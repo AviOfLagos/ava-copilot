@@ -50,6 +50,10 @@ export const clickElementActionSchema = {
     intent: z.string().default('').describe('purpose of this action'),
     index: z.number().int().describe('index of the element'),
     xpath: z.string().nullable().optional().describe('xpath of the element'),
+    commits: z
+      .boolean()
+      .default(false)
+      .describe('true if this action sends, posts, submits, deletes, publishes, buys or changes permissions'),
   }),
 } satisfies ActionSchema;
 
@@ -183,6 +187,10 @@ export const sendKeysActionSchema = {
   schema: z.object({
     intent: z.string().default('').describe('purpose of this action'),
     keys: z.string().describe('keys to send'),
+    commits: z
+      .boolean()
+      .default(false)
+      .describe('true if this action sends, posts, submits, deletes, publishes, buys or changes permissions'),
   }),
 } satisfies ActionSchema;
 

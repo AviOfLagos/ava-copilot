@@ -28,6 +28,8 @@ import { createLogger } from '@src/background/log';
 import { ExecutionState, Actors } from '../event/types';
 import type { ChatModel } from '@src/background/llm/types';
 import { wrapUntrustedContent } from '../messages/utils';
+import { reviewAction, verifyCommit } from '@src/background/gate/review';
+import { readPageTextAction, readPageTextActionSchema } from '@src/background/reader/reader';
 
 const logger = createLogger('Action');
 
@@ -243,11 +245,25 @@ export class ActionBuilder {
           });
         }
 
+        // A click that commits something waits here for the user's approval
+        const review = await reviewAction(this.context, page, {
+          action: 'click_element',
+          args: input,
+          node: elementNode,
+        });
+        if (!review.proceed) {
+          return review.result;
+        }
+
         try {
           const initialTabIds = await this.context.browserContext.getAllTabIds();
           await page.clickElementNode(this.context.options.useVision, elementNode);
           let msg = t('act_click_ok', [input.index.toString(), elementNode.getAllTextTillNextClickableElement(2)]);
           logger.info(msg);
+          const verification = await verifyCommit(this.context, page, review.commit);
+          if (verification) {
+            msg += ` - ${verification}`;
+          }
 
           // TODO: could be optimized by chrome extension tab api
           const currentTabIds = await this.context.browserContext.getAllTabIds();
@@ -287,6 +303,12 @@ export class ActionBuilder {
         const elementNode = state?.selectorMap.get(input.index);
         if (!elementNode) {
           throw new Error(t('act_errors_elementNotExist', [input.index.toString()]));
+        }
+
+        // Passwords, one-time codes and CAPTCHAs are the user's to type
+        const review = await reviewAction(this.context, page, { action: 'input_text', args: input, node: elementNode });
+        if (!review.proceed) {
+          return review.result;
         }
 
         await page.inputTextElementNode(this.context.options.useVision, elementNode, input.text);
@@ -375,6 +397,12 @@ export class ActionBuilder {
       return new ActionResult({ extractedContent: msg, includeInMemory: true });
     }, cacheContentActionSchema);
     actions.push(cacheContent);
+
+    const readPageText = new Action(
+      async (input: z.infer<typeof readPageTextActionSchema.schema>) => readPageTextAction(this.context, input),
+      readPageTextActionSchema,
+    );
+    actions.push(readPageText);
 
     // Scroll to percent
     const scrollToPercent = new Action(async (input: z.infer<typeof scrollToPercentActionSchema.schema>) => {
@@ -571,8 +599,18 @@ export class ActionBuilder {
       this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, intent);
 
       const page = await this.context.browserContext.getCurrentPage();
+      // Enter in a form or a chat box commits, so it waits here for the user's approval
+      const review = await reviewAction(this.context, page, { action: 'send_keys', args: input });
+      if (!review.proceed) {
+        return review.result;
+      }
+
       await page.sendKeys(input.keys);
-      const msg = t('act_sendKeys_ok', [input.keys]);
+      let msg = t('act_sendKeys_ok', [input.keys]);
+      const verification = await verifyCommit(this.context, page, review.commit);
+      if (verification) {
+        msg += ` - ${verification}`;
+      }
       this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, msg);
       return new ActionResult({ extractedContent: msg, includeInMemory: true });
     }, sendKeysActionSchema);

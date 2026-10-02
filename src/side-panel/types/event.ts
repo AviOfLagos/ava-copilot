@@ -40,6 +40,12 @@ export enum ExecutionState {
   ACT_START = 'act.start',
   ACT_OK = 'act.ok',
   ACT_FAIL = 'act.fail',
+  // The action waits for the user's decision; details hold a ConfirmRequest as JSON
+  ACT_CONFIRM = 'act.confirm',
+  // What the page showed after a committed action
+  ACT_VERIFY = 'act.verify',
+  // Something the user should know that is neither a result nor a failure
+  ACT_NOTICE = 'act.notice',
 }
 
 export interface EventData {

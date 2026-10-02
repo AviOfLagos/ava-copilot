@@ -334,6 +334,17 @@ export default class Page {
     return await this._puppeteerPage.content();
   }
 
+  /**
+   * Runs a function inside the page with one argument and returns its result.
+   * The function is sent to the page as source text, so it must not use anything defined outside itself.
+   */
+  async evaluateInPage<A, T>(pageFunction: (arg: A) => T, arg: A): Promise<T> {
+    if (!this._puppeteerPage) {
+      throw new Error('Puppeteer page is not connected');
+    }
+    return (await this._puppeteerPage.evaluate(pageFunction as never, arg as never)) as T;
+  }
+
   getCachedState(): PageState | null {
     return this._cachedState;
   }
@@ -1165,8 +1176,24 @@ export default class Page {
           el.dispatchEvent(new Event('change', { bubbles: true }));
         });
 
-        // Type the text with a small delay between keypresses
-        await element.type(text, { delay: 50 });
+        // Type line by line with a small delay between keypresses. A typed line break is the Enter key,
+        // which submits a form or sends a chat message. So a rich-text editor gets Shift+Enter for a
+        // line break, and a single-line input gets a space.
+        await element.focus();
+        for (const [i, line] of text.split(/\r\n|\r|\n/).entries()) {
+          if (i > 0) {
+            if (isContentEditable) {
+              await this._puppeteerPage.keyboard.down('Shift');
+              await this._puppeteerPage.keyboard.press('Enter');
+              await this._puppeteerPage.keyboard.up('Shift');
+            } else {
+              await element.type(' ', { delay: 50 });
+            }
+          }
+          if (line) {
+            await element.type(line, { delay: 50 });
+          }
+        }
       } else {
         // Use direct value setting for other types of elements
         await element.evaluate((el, value) => {

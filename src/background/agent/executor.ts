@@ -17,14 +17,14 @@ import {
   ChatModelForbiddenError,
   ExtensionConflictError,
   RequestCancelledError,
-  MaxStepsReachedError,
   MaxFailuresReachedError,
 } from './agents/errors';
 import { URLNotAllowedError } from '../browser/views';
 import { chatHistoryStore } from '@extension/storage/lib/chat';
 import type { AgentStepHistory } from './history';
 import type { GeneralSettingsConfig } from '@extension/storage';
-import { analytics } from '../services/analytics';
+
+import { ensureBudget } from '../usage/budget';
 
 const logger = createLogger('Executor');
 
@@ -65,8 +65,9 @@ export class Executor {
 
     this.generalSettings = extraArgs?.generalSettings;
     this.tasks.push(task);
-    this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep);
-    this.plannerPrompt = new PlannerPrompt();
+    const stylePrompt = this.generalSettings?.stylePrompt;
+    this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep, stylePrompt);
+    this.plannerPrompt = new PlannerPrompt(stylePrompt);
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
     const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());
@@ -96,6 +97,22 @@ export class Executor {
   clearExecutionEvents(): void {
     // Clear all execution event listeners
     this.context.eventManager.clearSubscribers(EventType.EXECUTION);
+  }
+
+  /**
+   * Passes the user's answer to a request that waits at the confirm gate.
+   *
+   * @returns false when no such request is waiting
+   */
+  answerConfirmation(requestId: string, approved: boolean): boolean {
+    return this.context.confirmGate.answer(requestId, approved);
+  }
+
+  /**
+   * Shows a short status line to the user, e.g. that a model call is waiting to retry.
+   */
+  notify(message: string): void {
+    void this.context.emitEvent(Actors.SYSTEM, ExecutionState.ACT_NOTICE, message);
   }
 
   addFollowUpTask(task: string): void {
@@ -135,9 +152,6 @@ export class Executor {
     try {
       this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_START, this.context.taskId);
 
-      // Track task start
-      void analytics.trackTaskStart(this.context.taskId);
-
       let step = 0;
       let latestPlanOutput: AgentOutput<PlannerOutput> | null = null;
       let navigatorDone = false;
@@ -150,6 +164,10 @@ export class Executor {
 
         logger.info(`🔄 Step ${step + 1} / ${allowedMaxSteps}`);
         if (await this.shouldStop()) {
+          break;
+        }
+        // The daily cost cap holds the task here until the user raises it or stops
+        if (!(await ensureBudget(this.context))) {
           break;
         }
 
@@ -180,39 +198,20 @@ export class Executor {
         // Emit final answer if available, otherwise use task ID
         const finalMessage = this.context.finalAnswer || this.context.taskId;
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_OK, finalMessage);
-
-        // Track task completion
-        void analytics.trackTaskComplete(this.context.taskId);
       } else if (step >= allowedMaxSteps) {
         logger.error('❌ Task failed: Max steps reached');
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_errors_maxStepsReached'));
-
-        // Track task failure with specific error category
-        const maxStepsError = new MaxStepsReachedError(t('exec_errors_maxStepsReached'));
-        const errorCategory = analytics.categorizeError(maxStepsError);
-        void analytics.trackTaskFailed(this.context.taskId, errorCategory);
       } else if (this.context.stopped) {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
-
-        // Track task cancellation
-        void analytics.trackTaskCancelled(this.context.taskId);
       } else {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_PAUSE, t('exec_task_pause'));
-        // Note: We don't track pause as it's not a final state
       }
     } catch (error) {
       if (error instanceof RequestCancelledError) {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
-
-        // Track task cancellation
-        void analytics.trackTaskCancelled(this.context.taskId);
       } else {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_task_fail', [errorMessage]));
-
-        // Track task failure with detailed error categorization
-        const errorCategory = analytics.categorizeError(error instanceof Error ? error : errorMessage);
-        void analytics.trackTaskFailed(this.context.taskId, errorCategory);
       }
     } finally {
       if (import.meta.env.DEV) {

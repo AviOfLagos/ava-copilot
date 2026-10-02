@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Extension description",
-    "message": "使用 AI 自動化網頁任務！Nanobrowser 是一款開放原始碼的瀏覽器擴充功能，能協助您擷取資料、填寫表單等。"
+    "message": "使用 AI 自動化網頁任務！Avi Copilot 是一款開放原始碼的瀏覽器擴充功能，能協助您擷取資料、填寫表單等。"
   },
   "app_metadata_name": {
     "description": "Extension name",
-    "message": "Nanobrowser：AI 網頁代理程式與自動化"
+    "message": "Avi Copilot"
   },
   "errors_unknown": {
     "message": "發生未知錯誤"
@@ -38,7 +38,7 @@
     "message": "回到對話"
   },
   "welcome_title": {
-    "message": "歡迎使用 Nanobrowser！"
+    "message": "歡迎使用 Avi Copilot！"
   },
   "welcome_instruction": {
     "message": "開始使用前，請先完成 API 金鑰的設定。"
@@ -167,7 +167,7 @@
     "message": "啟用語音輸入"
   },
   "permissions_microphone_description": {
-    "message": "Nanobrowser 需要麥克風存取權限，才能將語音轉換為文字。"
+    "message": "Avi Copilot 需要麥克風存取權限，才能將語音轉換為文字。"
   },
   "permissions_microphone_grantButton": {
     "message": "授予麥克風權限"
@@ -213,6 +213,12 @@
   },
   "options_general_header": {
     "message": "一般"
+  },
+  "options_general_stylePrompt": {
+    "message": "回應風格"
+  },
+  "options_general_stylePrompt_desc": {
+    "message": "代理程式回覆您時的寫作方式。留空則不套用任何風格。"
   },
   "options_general_maxSteps": {
     "message": "單一任務的步驟上限"
@@ -399,6 +405,9 @@
         "example": "Custom OpenAI"
       }
     }
+  },
+  "options_models_providers_errors_geminiKeyRejected": {
+    "message": "Google 拒絕了這組 API 金鑰。請檢查金鑰後再儲存一次。"
   },
   "options_firewall_header": {
     "message": "防火牆"
@@ -953,5 +962,122 @@
         "example": "Option not found"
       }
     }
+  },
+  "gate_kind_send": {
+    "message": "Send a message"
+  },
+  "gate_kind_publish": {
+    "message": "Publish or post"
+  },
+  "gate_kind_submit": {
+    "message": "Submit a form"
+  },
+  "gate_kind_delete": {
+    "message": "Delete or remove"
+  },
+  "gate_kind_purchase": {
+    "message": "Buy or pay"
+  },
+  "gate_kind_permission": {
+    "message": "Share or change permissions"
+  },
+  "gate_needsUser_login": {
+    "message": "This page needs you to sign in. Sign in on the page, then press Continue."
+  },
+  "gate_needsUser_captcha": {
+    "message": "This page shows a CAPTCHA. Solve it on the page, then press Continue."
+  },
+  "gate_needsUser_code": {
+    "message": "This page asks for a one-time code. Enter it on the page, then press Continue."
+  },
+  "gate_card_title": {
+    "message": "Confirm: $1"
+  },
+  "gate_card_needsUserTitle": {
+    "message": "Your turn"
+  },
+  "gate_card_page": {
+    "message": "Page"
+  },
+  "gate_card_target": {
+    "message": "Control"
+  },
+  "gate_card_noContent": {
+    "message": "No text could be read back from the page."
+  },
+  "gate_card_confirm": {
+    "message": "Confirm"
+  },
+  "gate_card_cancel": {
+    "message": "Cancel"
+  },
+  "gate_card_continue": {
+    "message": "Continue"
+  },
+  "gate_card_stop": {
+    "message": "Stop"
+  },
+  "gate_waiting": {
+    "message": "Waiting for you: $1"
+  },
+  "gate_approved": {
+    "message": "Confirmed: $1"
+  },
+  "gate_declinedByUser": {
+    "message": "Cancelled: $1"
+  },
+  "gate_declined": {
+    "message": "The user declined this action. Nothing was done. Stop here."
+  },
+  "gate_stale": {
+    "message": "The page changed while waiting for confirmation, so nothing was done."
+  },
+  "gate_userContinued": {
+    "message": "The user finished this step on the page themselves. Read the page again before the next action."
+  },
+  "gate_userStopped": {
+    "message": "Stopped. The page needs the user to finish a step first."
+  },
+  "gate_verify_shown": {
+    "message": "Checked: the text now shows on the page."
+  },
+  "gate_verify_moved": {
+    "message": "Checked: the page moved to $1 after the action."
+  },
+  "gate_verify_cleared": {
+    "message": "Checked: the form was cleared after the action."
+  },
+  "gate_verify_unknown": {
+    "message": "Could not confirm the result on the page. Check that it went through."
+  },
+  "options_gate_header": {
+    "message": "Confirm before acting"
+  },
+  "options_gate_desc": {
+    "message": "The agent pauses and shows what it is about to do. Turning a kind off lets it act without asking."
+  },
+  "gate_injection_ignored": {
+    "message": "This page contained instructions; ignored."
+  },
+  "usage_rateLimited": {
+    "message": "Rate limited, retrying in $1 s."
+  },
+  "usage_capReached_short": {
+    "message": "Daily cost cap reached"
+  },
+  "usage_capReached_detail": {
+    "message": "Spent today: $1. Cap: $2."
+  },
+  "usage_badge_title": {
+    "message": "This chat: $1 tokens. Today: $2."
+  },
+  "gate_needsUser_cap": {
+    "message": "The daily cost cap is reached. Raise it in Settings, then press Continue."
+  },
+  "options_general_dailyCap": {
+    "message": "Daily cost cap (USD)"
+  },
+  "options_general_dailyCap_desc": {
+    "message": "The agent pauses when today's model cost reaches this amount. 0 means no cap."
   }
 }

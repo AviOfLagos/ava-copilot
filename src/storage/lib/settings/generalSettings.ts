@@ -13,6 +13,10 @@ export interface GeneralSettingsConfig {
   displayHighlights: boolean;
   minWaitPageLoad: number;
   replayHistoricalTasks: boolean;
+  // Style for the text the agents write to the user; empty applies no style
+  stylePrompt: string;
+  // The agent pauses once today's model cost reaches this many US dollars; 0 means no cap
+  dailyCostCapUsd: number;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -32,6 +36,9 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   displayHighlights: true,
   minWaitPageLoad: 250,
   replayHistoricalTasks: false,
+  stylePrompt:
+    'Be short and direct. Give the answer first. End with action points when there is something for me to do.',
+  dailyCostCapUsd: 5,
 };
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {

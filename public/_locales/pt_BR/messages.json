@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Descrição da extensão",
-    "message": "Automatize tarefas da web com IA! NanoBrowser é uma extensão de código aberto para o navegador que permite extrair dados, preencher formulários e muito mais."
+    "message": "Automatize tarefas da web com IA! Avi Copilot é uma extensão de código aberto para o navegador que permite extrair dados, preencher formulários e muito mais."
   },
   "app_metadata_name": {
     "description": "Nome da extensão",
-    "message": "Nanobrowser: Agente Web de IA e Automação"
+    "message": "Avi Copilot"
   },
   "errors_unknown": {
     "message": "Ocorreu um erro desconhecido"
@@ -38,7 +38,7 @@
     "message": "Voltar para o chat"
   },
   "welcome_title": {
-    "message": "Bem-vindo ao Nanobrowser!"
+    "message": "Bem-vindo ao Avi Copilot!"
   },
   "welcome_instruction": {
     "message": "Para começar, por favor, configure suas chaves de API na página de configurações."
@@ -167,7 +167,7 @@
     "message": "Ativar Entrada de Voz"
   },
   "permissions_microphone_description": {
-    "message": "O Nanobrowser precisa de acesso ao microfone para converter sua fala em texto."
+    "message": "O Avi Copilot precisa de acesso ao microfone para converter sua fala em texto."
   },
   "permissions_microphone_grantButton": {
     "message": "Conceder Permissão ao Microfone"
@@ -213,6 +213,12 @@
   },
   "options_general_header": {
     "message": "Geral"
+  },
+  "options_general_stylePrompt": {
+    "message": "Estilo de resposta"
+  },
+  "options_general_stylePrompt_desc": {
+    "message": "Como os agentes escrevem as respostas para você. Deixe vazio para não aplicar nenhum estilo."
   },
   "options_general_maxSteps": {
     "message": "Máximo de Passos por Tarefa"
@@ -289,7 +295,6 @@
   "options_models_providers_custom_name_placeholder": {
     "message": "Nome do provedor"
   },
-
   "options_models_providers_apiKey": {
     "message": "Chave de API"
   },
@@ -308,21 +313,18 @@
   "options_models_providers_apiKey_show": {
     "message": "Mostrar chave de API"
   },
-
   "options_models_selection_header": {
     "message": "Seleção de Modelo"
   },
   "options_models_speechToText_header": {
     "message": "Modelo de Fala para Texto"
   },
-
   "options_models_agents_navigator": {
     "message": "Navega em sites e executa ações"
   },
   "options_models_agents_planner": {
     "message": "Desenvolve e refina estratégias para completar tarefas"
   },
-
   "options_models_labels_model": {
     "message": "Modelo"
   },
@@ -404,7 +406,9 @@
       }
     }
   },
-
+  "options_models_providers_errors_geminiKeyRejected": {
+    "message": "O Google recusou esta chave de API. Verifique a chave e salve novamente."
+  },
   "options_firewall_header": {
     "message": "Firewall"
   },
@@ -441,7 +445,6 @@
   "options_firewall_howItWorks": {
     "message": "O firewall contém uma lista de negações e uma lista de permissões.\nSe ambas as listas estiverem vazias, todos os URLs são permitidos\nA lista de negações tem prioridade - se um URL corresponder a qualquer entrada da lista de negações, ele será bloqueado\nQuando a lista de permissões está vazia, todos os URLs não negados são permitidos\nQuando a lista de permissões não está vazia, apenas os URLs correspondentes são permitidos\nCuringas ainda NÃO são suportados\nA lista de permissões é preferível à lista de negações"
   },
-
   "bg_errors_noTabId": {
     "message": "Nenhum ID de aba fornecido"
   },
@@ -541,7 +544,6 @@
   "exec_replay_historyEmpty": {
     "message": "O histórico está vazio"
   },
-
   "act_searchGoogle_start": {
     "message": "Procurando por \"$QUERY$\" no Google",
     "placeholders": {
@@ -960,5 +962,122 @@
         "example": "Opção não encontrada"
       }
     }
+  },
+  "gate_kind_send": {
+    "message": "Send a message"
+  },
+  "gate_kind_publish": {
+    "message": "Publish or post"
+  },
+  "gate_kind_submit": {
+    "message": "Submit a form"
+  },
+  "gate_kind_delete": {
+    "message": "Delete or remove"
+  },
+  "gate_kind_purchase": {
+    "message": "Buy or pay"
+  },
+  "gate_kind_permission": {
+    "message": "Share or change permissions"
+  },
+  "gate_needsUser_login": {
+    "message": "This page needs you to sign in. Sign in on the page, then press Continue."
+  },
+  "gate_needsUser_captcha": {
+    "message": "This page shows a CAPTCHA. Solve it on the page, then press Continue."
+  },
+  "gate_needsUser_code": {
+    "message": "This page asks for a one-time code. Enter it on the page, then press Continue."
+  },
+  "gate_card_title": {
+    "message": "Confirm: $1"
+  },
+  "gate_card_needsUserTitle": {
+    "message": "Your turn"
+  },
+  "gate_card_page": {
+    "message": "Page"
+  },
+  "gate_card_target": {
+    "message": "Control"
+  },
+  "gate_card_noContent": {
+    "message": "No text could be read back from the page."
+  },
+  "gate_card_confirm": {
+    "message": "Confirm"
+  },
+  "gate_card_cancel": {
+    "message": "Cancel"
+  },
+  "gate_card_continue": {
+    "message": "Continue"
+  },
+  "gate_card_stop": {
+    "message": "Stop"
+  },
+  "gate_waiting": {
+    "message": "Waiting for you: $1"
+  },
+  "gate_approved": {
+    "message": "Confirmed: $1"
+  },
+  "gate_declinedByUser": {
+    "message": "Cancelled: $1"
+  },
+  "gate_declined": {
+    "message": "The user declined this action. Nothing was done. Stop here."
+  },
+  "gate_stale": {
+    "message": "The page changed while waiting for confirmation, so nothing was done."
+  },
+  "gate_userContinued": {
+    "message": "The user finished this step on the page themselves. Read the page again before the next action."
+  },
+  "gate_userStopped": {
+    "message": "Stopped. The page needs the user to finish a step first."
+  },
+  "gate_verify_shown": {
+    "message": "Checked: the text now shows on the page."
+  },
+  "gate_verify_moved": {
+    "message": "Checked: the page moved to $1 after the action."
+  },
+  "gate_verify_cleared": {
+    "message": "Checked: the form was cleared after the action."
+  },
+  "gate_verify_unknown": {
+    "message": "Could not confirm the result on the page. Check that it went through."
+  },
+  "options_gate_header": {
+    "message": "Confirm before acting"
+  },
+  "options_gate_desc": {
+    "message": "The agent pauses and shows what it is about to do. Turning a kind off lets it act without asking."
+  },
+  "gate_injection_ignored": {
+    "message": "This page contained instructions; ignored."
+  },
+  "usage_rateLimited": {
+    "message": "Rate limited, retrying in $1 s."
+  },
+  "usage_capReached_short": {
+    "message": "Daily cost cap reached"
+  },
+  "usage_capReached_detail": {
+    "message": "Spent today: $1. Cap: $2."
+  },
+  "usage_badge_title": {
+    "message": "This chat: $1 tokens. Today: $2."
+  },
+  "gate_needsUser_cap": {
+    "message": "The daily cost cap is reached. Raise it in Settings, then press Continue."
+  },
+  "options_general_dailyCap": {
+    "message": "Daily cost cap (USD)"
+  },
+  "options_general_dailyCap_desc": {
+    "message": "The agent pauses when today's model cost reaches this amount. 0 means no cap."
   }
 }

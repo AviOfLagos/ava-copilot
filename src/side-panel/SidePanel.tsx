@@ -1,15 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RxDiscordLogo } from 'react-icons/rx';
 import { FiSettings } from 'react-icons/fi';
 import { PiPlusBold } from 'react-icons/pi';
 import { GrHistory } from 'react-icons/gr';
-import { type Message, Actors, chatHistoryStore, agentModelStore, generalSettingsStore } from '@extension/storage';
+import {
+  type Message,
+  type ConfirmRequest,
+  Actors,
+  AgentNameEnum,
+  ProviderTypeEnum,
+  chatHistoryStore,
+  agentModelStore,
+  generalSettingsStore,
+  llmProviderStore,
+} from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
 import ChatHistoryList from './components/ChatHistoryList';
+import ConfirmCard from './components/ConfirmCard';
+import UsageBadge from './components/UsageBadge';
 import BookmarkList from './components/BookmarkList';
 import { EventType, type AgentEvent, ExecutionState } from './types/event';
 import './SidePanel.css';
@@ -26,6 +37,8 @@ const SidePanel = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputEnabled, setInputEnabled] = useState(true);
   const [showStopButton, setShowStopButton] = useState(false);
+  // The request the agent waits on: an action to approve, or a step to do on the page
+  const [pendingConfirm, setPendingConfirm] = useState<ConfirmRequest | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [chatSessions, setChatSessions] = useState<Array<{ id: string; title: string; createdAt: number }>>([]);
@@ -64,11 +77,13 @@ const SidePanel = () => {
   // Check if models are configured
   const checkModelConfiguration = useCallback(async () => {
     try {
-      const configuredAgents = await agentModelStore.getConfiguredAgents();
-
-      // Check if at least one agent (preferably Navigator) is configured
-      const hasAtLeastOneModel = configuredAgents.length > 0;
-      setHasConfiguredModels(hasAtLeastOneModel);
+      // A task cannot run without a Navigator model whose provider has an API key
+      const navigatorModel = await agentModelStore.getAgentModel(AgentNameEnum.Navigator);
+      const provider = navigatorModel ? await llmProviderStore.getProvider(navigatorModel.provider) : undefined;
+      // Local and custom OpenAI-compatible providers can run without a key
+      const keyOptional =
+        provider?.type === ProviderTypeEnum.Ollama || provider?.type === ProviderTypeEnum.CustomOpenAI;
+      setHasConfiguredModels(!!provider && (keyOptional || provider.apiKey.trim() !== ''));
     } catch (error) {
       console.error('Error checking model configuration:', error);
       setHasConfiguredModels(false);
@@ -166,12 +181,14 @@ const SidePanel = () => {
               setInputEnabled(true);
               setShowStopButton(false);
               setIsReplaying(false);
+              setPendingConfirm(null);
               break;
             case ExecutionState.TASK_FAIL:
               setIsFollowUpMode(true);
               setInputEnabled(true);
               setShowStopButton(false);
               setIsReplaying(false);
+              setPendingConfirm(null);
               skip = false;
               break;
             case ExecutionState.TASK_CANCEL:
@@ -179,9 +196,13 @@ const SidePanel = () => {
               setInputEnabled(true);
               setShowStopButton(false);
               setIsReplaying(false);
+              setPendingConfirm(null);
               skip = false;
               break;
             case ExecutionState.TASK_PAUSE:
+              break;
+            case ExecutionState.ACT_NOTICE:
+              skip = false;
               break;
             case ExecutionState.TASK_RESUME:
               break;
@@ -237,6 +258,24 @@ const SidePanel = () => {
             case ExecutionState.ACT_FAIL:
               skip = false;
               break;
+            case ExecutionState.ACT_VERIFY:
+            case ExecutionState.ACT_NOTICE:
+              skip = false;
+              break;
+            case ExecutionState.ACT_CONFIRM:
+              try {
+                const request = JSON.parse(content) as ConfirmRequest;
+                setPendingConfirm(request);
+                appendMessage({
+                  actor,
+                  content: t('gate_waiting', [request.target || request.intent]),
+                  timestamp: timestamp,
+                });
+              } catch (error) {
+                // A request that cannot be shown is never approved; the task waits until it is stopped
+                console.error('Invalid confirm request', error);
+              }
+              return;
             default:
               console.error('Invalid action', state);
               return;
@@ -643,7 +682,31 @@ const SidePanel = () => {
     }
   };
 
+  // Sends the user's decision on the pending request to the background
+  const handleConfirmAnswer = (approved: boolean) => {
+    if (!pendingConfirm) {
+      return;
+    }
+    const subject = pendingConfirm.target || pendingConfirm.intent;
+    try {
+      sendMessage({ type: 'confirm_action', requestId: pendingConfirm.id, approved });
+      appendMessage({
+        actor: Actors.USER,
+        content: approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
+        timestamp: Date.now(),
+      });
+    } catch (err) {
+      appendMessage({
+        actor: Actors.SYSTEM,
+        content: err instanceof Error ? err.message : String(err),
+        timestamp: Date.now(),
+      });
+    }
+    setPendingConfirm(null);
+  };
+
   const handleStopTask = async () => {
+    setPendingConfirm(null);
     try {
       portRef.current?.postMessage({
         type: 'cancel_task',
@@ -1018,6 +1081,7 @@ const SidePanel = () => {
             )}
           </div>
           <div className="header-icons">
+            <UsageBadge sessionId={currentSessionId} isDarkMode={isDarkMode} />
             {!showHistory && (
               <>
                 <button
@@ -1040,13 +1104,6 @@ const SidePanel = () => {
                 </button>
               </>
             )}
-            <a
-              href="https://discord.gg/NN3ABHggMK"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'}`}>
-              <RxDiscordLogo size={20} />
-            </a>
             <button
               type="button"
               onClick={() => chrome.runtime.openOptionsPage()}
@@ -1087,7 +1144,7 @@ const SidePanel = () => {
               <div
                 className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
                 <div className="max-w-md text-center">
-                  <img src="/icon-128.png" alt="Nanobrowser Logo" className="mx-auto mb-4 size-12" />
+                  <img src="/icon-128.png" alt="Avi Copilot Logo" className="mx-auto mb-4 size-12" />
                   <h3 className={`mb-2 text-lg font-semibold ${isDarkMode ? 'text-sky-200' : 'text-sky-700'}`}>
                     {t('welcome_title')}
                   </h3>
@@ -1099,23 +1156,6 @@ const SidePanel = () => {
                     }`}>
                     {t('welcome_openSettings')}
                   </button>
-                  <div className="mt-4 text-sm opacity-75">
-                    <a
-                      href="https://github.com/nanobrowser/nanobrowser?tab=readme-ov-file#-quick-start"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-700 hover:text-sky-600'}`}>
-                      {t('welcome_quickStart')}
-                    </a>
-                    <span className="mx-2">•</span>
-                    <a
-                      href="https://discord.gg/NN3ABHggMK"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-700 hover:text-sky-600'}`}>
-                      {t('welcome_joinCommunity')}
-                    </a>
-                  </div>
                 </div>
               </div>
             )}
@@ -1165,6 +1205,9 @@ const SidePanel = () => {
                 {messages.length > 0 && (
                   <div
                     className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
+                    {pendingConfirm && (
+                      <ConfirmCard request={pendingConfirm} onAnswer={handleConfirmAnswer} isDarkMode={isDarkMode} />
+                    )}
                     <ChatInput
                       onSendMessage={handleSendMessage}
                       onStopTask={handleStopTask}

@@ -2,6 +2,25 @@
 
 This file provides guidance to AI coding assistants (e.g., Claude Code, GitHub Copilot, Cursor) when working with this repository.
 
+## This is a fork: Avi Copilot
+
+This repository is **Avi Copilot**, a fork of Nanobrowser at tag `v0.2.0` (remote `upstream`). The sections below are
+upstream's guidance and still describe the code accurately. Where they conflict with this section, this section wins.
+
+- What is being built: `docs/spec.md`. Build order, decisions and progress: `docs/task.md`.
+- Put new features in new directories (`src/background/threads`, `gate`, `meeting`, `kb`, `skills`) and keep edits to
+  upstream files small, so merges from `upstream` stay possible.
+- No analytics and no third-party calls other than the configured LLM provider. PostHog was removed.
+- `pnpm lint` runs `eslint --fix` over the whole repo and rewrites upstream files. Lint only the files you changed:
+  `pnpm exec eslint <paths> --ext .ts,.tsx`.
+- `MessageKey` is the intersection of all locales, so a new i18n key must be added to every file in `public/_locales`.
+- End-to-end tests: `pnpm test:e2e` builds and runs `e2e/*.e2e.mjs` against the fixture page with a scripted model
+  (`e2e/mock-llm.mjs`). They need Chrome for Testing or Chromium, because branded Chrome ignores `--load-extension`.
+- A function passed to `page.evaluateInPage` or `ElementHandle.evaluate` runs in the page from its source text. It
+  must not use imports, helpers or variables from outside itself. See `src/background/gate/probes.ts`.
+- Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
+  `src/background/gate/review.ts`. A new action that can do any of these must call it.
+
 ## Project Overview
 
 Nanobrowser is an open-source AI web automation Chrome extension that runs multi-agent systems locally in the browser. It's a free alternative to OpenAI Operator with support for multiple LLM providers (OpenAI, Anthropic, Gemini, Ollama, etc.).
@@ -243,7 +262,7 @@ Use Chrome i18n placeholder format with proper definitions:
 - **URL Validation**: Validate and restrict navigation to prevent malicious redirects
 - **Error Handling**: Avoid exposing sensitive information in error messages or logs
  - **Secrets/Config**: Use `.env.local` (git‑ignored) and prefix variables with `VITE_`.
-   Example: `VITE_POSTHOG_API_KEY`. Vite loads `VITE_*` from the repo root.
+   Vite loads `VITE_*` from the repo root.
 
 ## Important Reminders
 

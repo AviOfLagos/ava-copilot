@@ -1,5 +1,5 @@
 {
-  "name": "nanobrowser",
+  "name": "avi-copilot",
   "version": "0.2.0",
   "description": "AI web automation tool",
   "license": "Apache-2.0",
@@ -15,6 +15,7 @@
     "build": "wxt build",
     "zip": "pnpm build && tsx scripts/zip.ts",
     "test": "vitest run",
+    "test:e2e": "pnpm build && node --test --test-concurrency=1 e2e/gate.e2e.mjs e2e/agent.e2e.mjs",
     "type-check": "node src/i18n/generate-i18n.mjs && wxt prepare && tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --fix --cache --cache-location node_modules/.cache/.eslintcache",
     "prettier": "prettier . --write --cache --cache-location node_modules/.cache/.prettiercache",
@@ -34,7 +35,6 @@
     "ai": "7.0.126",
     "clsx": "^2.1.1",
     "jsonrepair": "^3.15.0",
-    "posthog-js": "^1.434.17",
     "puppeteer-core": "^25.12.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",

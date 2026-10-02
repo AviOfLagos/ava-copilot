@@ -21,10 +21,12 @@ import {
   getDefaultReasoningEffort,
   normalizeReasoningEffort,
   getProviderTypeByProviderId,
+  applyGeminiDefaults,
   type ProviderConfig,
   type ReasoningEffort,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
+import { checkGeminiKey } from '../geminiKey';
 
 // O-series, GPT-5 or GPT-6 models, the only OpenAI and Azure models that accept a reasoning effort.
 // Keep in sync with isOpenAIReasoningModel in src/background/llm/providers.ts.
@@ -66,6 +68,8 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
   const [isProviderSelectorOpen, setIsProviderSelectorOpen] = useState(false);
   const newlyAddedProviderRef = useRef<string | null>(null);
   const [nameErrors, setNameErrors] = useState<Record<string, string>>({});
+  // API keys the provider refused on save, by provider id
+  const [apiKeyErrors, setApiKeyErrors] = useState<Record<string, string>>({});
   // Add state for tracking API key visibility
   const [visibleApiKeys, setVisibleApiKeys] = useState<Record<string, boolean>>({});
   // Create a non-async wrapper for use in render functions
@@ -240,6 +244,11 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
 
   const handleApiKeyChange = (provider: string, apiKey: string, baseUrl?: string) => {
     setModifiedProviders(prev => new Set(prev).add(provider));
+    setApiKeyErrors(prev => {
+      const next = { ...prev };
+      delete next[provider];
+      return next;
+    });
     setProviders(prev => ({
       ...prev,
       [provider]: {
@@ -452,6 +461,24 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
       // Pass the cleaned config to setProvider
       // Cast to ProviderConfig as we've ensured necessary fields based on type
       await llmProviderStore.setProvider(provider, configToSave as ProviderConfig);
+
+      // Agents without a model get the default Gemini models, so a Gemini key is enough to start.
+      // A key Google refuses gets no defaults, which keeps the side panel on its setup screen.
+      if (providers[provider].type === ProviderTypeEnum.Gemini) {
+        const keyCheck = await checkGeminiKey(configToSave.apiKey);
+        if (keyCheck.status === 'rejected') {
+          setApiKeyErrors(prev => ({ ...prev, [provider]: t('options_models_providers_errors_geminiKeyRejected') }));
+        } else {
+          // Default only to models this key can call; a key that could not be checked keeps the full list
+          const savedModels = configToSave.modelNames ?? [];
+          const usableModels =
+            keyCheck.status === 'valid' ? savedModels.filter(model => keyCheck.modelIds.includes(model)) : savedModels;
+          const assigned = await applyGeminiDefaults(provider, usableModels);
+          for (const [agent, config] of Object.entries(assigned)) {
+            setSelectedModels(prev => ({ ...prev, [agent]: `${config.provider}>${config.modelName}` }));
+          }
+        }
+      }
 
       // Clear any name errors on successful save
       setNameErrors(prev => {
@@ -1119,6 +1146,11 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
                         )}
                       </div>
                     </div>
+                    {apiKeyErrors[providerId] && (
+                      <p role="alert" className={`ml-20 mt-1 text-xs ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}>
+                        {apiKeyErrors[providerId]}
+                      </p>
+                    )}
 
                     {/* Display API key for newly added providers only when visible */}
                     {modifiedProviders.has(providerId) &&

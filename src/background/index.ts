@@ -5,7 +5,6 @@ import {
   firewallStore,
   generalSettingsStore,
   llmProviderStore,
-  analyticsSettingsStore,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
 import BrowserContext from './browser/context';
@@ -17,7 +16,8 @@ import type { ChatModel } from './llm/types';
 import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
-import { analytics } from './services/analytics';
+import { meterModel } from './usage/meter';
+import type { UsageScope } from './usage/meter';
 
 const logger = createLogger('background');
 
@@ -56,18 +56,6 @@ chrome.tabs.onRemoved.addListener(tabId => {
 });
 
 logger.info('background loaded');
-
-// Initialize analytics
-analytics.init().catch(error => {
-  logger.error('Failed to initialize analytics:', error);
-});
-
-// Listen for analytics settings changes
-analyticsSettingsStore.subscribe(() => {
-  analytics.updateSettings().catch(error => {
-    logger.error('Failed to update analytics settings:', error);
-  });
-});
 
 // Listen for simple messages (e.g., from options page)
 chrome.runtime.onMessage.addListener(() => {
@@ -129,6 +117,13 @@ chrome.runtime.onConnect.addListener(port => {
               logger.info('follow_up_task: executor was cleaned up, can not add follow-up task');
               return port.postMessage({ type: 'error', error: t('bg_cmd_followUpTask_cleaned') });
             }
+            break;
+          }
+
+          case 'confirm_action': {
+            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
+            // Only an explicit true approves. Anything else declines.
+            currentExecutor.answerConfirmation(String(message.requestId), message.approved === true);
             break;
           }
 
@@ -292,14 +287,16 @@ async function setupExecutor(taskId: string, task: string, browserContext: Brows
   }
   // Log the provider config being used for the navigator
   const navigatorProviderConfig = providers[navigatorModel.provider];
-  const navigatorLLM = createChatModel(navigatorProviderConfig, navigatorModel);
+  // Model calls are counted against this chat session, and report retries through the executor once it exists
+  const usageScope: UsageScope = { sessionId: taskId, notify: () => {} };
+  const navigatorLLM = meterModel(createChatModel(navigatorProviderConfig, navigatorModel), usageScope);
 
   let plannerLLM: ChatModel | null = null;
   const plannerModel = agentModels[AgentNameEnum.Planner];
   if (plannerModel) {
     // Log the provider config being used for the planner
     const plannerProviderConfig = providers[plannerModel.provider];
-    plannerLLM = createChatModel(plannerProviderConfig, plannerModel);
+    plannerLLM = meterModel(createChatModel(plannerProviderConfig, plannerModel), usageScope);
   }
 
   // Apply firewall settings to browser context
@@ -334,6 +331,7 @@ async function setupExecutor(taskId: string, task: string, browserContext: Brows
     },
     generalSettings: generalSettings,
   });
+  usageScope.notify = message => executor.notify(message);
 
   return executor;
 }

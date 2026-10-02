@@ -5,16 +5,27 @@ import { systemMessage } from '@src/background/llm/messages';
 import type { AgentContext } from '@src/background/agent/types';
 import { createLogger } from '@src/background/log';
 import { navigatorSystemPromptTemplate } from './templates/navigator';
+import { buildStyleSection } from './style';
+import { navigatorGateSection } from '@src/background/gate/prompt';
+import { navigatorReaderSection } from '@src/background/reader/reader';
 
 const logger = createLogger('agent/prompts/navigator');
 
 export class NavigatorPrompt extends BasePrompt {
   private systemMessage: SystemModelMessage;
 
-  constructor(private readonly maxActionsPerStep = 10) {
+  constructor(
+    private readonly maxActionsPerStep = 10,
+    stylePrompt = '',
+  ) {
     super();
 
-    const promptTemplate = navigatorSystemPromptTemplate;
+    // The gate and style sections go inside the system instructions, before the closing tag
+    const promptTemplate = navigatorSystemPromptTemplate.replace(
+      '</system_instructions>',
+      () =>
+        `${navigatorGateSection}${navigatorReaderSection}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
+    );
     // Format the template with the maxActionsPerStep
     const formattedPrompt = promptTemplate.replace('{{max_actions}}', this.maxActionsPerStep.toString()).trim();
     this.systemMessage = systemMessage(formattedPrompt);

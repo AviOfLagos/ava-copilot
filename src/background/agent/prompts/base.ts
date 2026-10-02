@@ -3,6 +3,8 @@ import { imagePart, textPart, userMessage } from '@src/background/llm/messages';
 import type { AgentContext } from '@src/background/agent/types';
 import { wrapUntrustedContent } from '../messages/utils';
 import { createLogger } from '@src/background/log';
+import { reportPageInstructions } from '@src/background/gate/injection';
+import { needsVision } from '@src/background/reader/reader';
 
 const logger = createLogger('BasePrompt');
 /**
@@ -28,13 +30,16 @@ abstract class BasePrompt {
    * @returns The user message with the browser state and an optional screenshot
    */
   async buildBrowserStateUserMessage(context: AgentContext): Promise<UserModelMessage> {
-    const browserState = await context.browserContext.getState(context.options.useVision);
+    // A page drawn on canvas gets a screenshot even when vision is off, or the model sees nothing of it
+    const useVision = context.options.useVision || (await needsVision(context));
+    const browserState = await context.browserContext.getState(useVision);
     const rawElementsText = browserState.elementTree.clickableElementsToString(context.options.includeAttributes);
 
     let formattedElementsText = '';
     if (rawElementsText !== '') {
       const scrollInfo = `[Scroll info of current page] window.scrollY: ${browserState.scrollY}, document.body.scrollHeight: ${browserState.scrollHeight}, window.visualViewport.height: ${browserState.visualViewportHeight}, visual viewport height as percentage of scrollable distance: ${Math.round((browserState.visualViewportHeight / (browserState.scrollHeight - browserState.visualViewportHeight)) * 100)}%\n`;
       logger.info(scrollInfo);
+      await reportPageInstructions(context, browserState.url, rawElementsText);
       const elementsText = wrapUntrustedContent(rawElementsText);
       formattedElementsText = `${scrollInfo}[Start of page]\n${elementsText}\n[End of page]\n`;
     } else {
@@ -81,7 +86,7 @@ ${stepInfoDescription}
 ${actionResultsDescription}
 `;
 
-    if (browserState.screenshot && context.options.useVision) {
+    if (browserState.screenshot && useVision) {
       return userMessage([textPart(stateDescription), imagePart(browserState.screenshot, 'image/jpeg')]);
     }
 

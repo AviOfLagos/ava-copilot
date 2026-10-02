@@ -12,7 +12,9 @@ import { ThreatType } from './types';
 export const SECURITY_PATTERNS: SecurityPattern[] = [
   // Task override attempts
   {
-    pattern: /\b(ignore|forget|disregard)[\s\-_]*(previous|all|above)[\s\-_]*(instructions?|tasks?|commands?)\b/gi,
+    // One to three qualifiers, so 'ignore all previous instructions' matches as well as 'ignore previous instructions'
+    pattern:
+      /\b(ignore|forget|disregard)[\s\-_]*(?:(?:all|any|the|your|previous|prior|above|earlier)[\s\-_]*){1,3}(instructions?|tasks?|commands?|prompts?|rules?)\b/gi,
     type: ThreatType.TASK_OVERRIDE,
     description: 'Attempt to override previous instructions',
     replacement: '[BLOCKED_OVERRIDE_ATTEMPT]',
