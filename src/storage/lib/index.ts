@@ -3,6 +3,7 @@ export * from './settings';
 export * from './chat';
 export * from './usage';
 export * from './threads';
+export * from './meetings';
 export * from './profile';
 export * from './prompt/favorites';
 

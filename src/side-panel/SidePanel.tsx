@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
-import { PiPlusBold } from 'react-icons/pi';
+import { PiPlusBold, PiRecordBold } from 'react-icons/pi';
 import {
   type Message,
   Actors,
@@ -9,6 +9,7 @@ import {
   agentModelStore,
   db,
   llmProviderStore,
+  meetingSettingsStore,
   threadStore,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
@@ -20,6 +21,8 @@ import UsageBadge from './components/UsageBadge';
 import BookmarkList from './components/BookmarkList';
 import ThreadList from './threads/ThreadList';
 import ThreadBar from './threads/ThreadBar';
+import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
+import ConsentDialog from './meetings/ConsentDialog';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import './SidePanel.css';
@@ -32,6 +35,8 @@ const threadFromUrl = () => new URLSearchParams(location.search).get('thread');
 
 type PanelMessage =
   | { type: 'thread_started'; clientId: string; threadId: string }
+  | { type: 'meeting_started'; clientId: string; meetingId: string }
+  | { type: 'meeting_answer'; clientId: string; answer: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
   | { type: 'speech_to_text_error'; error: string }
@@ -42,6 +47,9 @@ const SidePanel = () => {
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
   const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
   const [showList, setShowList] = useState(false);
+  // The meeting shown instead of a thread, and whether the recording reminder is up
+  const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
   // A problem to show above the input that belongs to no message, e.g. a send that was refused
   const [banner, setBanner] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -52,6 +60,8 @@ const SidePanel = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
+  // Questions about a meeting waiting for their answer
+  const pendingAsksRef = useRef(new Map<string, () => void>());
 
   const thread = useLive(
     () => (threadId ? threadStore.get(threadId) : Promise.resolve(undefined)),
@@ -64,6 +74,8 @@ const SidePanel = () => {
     [],
   );
   const activeCount = useLive(() => db.threads.where('status').anyOf('running', 'waiting_confirm').count(), [], 0);
+  const recording = useLive(() => db.meetings.where('status').equals('recording').first(), [], undefined);
+  const recordingFor = useElapsed(recording);
 
   const isBusy = thread?.status === 'running' || thread?.status === 'waiting_confirm';
 
@@ -123,7 +135,19 @@ const SidePanel = () => {
             setSending(false);
           }
           break;
+        case 'meeting_started':
+          setMeetingId(message.meetingId);
+          setShowList(false);
+          break;
+        case 'meeting_answer':
+          pendingAsksRef.current.get(message.clientId)?.();
+          pendingAsksRef.current.delete(message.clientId);
+          break;
         case 'error':
+          if (message.clientId && pendingAsksRef.current.has(message.clientId)) {
+            pendingAsksRef.current.get(message.clientId)?.();
+            pendingAsksRef.current.delete(message.clientId);
+          }
           if (message.clientId) {
             pendingSendsRef.current.delete(message.clientId);
             setSending(false);
@@ -211,13 +235,39 @@ const SidePanel = () => {
     }
   };
 
+  const startNotes = async (includeMic: boolean) => {
+    setConsent(null);
+    setBanner(null);
+    await meetingSettingsStore.updateSettings({ consentShown: true, includeMic });
+    post({
+      type: 'meeting_start',
+      clientId: crypto.randomUUID(),
+      windowId: await currentWindowId(),
+      withMic: includeMic,
+    });
+  };
+
+  const handleTakeNotes = async () => {
+    if (recording) {
+      setMeetingId(recording.id);
+      setShowList(false);
+      return;
+    }
+    const settings = await meetingSettingsStore.getSettings();
+    // The first recording shows the reminder to tell participants
+    if (!settings.consentShown) setConsent({ includeMic: settings.includeMic });
+    else await startNotes(settings.includeMic);
+  };
+
   const handleNewThread = () => {
+    setMeetingId(null);
     setThreadId(null);
     setShowList(false);
     setBanner(null);
   };
 
   const handleSelect = (id: string) => {
+    setMeetingId(null);
     setThreadId(id);
     setShowList(false);
     setBanner(null);
@@ -310,6 +360,25 @@ const SidePanel = () => {
           </div>
           <div className="header-icons">
             <UsageBadge sessionId={threadId} isDarkMode={isDarkMode} />
+            {recording ? (
+              <button
+                type="button"
+                onClick={() => void handleTakeNotes()}
+                className="flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white"
+                aria-label={t('meeting_openNotes')}>
+                <span className="inline-block size-2 animate-pulse rounded-full bg-white" />
+                {t('meeting_recordingBadge', [clock(recordingFor)])}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleTakeNotes()}
+                className={headerButton}
+                aria-label={t('meeting_take')}
+                title={t('meeting_take')}>
+                <PiRecordBold size={20} />
+              </button>
+            )}
             {activeCount > 1 && (
               <button
                 type="button"
@@ -344,7 +413,40 @@ const SidePanel = () => {
           </div>
         </header>
 
-        {showList ? (
+        {consent ? (
+          <ConsentDialog
+            includeMic={consent.includeMic}
+            onStart={withMic => void startNotes(withMic)}
+            onCancel={() => setConsent(null)}
+            isDarkMode={isDarkMode}
+          />
+        ) : meetingId && !showList ? (
+          <>
+            {banner && (
+              <div
+                role="alert"
+                className={`m-2 rounded px-2 py-1 text-sm ${isDarkMode ? 'bg-red-950 text-red-200' : 'bg-red-50 text-red-700'}`}>
+                {banner}
+              </div>
+            )}
+            <MeetingView
+              meetingId={meetingId}
+              onStop={() => post({ type: 'meeting_stop', meetingId })}
+              onRetry={() => post({ type: 'meeting_retry', meetingId })}
+              onOpenThread={id => handleSelect(id)}
+              onAsk={question =>
+                new Promise<void>(resolve => {
+                  const clientId = crypto.randomUUID();
+                  pendingAsksRef.current.set(clientId, resolve);
+                  setBanner(null);
+                  post({ type: 'meeting_ask', clientId, meetingId, question });
+                })
+              }
+              onRefreshSummary={() => post({ type: 'meeting_summarize', meetingId })}
+              isDarkMode={isDarkMode}
+            />
+          </>
+        ) : showList ? (
           <div className="flex-1 overflow-hidden">
             <ThreadList
               activeThreadId={threadId}
@@ -391,6 +493,7 @@ const SidePanel = () => {
                 onContinue={async () =>
                   post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
                 }
+                onOpenMeeting={thread.meetingId ? () => setMeetingId(thread.meetingId) : undefined}
                 isDarkMode={isDarkMode}
               />
             )}

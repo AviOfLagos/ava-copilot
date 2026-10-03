@@ -4,5 +4,6 @@ export * from './agentModels';
 export * from './geminiDefaults';
 export * from './generalSettings';
 export * from './gateSettings';
+export * from './meetingSettings';
 export * from './firewall';
 export * from './speechToText';

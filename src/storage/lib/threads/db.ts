@@ -39,6 +39,8 @@ export interface ThreadRecord {
   // Messages up to this seq are covered by memory
   memoryUpToSeq: number;
   forkedFrom: { threadId: string; seq: number } | null;
+  // The meeting this thread holds the notes of
+  meetingId: string | null;
 }
 
 export interface ThreadMessage {
@@ -51,17 +53,87 @@ export interface ThreadMessage {
   ts: number;
 }
 
-// Placeholders for M3 and M4, declared now so the schema does not churn
+export type MeetingStatus = 'recording' | 'finishing' | 'done' | 'failed';
+
+// Where the words come from: the tab's audio, or the meeting's own live captions
+export type MeetingSource = 'audio' | 'captions';
+
+// Things the user should know while recording
+export type MeetingWarning = 'silence' | 'quota' | 'no_mic' | 'tab_closed' | 'cap' | 'transcription' | 'interrupted';
+
+export interface ActionItem {
+  owner: string;
+  task: string;
+  due: string | null;
+}
+
+// The structured note made when a meeting ends
+export interface MeetingNote {
+  title: string;
+  tldr: string[];
+  decisions: string[];
+  actionItems: ActionItem[];
+  openQuestions: string[];
+  participants: string[];
+}
+
 export interface MeetingRecord {
   id: string;
+  // The thread that holds the note, so the user can ask about the meeting later
   threadId: string | null;
+  tabId: number | null;
+  title: string;
+  platform: string;
+  url: string;
   startedAt: number;
+  endedAt: number | null;
+  status: MeetingStatus;
+  source: MeetingSource;
+  withMic: boolean;
+  // A summary of the meeting so far, refreshed every few minutes while recording
+  rollingSummary: string;
+  // When the rolling summary was last refreshed, and the transcript time it covers up to
+  summaryAt: number;
+  summaryUpTo: number;
+  // Summaries of 15-minute blocks, for meetings too long to summarize in one pass
+  blockSummaries: { from: number; to: number; summary: string }[];
+  note: MeetingNote | null;
+  markdown: string;
+  warnings: MeetingWarning[];
+  // Live captions: the latest remarks, seconds from the start, and how the connection is doing
+  liveCaptions: { t: number; text: string }[];
+  live: 'off' | 'connecting' | 'on' | 'reconnecting';
+  chunksTotal: number;
+  chunksDone: number;
+  error: string | null;
+}
+
+export interface AudioChunk {
+  id: string;
+  meetingId: string;
+  index: number;
+  // Seconds from the start of the recording
+  tStart: number;
+  tEnd: number;
+  mimeType: string;
+  // Base64 audio; cleared once transcribed unless the user keeps audio
+  data: string | null;
+  status: 'pending' | 'done' | 'failed';
+  attempts: number;
+  createdAt: number;
+  // Written when the recording stopped: nothing follows it
+  final: boolean;
 }
 
 export interface TranscriptSegment {
   id: string;
   meetingId: string;
+  // Seconds from the start of the recording
   tStart: number;
+  tEnd: number;
+  speaker: string;
+  text: string;
+  chunkIndex: number;
 }
 
 export interface KnowledgeItem {
@@ -80,6 +152,7 @@ export class AviCopilotDb extends Dexie {
   threads!: Table<ThreadRecord, string>;
   messages!: Table<ThreadMessage, string>;
   meetings!: Table<MeetingRecord, string>;
+  audioChunks!: Table<AudioChunk, string>;
   segments!: Table<TranscriptSegment, string>;
   kbItems!: Table<KnowledgeItem, string>;
   kbChunks!: Table<KnowledgeChunk, string>;
@@ -94,6 +167,10 @@ export class AviCopilotDb extends Dexie {
       segments: 'id, meetingId, [meetingId+tStart]',
       kbItems: 'id, sourceType, sourceId, updatedAt',
       kbChunks: 'id, itemId',
+    });
+    this.version(2).stores({
+      meetings: 'id, threadId, startedAt, status',
+      audioChunks: 'id, meetingId, [meetingId+index], status',
     });
   }
 }

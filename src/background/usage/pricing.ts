@@ -27,6 +27,10 @@ export const MODEL_PRICES: ModelPrice[] = [
   { model: 'gemini-3.5-flash-lite', input: 0.3, output: 2.5 },
 ];
 
+// Live API audio is billed by the minute (same source, read 2026-10-03). Replies are suppressed, so
+// streamed input is the whole cost of live captions.
+export const LIVE_AUDIO_USD_PER_MINUTE = 0.005;
+
 /**
  * Finds the price of a model on a given day.
  *

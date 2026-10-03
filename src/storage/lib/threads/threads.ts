@@ -42,6 +42,7 @@ export function newThread(fields: Partial<ThreadRecord> = {}): ThreadRecord {
     memory: '',
     memoryUpToSeq: 0,
     forkedFrom: null,
+    meetingId: null,
     ...fields,
   };
 }

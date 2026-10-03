@@ -1,22 +1,73 @@
 import 'webextension-polyfill';
-import { llmProviderStore } from '@extension/storage';
+import { llmProviderStore, meetingStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
 import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
+import { MeetingManager } from './meetings/manager';
 
 const logger = createLogger('background');
 
 // Every run belongs to a thread; the manager runs several at once, each on its own tabs
 const threads = new ThreadManager();
+const meetings = new MeetingManager();
 const SIDE_PANEL_URL = chrome.runtime.getURL(
   (chrome.runtime.getManifest() as { side_panel?: { default_path?: string } }).side_panel?.default_path ??
     'sidepanel.html',
 );
 
-// Setup side panel behavior
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(error => console.error(error));
+// The toolbar button opens the side panel itself rather than through openPanelOnActionClick:
+// a click handled here counts as invoking the extension on the tab, which is what lets the panel
+// record that tab's audio for meeting notes
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(error => console.error(error));
+chrome.action.onClicked.addListener(tab => {
+  if (tab.windowId !== undefined) {
+    chrome.sidePanel
+      .open({ windowId: tab.windowId })
+      .catch(error => logger.error('Could not open the side panel', error));
+  }
+});
+
+// The keyboard shortcut also invokes the extension on the tab, so notes start there directly
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command !== 'toggle-meeting-notes' || tab?.id === undefined) {
+    return;
+  }
+  try {
+    const recording = (await meetingStore.active()).find(meeting => meeting.status === 'recording');
+    if (recording) await meetings.stop(recording.id);
+    else await meetings.start({ tabId: tab.id });
+  } catch (error) {
+    logger.error('Meeting shortcut failed', error);
+  }
+});
+
+// Messages from the recorder in the offscreen document, and from the caption reader in a meeting page
+chrome.runtime.onMessage.addListener(message => {
+  const meetingId = typeof message?.meetingId === 'string' ? message.meetingId : null;
+  if (!meetingId) return;
+  switch (message.type) {
+    case 'meeting_chunk':
+      meetings.onChunk(meetingId);
+      break;
+    case 'meeting_silence':
+      void meetings.onSilence(meetingId, message.silent === true);
+      break;
+    case 'meeting_source_ended':
+      void meetings.onSourceEnded(meetingId);
+      break;
+    case 'meeting_captions':
+      if (Array.isArray(message.lines)) void meetings.onCaptions(meetingId, message.lines);
+      break;
+    case 'meeting_live_usage':
+      if (typeof message.seconds === 'number') void meetings.onLiveUsage(meetingId, message.seconds);
+      break;
+    case 'meeting_recorder_error':
+      logger.error('Recorder error', message.error);
+      break;
+  }
+});
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (tabId && changeInfo.status === 'complete' && tab.url?.startsWith('http')) {
@@ -34,10 +85,12 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
 
 chrome.tabs.onRemoved.addListener(tabId => {
   void threads.onTabRemoved(tabId);
+  void meetings.onTabRemoved(tabId);
 });
 
-// A restarted service worker picks up the threads that were running
+// A restarted service worker picks up the threads and meetings that were running
 void threads.recover().catch(error => logger.error('Failed to recover threads', error));
+void meetings.recover().catch(error => logger.error('Failed to recover meetings', error));
 
 logger.info('background loaded');
 
@@ -98,6 +151,28 @@ chrome.runtime.onConnect.addListener(port => {
 
         case 'thread_continue':
           if (threadId) await threads.continueThread(threadId, message.windowId);
+          return;
+
+        case 'meeting_start': {
+          const meetingId = await meetings.start({ windowId: message.windowId, withMic: message.withMic });
+          return port.postMessage({ type: 'meeting_started', clientId: message.clientId, meetingId });
+        }
+
+        case 'meeting_stop':
+          if (typeof message.meetingId === 'string') await meetings.stop(message.meetingId);
+          return;
+
+        case 'meeting_ask': {
+          const answer = await meetings.ask(String(message.meetingId), String(message.question ?? ''));
+          return port.postMessage({ type: 'meeting_answer', clientId: message.clientId, answer });
+        }
+
+        case 'meeting_summarize':
+          if (typeof message.meetingId === 'string') await meetings.summarizeNow(message.meetingId);
+          return;
+
+        case 'meeting_retry':
+          if (typeof message.meetingId === 'string') await meetings.retry(message.meetingId);
           return;
 
         case 'thread_delete':

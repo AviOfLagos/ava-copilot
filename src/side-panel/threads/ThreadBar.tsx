@@ -7,13 +7,15 @@ interface ThreadBarProps {
   thread: ThreadRecord;
   onRebind: () => void;
   onContinue: () => void;
+  // Opens the notes of the meeting this thread was made for
+  onOpenMeeting?: () => void;
   isDarkMode?: boolean;
 }
 
 /**
  * What a thread is attached to and runs on: its tabs, its model, and the error that stopped it.
  */
-export default function ThreadBar({ thread, onRebind, onContinue, isDarkMode = false }: ThreadBarProps) {
+export default function ThreadBar({ thread, onRebind, onContinue, onOpenMeeting, isDarkMode = false }: ThreadBarProps) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [models, setModels] = useState<{ value: string; label: string }[]>([]);
   const idle = thread.status === 'idle' || thread.status === 'error';
@@ -57,6 +59,11 @@ export default function ThreadBar({ thread, onRebind, onContinue, isDarkMode = f
   return (
     <div
       className={`space-y-1 border-b px-3 py-2 text-xs ${isDarkMode ? 'border-sky-900 text-gray-300' : 'border-sky-100 text-gray-700'}`}>
+      {onOpenMeeting && (
+        <button type="button" onClick={onOpenMeeting} className="font-medium text-sky-600 underline hover:text-sky-700">
+          {t('meeting_openNotes')}
+        </button>
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate" title={tabTitle ?? undefined}>
           {tabTitle !== null

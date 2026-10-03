@@ -139,18 +139,40 @@ Known gaps:
 - Runs resume only within 10 minutes of the interruption, by design.
 - Thread messages are kept forever; retention and export come with M4.
 
-### M3 — Meeting notes (L)
+### M3 — Meeting notes (L) — built 2026-10-03
 
-- [ ] Offscreen document, `tabCapture` started from the button click, audio routed back to the speakers
-- [ ] Optional mic, mixed in with WebAudio
-- [ ] Chunker (30 s, 2 s overlap) with a queue persisted to IndexedDB, so a network drop never loses audio
-- [ ] Transcriber built on the existing speech-to-text service
-- [ ] Rolling summary every 2–3 min, hierarchical past 2 h, structured final note
-- [ ] Caption-scraping fallback for Meet and Zoom Web
-- [ ] First-run consent modal, recording badge, silence warning, storage quota warning
-- [ ] Export: Markdown and clipboard
+- [x] Offscreen recorder (`src/offscreen`): tab audio played back to the speakers, optional mic mixed in, 16 kHz mono PCM through an AudioWorklet
+- [x] Chunks of 30 s with 2 s overlap (the first is 8 s, so words show quickly), written as WAV straight into IndexedDB before anything else happens: a network drop or a worker restart loses nothing
+- [x] Transcriber: the speech-to-text model setting, else Gemini Flash. Sentences that cross a chunk boundary are stitched, so none is repeated or cut.
+- [x] Rolling summary every 2.5 min; 15-minute block summaries for long meetings; structured final note (title, TL;DR, decisions, action items with owner and due date, open questions, participants) from the Pro model
+- [x] Note saved with the meeting and posted to a "Meeting – …" thread, so it can be asked about
+- [x] Caption fallback for Meet, Zoom web and Teams when the tab cannot be recorded
+- [x] First-run reminder to tell participants, REC badge on the tab, silence warning after 5 min, storage warning at 80%, daily cost cap holds transcription with the audio kept
+- [x] Export: copy Markdown, download .md
+- [x] Tests: chunker, WAV, stitching and note unit tests; 5 E2E tests in `e2e/meeting.e2e.mjs` (including a worker restart mid-recording); a manual real-speech check in `e2e/manual/meeting-gemini.mjs`
 
-**Exit:** U3, U4 pass. A 1-hour call produces notes within 60 s of Stop.
+**Exit:** U3 and U4 pass with the scripted model, and with real speech through Gemini (a `say` recording: accurate transcript, correct decision, owner, due date and open question). The first words show in under 10 s. A 1-hour meeting is transcribed as it goes, so Stop leaves one chunk and one note call; the 60-second target is not measured on a real hour.
+
+How it works, for whoever continues:
+
+- Chrome records a tab only after the extension is invoked on it. The toolbar button therefore opens the panel from `action.onClicked` (not `openPanelOnActionClick`): that click is the invocation. Alt+Shift+M also works. A tab that was not invoked falls back to its captions, or the panel explains what to click.
+- The recorder lives in the offscreen document and survives the service worker. On restart the manager asks it whether it is still recording and carries on.
+- E2E can press the toolbar button through CDP (`Extensions.triggerAction`, needs a pipe and `--enable-unsafe-extension-debugging`). Fake media flags break tab capture, and headless tabs capture silence.
+
+Live captions and questions (added 2026-10-03):
+
+- Live captions come from the Gemini Live API (`gemini-3.8-live`, `src/offscreen/live.ts`), streamed the same 16 kHz audio. Its models only reply with audio, so the reply is capped at one output token: tested against the real API, that stops the reply while the input transcript still arrives, a whole remark about a second after the speaker pauses. Billed at $0.005 a minute, counted toward the daily cap. Sessions reconnect with a resumption handle. On by default when a Gemini key is set.
+- The chunked transcript stays the record: Live is not used as the transcriber, because its transcript comes per remark, it does not label speakers reliably, and a dropped connection would lose words.
+- Ask about a meeting while it runs or after: answered by Flash from the summary, the transcript and captions newer than the transcript, with times quoted. Questions and answers are kept in the meeting's thread.
+- "Refresh now" on the summary, and the refresh interval in settings.
+- One run of the full suite had the live-captions test fail under load; six runs since passed. Watch it.
+
+Known gaps:
+
+- Speaker labels are per clip, so the same voice can be "Speaker 1" in one chunk and named in the next.
+- The model can occasionally add a word at the end of a clip that was not said.
+- The microphone path is not covered by automated tests (headless Chrome has no microphone).
+- "Saved to the knowledge base" waits for M4; the note is in the meeting and its thread.
 
 ### M4 — Knowledge base (M)
 

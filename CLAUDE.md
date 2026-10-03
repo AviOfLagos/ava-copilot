@@ -23,6 +23,9 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   Several threads run at once, each limited to its bound tabs by `BrowserContext.setBinding`.
 - In E2E tests, `page.waitForFunction` needs `{ polling: 300 }` when the page is a background tab: it gets no
   animation frames.
+- Meeting notes: `src/background/meetings` (manager) and `src/offscreen` (recorder). Chrome only records a tab the
+  extension was invoked on, so the toolbar button opens the panel from `chrome.action.onClicked`; do not switch back to
+  `openPanelOnActionClick`.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 

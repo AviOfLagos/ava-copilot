@@ -1199,5 +1199,197 @@
   },
   "threads_branch": {
     "message": "Branch from here"
+  },
+  "meeting_alreadyRecording": {
+    "message": "A meeting is already being recorded. Stop it first."
+  },
+  "meeting_needsInvoke": {
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Avi Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+  },
+  "meeting_untitled": {
+    "message": "Meeting"
+  },
+  "meeting_threadPrefix": {
+    "message": "Meeting –"
+  },
+  "meeting_noTab": {
+    "message": "No tab to take notes on."
+  },
+  "meeting_nothingTranscribed": {
+    "message": "Nothing was transcribed."
+  },
+  "meeting_take": {
+    "message": "Take meeting notes"
+  },
+  "meeting_recordingBadge": {
+    "message": "REC $1"
+  },
+  "meeting_stop": {
+    "message": "Stop"
+  },
+  "meeting_retry": {
+    "message": "Retry"
+  },
+  "meeting_fromCaptions": {
+    "message": "from the meeting captions"
+  },
+  "meeting_status_recording": {
+    "message": "Recording · $1"
+  },
+  "meeting_status_finishing": {
+    "message": "Writing the notes… ($1 of $2 parts transcribed)"
+  },
+  "meeting_status_failed": {
+    "message": "Could not write the notes: $1"
+  },
+  "meeting_status_done": {
+    "message": "Done · $1 recorded"
+  },
+  "meeting_warning_silence": {
+    "message": "No audio detected for 5 minutes. Recording continues."
+  },
+  "meeting_warning_quota": {
+    "message": "Storage is over 80% full. Delete old meetings or turn off keeping audio."
+  },
+  "meeting_warning_noMic": {
+    "message": "Your microphone is not included, so your own voice is missing. Allow the microphone and start again to include it."
+  },
+  "meeting_warning_tabClosed": {
+    "message": "The meeting tab closed, so the recording stopped."
+  },
+  "meeting_warning_cap": {
+    "message": "The daily cost cap is reached. The audio is kept and transcribed once you raise the cap."
+  },
+  "meeting_warning_transcription": {
+    "message": "Some audio could not be transcribed yet. It is kept and will be tried again."
+  },
+  "meeting_warning_interrupted": {
+    "message": "The recording was interrupted. The notes cover what was recorded before it."
+  },
+  "meeting_note_tldr": {
+    "message": "TL;DR"
+  },
+  "meeting_note_decisions": {
+    "message": "Decisions"
+  },
+  "meeting_note_actions": {
+    "message": "Action items"
+  },
+  "meeting_note_questions": {
+    "message": "Open questions"
+  },
+  "meeting_note_none": {
+    "message": "None"
+  },
+  "meeting_note_due": {
+    "message": "due $1"
+  },
+  "meeting_copy": {
+    "message": "Copy"
+  },
+  "meeting_copied": {
+    "message": "Copied"
+  },
+  "meeting_download": {
+    "message": "Download .md"
+  },
+  "meeting_openThread": {
+    "message": "Ask about it"
+  },
+  "meeting_summarySoFar": {
+    "message": "So far"
+  },
+  "meeting_transcript": {
+    "message": "Transcript"
+  },
+  "meeting_listening": {
+    "message": "Listening… the first words show within about ten seconds."
+  },
+  "meeting_noTranscript": {
+    "message": "No transcript."
+  },
+  "meeting_openNotes": {
+    "message": "Meeting notes"
+  },
+  "meeting_consent_title": {
+    "message": "Tell people you are taking notes"
+  },
+  "meeting_consent_body": {
+    "message": "Avi Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+  },
+  "meeting_consent_mic": {
+    "message": "Include my microphone, so my own voice is in the notes"
+  },
+  "meeting_consent_cancel": {
+    "message": "Cancel"
+  },
+  "meeting_consent_start": {
+    "message": "Start notes"
+  },
+  "meeting_command_toggle": {
+    "message": "Start or stop meeting notes on this tab"
+  },
+  "options_meetings_header": {
+    "message": "Meeting notes"
+  },
+  "options_meetings_includeMic": {
+    "message": "Include my microphone"
+  },
+  "options_meetings_includeMic_desc": {
+    "message": "Mix your own voice into the recording."
+  },
+  "options_meetings_keepAudio": {
+    "message": "Keep the audio"
+  },
+  "options_meetings_keepAudio_desc": {
+    "message": "Off: audio is deleted once it is transcribed. On: it stays with the meeting."
+  },
+  "meeting_notFound": {
+    "message": "That meeting no longer exists."
+  },
+  "meeting_refreshSummary": {
+    "message": "Refresh now"
+  },
+  "meeting_summaryPending": {
+    "message": "The first summary comes once something has been said."
+  },
+  "meeting_live_title": {
+    "message": "Live"
+  },
+  "meeting_live_on": {
+    "message": "captions on"
+  },
+  "meeting_live_connecting": {
+    "message": "connecting…"
+  },
+  "meeting_live_reconnecting": {
+    "message": "reconnecting… the transcript below still has every word"
+  },
+  "meeting_live_off": {
+    "message": "off"
+  },
+  "meeting_ask_title": {
+    "message": "Ask about this meeting"
+  },
+  "meeting_ask_placeholder": {
+    "message": "What did they decide about pricing?"
+  },
+  "meeting_ask_button": {
+    "message": "Ask"
+  },
+  "meeting_asking": {
+    "message": "Thinking…"
+  },
+  "options_meetings_liveCaptions": {
+    "message": "Live captions"
+  },
+  "options_meetings_liveCaptions_desc": {
+    "message": "Instant captions from Gemini Live while recording, about $0.30 an hour. Needs a Gemini key. The full transcript is made either way."
+  },
+  "options_meetings_summaryMinutes": {
+    "message": "Refresh the summary every (minutes)"
+  },
+  "options_meetings_summaryMinutes_desc": {
+    "message": "How often the \"So far\" summary updates while recording."
   }
 }

@@ -8,6 +8,9 @@ import {
   DEFAULT_GENERAL_SETTINGS,
   DEFAULT_GATE_SETTINGS,
   COMMIT_KINDS,
+  DEFAULT_MEETING_SETTINGS,
+  meetingSettingsStore,
+  type MeetingSettingsConfig,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
 
@@ -29,6 +32,7 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
   // The style prompt is edited as a draft and saved on blur, so typing is not overwritten by a store read
   const [stylePromptDraft, setStylePromptDraft] = useState(DEFAULT_GENERAL_SETTINGS.stylePrompt);
   const [gateSettings, setGateSettings] = useState<GateSettingsConfig>(DEFAULT_GATE_SETTINGS);
+  const [meetingSettings, setMeetingSettings] = useState<MeetingSettingsConfig>(DEFAULT_MEETING_SETTINGS);
 
   useEffect(() => {
     // Load initial settings
@@ -37,7 +41,13 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
       setStylePromptDraft(loaded.stylePrompt);
     });
     gateSettingsStore.getSettings().then(setGateSettings);
+    meetingSettingsStore.getSettings().then(setMeetingSettings);
   }, []);
+
+  const updateMeeting = async (changes: Partial<MeetingSettingsConfig>) => {
+    setMeetingSettings(prev => ({ ...prev, ...changes }));
+    await meetingSettingsStore.updateSettings(changes);
+  };
 
   const updateConfirm = async (kind: CommitKind, enabled: boolean) => {
     setGateSettings(prev => ({ confirm: { ...prev.confirm, [kind]: enabled } }));
@@ -344,6 +354,117 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div
+        className={`rounded-lg border ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white'} p-6 text-left shadow-sm`}>
+        <h2 className={`mb-4 text-left text-xl font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+          {t('options_meetings_header')}
+        </h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_meetings_includeMic')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_meetings_includeMic_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex cursor-pointer items-center">
+              <input
+                id="meeting-includeMic"
+                type="checkbox"
+                checked={meetingSettings.includeMic}
+                onChange={e => updateMeeting({ includeMic: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="meeting-includeMic"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{t('options_meetings_includeMic')}</span>
+              </label>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_meetings_liveCaptions')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_meetings_liveCaptions_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex cursor-pointer items-center">
+              <input
+                id="meeting-liveCaptions"
+                type="checkbox"
+                checked={meetingSettings.liveCaptions}
+                onChange={e => updateMeeting({ liveCaptions: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="meeting-liveCaptions"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{t('options_meetings_liveCaptions')}</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_meetings_summaryMinutes')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_meetings_summaryMinutes_desc')}
+              </p>
+            </div>
+            <label htmlFor="meeting-summaryMinutes" className="sr-only">
+              {t('options_meetings_summaryMinutes')}
+            </label>
+            <input
+              id="meeting-summaryMinutes"
+              type="number"
+              min={0.5}
+              max={15}
+              step={0.5}
+              value={meetingSettings.summaryEverySeconds / 60}
+              onChange={e => {
+                const minutes = Number.parseFloat(e.target.value);
+                if (Number.isFinite(minutes) && minutes >= 0.5) {
+                  void updateMeeting({ summaryEverySeconds: Math.round(minutes * 60) });
+                }
+              }}
+              className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_meetings_keepAudio')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_meetings_keepAudio_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex cursor-pointer items-center">
+              <input
+                id="meeting-keepAudio"
+                type="checkbox"
+                checked={meetingSettings.keepAudio}
+                onChange={e => updateMeeting({ keepAudio: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="meeting-keepAudio"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{t('options_meetings_keepAudio')}</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </section>

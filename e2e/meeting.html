@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Weekly sync</title>
+  </head>
+  <body>
+    <h1>Weekly sync</h1>
+    <script>
+      // With ?captions, the page shows live captions the way Zoom web does
+      if (new URLSearchParams(location.search).has('captions')) {
+        const line = document.createElement('div');
+        line.className = 'live-transcription-subtitle__item';
+        line.dataset.speaker = 'Ada';
+        document.body.append(line);
+        let n = 0;
+        // A new caption line every two seconds, the way a speaker's words come in
+        setInterval(() => {
+          n += 1;
+          line.textContent = `Captions line ${n}`;
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>

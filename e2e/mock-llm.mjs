@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,6 +38,26 @@ function textOf(message) {
   if (typeof message.content === 'string') return message.content;
   if (Array.isArray(message.content)) return message.content.map(part => part.text ?? '').join('\n');
   return '';
+}
+
+// The system prompts of the meeting calls, in src/background/meetings/notes.ts
+const MEETING_PROMPTS = [
+  ['qa', 'You answer questions about a meeting'],
+  ['transcribe', 'You transcribe a clip of a meeting recording'],
+  ['rolling', 'You keep a running summary of a live meeting'],
+  ['block', 'Summarize this part of a meeting transcript'],
+  ['note', 'You write the notes of a meeting'],
+];
+
+function textCompletion(request, text) {
+  return {
+    id: 'chatcmpl-mock',
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: request.model,
+    choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+  };
 }
 
 function completion(request, payload) {
@@ -79,15 +100,33 @@ export async function startMockLlm(scenarios) {
     res.setHeader('Access-Control-Allow-Headers', '*');
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
 
-    if (req.method === 'GET' && req.url.startsWith('/fixture.html')) {
+    const page = req.method === 'GET' && /^\/([\w-]+\.html)/.exec(req.url);
+    if (page && fs.existsSync(path.join(here, page[1]))) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(fs.readFileSync(path.join(here, 'fixture.html')));
+      return res.end(fs.readFileSync(path.join(here, page[1])));
     }
 
     if (req.method === 'POST' && req.url.endsWith('/chat/completions')) {
       let body = '';
       for await (const chunk of req) body += chunk;
       const request = JSON.parse(body);
+      const system = textOf(request.messages[0] ?? {});
+
+      // Meeting notes: transcription, summaries and the final note answer from their own script
+      const meetingKind = MEETING_PROMPTS.find(([, marker]) => system.includes(marker))?.[0];
+      if (meetingKind) {
+        if (meetingKind === 'transcribe' && meeting.failTranscriptions > 0) {
+          meeting.failTranscriptions -= 1;
+          res.writeHead(503, { 'Content-Type': 'application/json', 'Retry-After': '1' });
+          return res.end(JSON.stringify({ error: { message: 'scripted outage' } }));
+        }
+        const reply = meetingReply(meetingKind, request);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(
+          JSON.stringify(typeof reply === 'string' ? textCompletion(request, reply) : completion(request, reply)),
+        );
+      }
+
       const run = runFor(request);
       run.requests.push(request.messages.map(textOf).join('\n'));
       // A queued failure answers this call instead of the script, e.g. a 429 to exercise the retry
@@ -96,7 +135,6 @@ export async function startMockLlm(scenarios) {
         res.writeHead(failure.status, { 'Content-Type': 'application/json', ...failure.headers });
         return res.end(JSON.stringify({ error: { message: `scripted ${failure.status}` } }));
       }
-      const system = textOf(request.messages[0] ?? {});
       const isNavigator = system.includes('<system_instructions>');
       let payload;
       try {
@@ -141,6 +179,120 @@ export async function startMockLlm(scenarios) {
     res.writeHead(404).end();
   });
 
+  // What the meeting tests see: every audio clip received, and how many lines were handed out
+  const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0 };
+  const meetingReply = (kind, request) => {
+    if (kind === 'transcribe') {
+      const audio = request.messages
+        .flatMap(m => (Array.isArray(m.content) ? m.content : []))
+        .find(part => part.type === 'input_audio');
+      meeting.clips.push(audio?.input_audio ?? null);
+      meeting.lines += 1;
+      return { segments: [{ start: 0.6, end: 1.4, speaker: 'Ada', text: `Line ${meeting.lines}` }] };
+    }
+    if (kind === 'rolling') {
+      meeting.summaries += 1;
+      return `Summary: ${meeting.lines} lines so far.`;
+    }
+    if (kind === 'block') {
+      return 'Block summary.';
+    }
+    if (kind === 'qa') {
+      const asked = textOf(request.messages[request.messages.length - 1]);
+      const lines = (asked.match(/\] Ada: Line \d+/g) ?? []).length;
+      const captions = (asked.match(/Live words \d+/g) ?? []).length;
+      return `Answer from ${lines} transcript lines and ${captions} live captions.`;
+    }
+    meeting.notes += 1;
+    return {
+      title: 'Weekly sync notes',
+      tldr: ['Stage 2 moves to Friday', 'Ada drafts the launch post', 'Budget unchanged'],
+      decisions: ['Stage 2 deadline is Friday'],
+      actionItems: [{ owner: 'Ada', task: 'Draft the launch post', due: 'Thursday' }],
+      openQuestions: ['Who books the room?'],
+      participants: ['Ada'],
+    };
+  };
+
+  // The Gemini Live API over a WebSocket: a caption for every two seconds of audio received
+  const live = { sessions: [], lines: 0, dropAfter: 0 };
+  server.on('upgrade', (req, socket) => {
+    if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
+    const accept = crypto
+      .createHash('sha1')
+      .update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+      .digest('base64');
+    socket.write(
+      `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+    );
+    const session = {
+      key: new URL(req.url, 'http://mock').searchParams.get('key'),
+      setups: [],
+      mimeTypes: new Set(),
+      audioBytes: 0,
+      captions: 0,
+    };
+    live.sessions.push(session);
+    const send = message => {
+      const data = Buffer.from(JSON.stringify(message));
+      const header =
+        data.length < 126
+          ? Buffer.from([0x81, data.length])
+          : Buffer.from([0x81, 126, data.length >> 8, data.length & 0xff]);
+      socket.write(Buffer.concat([header, data]));
+    };
+    let pending = Buffer.alloc(0);
+    socket.on('error', () => {});
+    socket.on('data', chunk => {
+      pending = Buffer.concat([pending, chunk]);
+      while (pending.length >= 2) {
+        const opcode = pending[0] & 0x0f;
+        const masked = (pending[1] & 0x80) !== 0;
+        let length = pending[1] & 0x7f;
+        let offset = 2;
+        if (length === 126) {
+          if (pending.length < 4) return;
+          length = pending.readUInt16BE(2);
+          offset = 4;
+        } else if (length === 127) {
+          if (pending.length < 10) return;
+          length = Number(pending.readBigUInt64BE(2));
+          offset = 10;
+        }
+        const total = offset + (masked ? 4 : 0) + length;
+        if (pending.length < total) return;
+        const payload = Buffer.from(pending.subarray(total - length, total));
+        if (masked) {
+          const mask = pending.subarray(offset, offset + 4);
+          for (let i = 0; i < payload.length; i++) payload[i] ^= mask[i % 4];
+        }
+        pending = pending.subarray(total);
+        if (opcode === 0x8) return socket.end();
+        if (opcode !== 0x1) continue;
+        const message = JSON.parse(payload.toString());
+        if (message.setup) {
+          session.setups.push(message.setup);
+          send({ setupComplete: {} });
+          send({ sessionResumptionUpdate: { newHandle: `handle-${live.sessions.length}`, resumable: true } });
+        } else if (message.realtimeInput?.audio) {
+          session.mimeTypes.add(message.realtimeInput.audio.mimeType);
+          session.audioBytes += Buffer.from(message.realtimeInput.audio.data, 'base64').length;
+          // Two seconds of 16 kHz 16-bit audio is 64000 bytes
+          while (session.audioBytes >= (session.captions + 1) * 64000) {
+            session.captions += 1;
+            live.lines += 1;
+            send({ serverContent: { inputTranscription: { text: `Live words ${live.lines}` } } });
+            if (live.dropAfter && live.lines === live.dropAfter) {
+              live.dropAfter = 0;
+              // A dropped connection, as on a flaky network
+              return socket.destroy();
+            }
+          }
+        }
+      }
+    });
+  });
+
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   return {
@@ -152,6 +304,8 @@ export async function startMockLlm(scenarios) {
       return runs.get(lastStarted) ?? newRun(null);
     },
     runs,
+    meeting,
+    live,
     start(name) {
       runs.set(name, newRun(name));
       lastStarted = name;

@@ -43,11 +43,20 @@ export async function launchExtension(mock) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'avi-copilot-e2e-'));
   const browser = await puppeteer.launch({
     executablePath: findChrome(),
-    headless: true,
+    // Tab audio capture needs a real window; E2E_HEADED=1 shows one
+    headless: !process.env.E2E_HEADED,
     userDataDir: profile,
     // Tall enough for the whole fixture: the agent is only shown the elements in view
     defaultViewport: { width: 1100, height: 1700 },
-    args: [`--disable-extensions-except=${dist}`, `--load-extension=${dist}`, '--no-first-run'],
+    // A pipe and unsafe extension debugging let tests press the toolbar button (Extensions.triggerAction)
+    pipe: true,
+    args: [
+      `--disable-extensions-except=${dist}`,
+      `--load-extension=${dist}`,
+      '--no-first-run',
+      '--enable-unsafe-extension-debugging',
+      '--autoplay-policy=no-user-gesture-required',
+    ],
   });
 
   // Our service worker is the one whose manifest has a side panel
@@ -95,6 +104,7 @@ export async function launchExtension(mock) {
     },
     /** Writes extension storage directly, e.g. to set up usage or settings for a test. */
     setStorage: items => options.evaluate(items => chrome.storage.local.set(items), items),
+    getStorage: key => options.evaluate(async key => (await chrome.storage.local.get(key))[key], key),
     removeStorage: keys => options.evaluate(keys => chrome.storage.local.remove(keys), keys),
     async close() {
       await browser.close();
@@ -242,6 +252,21 @@ export async function restartServiceWorker(extension, page) {
     await browserSession.connection().session(sessionId).send('Runtime.runIfWaitingForDebugger');
   }
   await browserSession.detach();
+}
+
+/**
+ * Presses the extension's toolbar button on a page's tab, as the user would. That opens the side
+ * panel and lets the extension record the tab. Returns the side panel page.
+ */
+export async function pressToolbarButton(extension, page) {
+  const session = await extension.browser.target().createCDPSession();
+  const { targetInfos } = await session.send('Target.getTargets', { filter: [{ type: 'tab' }] });
+  const tab = targetInfos.find(info => info.url === page.url());
+  if (!tab) throw new Error(`No tab for ${page.url()}`);
+  await session.send('Extensions.triggerAction', { id: new URL(extension.origin).host, targetId: tab.targetId });
+  await session.detach();
+  const panel = await extension.browser.waitForTarget(target => target.url().endsWith('/sidepanel.html'));
+  return panel.asPage();
 }
 
 export { sleep };

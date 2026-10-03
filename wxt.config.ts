@@ -64,8 +64,16 @@ export default defineConfig({
       'debugger',
       'unlimitedStorage',
       'webNavigation',
+      'tabCapture',
+      'offscreen',
     ],
     action: { default_icon: 'icon-32.png' },
+    commands: {
+      'toggle-meeting-notes': {
+        suggested_key: { default: 'Alt+Shift+M' },
+        description: '__MSG_meeting_command_toggle__',
+      },
+    },
     icons: { 128: 'icon-128.png' },
     web_accessible_resources: [
       {
