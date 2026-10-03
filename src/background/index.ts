@@ -6,12 +6,14 @@ import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
+import { VoiceManager } from './voice/manager';
 
 const logger = createLogger('background');
 
 // Every run belongs to a thread; the manager runs several at once, each on its own tabs
 const threads = new ThreadManager();
 const meetings = new MeetingManager();
+const voice = new VoiceManager(threads, meetings);
 const SIDE_PANEL_URL = chrome.runtime.getURL(
   (chrome.runtime.getManifest() as { side_panel?: { default_path?: string } }).side_panel?.default_path ??
     'sidepanel.html',
@@ -41,6 +43,32 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   } catch (error) {
     logger.error('Meeting shortcut failed', error);
   }
+});
+
+// Messages from the voice session in the offscreen document; a tool call is answered
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || typeof message?.type !== 'string' || !message.type.startsWith('voice_')) {
+    return;
+  }
+  switch (message.type) {
+    case 'voice_tool':
+      voice
+        .onTool(String(message.name), message.args ?? {})
+        .then(sendResponse, error =>
+          sendResponse(`The tool failed: ${error instanceof Error ? error.message : error}`),
+        );
+      return true;
+    case 'voice_turn':
+      void voice.onTurn(String(message.heard ?? ''), String(message.said ?? ''));
+      break;
+    case 'voice_status':
+      voice.onStatus(message.status);
+      break;
+    case 'voice_usage':
+      void voice.onUsage(Number(message.inputSeconds) || 0, Number(message.outputSeconds) || 0);
+      break;
+  }
+  return;
 });
 
 // Messages from the recorder in the offscreen document, and from the caption reader in a meeting page
@@ -91,6 +119,7 @@ chrome.tabs.onRemoved.addListener(tabId => {
 // A restarted service worker picks up the threads and meetings that were running
 void threads.recover().catch(error => logger.error('Failed to recover threads', error));
 void meetings.recover().catch(error => logger.error('Failed to recover meetings', error));
+void voice.recover().catch(error => logger.error('Failed to recover voice', error));
 
 logger.info('background loaded');
 
@@ -170,6 +199,14 @@ chrome.runtime.onConnect.addListener(port => {
         case 'meeting_summarize':
           if (typeof message.meetingId === 'string') await meetings.summarizeNow(message.meetingId);
           return;
+
+        case 'voice_start': {
+          const result = await voice.start(message.windowId);
+          return port.postMessage({ type: 'voice_started', ...result });
+        }
+
+        case 'voice_stop':
+          return voice.stop();
 
         case 'meeting_retry':
           if (typeof message.meetingId === 'string') await meetings.retry(message.meetingId);

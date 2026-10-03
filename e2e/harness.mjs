@@ -56,6 +56,8 @@ export async function launchExtension(mock) {
       '--no-first-run',
       '--enable-unsafe-extension-debugging',
       '--autoplay-policy=no-user-gesture-required',
+      // A fake microphone for the voice tests; it breaks tab capture, so only those tests use it
+      ...(process.env.E2E_FAKE_MIC ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] : []),
     ],
   });
 

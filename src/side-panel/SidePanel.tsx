@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
-import { PiPlusBold, PiRecordBold } from 'react-icons/pi';
+import { PiMicrophoneBold, PiPlusBold, PiRecordBold } from 'react-icons/pi';
 import {
   type Message,
   Actors,
@@ -28,6 +28,11 @@ import { useSpeechInput } from './hooks/useSpeechInput';
 import './SidePanel.css';
 
 const PROGRESS = 'Showing progress...';
+const VOICE_LABELS = {
+  connecting: 'voice_status_connecting',
+  listening: 'voice_status_listening',
+  speaking: 'voice_status_speaking',
+} as const;
 const HEARTBEAT_MS = 25_000;
 
 // A popped-out panel opens on the thread named in its address
@@ -37,6 +42,7 @@ type PanelMessage =
   | { type: 'thread_started'; clientId: string; threadId: string }
   | { type: 'meeting_started'; clientId: string; meetingId: string }
   | { type: 'meeting_answer'; clientId: string; answer: string }
+  | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
   | { type: 'speech_to_text_error'; error: string }
@@ -50,6 +56,8 @@ const SidePanel = () => {
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
+  // The spoken conversation, as the offscreen document reports it
+  const [voiceStatus, setVoiceStatus] = useState<'off' | 'connecting' | 'listening' | 'speaking'>('off');
   // A problem to show above the input that belongs to no message, e.g. a send that was refused
   const [banner, setBanner] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -138,6 +146,21 @@ const SidePanel = () => {
         case 'meeting_started':
           setMeetingId(message.meetingId);
           setShowList(false);
+          break;
+        case 'voice_started':
+          if (message.micDenied) {
+            setVoiceStatus('off');
+            setBanner(t('voice_micNeeded'));
+            void chrome.windows.create({
+              url: chrome.runtime.getURL('permission/index.html'),
+              type: 'popup',
+              width: 500,
+              height: 600,
+            });
+          } else if (!message.ok) {
+            setVoiceStatus('off');
+            setBanner(message.error || t('errors_unknown'));
+          }
           break;
         case 'meeting_answer':
           pendingAsksRef.current.get(message.clientId)?.();
@@ -235,6 +258,13 @@ const SidePanel = () => {
     }
   };
 
+  // A thread waiting for a click that is not the one on screen, e.g. a task started by voice
+  const waiting = useLive(() => db.threads.where('status').equals('waiting_confirm').toArray(), [], []);
+  // One card at a time: the thread on screen comes first
+  const elsewhere = thread?.pendingRequest
+    ? undefined
+    : waiting.find(other => other.id !== threadId && other.pendingRequest);
+
   const startNotes = async (includeMic: boolean) => {
     setConsent(null);
     setBanner(null);
@@ -257,6 +287,28 @@ const SidePanel = () => {
     // The first recording shows the reminder to tell participants
     if (!settings.consentShown) setConsent({ includeMic: settings.includeMic });
     else await startNotes(settings.includeMic);
+  };
+
+  // The offscreen document tells every page how the conversation is going
+  useEffect(() => {
+    const onStatus = (message: { type?: string; status?: typeof voiceStatus; error?: string }) => {
+      if (message?.type !== 'voice_status' || !message.status) return;
+      setVoiceStatus(message.status);
+      if (message.error) setBanner(message.error);
+    };
+    chrome.runtime.onMessage.addListener(onStatus);
+    return () => chrome.runtime.onMessage.removeListener(onStatus);
+  }, []);
+
+  const toggleVoice = async () => {
+    setBanner(null);
+    if (voiceStatus !== 'off') {
+      setVoiceStatus('off');
+      post({ type: 'voice_stop' });
+      return;
+    }
+    setVoiceStatus('connecting');
+    post({ type: 'voice_start', windowId: await currentWindowId() });
   };
 
   const handleNewThread = () => {
@@ -360,6 +412,26 @@ const SidePanel = () => {
           </div>
           <div className="header-icons">
             <UsageBadge sessionId={threadId} isDarkMode={isDarkMode} />
+            {voiceStatus === 'off' ? (
+              <button
+                type="button"
+                onClick={() => void toggleVoice()}
+                className={headerButton}
+                aria-label={t('voice_talk')}
+                title={t('voice_talk')}>
+                <PiMicrophoneBold size={20} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void toggleVoice()}
+                className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold text-white ${voiceStatus === 'speaking' ? 'bg-sky-600' : 'bg-emerald-600'}`}
+                aria-label={t('voice_stop')}
+                title={t('voice_stop')}>
+                <span className="inline-block size-2 animate-pulse rounded-full bg-white" />
+                {t(VOICE_LABELS[voiceStatus])}
+              </button>
+            )}
             {recording ? (
               <button
                 type="button"
@@ -412,6 +484,26 @@ const SidePanel = () => {
             </button>
           </div>
         </header>
+
+        {elsewhere?.pendingRequest && (
+          <div className="px-2 pt-2">
+            <p className={`mb-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {t('threads_waitingElsewhere', [elsewhere.title || t('threads_untitled')])}
+            </p>
+            <ConfirmCard
+              request={elsewhere.pendingRequest}
+              onAnswer={approved =>
+                post({
+                  type: 'confirm_action',
+                  threadId: elsewhere.id,
+                  requestId: elsewhere.pendingRequest!.id,
+                  approved,
+                })
+              }
+              isDarkMode={isDarkMode}
+            />
+          </div>
+        )}
 
         {consent ? (
           <ConsentDialog

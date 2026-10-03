@@ -28,6 +28,7 @@ import type { UsageScope } from '../usage/meter';
 import { isOverCap } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE } from '../usage/pricing';
 import { resolveModels } from '../threads/factory';
+import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
 import { CAPTION_SELECTORS, pageHasCaptions, stopWatchingCaptions, watchCaptions } from './captions';
 import {
   BLOCK_SUMMARY_INSTRUCTIONS,
@@ -46,7 +47,6 @@ import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, trans
 
 const logger = createLogger('Meetings');
 
-const OFFSCREEN_URL = 'offscreen.html';
 // Gemini Flash transcribes when no speech-to-text model is set
 const DEFAULT_TRANSCRIBER = 'gemini-3.8-flash';
 // A chunk that failed this many times for a reason other than its audio waits for a retry trigger
@@ -113,7 +113,7 @@ export class MeetingManager {
 
     try {
       if (streamId) {
-        await this.ensureOffscreen();
+        await ensureOffscreen();
         const response = await this.toOffscreen({
           type: 'recorder_start',
           options: {
@@ -160,7 +160,7 @@ export class MeetingManager {
       await this.toOffscreen({ type: 'recorder_stop', meetingId }).catch(error =>
         logger.warning('The recorder did not stop cleanly', error),
       );
-      await chrome.offscreen.closeDocument().catch(() => {});
+      await closeOffscreenIfIdle();
     } else if (meeting.tabId !== null) {
       await chrome.scripting
         .executeScript({ target: { tabId: meeting.tabId }, func: stopWatchingCaptions })
@@ -341,25 +341,14 @@ export class MeetingManager {
     });
   }
 
-  private async ensureOffscreen(): Promise<void> {
-    const open = await chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT] });
-    if (open.length === 0) {
-      await chrome.offscreen.createDocument({
-        url: OFFSCREEN_URL,
-        reasons: [chrome.offscreen.Reason.USER_MEDIA],
-        justification: 'Records the meeting tab and microphone for meeting notes',
-      });
-    }
-  }
-
-  private async toOffscreen(message: Record<string, unknown>): Promise<{
-    ok?: boolean;
-    error?: string;
-    micUsed?: boolean;
-    recording?: boolean;
-    meetingId?: string | null;
-  }> {
-    return chrome.runtime.sendMessage({ target: 'offscreen', ...message });
+  private toOffscreen(message: Record<string, unknown>) {
+    return toOffscreen<{
+      ok?: boolean;
+      error?: string;
+      micUsed?: boolean;
+      recording?: boolean;
+      meetingId?: string | null;
+    }>(message);
   }
 
   private async setBadge(tabId: number, recording: boolean): Promise<void> {

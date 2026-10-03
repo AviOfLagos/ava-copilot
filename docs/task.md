@@ -174,6 +174,19 @@ Known gaps:
 - The microphone path is not covered by automated tests (headless Chrome has no microphone).
 - "Saved to the knowledge base" waits for M4; the note is in the meeting and its thread.
 
+### Voice — talk to the copilot (added 2026-10-03, not in the spec)
+
+- [x] Talk button in the panel: a spoken conversation over the Gemini Live API (`gemini-3.8-live`), held in the offscreen document so it survives the panel closing. Mic in at 16 kHz, the copilot's voice out at 24 kHz; talking over it stops it.
+- [x] Tools: `run_browser_task` (starts a thread on the tab you are on), `ask_meeting`, `get_status`, `stop_tasks`. None can approve anything.
+- [x] Proactive: the copilot says when a task it knows about finishes, fails, or waits for your Confirm click, and when meeting notes are ready.
+- [x] Any thread waiting for a click shows its Confirm card at the top of the panel, whatever you are looking at.
+- [x] The conversation is kept in a "Voice conversation" thread. Billed by the minute ($0.005 in, $0.018 out) against the daily cap.
+- [x] Tests: notice and audio unit tests; 2 E2E tests with a fake microphone and the mock's Live API (a spoken task, and a send that waits for the click)
+
+Checked against the real API (a probe script, not a test): it hears speech, answers aloud, calls `run_browser_task` with a sensible task, and passes on a notice. Not yet tried with a real microphone and speakers.
+
+Rules kept on purpose: it speaks to you, never into a call; a spoken "yes" never confirms, only the click does.
+
 ### M4 — Knowledge base (M)
 
 - [ ] Chunk and embed chats, meetings and saved pages (Gemini embeddings)

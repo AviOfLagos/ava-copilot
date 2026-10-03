@@ -1391,5 +1391,32 @@
   },
   "options_meetings_summaryMinutes_desc": {
     "message": "How often the \"So far\" summary updates while recording."
+  },
+  "voice_needsGemini": {
+    "message": "Talking needs a Gemini key. Add one in Settings."
+  },
+  "voice_threadTitle": {
+    "message": "Voice conversation"
+  },
+  "voice_talk": {
+    "message": "Talk to the copilot"
+  },
+  "voice_stop": {
+    "message": "Stop talking"
+  },
+  "voice_status_connecting": {
+    "message": "Connecting…"
+  },
+  "voice_status_listening": {
+    "message": "Listening"
+  },
+  "voice_status_speaking": {
+    "message": "Speaking"
+  },
+  "voice_micNeeded": {
+    "message": "Allow the microphone in the window that opened, then press Talk again."
+  },
+  "threads_waitingElsewhere": {
+    "message": "From \"$1\":"
   }
 }

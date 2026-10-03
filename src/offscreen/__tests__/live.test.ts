@@ -24,3 +24,11 @@ describe('liveSetup', () => {
     expect(liveSetup('gemini-3.8-live', 'abc').setup.sessionResumption).toEqual({ handle: 'abc' });
   });
 });
+
+describe('voice audio', () => {
+  it('reads the model 16-bit PCM back into samples', async () => {
+    const { pcm16ToFloat } = await import('../voice');
+    const samples = pcm16ToFloat(pcm16Base64(Float32Array.from([0, 0.5, -0.5])));
+    expect(Array.from(samples).map(s => Math.round(s * 100) / 100)).toEqual([0, 0.5, -0.5]);
+  });
+});

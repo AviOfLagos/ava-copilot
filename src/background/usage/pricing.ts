@@ -30,6 +30,8 @@ export const MODEL_PRICES: ModelPrice[] = [
 // Live API audio is billed by the minute (same source, read 2026-10-03). Replies are suppressed, so
 // streamed input is the whole cost of live captions.
 export const LIVE_AUDIO_USD_PER_MINUTE = 0.005;
+// Spoken replies, for the voice conversation
+export const LIVE_AUDIO_OUT_USD_PER_MINUTE = 0.018;
 
 /**
  * Finds the price of a model on a given day.

@@ -215,7 +215,16 @@ export async function startMockLlm(scenarios) {
   };
 
   // The Gemini Live API over a WebSocket: a caption for every two seconds of audio received
-  const live = { sessions: [], lines: 0, dropAfter: 0 };
+  // A voice session (its setup has tools) hears the scripted request once, calls the tool, answers,
+  // and repeats each system notice
+  const live = {
+    sessions: [],
+    lines: 0,
+    dropAfter: 0,
+    voiceRequest: 'Run the scripted scenario voice-task.',
+    notices: [],
+    toolResponses: [],
+  };
   server.on('upgrade', (req, socket) => {
     if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
     const accept = crypto
@@ -272,8 +281,34 @@ export async function startMockLlm(scenarios) {
         const message = JSON.parse(payload.toString());
         if (message.setup) {
           session.setups.push(message.setup);
+          session.voice = Boolean(message.setup.tools);
           send({ setupComplete: {} });
           send({ sessionResumptionUpdate: { newHandle: `handle-${live.sessions.length}`, resumable: true } });
+        } else if (session.voice && message.toolResponse) {
+          live.toolResponses.push(...message.toolResponse.functionResponses);
+          const reply = Buffer.alloc(24000).toString('base64');
+          send({ serverContent: { outputTranscription: { text: 'Started it.' } } });
+          send({
+            serverContent: {
+              modelTurn: { parts: [{ inlineData: { mimeType: 'audio/pcm;rate=24000', data: reply } }] },
+            },
+          });
+          send({ serverContent: { turnComplete: true } });
+        } else if (session.voice && message.clientContent) {
+          live.notices.push(message.clientContent.turns[0].parts[0].text);
+          send({ serverContent: { outputTranscription: { text: 'Heads up.' }, turnComplete: true } });
+        } else if (session.voice && message.realtimeInput?.audio) {
+          session.audioBytes += Buffer.from(message.realtimeInput.audio.data, 'base64').length;
+          // After a second of microphone audio, the user has asked for something
+          if (!session.asked && session.audioBytes >= 32000) {
+            session.asked = true;
+            send({ serverContent: { inputTranscription: { text: live.voiceRequest } } });
+            send({
+              toolCall: {
+                functionCalls: [{ id: 'call-1', name: 'run_browser_task', args: { task: live.voiceRequest } }],
+              },
+            });
+          }
         } else if (message.realtimeInput?.audio) {
           session.mimeTypes.add(message.realtimeInput.audio.mimeType);
           session.audioBytes += Buffer.from(message.realtimeInput.audio.data, 'base64').length;
