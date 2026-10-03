@@ -63,8 +63,16 @@ function completion(request, payload) {
  * @param scenarios - name → list of steps; each step maps the page elements to the navigator's actions
  */
 export async function startMockLlm(scenarios) {
-  // The scenario the next task follows, and how far the navigator got in it
-  const run = { name: null, step: 0, navigatorCalls: [], images: [], errors: [], failures: [] };
+  // Each scenario keeps its own progress, so several threads can follow different scripts at once.
+  // A call belongs to the scenario its task names: "Run the scripted scenario <name>".
+  const runs = new Map();
+  const newRun = name => ({ name, step: 0, navigatorCalls: [], requests: [], images: [], errors: [], failures: [] });
+  let lastStarted = null;
+  const runFor = request => {
+    const text = request.messages.map(textOf).join('\n');
+    const named = [...text.matchAll(/scripted scenario ([\w-]+)/g)].map(match => match[1]).pop();
+    return runs.get(named) ?? runs.get(lastStarted) ?? newRun(null);
+  };
 
   const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -80,6 +88,8 @@ export async function startMockLlm(scenarios) {
       let body = '';
       for await (const chunk of req) body += chunk;
       const request = JSON.parse(body);
+      const run = runFor(request);
+      run.requests.push(request.messages.map(textOf).join('\n'));
       // A queued failure answers this call instead of the script, e.g. a 429 to exercise the retry
       const failure = run.failures.shift();
       if (failure) {
@@ -105,7 +115,7 @@ export async function startMockLlm(scenarios) {
               memory: `step ${run.step}`,
               next_goal: 'next scripted step',
             },
-            action: step(parseElements(state)),
+            action: await step(parseElements(state)),
           };
         } else {
           const done = run.step >= steps.length;
@@ -137,18 +147,18 @@ export async function startMockLlm(scenarios) {
     port,
     baseUrl: `http://127.0.0.1:${port}/v1`,
     fixtureUrl: `http://127.0.0.1:${port}/fixture.html`,
-    run,
+    /** The run of the scenario started last. */
+    get run() {
+      return runs.get(lastStarted) ?? newRun(null);
+    },
+    runs,
     start(name) {
-      run.name = name;
-      run.step = 0;
-      run.navigatorCalls = [];
-      run.images = [];
-      run.errors = [];
-      run.failures = [];
+      runs.set(name, newRun(name));
+      lastStarted = name;
     },
     /** Makes the next model call fail with this HTTP status. */
     failNext(status, headers = {}) {
-      run.failures.push({ status, headers });
+      this.run.failures.push({ status, headers });
     },
     close: () => new Promise(resolve => server.close(resolve)),
   };

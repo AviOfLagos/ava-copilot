@@ -1079,5 +1079,125 @@
   },
   "options_general_dailyCap_desc": {
     "message": "The agent pauses when today's model cost reaches this amount. 0 means no cap."
+  },
+  "threads_busy": {
+    "message": "This thread is already running. Stop it or wait for it to finish."
+  },
+  "threads_tooMany": {
+    "message": "$1 threads are already running. Stop one or wait for one to finish."
+  },
+  "threads_tabInUse": {
+    "message": "Tab is in use by thread \"$1\"."
+  },
+  "threads_tabClosed": {
+    "message": "The tab this thread was working in was closed."
+  },
+  "threads_debuggerClosed": {
+    "message": "The debugging bar was closed on the tab, which stops the agent."
+  },
+  "threads_resumed": {
+    "message": "Resumed."
+  },
+  "threads_interrupted": {
+    "message": "The run was interrupted when the browser background restarted."
+  },
+  "threads_list_title": {
+    "message": "Threads"
+  },
+  "threads_search_placeholder": {
+    "message": "Search threads"
+  },
+  "threads_showArchived": {
+    "message": "Show archived threads"
+  },
+  "threads_showLive": {
+    "message": "Show active threads"
+  },
+  "threads_empty": {
+    "message": "No threads here."
+  },
+  "threads_untitled": {
+    "message": "New thread"
+  },
+  "threads_new": {
+    "message": "New thread"
+  },
+  "threads_popOut": {
+    "message": "Open in its own window"
+  },
+  "threads_stopAll": {
+    "message": "Stop all ($1)"
+  },
+  "threads_action_pin": {
+    "message": "Pin"
+  },
+  "threads_action_unpin": {
+    "message": "Unpin"
+  },
+  "threads_action_rename": {
+    "message": "Rename"
+  },
+  "threads_action_archive": {
+    "message": "Archive"
+  },
+  "threads_action_unarchive": {
+    "message": "Unarchive"
+  },
+  "threads_action_delete": {
+    "message": "Delete"
+  },
+  "threads_action_confirmDelete": {
+    "message": "Delete this thread?"
+  },
+  "threads_action_keep": {
+    "message": "Keep"
+  },
+  "threads_status_idle": {
+    "message": "Idle"
+  },
+  "threads_status_running": {
+    "message": "Running"
+  },
+  "threads_status_waiting": {
+    "message": "Waiting for you"
+  },
+  "threads_status_error": {
+    "message": "Stopped"
+  },
+  "threads_time_now": {
+    "message": "just now"
+  },
+  "threads_time_minutes": {
+    "message": "$1 min ago"
+  },
+  "threads_time_hours": {
+    "message": "$1 h ago"
+  },
+  "threads_bound": {
+    "message": "Works on: $1"
+  },
+  "threads_boundMany": {
+    "message": "Works on: $1 and $2 more"
+  },
+  "threads_notBound": {
+    "message": "Works on the tab you are on when you send."
+  },
+  "threads_useThisTab": {
+    "message": "Use the current tab"
+  },
+  "threads_model_label": {
+    "message": "Model"
+  },
+  "threads_model_default": {
+    "message": "Default models"
+  },
+  "threads_continue": {
+    "message": "Continue"
+  },
+  "threads_reopenContinue": {
+    "message": "Reopen and continue"
+  },
+  "threads_branch": {
+    "message": "Branch from here"
   }
 }

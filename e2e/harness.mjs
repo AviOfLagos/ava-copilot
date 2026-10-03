@@ -119,13 +119,14 @@ export async function openSession(extension, mock, query = '') {
 
   const panelText = async () => (await panel.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
 
-  return {
+  const session = {
     web,
     panel,
     panelErrors,
     panelText,
-    /** Types a task into the panel and sends it. */
+    /** Types a task into the panel and sends it, with this session's page as the active tab. */
     async send(task) {
+      await session.web.bringToFront();
       await panel.evaluate(text => {
         const input = document.querySelector('textarea');
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, text);
@@ -159,12 +160,88 @@ export async function openSession(extension, mock, query = '') {
       throw new Error(`The task did not end. Panel shows: ${await panelText()}`);
     },
     hasCard: () => panel.evaluate(() => document.querySelector('[role="alertdialog"]') !== null),
-    events: () => web.evaluate(() => window.__events),
+    /** Clicks a button in the panel by its visible text or accessible name. */
+    async click(label) {
+      await panel.evaluate(label => {
+        const button = [...document.querySelectorAll('button')].find(b => {
+          const text = b.innerText.trim();
+          return text === label || text.startsWith(`${label}\n`) || b.getAttribute('aria-label') === label;
+        });
+        if (!button) throw new Error(`No button "${label}"`);
+        button.click();
+      }, label);
+    },
+    events: () => session.web.evaluate(() => window.__events),
     async close() {
       await panel.close();
-      await web.close();
+      await session.web.close();
     },
   };
+  return session;
+}
+
+/**
+ * Reads the threads table straight from the extension's IndexedDB, through an extension page.
+ */
+export function readThreads(page) {
+  return page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const all = open.result.transaction('threads').objectStore('threads').getAll();
+          all.onsuccess = () => resolve(all.result);
+          all.onerror = () => reject(all.error);
+        };
+      }),
+  );
+}
+
+/** Waits until a thread whose title contains `text` matches `predicate`, and returns it. */
+export async function waitForThread(page, text, predicate = () => true, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const thread = (await readThreads(page)).find(t => t.title.includes(text) && predicate(t));
+    if (thread) return thread;
+    await sleep(200);
+  }
+  throw new Error(`No thread "${text}" reached the expected state`);
+}
+
+/**
+ * Stops the extension's service worker, as Chrome does after 30 seconds idle, then wakes it the
+ * way any extension event would.
+ */
+export async function restartServiceWorker(extension, page) {
+  const session = await page.createCDPSession();
+  const versions = [];
+  session.on('ServiceWorker.workerVersionUpdated', event => versions.push(...event.versions));
+  await session.send('ServiceWorker.enable');
+  await sleep(300);
+  for (const version of versions.filter(
+    v => v.scriptURL.startsWith(extension.origin) && v.runningStatus === 'running',
+  )) {
+    await session.send('ServiceWorker.stopWorker', { versionId: version.versionId });
+  }
+  await session.detach();
+  await sleep(500);
+  await page.evaluate(() => chrome.runtime.connect({ name: 'wake' }));
+
+  // Puppeteer holds a new worker until a debugger releases it. Chrome itself never does this, so
+  // release it here, or the restarted worker would never run.
+  await sleep(500);
+  const browserSession = await extension.browser.target().createCDPSession();
+  const { targetInfos } = await browserSession.send('Target.getTargets');
+  const worker = targetInfos.find(info => info.type === 'service_worker' && info.url.startsWith(extension.origin));
+  if (worker) {
+    const { sessionId } = await browserSession.send('Target.attachToTarget', {
+      targetId: worker.targetId,
+      flatten: true,
+    });
+    await browserSession.connection().session(sessionId).send('Runtime.runIfWaitingForDebugger');
+  }
+  await browserSession.detach();
 }
 
 export { sleep };

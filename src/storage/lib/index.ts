@@ -2,6 +2,7 @@ export type { BaseStorage } from './base/types';
 export * from './settings';
 export * from './chat';
 export * from './usage';
+export * from './threads';
 export * from './profile';
 export * from './prompt/favorites';
 

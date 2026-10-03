@@ -25,6 +25,7 @@ import type { AgentStepHistory } from './history';
 import type { GeneralSettingsConfig } from '@extension/storage';
 
 import { ensureBudget } from '../usage/budget';
+import { compactIfNeeded } from '../threads/compaction';
 
 const logger = createLogger('Executor');
 
@@ -33,6 +34,8 @@ export interface ExecutorExtraArgs {
   extractorLLM?: ChatModel;
   agentOptions?: Partial<AgentOptions>;
   generalSettings?: GeneralSettingsConfig;
+  // Earlier conversation the task starts with, e.g. the thread it belongs to
+  messageContext?: string;
 }
 
 export class Executor {
@@ -42,6 +45,8 @@ export class Executor {
   private readonly plannerPrompt: PlannerPrompt;
   private readonly navigatorPrompt: NavigatorPrompt;
   private readonly generalSettings: GeneralSettingsConfig | undefined;
+  // Summarizes older steps when a long task nears the model's input limit
+  private readonly summarizer: ChatModel;
   private tasks: string[] = [];
   constructor(
     task: string,
@@ -87,7 +92,12 @@ export class Executor {
 
     this.context = context;
     // Initialize message history
-    this.context.messageManager.initTaskMessages(this.navigatorPrompt.getSystemMessage(), task);
+    this.context.messageManager.initTaskMessages(
+      this.navigatorPrompt.getSystemMessage(),
+      task,
+      extraArgs?.messageContext,
+    );
+    this.summarizer = plannerLLM;
   }
 
   subscribeExecutionEvents(callback: EventCallback): void {
@@ -106,6 +116,11 @@ export class Executor {
    */
   answerConfirmation(requestId: string, approved: boolean): boolean {
     return this.context.confirmGate.answer(requestId, approved);
+  }
+
+  /** The task this executor works on now: the latest follow-up, or the first task. */
+  get currentTask(): string {
+    return this.tasks[this.tasks.length - 1];
   }
 
   /**
@@ -170,6 +185,7 @@ export class Executor {
         if (!(await ensureBudget(this.context))) {
           break;
         }
+        await compactIfNeeded(this.context, this.summarizer);
 
         // Run planner periodically for guidance
         if (this.planner && (context.nSteps % context.options.planningInterval === 0 || navigatorDone)) {

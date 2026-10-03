@@ -18,6 +18,11 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   (`e2e/mock-llm.mjs`). They need Chrome for Testing or Chromium, because branded Chrome ignores `--load-extension`.
 - A function passed to `page.evaluateInPage` or `ElementHandle.evaluate` runs in the page from its source text. It
   must not use imports, helpers or variables from outside itself. See `src/background/gate/probes.ts`.
+- Threads: the background owns all state (`src/background/threads`, Dexie database in `src/storage/lib/threads`).
+  The side panel reads the database with live queries and sends commands over its port; it never runs tasks.
+  Several threads run at once, each limited to its bound tabs by `BrowserContext.setBinding`.
+- In E2E tests, `page.waitForFunction` needs `{ polling: 300 }` when the page is a background tab: it gets no
+  animation frames.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 

@@ -104,8 +104,21 @@ export default class Page {
     }
 
     logger.info('attaching puppeteer', this._tabId);
+    let transport: ExtensionTransport;
+    try {
+      transport = await ExtensionTransport.connectTab(this._tabId);
+    } catch (error) {
+      // A service worker that Chrome restarted leaves its debugger session on the tab. The session
+      // belongs to this extension, so detach it and try once more. Another extension's session stays.
+      if (!String(error).includes('Another debugger is already attached')) {
+        throw error;
+      }
+      logger.info('Detaching a stale debugger session', this._tabId);
+      await chrome.debugger.detach({ tabId: this._tabId }).catch(() => {});
+      transport = await ExtensionTransport.connectTab(this._tabId);
+    }
     const browser = await connect({
-      transport: await ExtensionTransport.connectTab(this._tabId),
+      transport,
       defaultViewport: null,
       protocol: 'cdp' as ProtocolType,
     });

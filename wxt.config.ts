@@ -55,7 +55,16 @@ export default defineConfig({
     name: '__MSG_app_metadata_name__',
     description: '__MSG_app_metadata_description__',
     host_permissions: ['<all_urls>'],
-    permissions: ['storage', 'scripting', 'tabs', 'activeTab', 'debugger', 'unlimitedStorage', 'webNavigation'],
+    permissions: [
+      'storage',
+      'scripting',
+      'tabs',
+      'tabGroups',
+      'activeTab',
+      'debugger',
+      'unlimitedStorage',
+      'webNavigation',
+    ],
     action: { default_icon: 'icon-32.png' },
     icons: { 128: 'icon-128.png' },
     web_accessible_resources: [

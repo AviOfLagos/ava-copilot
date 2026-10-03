@@ -15,6 +15,7 @@ import {
   wrapUserRequest,
   splitUserTextAndAttachments,
   wrapAttachments,
+  USER_REQUEST_TAG_START,
 } from '@src/background/agent/messages/utils';
 
 const logger = createLogger('MessageManager');
@@ -48,6 +49,15 @@ export class MessageManagerSettings {
     if (options.sensitiveData !== undefined) this.sensitiveData = options.sensitiveData;
     if (options.availableFilePaths !== undefined) this.availableFilePaths = options.availableFilePaths;
   }
+}
+
+const HISTORY_START_MARKER = '[Your task history memory starts here]';
+
+// A message that carries a task from the user, wrapped by wrapUserRequest
+function isTaskMessage(message: ModelMessage): boolean {
+  return (
+    message.role === 'user' && typeof message.content === 'string' && message.content.includes(USER_REQUEST_TAG_START)
+  );
 }
 
 export default class MessageManager {
@@ -112,7 +122,7 @@ export default class MessageManager {
     this.addToolMessage('Browser started', toolCallId, 'init');
 
     // Add history start marker
-    const historyStartMessage = userMessage('[Your task history memory starts here]');
+    const historyStartMessage = userMessage(HISTORY_START_MARKER);
     this.addMessageWithTokens(historyStartMessage);
 
     // Add available file paths if provided
@@ -156,6 +166,59 @@ export default class MessageManager {
    */
   public length(): number {
     return this.history.messages.length;
+  }
+
+  public totalTokens(): number {
+    return this.history.totalTokens;
+  }
+
+  public maxInputTokens(): number {
+    return this.settings.maxInputTokens;
+  }
+
+  /**
+   * The part of the history a compaction would replace: the steps between the task history marker and
+   * the last `keepLast` messages. The user's task messages are never in it. The kept tail never starts
+   * with a tool result, so no tool call loses its answer.
+   *
+   * @returns The index where the kept tail starts and the messages before it, or null when there is nothing to replace
+   */
+  public compactableMessages(keepLast: number): { cut: number; messages: ModelMessage[] } | null {
+    const messages = this.history.messages;
+    const marker = messages.findIndex(m => m.message.content === HISTORY_START_MARKER);
+    if (marker === -1) {
+      return null;
+    }
+    let cut = Math.max(marker + 1, messages.length - keepLast);
+    while (cut < messages.length && messages[cut].message.role === 'tool') {
+      cut++;
+    }
+    const replaced = messages.slice(marker + 1, cut).filter(m => !isTaskMessage(m.message));
+    return replaced.length > 0 ? { cut, messages: replaced.map(m => m.message) } : null;
+  }
+
+  /**
+   * Replaces the steps before `cut` (see compactableMessages) with one summary message.
+   * The init messages, the marker and the user's task messages stay where they are.
+   */
+  public compactHistory(summary: string, cut: number): void {
+    const messages = this.history.messages;
+    const marker = messages.findIndex(m => m.message.content === HISTORY_START_MARKER);
+    if (marker === -1 || cut <= marker + 1) {
+      return;
+    }
+    const head = messages.slice(0, marker + 1);
+    const tasks = messages.slice(marker + 1, cut).filter(m => isTaskMessage(m.message));
+    const tail = messages.slice(cut);
+
+    this.history = new MessageHistory();
+    for (const m of [...head, ...tasks]) {
+      this.history.addMessage(m.message, m.metadata);
+    }
+    this.addMessageWithTokens(userMessage(`[Summary of earlier steps in this task]\n${summary}`));
+    for (const m of tail) {
+      this.history.addMessage(m.message, m.metadata);
+    }
   }
 
   /**

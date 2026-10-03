@@ -105,20 +105,39 @@ Known gaps:
 - Prices in `src/background/usage/pricing.ts` were read from Google's pricing page on 2026-10-02 and need updating by hand. A model without a price is counted in tokens only and never trips the cap.
 - The canvas screenshot fallback is tested on the fixture, not on Google Sheets.
 
-### M2 — Threads (L)
+### M2 — Threads (L) — built 2026-10-03
 
-- [ ] Dexie schema: threads, messages, runner state, plus the tables M3 and M4 will need
-- [ ] ThreadManager: a map of thread to executor, each with its own browser context and its own port
-- [ ] Tab and tab-group binding, "tab is in use by thread X" lock, tab-closed error with reopen
-- [ ] Debugger detach cancels only the thread bound to that tab (today it cancels the single global task)
-- [ ] Persisted runner state, resume after worker kill
-- [ ] Concurrency cap, default 3
-- [ ] Sidebar: search, pin, rename, archive, delete, fork from message
-- [ ] Auto-title, auto-summary of old turns past 60% of the model window
-- [ ] Model per thread
-- [ ] Pop-out window
+- [x] Dexie database `avi-copilot`: threads, messages, and empty tables for meetings, transcript segments and the knowledge base
+- [x] ThreadManager in `src/background/threads/manager.ts`: one executor and browser context per running thread, each bound to its own tabs
+- [x] Tab binding: the active tab, or the whole tab group, or the highlighted tabs. Tabs the agent opens join the thread and are grouped. Other tabs are hidden from the model and refused.
+- [x] "Tab is in use by thread X" lock, tab-closed error with "Reopen and continue", debugger bar closed stops only that thread
+- [x] Service worker restart: a run interrupted less than 10 minutes ago resumes on its tabs with a "Resumed." message; an older one is marked interrupted with a Continue button. A pending confirmation is asked again, never replayed.
+- [x] Concurrency cap, default 3, in settings
+- [x] Thread list: search, pin, rename, archive, delete with confirm. Branch from any message.
+- [x] Auto-title from the first message. Thread memory: past ~12k tokens the older turns are summarized into the thread. Inside a running task, past 60% of the input budget the older steps are summarized.
+- [x] Model per thread (or the default agent models)
+- [x] Pop-out window per thread, and a "Stop all" switch
+- [x] Tests: thread store and ThreadManager unit tests; 7 E2E tests in `e2e/threads.e2e.mjs`
 
-**Exit:** U1c, U6, U7, U9 pass. Killing the worker mid-task loses nothing.
+**Exit:** U1c, U6, U7, U9 pass. Killing the worker mid-task loses nothing. U6, U7 and the worker kill are covered by E2E tests; a real Gemini follow-up after a worker restart answered from the stored history. U1c (read one tab, write another) is not tested yet.
+
+How it works, for whoever continues:
+
+- The background owns the record. Every agent event becomes a thread message, an activity line or a pending request in the database (`src/background/threads/transcript.ts`), so the panel is only a view and can close, reopen or pop out at any time.
+- A finished run's executor is kept in memory (up to 5) so a follow-up keeps the model's full history. After a restart, or for an older thread, a new executor starts with the thread transcript as context, framed as history the agent must not act on.
+- Fixed while testing: Chrome keeps a restarted worker's debugger session on the tab, so the resumed run could not attach. `Page.attachPuppeteer` now detaches the stale session, which belongs to this extension, and retries.
+
+Changed from upstream:
+
+- Closing the panel no longer stops the task. Runs keep going and the record is kept; stop them from the panel or with Chrome's debugging bar.
+- The chat history store and replay (`/replay`) are no longer used by the panel, and the debug commands `/state` and `/nohighlight` are gone.
+- `tabGroups` permission added.
+
+Known gaps:
+
+- Navigating a thread's tab activates it, so two threads in the same window take turns being the visible tab.
+- Runs resume only within 10 minutes of the interruption, by design.
+- Thread messages are kept forever; retention and export come with M4.
 
 ### M3 — Meeting notes (L)
 

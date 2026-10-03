@@ -9,12 +9,16 @@ import {
 import Page, { build_initial_state } from './page';
 import { createLogger } from '@src/background/log';
 import { isUrlAllowed } from './util';
+import { TabNotBoundError } from '../threads/binding';
+import type { TabBinding } from '../threads/binding';
 
 const logger = createLogger('BrowserContext');
 export default class BrowserContext {
   private _config: BrowserContextConfig;
   private _currentTabId: number | null = null;
   private _attachedPages: Map<number, Page> = new Map();
+  // The tabs this context may act on; null allows any tab
+  private _binding: TabBinding | null = null;
 
   constructor(config: Partial<BrowserContextConfig>) {
     this._config = { ...DEFAULT_BROWSER_CONTEXT_CONFIG, ...config };
@@ -26,6 +30,28 @@ export default class BrowserContext {
 
   public updateConfig(config: Partial<BrowserContextConfig>): void {
     this._config = { ...this._config, ...config };
+  }
+
+  /**
+   * Limits this context to the tabs of a binding: it lists, switches to and closes only those, and
+   * starts on the first of them.
+   */
+  public setBinding(binding: TabBinding): void {
+    this._binding = binding;
+    this._currentTabId = binding.tabIds[0] ?? null;
+  }
+
+  // A tab may join the binding when it is bound already, or a bound tab opened it
+  private async _allowTab(tabId: number): Promise<void> {
+    if (!this._binding || this._binding.has(tabId)) {
+      return;
+    }
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.openerTabId !== undefined && this._binding.has(tab.openerTabId)) {
+      this._binding.add(tabId);
+      return;
+    }
+    throw new TabNotBoundError(tabId);
   }
 
   public updateCurrentTabId(tabId: number): void {
@@ -90,6 +116,21 @@ export default class BrowserContext {
   }
 
   public async getCurrentPage(): Promise<Page> {
+    // A bound context never wanders to another tab: it goes on in a bound tab, or stops
+    if (!this._currentTabId && this._binding) {
+      for (const tabId of this._binding.tabIds) {
+        const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+        if (tab) {
+          this._currentTabId = tabId;
+          break;
+        }
+        this._binding.remove(tabId);
+      }
+      if (!this._currentTabId) {
+        throw new Error('The tabs bound to this thread are closed');
+      }
+    }
+
     // 1. If _currentTabId not set, query the active tab and attach it
     if (!this._currentTabId) {
       let activeTab: chrome.tabs.Tab;
@@ -131,7 +172,8 @@ export default class BrowserContext {
    * @returns A set of tab IDs.
    */
   public async getAllTabIds(): Promise<Set<number>> {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+    // Every window: a bound tab need not be in the window that last had focus
+    const tabs = await chrome.tabs.query({});
     return new Set(tabs.map(tab => tab.id).filter(id => id !== undefined));
   }
 
@@ -219,6 +261,7 @@ export default class BrowserContext {
 
   public async switchTab(tabId: number): Promise<Page> {
     logger.info('switchTab', tabId);
+    await this._allowTab(tabId);
 
     await chrome.tabs.update(tabId, { active: true });
     await this.waitForTabEvents(tabId, { waitForUpdate: false });
@@ -261,11 +304,12 @@ export default class BrowserContext {
       throw new URLNotAllowedError(`Open tab failed. URL: ${url} is not allowed`);
     }
 
-    // Create the new tab
-    const tab = await chrome.tabs.create({ url, active: true });
+    // Create the new tab, next to the tab this context works in
+    const tab = await chrome.tabs.create({ url, active: true, openerTabId: this._currentTabId ?? undefined });
     if (!tab.id) {
       throw new Error('No tab ID available');
     }
+    this._binding?.add(tab.id);
     // Wait for tab events
     await this.waitForTabEvents(tab.id);
 
@@ -280,6 +324,9 @@ export default class BrowserContext {
   }
 
   public async closeTab(tabId: number): Promise<void> {
+    if (this._binding && !this._binding.has(tabId)) {
+      throw new TabNotBoundError(tabId);
+    }
     await this.detachPage(tabId);
     await chrome.tabs.remove(tabId);
     // update current tab id if needed
@@ -305,6 +352,10 @@ export default class BrowserContext {
     const tabInfos: TabInfo[] = [];
 
     for (const tab of tabs) {
+      // The model only hears of the tabs it may use
+      if (this._binding && tab.id && !this._binding.has(tab.id)) {
+        continue;
+      }
       if (tab.id && tab.url && tab.title) {
         tabInfos.push({
           id: tab.id,

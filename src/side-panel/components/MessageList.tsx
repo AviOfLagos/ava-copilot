@@ -1,13 +1,16 @@
 import type { Message } from '@extension/storage';
 import { ACTOR_PROFILES } from '../types/message';
 import { memo } from 'react';
+import { t } from '@extension/i18n';
 
 interface MessageListProps {
   messages: Message[];
   isDarkMode?: boolean;
+  // Starts a new thread from the conversation up to this message
+  onBranch?: (index: number) => void;
 }
 
-export default memo(function MessageList({ messages, isDarkMode = false }: MessageListProps) {
+export default memo(function MessageList({ messages, isDarkMode = false, onBranch }: MessageListProps) {
   return (
     <div className="max-w-full space-y-4">
       {messages.map((message, index) => (
@@ -16,6 +19,7 @@ export default memo(function MessageList({ messages, isDarkMode = false }: Messa
           message={message}
           isSameActor={index > 0 ? messages[index - 1].actor === message.actor : false}
           isDarkMode={isDarkMode}
+          onBranch={onBranch ? () => onBranch(index) : undefined}
         />
       ))}
     </div>
@@ -26,9 +30,10 @@ interface MessageBlockProps {
   message: Message;
   isSameActor: boolean;
   isDarkMode?: boolean;
+  onBranch?: () => void;
 }
 
-function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlockProps) {
+function MessageBlock({ message, isSameActor, isDarkMode = false, onBranch }: MessageBlockProps) {
   if (!message.actor) {
     console.error('No actor found');
     return <div />;
@@ -38,7 +43,7 @@ function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlock
 
   return (
     <div
-      className={`flex max-w-full gap-3 ${
+      className={`group/message flex max-w-full gap-3 ${
         !isSameActor
           ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
           : ''
@@ -70,7 +75,15 @@ function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlock
             )}
           </div>
           {!isProgress && (
-            <div className={`text-right text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}>
+            <div className={`flex justify-end gap-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}>
+              {onBranch && (
+                <button
+                  type="button"
+                  onClick={onBranch}
+                  className="opacity-0 hover:text-sky-500 focus:opacity-100 group-hover/message:opacity-100">
+                  {t('threads_branch')}
+                </button>
+              )}
               {formatTimestamp(message.timestamp)}
             </div>
           )}

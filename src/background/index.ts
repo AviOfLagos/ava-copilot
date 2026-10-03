@@ -1,29 +1,15 @@
 import 'webextension-polyfill';
-import {
-  agentModelStore,
-  AgentNameEnum,
-  firewallStore,
-  generalSettingsStore,
-  llmProviderStore,
-} from '@extension/storage';
+import { llmProviderStore } from '@extension/storage';
 import { t } from '@extension/i18n';
-import BrowserContext from './browser/context';
-import { Executor } from './agent/executor';
 import { createLogger } from './log';
-import { ExecutionState } from './agent/event/types';
-import { createChatModel } from './llm/providers';
-import type { ChatModel } from './llm/types';
-import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
-import { meterModel } from './usage/meter';
-import type { UsageScope } from './usage/meter';
+import { ThreadManager } from './threads/manager';
 
 const logger = createLogger('background');
 
-const browserContext = new BrowserContext({});
-let currentExecutor: Executor | null = null;
-let currentPort: chrome.runtime.Port | null = null;
+// Every run belongs to a thread; the manager runs several at once, each on its own tabs
+const threads = new ThreadManager();
 const SIDE_PANEL_URL = chrome.runtime.getURL(
   (chrome.runtime.getManifest() as { side_panel?: { default_path?: string } }).side_panel?.default_path ??
     'sidepanel.html',
@@ -38,325 +24,112 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
-// Listen for debugger detached event
-// if canceled_by_user, remove the tab from the browser context
+// The user dismissed Chrome's debugging bar on a tab: stop only the thread working there
 chrome.debugger.onDetach.addListener(async (source, reason) => {
-  console.log('Debugger detached:', source, reason);
-  if (reason === 'canceled_by_user') {
-    if (source.tabId) {
-      currentExecutor?.cancel();
-      await browserContext.cleanup();
-    }
+  logger.info('Debugger detached', source, reason);
+  if (reason === 'canceled_by_user' && source.tabId) {
+    await threads.onDebuggerDetached(source.tabId);
   }
 });
 
-// Cleanup when tab is closed
 chrome.tabs.onRemoved.addListener(tabId => {
-  browserContext.removeAttachedPage(tabId);
+  void threads.onTabRemoved(tabId);
 });
+
+// A restarted service worker picks up the threads that were running
+void threads.recover().catch(error => logger.error('Failed to recover threads', error));
 
 logger.info('background loaded');
 
-// Listen for simple messages (e.g., from options page)
-chrome.runtime.onMessage.addListener(() => {
-  // Handle other message types if needed in the future
-  // Return false if response is not sent asynchronously
-  // return false;
-});
-
-// Setup connection listener for long-lived connections (e.g., side panel)
-chrome.runtime.onConnect.addListener(port => {
-  if (port.name === 'side-panel-connection') {
-    const senderUrl = port.sender?.url;
-    const senderId = port.sender?.id;
-
-    if (!senderUrl || senderId !== chrome.runtime.id || senderUrl !== SIDE_PANEL_URL) {
-      logger.warning('Blocked unauthorized side-panel-connection', senderId, senderUrl);
-      port.disconnect();
-      return;
-    }
-
-    currentPort = port;
-
-    port.onMessage.addListener(async message => {
-      try {
-        switch (message.type) {
-          case 'heartbeat':
-            // Acknowledge heartbeat
-            port.postMessage({ type: 'heartbeat_ack' });
-            break;
-
-          case 'new_task': {
-            if (!message.task) return port.postMessage({ type: 'error', error: t('bg_cmd_newTask_noTask') });
-            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-
-            logger.info('new_task', message.tabId, message.task);
-            currentExecutor = await setupExecutor(message.taskId, message.task, browserContext);
-            subscribeToExecutorEvents(currentExecutor);
-
-            const result = await currentExecutor.execute();
-            logger.info('new_task execution result', message.tabId, result);
-            break;
-          }
-
-          case 'follow_up_task': {
-            if (!message.task) return port.postMessage({ type: 'error', error: t('bg_cmd_followUpTask_noTask') });
-            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-
-            logger.info('follow_up_task', message.tabId, message.task);
-
-            // If executor exists, add follow-up task
-            if (currentExecutor) {
-              currentExecutor.addFollowUpTask(message.task);
-              // Re-subscribe to events in case the previous subscription was cleaned up
-              subscribeToExecutorEvents(currentExecutor);
-              const result = await currentExecutor.execute();
-              logger.info('follow_up_task execution result', message.tabId, result);
-            } else {
-              // executor was cleaned up, can not add follow-up task
-              logger.info('follow_up_task: executor was cleaned up, can not add follow-up task');
-              return port.postMessage({ type: 'error', error: t('bg_cmd_followUpTask_cleaned') });
-            }
-            break;
-          }
-
-          case 'confirm_action': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
-            // Only an explicit true approves. Anything else declines.
-            currentExecutor.answerConfirmation(String(message.requestId), message.approved === true);
-            break;
-          }
-
-          case 'cancel_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
-            await currentExecutor.cancel();
-            break;
-          }
-
-          case 'resume_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_cmd_resumeTask_noTask') });
-            await currentExecutor.resume();
-            return port.postMessage({ type: 'success' });
-          }
-
-          case 'pause_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
-            await currentExecutor.pause();
-            return port.postMessage({ type: 'success' });
-          }
-
-          case 'screenshot': {
-            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-            const page = await browserContext.switchTab(message.tabId);
-            const screenshot = await page.takeScreenshot();
-            logger.info('screenshot', message.tabId, screenshot);
-            return port.postMessage({ type: 'success', screenshot });
-          }
-
-          case 'state': {
-            try {
-              const browserState = await browserContext.getState(true);
-              const elementsText = browserState.elementTree.clickableElementsToString(
-                DEFAULT_AGENT_OPTIONS.includeAttributes,
-              );
-
-              logger.info('state', browserState);
-              logger.info('interactive elements', elementsText);
-              return port.postMessage({ type: 'success', msg: t('bg_cmd_state_printed') });
-            } catch (error) {
-              logger.error('Failed to get state:', error);
-              return port.postMessage({ type: 'error', error: t('bg_cmd_state_failed') });
-            }
-          }
-
-          case 'nohighlight': {
-            const page = await browserContext.getCurrentPage();
-            await page.removeHighlight();
-            return port.postMessage({ type: 'success', msg: t('bg_cmd_nohighlight_ok') });
-          }
-
-          case 'speech_to_text': {
-            try {
-              if (!message.audio) {
-                return port.postMessage({
-                  type: 'speech_to_text_error',
-                  error: t('bg_cmd_stt_noAudioData'),
-                });
-              }
-
-              logger.info('Processing speech-to-text request...');
-
-              // Get all providers for speech-to-text service
-              const providers = await llmProviderStore.getAllProviders();
-
-              // Create speech-to-text service with all providers
-              const speechToTextService = await SpeechToTextService.create(providers);
-
-              // Extract base64 audio data (remove data URL prefix if present)
-              let base64Audio = message.audio;
-              if (base64Audio.startsWith('data:')) {
-                base64Audio = base64Audio.split(',')[1];
-              }
-
-              // Transcribe audio
-              const transcribedText = await speechToTextService.transcribeAudio(base64Audio);
-
-              logger.info('Speech-to-text completed successfully');
-              return port.postMessage({
-                type: 'speech_to_text_result',
-                text: transcribedText,
-              });
-            } catch (error) {
-              logger.error('Speech-to-text failed:', error);
-              return port.postMessage({
-                type: 'speech_to_text_error',
-                error: error instanceof Error ? error.message : t('bg_cmd_stt_failed'),
-              });
-            }
-          }
-
-          case 'replay': {
-            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-            if (!message.taskId) return port.postMessage({ type: 'error', error: t('bg_errors_noTaskId') });
-            if (!message.historySessionId)
-              return port.postMessage({ type: 'error', error: t('bg_cmd_replay_noHistory') });
-            logger.info('replay', message.tabId, message.taskId, message.historySessionId);
-
-            try {
-              // Switch to the specified tab
-              await browserContext.switchTab(message.tabId);
-              // Setup executor with the new taskId and a dummy task description
-              currentExecutor = await setupExecutor(message.taskId, message.task, browserContext);
-              subscribeToExecutorEvents(currentExecutor);
-
-              // Run replayHistory with the history session ID
-              const result = await currentExecutor.replayHistory(message.historySessionId);
-              logger.debug('replay execution result', message.tabId, result);
-            } catch (error) {
-              logger.error('Replay failed:', error);
-              return port.postMessage({
-                type: 'error',
-                error: error instanceof Error ? error.message : t('bg_cmd_replay_failed'),
-              });
-            }
-            break;
-          }
-
-          default:
-            return port.postMessage({ type: 'error', error: t('errors_cmd_unknown', [message.type]) });
-        }
-      } catch (error) {
-        console.error('Error handling port message:', error);
-        port.postMessage({
-          type: 'error',
-          error: error instanceof Error ? error.message : t('errors_unknown'),
-        });
-      }
-    });
-
-    port.onDisconnect.addListener(() => {
-      // this event is also triggered when the side panel is closed, so we need to cancel the task
-      console.log('Side panel disconnected');
-      currentPort = null;
-      currentExecutor?.cancel();
-    });
+// A panel is the side panel page, opened in the side panel or popped out into its own window
+function isPanel(port: chrome.runtime.Port): boolean {
+  const senderUrl = port.sender?.url;
+  if (!senderUrl || port.sender?.id !== chrome.runtime.id) {
+    return false;
   }
-});
-
-async function setupExecutor(taskId: string, task: string, browserContext: BrowserContext) {
-  const providers = await llmProviderStore.getAllProviders();
-  // if no providers, need to display the options page
-  if (Object.keys(providers).length === 0) {
-    throw new Error(t('bg_setup_noApiKeys'));
-  }
-
-  // Clean up any legacy validator settings for backward compatibility
-  await agentModelStore.cleanupLegacyValidatorSettings();
-
-  const agentModels = await agentModelStore.getAllAgentModels();
-  // verify if every provider used in the agent models exists in the providers
-  for (const agentModel of Object.values(agentModels)) {
-    if (!providers[agentModel.provider]) {
-      throw new Error(t('bg_setup_noProvider', [agentModel.provider]));
-    }
-  }
-
-  const navigatorModel = agentModels[AgentNameEnum.Navigator];
-  if (!navigatorModel) {
-    throw new Error(t('bg_setup_noNavigatorModel'));
-  }
-  // Log the provider config being used for the navigator
-  const navigatorProviderConfig = providers[navigatorModel.provider];
-  // Model calls are counted against this chat session, and report retries through the executor once it exists
-  const usageScope: UsageScope = { sessionId: taskId, notify: () => {} };
-  const navigatorLLM = meterModel(createChatModel(navigatorProviderConfig, navigatorModel), usageScope);
-
-  let plannerLLM: ChatModel | null = null;
-  const plannerModel = agentModels[AgentNameEnum.Planner];
-  if (plannerModel) {
-    // Log the provider config being used for the planner
-    const plannerProviderConfig = providers[plannerModel.provider];
-    plannerLLM = meterModel(createChatModel(plannerProviderConfig, plannerModel), usageScope);
-  }
-
-  // Apply firewall settings to browser context
-  const firewall = await firewallStore.getFirewall();
-  if (firewall.enabled) {
-    browserContext.updateConfig({
-      allowedUrls: firewall.allowList,
-      deniedUrls: firewall.denyList,
-    });
-  } else {
-    browserContext.updateConfig({
-      allowedUrls: [],
-      deniedUrls: [],
-    });
-  }
-
-  const generalSettings = await generalSettingsStore.getSettings();
-  browserContext.updateConfig({
-    minimumWaitPageLoadTime: generalSettings.minWaitPageLoad / 1000.0,
-    displayHighlights: generalSettings.displayHighlights,
-  });
-
-  const executor = new Executor(task, taskId, browserContext, navigatorLLM, {
-    plannerLLM: plannerLLM ?? navigatorLLM,
-    agentOptions: {
-      maxSteps: generalSettings.maxSteps,
-      maxFailures: generalSettings.maxFailures,
-      maxActionsPerStep: generalSettings.maxActionsPerStep,
-      useVision: generalSettings.useVision,
-      useVisionForPlanner: true,
-      planningInterval: generalSettings.planningInterval,
-    },
-    generalSettings: generalSettings,
-  });
-  usageScope.notify = message => executor.notify(message);
-
-  return executor;
+  const url = new URL(senderUrl);
+  return `${url.origin}${url.pathname}` === SIDE_PANEL_URL;
 }
 
-// Update subscribeToExecutorEvents to use port
-async function subscribeToExecutorEvents(executor: Executor) {
-  // Clear previous event listeners to prevent multiple subscriptions
-  executor.clearExecutionEvents();
+async function transcribe(audio: string): Promise<string> {
+  const providers = await llmProviderStore.getAllProviders();
+  const speechToTextService = await SpeechToTextService.create(providers);
+  // Remove the data URL prefix if present
+  return speechToTextService.transcribeAudio(audio.startsWith('data:') ? audio.split(',')[1] : audio);
+}
 
-  // Subscribe to new events
-  executor.subscribeExecutionEvents(async event => {
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name !== 'side-panel-connection') {
+    return;
+  }
+  if (!isPanel(port)) {
+    logger.warning('Blocked unauthorized side-panel-connection', port.sender?.id, port.sender?.url);
+    port.disconnect();
+    return;
+  }
+
+  port.onMessage.addListener(async message => {
+    const threadId = typeof message?.threadId === 'string' ? message.threadId : null;
     try {
-      if (currentPort) {
-        currentPort.postMessage(event);
+      switch (message?.type) {
+        case 'heartbeat':
+          return port.postMessage({ type: 'heartbeat_ack' });
+
+        case 'thread_send': {
+          const id = await threads.send({ threadId, text: String(message.text ?? ''), windowId: message.windowId });
+          return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
+        }
+
+        case 'thread_cancel':
+          if (threadId) await threads.cancel(threadId);
+          return;
+
+        case 'thread_cancel_all':
+          return threads.cancelAll();
+
+        case 'confirm_action':
+          // Only an explicit true approves. Anything else declines.
+          if (threadId) await threads.answer(threadId, String(message.requestId), message.approved === true);
+          return;
+
+        case 'thread_rebind':
+          if (threadId) await threads.rebind(threadId, message.windowId);
+          return;
+
+        case 'thread_continue':
+          if (threadId) await threads.continueThread(threadId, message.windowId);
+          return;
+
+        case 'thread_delete':
+          if (threadId) await threads.remove(threadId);
+          return;
+
+        case 'speech_to_text': {
+          if (!message.audio) {
+            return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
+          }
+          try {
+            return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio) });
+          } catch (error) {
+            logger.error('Speech-to-text failed:', error);
+            return port.postMessage({
+              type: 'speech_to_text_error',
+              error: error instanceof Error ? error.message : t('bg_cmd_stt_failed'),
+            });
+          }
+        }
+
+        default:
+          return port.postMessage({ type: 'error', threadId, error: t('errors_cmd_unknown', [String(message?.type)]) });
       }
     } catch (error) {
-      logger.error('Failed to send message to side panel:', error);
-    }
-
-    if (
-      event.state === ExecutionState.TASK_OK ||
-      event.state === ExecutionState.TASK_FAIL ||
-      event.state === ExecutionState.TASK_CANCEL
-    ) {
-      await currentExecutor?.cleanup();
+      logger.error('Error handling panel message:', error);
+      port.postMessage({
+        type: 'error',
+        threadId,
+        clientId: message?.clientId,
+        error: error instanceof Error ? error.message : t('errors_unknown'),
+      });
     }
   });
-}
+});

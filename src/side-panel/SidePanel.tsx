@@ -1,83 +1,83 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { FiSettings } from 'react-icons/fi';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
 import { PiPlusBold } from 'react-icons/pi';
-import { GrHistory } from 'react-icons/gr';
 import {
   type Message,
-  type ConfirmRequest,
   Actors,
   AgentNameEnum,
   ProviderTypeEnum,
-  chatHistoryStore,
   agentModelStore,
-  generalSettingsStore,
+  db,
   llmProviderStore,
+  threadStore,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
-import ChatHistoryList from './components/ChatHistoryList';
 import ConfirmCard from './components/ConfirmCard';
 import UsageBadge from './components/UsageBadge';
 import BookmarkList from './components/BookmarkList';
-import { EventType, type AgentEvent, ExecutionState } from './types/event';
+import ThreadList from './threads/ThreadList';
+import ThreadBar from './threads/ThreadBar';
+import { useLive } from './hooks/useLive';
+import { useSpeechInput } from './hooks/useSpeechInput';
 import './SidePanel.css';
 
-// Declare chrome API types
-declare global {
-  interface Window {
-    chrome: typeof chrome;
-  }
-}
+const PROGRESS = 'Showing progress...';
+const HEARTBEAT_MS = 25_000;
+
+// A popped-out panel opens on the thread named in its address
+const threadFromUrl = () => new URLSearchParams(location.search).get('thread');
+
+type PanelMessage =
+  | { type: 'thread_started'; clientId: string; threadId: string }
+  | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
+  | { type: 'speech_to_text_result'; text: string }
+  | { type: 'speech_to_text_error'; error: string }
+  | { type: 'heartbeat_ack' };
 
 const SidePanel = () => {
-  const progressMessage = 'Showing progress...';
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputEnabled, setInputEnabled] = useState(true);
-  const [showStopButton, setShowStopButton] = useState(false);
-  // The request the agent waits on: an action to approve, or a step to do on the page
-  const [pendingConfirm, setPendingConfirm] = useState<ConfirmRequest | null>(null);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
-  const [chatSessions, setChatSessions] = useState<Array<{ id: string; title: string; createdAt: number }>>([]);
-  const [isFollowUpMode, setIsFollowUpMode] = useState(false);
-  const [isHistoricalSession, setIsHistoricalSession] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
+  const [showList, setShowList] = useState(false);
+  // A problem to show above the input that belongs to no message, e.g. a send that was refused
+  const [banner, setBanner] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const [favoritePrompts, setFavoritePrompts] = useState<FavoritePrompt[]>([]);
-  const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null); // null = loading, false = no models, true = has models
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessingSpeech, setIsProcessingSpeech] = useState(false);
-  const [isReplaying, setIsReplaying] = useState(false);
-  const [replayEnabled, setReplayEnabled] = useState(false);
-  const sessionIdRef = useRef<string | null>(null);
-  const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
-  const heartbeatIntervalRef = useRef<number | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const heartbeatRef = useRef<number | null>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Sends waiting to learn the id of the thread they created
+  const pendingSendsRef = useRef(new Set<string>());
 
-  // Check for dark mode preference
+  const thread = useLive(
+    () => (threadId ? threadStore.get(threadId) : Promise.resolve(undefined)),
+    [threadId],
+    undefined,
+  );
+  const threadMessages = useLive(
+    () => (threadId ? threadStore.messages(threadId) : Promise.resolve([])),
+    [threadId],
+    [],
+  );
+  const activeCount = useLive(() => db.threads.where('status').anyOf('running', 'waiting_confirm').count(), [], 0);
+
+  const isBusy = thread?.status === 'running' || thread?.status === 'waiting_confirm';
+
   useEffect(() => {
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(darkModeMediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    darkModeMediaQuery.addEventListener('change', handleChange);
-    return () => darkModeMediaQuery.removeEventListener('change', handleChange);
+    const query = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDarkMode(query.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
   }, []);
 
-  // Check if models are configured
+  // A task cannot run without a Navigator model whose provider has an API key
   const checkModelConfiguration = useCallback(async () => {
     try {
-      // A task cannot run without a Navigator model whose provider has an API key
       const navigatorModel = await agentModelStore.getAgentModel(AgentNameEnum.Navigator);
       const provider = navigatorModel ? await llmProviderStore.getProvider(navigatorModel.provider) : undefined;
       // Local and custom OpenAI-compatible providers can run without a key
@@ -90,1141 +90,345 @@ const SidePanel = () => {
     }
   }, []);
 
-  // Load general settings to check if replay is enabled
-  const loadGeneralSettings = useCallback(async () => {
-    try {
-      const settings = await generalSettingsStore.getSettings();
-      setReplayEnabled(settings.replayHistoricalTasks);
-    } catch (error) {
-      console.error('Error loading general settings:', error);
-      setReplayEnabled(false);
-    }
+  useEffect(() => {
+    void checkModelConfiguration();
+    const recheck = () => !document.hidden && void checkModelConfiguration();
+    document.addEventListener('visibilitychange', recheck);
+    window.addEventListener('focus', recheck);
+    return () => {
+      document.removeEventListener('visibilitychange', recheck);
+      window.removeEventListener('focus', recheck);
+    };
+  }, [checkModelConfiguration]);
+
+  useEffect(() => {
+    favoritesStorage
+      .getAllPrompts()
+      .then(setFavoritePrompts)
+      .catch(error => console.error('Failed to load favorite prompts:', error));
   }, []);
 
-  // Check model configuration on mount
-  useEffect(() => {
-    checkModelConfiguration();
-    loadGeneralSettings();
-  }, [checkModelConfiguration, loadGeneralSettings]);
+  const speech = useSpeechInput(
+    useCallback(audio => postRef.current({ type: 'speech_to_text', audio }), []),
+    useCallback((message: string) => setBanner(message), []),
+  );
+  const { setIsProcessingSpeech } = speech;
 
-  // Re-check model configuration when the side panel becomes visible again
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Panel became visible, re-check configuration and settings
-        checkModelConfiguration();
-        loadGeneralSettings();
+  const onPortMessage = useCallback(
+    (message: PanelMessage) => {
+      switch (message.type) {
+        case 'thread_started':
+          if (pendingSendsRef.current.delete(message.clientId)) {
+            setThreadId(message.threadId);
+            setSending(false);
+          }
+          break;
+        case 'error':
+          if (message.clientId) {
+            pendingSendsRef.current.delete(message.clientId);
+            setSending(false);
+          }
+          setBanner(message.error || t('errors_unknown'));
+          break;
+        case 'speech_to_text_result':
+          if (message.text) setInputTextRef.current?.(message.text);
+          setIsProcessingSpeech(false);
+          break;
+        case 'speech_to_text_error':
+          setBanner(message.error || t('chat_stt_recognitionFailed'));
+          setIsProcessingSpeech(false);
+          break;
       }
-    };
+    },
+    [setIsProcessingSpeech],
+  );
 
-    const handleFocus = () => {
-      // Panel gained focus, re-check configuration and settings
-      checkModelConfiguration();
-      loadGeneralSettings();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [checkModelConfiguration, loadGeneralSettings]);
-
-  useEffect(() => {
-    sessionIdRef.current = currentSessionId;
-  }, [currentSessionId]);
-
-  useEffect(() => {
-    isReplayingRef.current = isReplaying;
-  }, [isReplaying]);
-
-  const appendMessage = useCallback((newMessage: Message, sessionId?: string | null) => {
-    // Don't save progress messages
-    const isProgressMessage = newMessage.content === progressMessage;
-
-    setMessages(prev => {
-      const filteredMessages = prev.filter((msg, idx) => !(msg.content === progressMessage && idx === prev.length - 1));
-      return [...filteredMessages, newMessage];
+  // One connection for the life of the panel; it reconnects if the background restarts
+  const connect = useCallback((): chrome.runtime.Port => {
+    if (portRef.current) {
+      return portRef.current;
+    }
+    const port = chrome.runtime.connect({ name: 'side-panel-connection' });
+    port.onMessage.addListener(onPortMessage);
+    port.onDisconnect.addListener(() => {
+      portRef.current = null;
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
     });
-
-    // Use provided sessionId if available, otherwise fall back to sessionIdRef.current
-    const effectiveSessionId = sessionId !== undefined ? sessionId : sessionIdRef.current;
-
-    console.log('sessionId', effectiveSessionId);
-
-    // Save message to storage if we have a session and it's not a progress message
-    if (effectiveSessionId && !isProgressMessage) {
-      chatHistoryStore
-        .addMessage(effectiveSessionId, newMessage)
-        .catch(err => console.error('Failed to save message to history:', err));
-    }
-  }, []);
-
-  const handleTaskState = useCallback(
-    (event: AgentEvent) => {
-      const { actor, state, timestamp, data } = event;
-      const content = data?.details;
-      let skip = true;
-      let displayProgress = false;
-
-      switch (actor) {
-        case Actors.SYSTEM:
-          switch (state) {
-            case ExecutionState.TASK_START:
-              // Reset historical session flag when a new task starts
-              setIsHistoricalSession(false);
-              break;
-            case ExecutionState.TASK_OK:
-              setIsFollowUpMode(true);
-              setInputEnabled(true);
-              setShowStopButton(false);
-              setIsReplaying(false);
-              setPendingConfirm(null);
-              break;
-            case ExecutionState.TASK_FAIL:
-              setIsFollowUpMode(true);
-              setInputEnabled(true);
-              setShowStopButton(false);
-              setIsReplaying(false);
-              setPendingConfirm(null);
-              skip = false;
-              break;
-            case ExecutionState.TASK_CANCEL:
-              setIsFollowUpMode(false);
-              setInputEnabled(true);
-              setShowStopButton(false);
-              setIsReplaying(false);
-              setPendingConfirm(null);
-              skip = false;
-              break;
-            case ExecutionState.TASK_PAUSE:
-              break;
-            case ExecutionState.ACT_NOTICE:
-              skip = false;
-              break;
-            case ExecutionState.TASK_RESUME:
-              break;
-            default:
-              console.error('Invalid task state', state);
-              return;
-          }
-          break;
-        case Actors.USER:
-          break;
-        case Actors.PLANNER:
-          switch (state) {
-            case ExecutionState.STEP_START:
-              displayProgress = true;
-              break;
-            case ExecutionState.STEP_OK:
-              skip = false;
-              break;
-            case ExecutionState.STEP_FAIL:
-              skip = false;
-              break;
-            case ExecutionState.STEP_CANCEL:
-              break;
-            default:
-              console.error('Invalid step state', state);
-              return;
-          }
-          break;
-        case Actors.NAVIGATOR:
-          switch (state) {
-            case ExecutionState.STEP_START:
-              displayProgress = true;
-              break;
-            case ExecutionState.STEP_OK:
-              displayProgress = false;
-              break;
-            case ExecutionState.STEP_FAIL:
-              skip = false;
-              displayProgress = false;
-              break;
-            case ExecutionState.STEP_CANCEL:
-              displayProgress = false;
-              break;
-            case ExecutionState.ACT_START:
-              if (content !== 'cache_content') {
-                // skip to display caching content
-                skip = false;
-              }
-              break;
-            case ExecutionState.ACT_OK:
-              skip = !isReplayingRef.current;
-              break;
-            case ExecutionState.ACT_FAIL:
-              skip = false;
-              break;
-            case ExecutionState.ACT_VERIFY:
-            case ExecutionState.ACT_NOTICE:
-              skip = false;
-              break;
-            case ExecutionState.ACT_CONFIRM:
-              try {
-                const request = JSON.parse(content) as ConfirmRequest;
-                setPendingConfirm(request);
-                appendMessage({
-                  actor,
-                  content: t('gate_waiting', [request.target || request.intent]),
-                  timestamp: timestamp,
-                });
-              } catch (error) {
-                // A request that cannot be shown is never approved; the task waits until it is stopped
-                console.error('Invalid confirm request', error);
-              }
-              return;
-            default:
-              console.error('Invalid action', state);
-              return;
-          }
-          break;
-        case Actors.VALIDATOR:
-          // Handle legacy validator events from historical messages
-          switch (state) {
-            case ExecutionState.STEP_START:
-              displayProgress = true;
-              break;
-            case ExecutionState.STEP_OK:
-              skip = false;
-              break;
-            case ExecutionState.STEP_FAIL:
-              skip = false;
-              break;
-            default:
-              console.error('Invalid validation', state);
-              return;
-          }
-          break;
-        default:
-          console.error('Unknown actor', actor);
-          return;
-      }
-
-      if (!skip) {
-        appendMessage({
-          actor,
-          content: content || '',
-          timestamp: timestamp,
-        });
-      }
-
-      if (displayProgress) {
-        appendMessage({
-          actor,
-          content: progressMessage,
-          timestamp: timestamp,
-        });
-      }
-    },
-    [appendMessage],
-  );
-
-  // Stop heartbeat and close connection
-  const stopConnection = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-    if (portRef.current) {
-      portRef.current.disconnect();
-      portRef.current = null;
-    }
-  }, []);
-
-  // Setup connection management
-  const setupConnection = useCallback(() => {
-    // Only setup if no existing connection
-    if (portRef.current) {
-      return;
-    }
-
-    try {
-      portRef.current = chrome.runtime.connect({ name: 'side-panel-connection' });
-
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      portRef.current.onMessage.addListener((message: any) => {
-        // Add type checking for message
-        if (message && message.type === EventType.EXECUTION) {
-          handleTaskState(message);
-        } else if (message && message.type === 'error') {
-          // Handle error messages from service worker
-          appendMessage({
-            actor: Actors.SYSTEM,
-            content: message.error || t('errors_unknown'),
-            timestamp: Date.now(),
-          });
-          setInputEnabled(true);
-          setShowStopButton(false);
-        } else if (message && message.type === 'speech_to_text_result') {
-          // Handle speech-to-text result
-          if (message.text && setInputTextRef.current) {
-            setInputTextRef.current(message.text);
-          }
-          setIsProcessingSpeech(false);
-        } else if (message && message.type === 'speech_to_text_error') {
-          // Handle speech-to-text error
-          appendMessage({
-            actor: Actors.SYSTEM,
-            content: message.error || t('chat_stt_recognitionFailed'),
-            timestamp: Date.now(),
-          });
-          setIsProcessingSpeech(false);
-        } else if (message && message.type === 'heartbeat_ack') {
-          console.log('Heartbeat acknowledged');
-        }
-      });
-
-      portRef.current.onDisconnect.addListener(() => {
-        const error = chrome.runtime.lastError;
-        console.log('Connection disconnected', error ? `Error: ${error.message}` : '');
+    heartbeatRef.current = window.setInterval(() => {
+      try {
+        portRef.current?.postMessage({ type: 'heartbeat' });
+      } catch {
         portRef.current = null;
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current);
-          heartbeatIntervalRef.current = null;
-        }
-        setInputEnabled(true);
-        setShowStopButton(false);
-      });
-
-      // Setup heartbeat interval
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
       }
+    }, HEARTBEAT_MS);
+    portRef.current = port;
+    return port;
+  }, [onPortMessage]);
 
-      heartbeatIntervalRef.current = window.setInterval(() => {
-        if (portRef.current?.name === 'side-panel-connection') {
-          try {
-            portRef.current.postMessage({ type: 'heartbeat' });
-          } catch (error) {
-            console.error('Heartbeat failed:', error);
-            stopConnection(); // Stop connection if heartbeat fails
-          }
-        } else {
-          stopConnection(); // Stop if port is invalid
-        }
-      }, 25000);
-    } catch (error) {
-      console.error('Failed to establish connection:', error);
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: t('errors_conn_serviceWorker'),
-        timestamp: Date.now(),
-      });
-      // Clear any references since connection failed
-      portRef.current = null;
-    }
-  }, [handleTaskState, appendMessage, stopConnection]);
+  const post = useCallback((message: Record<string, unknown>) => connect().postMessage(message), [connect]);
+  const postRef = useRef(post);
+  postRef.current = post;
 
-  // Add safety check for message sending
-  const sendMessage = useCallback(
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    (message: any) => {
-      if (portRef.current?.name !== 'side-panel-connection') {
-        throw new Error('No valid connection available');
-      }
-      try {
-        portRef.current.postMessage(message);
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        stopConnection(); // Stop connection when message sending fails
-        throw error;
-      }
-    },
-    [stopConnection],
-  );
-
-  // Handle replay command
-  const handleReplay = async (historySessionId: string): Promise<void> => {
-    try {
-      // Check if replay is enabled in settings
-      if (!replayEnabled) {
-        appendMessage({
-          actor: Actors.SYSTEM,
-          content: t('chat_replay_disabled'),
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      // Check if history exists using loadAgentStepHistory
-      const historyData = await chatHistoryStore.loadAgentStepHistory(historySessionId);
-      if (!historyData) {
-        appendMessage({
-          actor: Actors.SYSTEM,
-          content: t('chat_replay_noHistory', historySessionId.substring(0, 20)),
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      // Get current tab ID
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tabId = tabs[0]?.id;
-      if (!tabId) {
-        throw new Error('No active tab found');
-      }
-
-      // Clear messages if we're in a historical session
-      if (isHistoricalSession) {
-        setMessages([]);
-      }
-
-      // Create a new chat session for this replay task
-      const newSession = await chatHistoryStore.createSession(`Replay of ${historySessionId.substring(0, 20)}...`);
-      console.log('newSession for replay', newSession);
-
-      // Store the new session ID in both state and ref
-      const newTaskId = newSession.id;
-      setCurrentSessionId(newTaskId);
-      sessionIdRef.current = newTaskId;
-
-      // Send replay command to background
-      setInputEnabled(false);
-      setShowStopButton(true);
-
-      // Reset follow-up mode and historical session flags
-      setIsFollowUpMode(false);
-      setIsHistoricalSession(false);
-
-      const userMessage = {
-        actor: Actors.USER,
-        content: `/replay ${historySessionId}`,
-        timestamp: Date.now(),
-      };
-
-      // Add the user message to the new session
-      appendMessage(userMessage, sessionIdRef.current);
-
-      // Setup connection if not exists
-      if (!portRef.current) {
-        setupConnection();
-      }
-
-      // Send replay command to background with the task from history
-      portRef.current?.postMessage({
-        type: 'replay',
-        taskId: newTaskId,
-        tabId: tabId,
-        historySessionId: historySessionId,
-        task: historyData.task, // Add the task from history
-      });
-
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: t('chat_replay_starting', historyData.task),
-        timestamp: Date.now(),
-      });
-      setIsReplaying(true);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: t('chat_replay_failed', errorMessage),
-        timestamp: Date.now(),
-      });
-    }
-  };
-
-  // Handle chat commands that start with /
-  const handleCommand = async (command: string): Promise<boolean> => {
-    try {
-      // Setup connection if not exists
-      if (!portRef.current) {
-        setupConnection();
-      }
-
-      // Handle different commands
-      if (command === '/state') {
-        portRef.current?.postMessage({
-          type: 'state',
-        });
-        return true;
-      }
-
-      if (command === '/nohighlight') {
-        portRef.current?.postMessage({
-          type: 'nohighlight',
-        });
-        return true;
-      }
-
-      if (command.startsWith('/replay ')) {
-        // Parse replay command: /replay <historySessionId>
-        // Handle multiple spaces by filtering out empty strings
-        const parts = command.split(' ').filter(part => part.trim() !== '');
-        if (parts.length !== 2) {
-          appendMessage({
-            actor: Actors.SYSTEM,
-            content: t('chat_replay_invalidArgs'),
-            timestamp: Date.now(),
-          });
-          return true;
-        }
-
-        const historySessionId = parts[1];
-        await handleReplay(historySessionId);
-        return true;
-      }
-
-      // Unsupported command
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: t('errors_cmd_unknown', command),
-        timestamp: Date.now(),
-      });
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('Command error', errorMessage);
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: errorMessage,
-        timestamp: Date.now(),
-      });
-      return true;
-    }
-  };
-
-  const handleSendMessage = async (text: string, displayText?: string) => {
-    console.log('handleSendMessage', text);
-
-    // Trim the input text first
-    const trimmedText = text.trim();
-
-    if (!trimmedText) return;
-
-    // Check if the input is a command (starts with /)
-    if (trimmedText.startsWith('/')) {
-      // Process command and return if it was handled
-      const wasHandled = await handleCommand(trimmedText);
-      if (wasHandled) return;
-    }
-
-    // Block sending messages in historical sessions
-    if (isHistoricalSession) {
-      console.log('Cannot send messages in historical sessions');
-      return;
-    }
-
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tabId = tabs[0]?.id;
-      if (!tabId) {
-        throw new Error('No active tab found');
-      }
-
-      setInputEnabled(false);
-      setShowStopButton(true);
-
-      // Create a new chat session for this task if not in follow-up mode
-      if (!isFollowUpMode) {
-        // Use display text for session title if available, otherwise use full text
-        const titleText = displayText || text;
-        const newSession = await chatHistoryStore.createSession(
-          titleText.substring(0, 50) + (titleText.length > 50 ? '...' : ''),
-        );
-        console.log('newSession', newSession);
-
-        // Store the session ID in both state and ref
-        const sessionId = newSession.id;
-        setCurrentSessionId(sessionId);
-        sessionIdRef.current = sessionId;
-      }
-
-      const userMessage = {
-        actor: Actors.USER,
-        content: displayText || text, // Use display text for chat UI, full text for background service
-        timestamp: Date.now(),
-      };
-
-      // Pass the sessionId directly to appendMessage
-      appendMessage(userMessage, sessionIdRef.current);
-
-      // Setup connection if not exists
-      if (!portRef.current) {
-        setupConnection();
-      }
-
-      // Send message using the utility function
-      if (isFollowUpMode) {
-        // Send as follow-up task
-        await sendMessage({
-          type: 'follow_up_task',
-          task: text,
-          taskId: sessionIdRef.current,
-          tabId,
-        });
-        console.log('follow_up_task sent', text, tabId, sessionIdRef.current);
-      } else {
-        // Send as new task
-        await sendMessage({
-          type: 'new_task',
-          task: text,
-          taskId: sessionIdRef.current,
-          tabId,
-        });
-        console.log('new_task sent', text, tabId, sessionIdRef.current);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('Task error', errorMessage);
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: errorMessage,
-        timestamp: Date.now(),
-      });
-      setInputEnabled(true);
-      setShowStopButton(false);
-      stopConnection();
-    }
-  };
-
-  // Sends the user's decision on the pending request to the background
-  const handleConfirmAnswer = (approved: boolean) => {
-    if (!pendingConfirm) {
-      return;
-    }
-    const subject = pendingConfirm.target || pendingConfirm.intent;
-    try {
-      sendMessage({ type: 'confirm_action', requestId: pendingConfirm.id, approved });
-      appendMessage({
-        actor: Actors.USER,
-        content: approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
-        timestamp: Date.now(),
-      });
-    } catch (err) {
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: err instanceof Error ? err.message : String(err),
-        timestamp: Date.now(),
-      });
-    }
-    setPendingConfirm(null);
-  };
-
-  const handleStopTask = async () => {
-    setPendingConfirm(null);
-    try {
-      portRef.current?.postMessage({
-        type: 'cancel_task',
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('cancel_task error', errorMessage);
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: errorMessage,
-        timestamp: Date.now(),
-      });
-    }
-    setInputEnabled(true);
-    setShowStopButton(false);
-  };
-
-  const handleNewChat = () => {
-    // Clear messages and start a new chat
-    setMessages([]);
-    setCurrentSessionId(null);
-    sessionIdRef.current = null;
-    setInputEnabled(true);
-    setShowStopButton(false);
-    setIsFollowUpMode(false);
-    setIsHistoricalSession(false);
-
-    // Disconnect any existing connection
-    stopConnection();
-  };
-
-  const loadChatSessions = useCallback(async () => {
-    try {
-      const sessions = await chatHistoryStore.getSessionsMetadata();
-      setChatSessions(sessions.sort((a, b) => b.createdAt - a.createdAt));
-    } catch (error) {
-      console.error('Failed to load chat sessions:', error);
-    }
-  }, []);
-
-  const handleLoadHistory = async () => {
-    await loadChatSessions();
-    setShowHistory(true);
-  };
-
-  const handleBackToChat = (reset = false) => {
-    setShowHistory(false);
-    if (reset) {
-      setCurrentSessionId(null);
-      setMessages([]);
-      setIsFollowUpMode(false);
-      setIsHistoricalSession(false);
-    }
-  };
-
-  const handleSessionSelect = async (sessionId: string) => {
-    try {
-      const fullSession = await chatHistoryStore.getSession(sessionId);
-      if (fullSession && fullSession.messages.length > 0) {
-        setCurrentSessionId(fullSession.id);
-        setMessages(fullSession.messages);
-        setIsFollowUpMode(false);
-        setIsHistoricalSession(true); // Mark this as a historical session
-        console.log('history session selected', sessionId);
-      }
-      setShowHistory(false);
-    } catch (error) {
-      console.error('Failed to load session:', error);
-    }
-  };
-
-  const handleSessionDelete = async (sessionId: string) => {
-    try {
-      await chatHistoryStore.deleteSession(sessionId);
-      await loadChatSessions();
-      if (sessionId === currentSessionId) {
-        setMessages([]);
-        setCurrentSessionId(null);
-      }
-    } catch (error) {
-      console.error('Failed to delete session:', error);
-    }
-  };
-
-  const handleSessionBookmark = async (sessionId: string) => {
-    try {
-      const fullSession = await chatHistoryStore.getSession(sessionId);
-
-      if (fullSession && fullSession.messages.length > 0) {
-        // Get the session title
-        const sessionTitle = fullSession.title;
-        // Get the first 8 words of the title
-        const title = sessionTitle.split(' ').slice(0, 8).join(' ');
-
-        // Get the first message content (the task)
-        const taskContent = fullSession.messages[0]?.content || '';
-
-        // Add to favorites storage
-        await favoritesStorage.addPrompt(title, taskContent);
-
-        // Update favorites in the UI
-        const prompts = await favoritesStorage.getAllPrompts();
-        setFavoritePrompts(prompts);
-
-        // Return to chat view after pinning
-        handleBackToChat(true);
-      }
-    } catch (error) {
-      console.error('Failed to pin session to favorites:', error);
-    }
-  };
-
-  const handleBookmarkSelect = (content: string) => {
-    if (setInputTextRef.current) {
-      setInputTextRef.current(content);
-    }
-  };
-
-  const handleBookmarkUpdateTitle = async (id: number, title: string) => {
-    try {
-      await favoritesStorage.updatePromptTitle(id, title);
-
-      // Update favorites in the UI
-      const prompts = await favoritesStorage.getAllPrompts();
-      setFavoritePrompts(prompts);
-    } catch (error) {
-      console.error('Failed to update favorite prompt title:', error);
-    }
-  };
-
-  const handleBookmarkDelete = async (id: number) => {
-    try {
-      await favoritesStorage.removePrompt(id);
-
-      // Update favorites in the UI
-      const prompts = await favoritesStorage.getAllPrompts();
-      setFavoritePrompts(prompts);
-    } catch (error) {
-      console.error('Failed to delete favorite prompt:', error);
-    }
-  };
-
-  const handleBookmarkReorder = async (draggedId: number, targetId: number) => {
-    try {
-      // Directly pass IDs to storage function - it now handles the reordering logic
-      await favoritesStorage.reorderPrompts(draggedId, targetId);
-
-      // Fetch the updated list from storage to get the new IDs and reflect the authoritative order
-      const updatedPromptsFromStorage = await favoritesStorage.getAllPrompts();
-      setFavoritePrompts(updatedPromptsFromStorage);
-    } catch (error) {
-      console.error('Failed to reorder favorite prompts:', error);
-    }
-  };
-
-  // Load favorite prompts from storage
   useEffect(() => {
-    const loadFavorites = async () => {
-      try {
-        const prompts = await favoritesStorage.getAllPrompts();
-        setFavoritePrompts(prompts);
-      } catch (error) {
-        console.error('Failed to load favorite prompts:', error);
-      }
-    };
-
-    loadFavorites();
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
+    connect();
     return () => {
-      // Stop recording if active
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-      }
-      // Clear recording timer
-      if (recordingTimerRef.current) {
-        clearTimeout(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-      stopConnection();
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      portRef.current?.disconnect();
+      portRef.current = null;
     };
-  }, [stopConnection]);
+  }, [connect]);
 
-  // Scroll to bottom when new messages arrive
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  const currentWindowId = async () => (await chrome.windows.getCurrent()).id;
+
+  const handleSend = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isBusy || sending) return;
+    setBanner(null);
+    const clientId = crypto.randomUUID();
+    if (!threadId) {
+      // A new thread gets its id from the background; until then the input waits
+      pendingSendsRef.current.add(clientId);
+      setSending(true);
+    }
+    try {
+      post({ type: 'thread_send', clientId, threadId, text: trimmed, windowId: await currentWindowId() });
+    } catch (error) {
+      pendingSendsRef.current.delete(clientId);
+      setSending(false);
+      setBanner(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleStop = () => threadId && post({ type: 'thread_cancel', threadId });
+
+  const handleConfirmAnswer = (approved: boolean) => {
+    const request = thread?.pendingRequest;
+    if (request && threadId) {
+      post({ type: 'confirm_action', threadId, requestId: request.id, approved });
+    }
+  };
+
+  const handleNewThread = () => {
+    setThreadId(null);
+    setShowList(false);
+    setBanner(null);
+  };
+
+  const handleSelect = (id: string) => {
+    setThreadId(id);
+    setShowList(false);
+    setBanner(null);
+  };
+
+  const handleDelete = (id: string) => {
+    post({ type: 'thread_delete', threadId: id });
+    if (id === threadId) setThreadId(null);
+  };
+
+  const handleBranch = async (index: number) => {
+    const message = threadMessages[index];
+    if (!threadId || !message) return;
+    const fork = await threadStore.fork(threadId, message.seq);
+    setThreadId(fork.id);
+  };
+
+  const handlePopOut = async () => {
+    const url = chrome.runtime.getURL(`sidepanel.html${threadId ? `?thread=${threadId}` : ''}`);
+    await chrome.windows.create({ url, type: 'popup', width: 440, height: 760 });
+  };
+
+  const messages: Message[] = useMemo(() => {
+    const shown: Message[] = threadMessages.map(message => ({
+      actor: message.actor as Actors,
+      content: message.content,
+      timestamp: message.ts,
+    }));
+    if (thread?.status === 'running' && thread.activity) {
+      shown.push({
+        actor: thread.activity === 'planning' ? Actors.PLANNER : Actors.NAVIGATOR,
+        content: PROGRESS,
+        timestamp: Date.now(),
+      });
+    }
+    return shown;
+  }, [threadMessages, thread?.status, thread?.activity]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length, thread?.pendingRequest]);
 
-  const handleMicClick = async () => {
-    if (isRecording) {
-      // Stop recording
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-      }
-      // Clear the timer
-      if (recordingTimerRef.current) {
-        clearTimeout(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-      setIsRecording(false);
-      return;
-    }
+  const headerButton = `header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`;
 
-    try {
-      // First check if permission is already granted
-      const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-
-      if (permissionStatus.state === 'denied') {
-        appendMessage({
-          actor: Actors.SYSTEM,
-          content: t('chat_stt_microphone_permissionDenied'),
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      // If permission is not granted, open permission page
-      if (permissionStatus.state !== 'granted') {
-        const permissionUrl = chrome.runtime.getURL('permission/index.html');
-
-        // Open permission page in a new window
-        chrome.windows.create(
-          {
-            url: permissionUrl,
-            type: 'popup',
-            width: 500,
-            height: 600,
-          },
-          createdWindow => {
-            if (createdWindow?.id) {
-              // Listen for window close to check permission status
-              chrome.windows.onRemoved.addListener(function onWindowClose(windowId) {
-                if (windowId === createdWindow.id) {
-                  chrome.windows.onRemoved.removeListener(onWindowClose);
-                  // Check permission status after window closes
-                  setTimeout(async () => {
-                    try {
-                      const newPermissionStatus = await navigator.permissions.query({
-                        name: 'microphone' as PermissionName,
-                      });
-                      // Only retry if permission was granted
-                      if (newPermissionStatus.state === 'granted') {
-                        handleMicClick();
-                      }
-                      // If denied or prompt, do nothing - let user manually try again
-                    } catch (error) {
-                      console.error('Failed to check permission status:', error);
-                    }
-                  }, 500);
-                }
-              });
-            }
-          },
-        );
-        return;
-      }
-
-      // Permission granted - proceed with recording
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Clear previous audio chunks
-      audioChunksRef.current = [];
-
-      // Create MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Handle data available event
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      // Handle stop event
-      mediaRecorder.onstop = async () => {
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
-
-        if (audioChunksRef.current.length > 0) {
-          // Create audio blob
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-          // Convert blob to base64
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Audio = reader.result as string;
-
-            // Setup connection if not exists
-            if (!portRef.current) {
-              setupConnection();
-            }
-
-            // Send audio to backend for speech-to-text conversion
-            try {
-              setIsProcessingSpeech(true);
-              portRef.current?.postMessage({
-                type: 'speech_to_text',
-                audio: base64Audio,
-              });
-            } catch (error) {
-              console.error('Failed to send audio for speech-to-text:', error);
-              appendMessage({
-                actor: Actors.SYSTEM,
-                content: t('chat_stt_processingFailed'),
-                timestamp: Date.now(),
-              });
-              setIsRecording(false);
-              setIsProcessingSpeech(false);
-            }
-          };
-          reader.readAsDataURL(audioBlob);
-        }
-      };
-
-      // Set up 2-minute duration limit
-      const maxDuration = 2 * 60 * 1000;
-      recordingTimerRef.current = window.setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-        }
-        setIsRecording(false);
-        setIsProcessingSpeech(true);
-        recordingTimerRef.current = null;
-      }, maxDuration);
-
-      // Start recording
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-
-      let errorMessage = t('chat_stt_microphone_accessFailed');
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage += t('chat_stt_microphone_grantPermission');
-        } else if (error.name === 'NotFoundError') {
-          errorMessage += t('chat_stt_microphone_notFound');
-        } else {
-          errorMessage += error.message;
-        }
-      }
-
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: errorMessage,
-        timestamp: Date.now(),
-      });
-      setIsRecording(false);
-    }
-  };
+  const input = (
+    <div className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
+      {thread?.pendingRequest && (
+        <ConfirmCard request={thread.pendingRequest} onAnswer={handleConfirmAnswer} isDarkMode={isDarkMode} />
+      )}
+      {banner && (
+        <div
+          role="alert"
+          className={`mb-2 rounded px-2 py-1 text-sm ${isDarkMode ? 'bg-red-950 text-red-200' : 'bg-red-50 text-red-700'}`}>
+          {banner}
+        </div>
+      )}
+      <ChatInput
+        onSendMessage={text => void handleSend(text)}
+        onStopTask={handleStop}
+        onMicClick={() => void speech.toggle()}
+        isRecording={speech.isRecording}
+        isProcessingSpeech={speech.isProcessingSpeech}
+        disabled={isBusy || sending}
+        showStopButton={isBusy}
+        setContent={setter => {
+          setInputTextRef.current = setter;
+        }}
+        isDarkMode={isDarkMode}
+      />
+    </div>
+  );
 
   return (
     <div>
       <div
         className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-sky-800' : 'border-[rgb(186,230,253)]'} rounded-2xl`}>
         <header className="header relative">
-          <div className="header-logo">
-            {showHistory ? (
-              <button
-                type="button"
-                onClick={() => handleBackToChat(false)}
-                className={`${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
-                aria-label={t('nav_back_a11y')}>
-                {t('nav_back')}
-              </button>
-            ) : (
-              <img src="/icon-128.png" alt="Extension Logo" className="size-6" />
-            )}
+          <div className="header-logo min-w-0">
+            <button
+              type="button"
+              onClick={() => setShowList(!showList)}
+              className={`${headerButton} flex min-w-0 items-center gap-2`}
+              aria-label={t('threads_list_title')}
+              aria-expanded={showList}>
+              <FiList size={20} className="shrink-0" />
+              <span className={`truncate text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                {showList ? t('threads_list_title') : thread?.title || t('threads_untitled')}
+              </span>
+            </button>
           </div>
           <div className="header-icons">
-            <UsageBadge sessionId={currentSessionId} isDarkMode={isDarkMode} />
-            {!showHistory && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleNewChat}
-                  onKeyDown={e => e.key === 'Enter' && handleNewChat()}
-                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
-                  aria-label={t('nav_newChat_a11y')}
-                  tabIndex={0}>
-                  <PiPlusBold size={20} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLoadHistory}
-                  onKeyDown={e => e.key === 'Enter' && handleLoadHistory()}
-                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
-                  aria-label={t('nav_loadHistory_a11y')}
-                  tabIndex={0}>
-                  <GrHistory size={20} />
-                </button>
-              </>
+            <UsageBadge sessionId={threadId} isDarkMode={isDarkMode} />
+            {activeCount > 1 && (
+              <button
+                type="button"
+                onClick={() => post({ type: 'thread_cancel_all' })}
+                className="rounded bg-red-600 px-2 py-0.5 text-xs text-white">
+                {t('threads_stopAll', [String(activeCount)])}
+              </button>
             )}
             <button
               type="button"
+              onClick={handleNewThread}
+              className={headerButton}
+              aria-label={t('threads_new')}
+              title={t('threads_new')}>
+              <PiPlusBold size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePopOut()}
+              className={headerButton}
+              aria-label={t('threads_popOut')}
+              title={t('threads_popOut')}>
+              <FiExternalLink size={18} />
+            </button>
+            <button
+              type="button"
               onClick={() => chrome.runtime.openOptionsPage()}
-              onKeyDown={e => e.key === 'Enter' && chrome.runtime.openOptionsPage()}
-              className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
-              aria-label={t('nav_settings_a11y')}
-              tabIndex={0}>
+              className={headerButton}
+              aria-label={t('nav_settings_a11y')}>
               <FiSettings size={20} />
             </button>
           </div>
         </header>
-        {showHistory ? (
+
+        {showList ? (
           <div className="flex-1 overflow-hidden">
-            <ChatHistoryList
-              sessions={chatSessions}
-              onSessionSelect={handleSessionSelect}
-              onSessionDelete={handleSessionDelete}
-              onSessionBookmark={handleSessionBookmark}
-              visible={true}
+            <ThreadList
+              activeThreadId={threadId}
+              onSelect={handleSelect}
+              onDelete={handleDelete}
               isDarkMode={isDarkMode}
             />
           </div>
+        ) : hasConfiguredModels === null ? (
+          <div
+            className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
+            <div className="text-center">
+              <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent"></div>
+              <p>{t('status_checkingConfig')}</p>
+            </div>
+          </div>
+        ) : hasConfiguredModels === false ? (
+          <div
+            className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
+            <div className="max-w-md text-center">
+              <img src="/icon-128.png" alt="Avi Copilot Logo" className="mx-auto mb-4 size-12" />
+              <h3 className={`mb-2 text-lg font-semibold ${isDarkMode ? 'text-sky-200' : 'text-sky-700'}`}>
+                {t('welcome_title')}
+              </h3>
+              <p className="mb-4">{t('welcome_instruction')}</p>
+              <button
+                type="button"
+                onClick={() => chrome.runtime.openOptionsPage()}
+                className={`my-4 rounded-lg px-4 py-2 font-medium transition-colors ${
+                  isDarkMode ? 'bg-sky-600 text-white hover:bg-sky-700' : 'bg-sky-500 text-white hover:bg-sky-600'
+                }`}>
+                {t('welcome_openSettings')}
+              </button>
+            </div>
+          </div>
         ) : (
           <>
-            {/* Show loading state while checking model configuration */}
-            {hasConfiguredModels === null && (
-              <div
-                className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
-                <div className="text-center">
-                  <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent"></div>
-                  <p>{t('status_checkingConfig')}</p>
-                </div>
-              </div>
+            {thread && (
+              <ThreadBar
+                thread={thread}
+                onRebind={async () =>
+                  post({ type: 'thread_rebind', threadId: thread.id, windowId: await currentWindowId() })
+                }
+                onContinue={async () =>
+                  post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
+                }
+                isDarkMode={isDarkMode}
+              />
             )}
-
-            {/* Show setup message when no models are configured */}
-            {hasConfiguredModels === false && (
-              <div
-                className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
-                <div className="max-w-md text-center">
-                  <img src="/icon-128.png" alt="Avi Copilot Logo" className="mx-auto mb-4 size-12" />
-                  <h3 className={`mb-2 text-lg font-semibold ${isDarkMode ? 'text-sky-200' : 'text-sky-700'}`}>
-                    {t('welcome_title')}
-                  </h3>
-                  <p className="mb-4">{t('welcome_instruction')}</p>
-                  <button
-                    onClick={() => chrome.runtime.openOptionsPage()}
-                    className={`my-4 rounded-lg px-4 py-2 font-medium transition-colors ${
-                      isDarkMode ? 'bg-sky-600 text-white hover:bg-sky-700' : 'bg-sky-500 text-white hover:bg-sky-600'
-                    }`}>
-                    {t('welcome_openSettings')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Show normal chat interface when models are configured */}
-            {hasConfiguredModels === true && (
+            {messages.length === 0 ? (
               <>
-                {messages.length === 0 && (
-                  <>
-                    <div
-                      className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} mb-2 p-2 shadow-sm backdrop-blur-sm`}>
-                      <ChatInput
-                        onSendMessage={handleSendMessage}
-                        onStopTask={handleStopTask}
-                        onMicClick={handleMicClick}
-                        isRecording={isRecording}
-                        isProcessingSpeech={isProcessingSpeech}
-                        disabled={!inputEnabled || isHistoricalSession}
-                        showStopButton={showStopButton}
-                        setContent={setter => {
-                          setInputTextRef.current = setter;
-                        }}
-                        isDarkMode={isDarkMode}
-                        historicalSessionId={isHistoricalSession && replayEnabled ? currentSessionId : null}
-                        onReplay={handleReplay}
-                      />
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      <BookmarkList
-                        bookmarks={favoritePrompts}
-                        onBookmarkSelect={handleBookmarkSelect}
-                        onBookmarkUpdateTitle={handleBookmarkUpdateTitle}
-                        onBookmarkDelete={handleBookmarkDelete}
-                        onBookmarkReorder={handleBookmarkReorder}
-                        isDarkMode={isDarkMode}
-                      />
-                    </div>
-                  </>
-                )}
-                {messages.length > 0 && (
-                  <div
-                    className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
-                    <MessageList messages={messages} isDarkMode={isDarkMode} />
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-                {messages.length > 0 && (
-                  <div
-                    className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
-                    {pendingConfirm && (
-                      <ConfirmCard request={pendingConfirm} onAnswer={handleConfirmAnswer} isDarkMode={isDarkMode} />
-                    )}
-                    <ChatInput
-                      onSendMessage={handleSendMessage}
-                      onStopTask={handleStopTask}
-                      onMicClick={handleMicClick}
-                      isRecording={isRecording}
-                      isProcessingSpeech={isProcessingSpeech}
-                      disabled={!inputEnabled || isHistoricalSession}
-                      showStopButton={showStopButton}
-                      setContent={setter => {
-                        setInputTextRef.current = setter;
-                      }}
-                      isDarkMode={isDarkMode}
-                      historicalSessionId={isHistoricalSession && replayEnabled ? currentSessionId : null}
-                      onReplay={handleReplay}
-                    />
-                  </div>
-                )}
+                {input}
+                <div className="flex-1 overflow-y-auto">
+                  <BookmarkList
+                    bookmarks={favoritePrompts}
+                    onBookmarkSelect={content => setInputTextRef.current?.(content)}
+                    onBookmarkUpdateTitle={async (id, title) => {
+                      await favoritesStorage.updatePromptTitle(id, title);
+                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                    }}
+                    onBookmarkDelete={async id => {
+                      await favoritesStorage.removePrompt(id);
+                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                    }}
+                    onBookmarkReorder={async (draggedId, targetId) => {
+                      await favoritesStorage.reorderPrompts(draggedId, targetId);
+                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                    }}
+                    isDarkMode={isDarkMode}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
+                  <MessageList
+                    messages={messages}
+                    isDarkMode={isDarkMode}
+                    onBranch={isBusy ? undefined : handleBranch}
+                  />
+                  <div ref={messagesEndRef} />
+                </div>
+                {input}
               </>
             )}
           </>
