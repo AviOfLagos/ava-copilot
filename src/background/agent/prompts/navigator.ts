@@ -8,6 +8,7 @@ import { navigatorSystemPromptTemplate } from './templates/navigator';
 import { buildStyleSection } from './style';
 import { navigatorGateSection } from '@src/background/gate/prompt';
 import { navigatorReaderSection } from '@src/background/reader/reader';
+import { navigatorKnowledgeSection } from '@src/background/kb/action';
 
 const logger = createLogger('agent/prompts/navigator');
 
@@ -24,7 +25,7 @@ export class NavigatorPrompt extends BasePrompt {
     const promptTemplate = navigatorSystemPromptTemplate.replace(
       '</system_instructions>',
       () =>
-        `${navigatorGateSection}${navigatorReaderSection}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
+        `${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
     );
     // Format the template with the maxActionsPerStep
     const formattedPrompt = promptTemplate.replace('{{max_actions}}', this.maxActionsPerStep.toString()).trim();

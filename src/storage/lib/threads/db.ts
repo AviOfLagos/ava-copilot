@@ -136,16 +136,46 @@ export interface TranscriptSegment {
   chunkIndex: number;
 }
 
+export type KnowledgeSourceType = 'thread' | 'meeting' | 'page';
+
+// Where a passage came from, precise enough to open it again
+export type KnowledgeAnchor =
+  | { kind: 'thread'; threadId: string; seq: number }
+  // Seconds from the start of the recording; -1 is the meeting note
+  | { kind: 'meeting'; meetingId: string; t: number }
+  | { kind: 'page'; url: string };
+
 export interface KnowledgeItem {
   id: string;
-  sourceType: string;
+  sourceType: KnowledgeSourceType;
+  // The thread or meeting id, or the page URL
   sourceId: string;
+  title: string;
+  url: string;
+  // When the chat, meeting or saved page happened, for dates in answers and retention
+  sourceDate: number;
+  // The source's own updatedAt when it was last indexed, to know when it changed
+  sourceUpdatedAt: number;
+  createdAt: number;
   updatedAt: number;
+  chunkCount: number;
+  // Chunks still waiting for an embedding; keyword search works without one
+  unembedded: number;
 }
 
 export interface KnowledgeChunk {
   id: string;
   itemId: string;
+  index: number;
+  text: string;
+  // Short place name for a citation, e.g. "12:04" or "message 7"
+  label: string;
+  anchor: KnowledgeAnchor;
+  // A hash of the text, so an unchanged chunk keeps its embedding when its source is indexed again
+  hash: string;
+  // Unit-length embedding, or null until embedded
+  vector: number[] | null;
+  embedModel: string | null;
 }
 
 export class AviCopilotDb extends Dexie {
@@ -171,6 +201,10 @@ export class AviCopilotDb extends Dexie {
     this.version(2).stores({
       meetings: 'id, threadId, startedAt, status',
       audioChunks: 'id, meetingId, [meetingId+index], status',
+    });
+    this.version(3).stores({
+      kbItems: 'id, sourceType, [sourceType+sourceId], updatedAt, sourceDate',
+      kbChunks: 'id, itemId',
     });
   }
 }

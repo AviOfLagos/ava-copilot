@@ -1418,5 +1418,149 @@
   },
   "threads_waitingElsewhere": {
     "message": "From \"$1\":"
+  },
+  "kb_title": {
+    "message": "Knowledge base"
+  },
+  "kb_ask_placeholder": {
+    "message": "Ask about past meetings, chats and saved pages"
+  },
+  "kb_ask_button": {
+    "message": "Ask"
+  },
+  "kb_asking": {
+    "message": "Searching your knowledge base…"
+  },
+  "kb_answer": {
+    "message": "Answer"
+  },
+  "kb_answer_nothing": {
+    "message": "I couldn't find anything about that in your knowledge base."
+  },
+  "kb_sources": {
+    "message": "Sources"
+  },
+  "kb_place_note": {
+    "message": "notes"
+  },
+  "kb_savePage": {
+    "message": "Save this page"
+  },
+  "kb_saving": {
+    "message": "Saving…"
+  },
+  "kb_saved": {
+    "message": "Saved \"$TITLE$\" to the knowledge base",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Release notes"
+      }
+    }
+  },
+  "kb_pageUnreadable": {
+    "message": "This page can't be read. Open a web page and try again."
+  },
+  "kb_pageEmpty": {
+    "message": "This page has no text to save."
+  },
+  "kb_empty": {
+    "message": "Nothing here yet. Finished chats and meeting notes are added on their own, and you can save any page."
+  },
+  "kb_items": {
+    "message": "In your knowledge base ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "kb_delete": {
+    "message": "Remove \"$TITLE$\" from the knowledge base",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Stage 2 sync"
+      }
+    }
+  },
+  "kb_keywordOnly": {
+    "message": "keyword search only"
+  },
+  "kb_type_thread": {
+    "message": "Chat"
+  },
+  "kb_type_meeting": {
+    "message": "Meeting"
+  },
+  "kb_type_page": {
+    "message": "Page"
+  },
+  "options_kb_desc": {
+    "message": "Your past chats, meeting notes and saved pages, searchable from the side panel and by the agent. Search by meaning uses your Gemini key (gemini-embedding-2, $0.20 per million tokens); without one it searches by keyword. Everything stays in this browser."
+  },
+  "options_kb_indexChats": {
+    "message": "Add chats"
+  },
+  "options_kb_indexChats_desc": {
+    "message": "Add each chat when a task finishes."
+  },
+  "options_kb_indexMeetings": {
+    "message": "Add meetings"
+  },
+  "options_kb_indexMeetings_desc": {
+    "message": "Add the note and transcript when a meeting ends."
+  },
+  "options_kb_retention": {
+    "message": "Keep items for"
+  },
+  "options_kb_retention_desc": {
+    "message": "Older items are removed from the knowledge base. The chats and meetings themselves stay."
+  },
+  "options_kb_retention_forever": {
+    "message": "Forever"
+  },
+  "options_kb_retention_days": {
+    "message": "$DAYS$ days",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "90"
+      }
+    }
+  },
+  "options_kb_export": {
+    "message": "Export JSON"
+  },
+  "options_kb_import": {
+    "message": "Import JSON"
+  },
+  "options_kb_wipe": {
+    "message": "Wipe the knowledge base"
+  },
+  "options_kb_wipeConfirm": {
+    "message": "Remove everything from the knowledge base? Your chats and meetings stay."
+  },
+  "options_kb_wiped": {
+    "message": "The knowledge base is empty."
+  },
+  "options_kb_exported": {
+    "message": "Exported $COUNT$ items.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "options_kb_imported": {
+    "message": "Imported $COUNT$ items.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
   }
 }

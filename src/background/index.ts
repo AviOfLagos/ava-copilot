@@ -1,5 +1,5 @@
 import 'webextension-polyfill';
-import { llmProviderStore, meetingStore } from '@extension/storage';
+import { db, llmProviderStore, meetingStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
 import { SpeechToTextService } from './services/speechToText';
@@ -7,13 +7,18 @@ import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
 import { VoiceManager } from './voice/manager';
+import { KnowledgeBase } from './kb/manager';
+import { setKnowledgeBase } from './kb/shared';
+import { parseKbExport } from './kb/transfer';
 
 const logger = createLogger('background');
 
 // Every run belongs to a thread; the manager runs several at once, each on its own tabs
 const threads = new ThreadManager();
 const meetings = new MeetingManager();
-const voice = new VoiceManager(threads, meetings);
+const kb = new KnowledgeBase();
+setKnowledgeBase(kb);
+const voice = new VoiceManager(threads, meetings, kb);
 const SIDE_PANEL_URL = chrome.runtime.getURL(
   (chrome.runtime.getManifest() as { side_panel?: { default_path?: string } }).side_panel?.default_path ??
     'sidepanel.html',
@@ -116,10 +121,51 @@ chrome.tabs.onRemoved.addListener(tabId => {
   void meetings.onTabRemoved(tabId);
 });
 
+// Chats join the knowledge base when a run settles, and meetings when their note is written. The
+// background is the only writer of these statuses, so its own writes are the signal.
+db.threads.hook('updating', (changes: Partial<{ status: string }>) => {
+  if (changes.status === 'idle' || changes.status === 'error') kb.scheduleSweep();
+});
+db.meetings.hook('updating', (changes: Partial<{ status: string }>, meetingId: string) => {
+  if (changes.status === 'done') {
+    setTimeout(() => void kb.indexMeeting(meetingId).catch(error => logger.error('Could not index meeting', error)));
+  }
+});
+
+// Settings pages manage the knowledge base through the background, which keeps its search index
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || typeof message?.type !== 'string' || !message.type.startsWith('kb_')) {
+    return;
+  }
+  const run = async () => {
+    switch (message.type) {
+      case 'kb_wipe':
+        await kb.wipe();
+        return { ok: true };
+      case 'kb_import':
+        return { ok: true, count: await kb.importAll(parseKbExport(message.data)) };
+      case 'kb_delete':
+        await kb.remove(String(message.itemId));
+        return { ok: true };
+      case 'kb_sweep':
+        await kb.sweep();
+        return { ok: true };
+      default:
+        return { ok: false, error: t('errors_cmd_unknown', [message.type]) };
+    }
+  };
+  run().then(sendResponse, error =>
+    sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+  );
+  return true;
+});
+
 // A restarted service worker picks up the threads and meetings that were running
 void threads.recover().catch(error => logger.error('Failed to recover threads', error));
 void meetings.recover().catch(error => logger.error('Failed to recover meetings', error));
 void voice.recover().catch(error => logger.error('Failed to recover voice', error));
+// Retention, and anything that changed while the worker was asleep
+kb.scheduleSweep(10_000);
 
 logger.info('background loaded');
 
@@ -213,7 +259,26 @@ chrome.runtime.onConnect.addListener(port => {
           return;
 
         case 'thread_delete':
-          if (threadId) await threads.remove(threadId);
+          if (threadId) {
+            await threads.remove(threadId);
+            await kb.forget('thread', threadId);
+          }
+          return;
+
+        case 'kb_ask': {
+          const result = await kb.ask(String(message.question ?? ''));
+          return port.postMessage({ type: 'kb_answer', clientId: message.clientId, ...result });
+        }
+
+        case 'kb_save_page': {
+          const [tab] = await chrome.tabs.query({ active: true, windowId: message.windowId });
+          if (tab?.id === undefined) throw new Error(t('kb_pageUnreadable'));
+          const item = await kb.savePage(tab.id);
+          return port.postMessage({ type: 'kb_saved', clientId: message.clientId, title: item.title });
+        }
+
+        case 'kb_delete':
+          if (typeof message.itemId === 'string') await kb.remove(message.itemId);
           return;
 
         case 'speech_to_text': {

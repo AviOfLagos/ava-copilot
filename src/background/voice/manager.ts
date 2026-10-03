@@ -16,6 +16,7 @@ import { LIVE_AUDIO_USD_PER_MINUTE, LIVE_AUDIO_OUT_USD_PER_MINUTE } from '../usa
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
 import type { ThreadManager } from '../threads/manager';
 import type { MeetingManager } from '../meetings/manager';
+import type { KnowledgeBase } from '../kb/manager';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS } from './prompt';
 
 const logger = createLogger('Voice');
@@ -42,6 +43,7 @@ export class VoiceManager {
   constructor(
     private readonly threads: ThreadManager,
     private readonly meetings: MeetingManager,
+    private readonly kb: KnowledgeBase | null = null,
   ) {}
 
   get running(): boolean {
@@ -135,6 +137,12 @@ export class VoiceManager {
         const meeting = (await meetingStore.list()).find(m => m.status !== 'failed');
         if (!meeting) return 'No meeting has been recorded yet.';
         return this.meetings.ask(meeting.id, String(args.question ?? ''));
+      }
+      case 'ask_knowledge': {
+        if (!this.kb) return 'The knowledge base is not available.';
+        const { answer, citations } = await this.kb.ask(String(args.question ?? ''));
+        const sources = citations.map(c => `[${c.n}] ${c.title}, ${c.label}`).join('; ');
+        return sources ? `${answer}\nSources: ${sources}` : answer;
       }
       case 'get_status':
         return this.describeStatus();

@@ -63,6 +63,12 @@ describe('noticeFor', () => {
 
 describe('VOICE_TOOLS', () => {
   it('offers no tool that could approve or send on its own', () => {
-    expect(VOICE_TOOLS.map(tool => tool.name)).toEqual(['run_browser_task', 'ask_meeting', 'get_status', 'stop_tasks']);
+    expect(VOICE_TOOLS.map(tool => tool.name)).toEqual([
+      'run_browser_task',
+      'ask_meeting',
+      'ask_knowledge',
+      'get_status',
+      'stop_tasks',
+    ]);
   });
 });

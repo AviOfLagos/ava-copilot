@@ -6,6 +6,7 @@ import type { AgentContext } from '@src/background/agent/types';
 import { plannerSystemPromptTemplate } from './templates/planner';
 import { buildStyleSection } from './style';
 import { plannerGateSection } from '@src/background/gate/prompt';
+import { plannerKnowledgeSection } from '@src/background/kb/action';
 
 export class PlannerPrompt extends BasePrompt {
   constructor(private readonly stylePrompt = '') {
@@ -16,6 +17,7 @@ export class PlannerPrompt extends BasePrompt {
     return systemMessage(
       plannerSystemPromptTemplate +
         plannerGateSection +
+        plannerKnowledgeSection +
         buildStyleSection(this.stylePrompt, 'the "final_answer" field'),
     );
   }

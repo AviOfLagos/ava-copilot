@@ -26,6 +26,10 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Meeting notes: `src/background/meetings` (manager) and `src/offscreen` (recorder). Chrome only records a tab the
   extension was invoked on, so the toolbar button opens the panel from `chrome.action.onClicked`; do not switch back to
   `openPanelOnActionClick`.
+- Knowledge base: `src/background/kb` (one `KnowledgeBase` in the background owns all writes and an in-memory search
+  index; pages send `kb_*` messages and only read the Dexie tables). Chats and meetings are indexed from Dexie
+  `updating` hooks on their status in `src/background/index.ts`. The agent reaches it through `kb/shared.ts`, which
+  exists so agent actions do not import the thread machinery.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 

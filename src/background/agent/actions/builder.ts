@@ -30,6 +30,7 @@ import type { ChatModel } from '@src/background/llm/types';
 import { wrapUntrustedContent } from '../messages/utils';
 import { reviewAction, verifyCommit } from '@src/background/gate/review';
 import { readPageTextAction, readPageTextActionSchema } from '@src/background/reader/reader';
+import { searchKnowledgeAction, searchKnowledgeActionSchema } from '@src/background/kb/action';
 
 const logger = createLogger('Action');
 
@@ -403,6 +404,12 @@ export class ActionBuilder {
       readPageTextActionSchema,
     );
     actions.push(readPageText);
+
+    const searchKnowledge = new Action(
+      async (input: z.infer<typeof searchKnowledgeActionSchema.schema>) => searchKnowledgeAction(this.context, input),
+      searchKnowledgeActionSchema,
+    );
+    actions.push(searchKnowledge);
 
     // Scroll to percent
     const scrollToPercent = new Action(async (input: z.infer<typeof scrollToPercentActionSchema.schema>) => {

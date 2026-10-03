@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
+import { FiBookOpen, FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
 import { PiMicrophoneBold, PiPlusBold, PiRecordBold } from 'react-icons/pi';
 import {
   type Message,
@@ -11,6 +11,8 @@ import {
   llmProviderStore,
   meetingSettingsStore,
   threadStore,
+  type KbAnswer,
+  type KbCitation,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -23,6 +25,7 @@ import ThreadList from './threads/ThreadList';
 import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
+import KnowledgeView from './kb/KnowledgeView';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import './SidePanel.css';
@@ -42,6 +45,8 @@ type PanelMessage =
   | { type: 'thread_started'; clientId: string; threadId: string }
   | { type: 'meeting_started'; clientId: string; meetingId: string }
   | { type: 'meeting_answer'; clientId: string; answer: string }
+  | ({ type: 'kb_answer'; clientId: string } & KbAnswer)
+  | { type: 'kb_saved'; clientId: string; title: string }
   | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
@@ -55,6 +60,9 @@ const SidePanel = () => {
   const [showList, setShowList] = useState(false);
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [showKb, setShowKb] = useState(false);
+  // Where a citation points in the meeting's transcript, in seconds
+  const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
   const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
   // The spoken conversation, as the offscreen document reports it
   const [voiceStatus, setVoiceStatus] = useState<'off' | 'connecting' | 'listening' | 'speaking'>('off');
@@ -70,6 +78,8 @@ const SidePanel = () => {
   const pendingSendsRef = useRef(new Set<string>());
   // Questions about a meeting waiting for their answer
   const pendingAsksRef = useRef(new Map<string, () => void>());
+  // Knowledge base questions and page saves waiting for the background's reply
+  const pendingKbRef = useRef(new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>());
 
   const thread = useLive(
     () => (threadId ? threadStore.get(threadId) : Promise.resolve(undefined)),
@@ -166,7 +176,20 @@ const SidePanel = () => {
           pendingAsksRef.current.get(message.clientId)?.();
           pendingAsksRef.current.delete(message.clientId);
           break;
+        case 'kb_answer':
+          pendingKbRef.current.get(message.clientId)?.resolve({ answer: message.answer, citations: message.citations });
+          pendingKbRef.current.delete(message.clientId);
+          break;
+        case 'kb_saved':
+          pendingKbRef.current.get(message.clientId)?.resolve(message.title);
+          pendingKbRef.current.delete(message.clientId);
+          break;
         case 'error':
+          if (message.clientId && pendingKbRef.current.has(message.clientId)) {
+            pendingKbRef.current.get(message.clientId)?.reject(new Error(message.error || t('errors_unknown')));
+            pendingKbRef.current.delete(message.clientId);
+            break;
+          }
           if (message.clientId && pendingAsksRef.current.has(message.clientId)) {
             pendingAsksRef.current.get(message.clientId)?.();
             pendingAsksRef.current.delete(message.clientId);
@@ -279,6 +302,8 @@ const SidePanel = () => {
 
   const handleTakeNotes = async () => {
     if (recording) {
+      setShowKb(false);
+      setMeetingFocusT(null);
       setMeetingId(recording.id);
       setShowList(false);
       return;
@@ -311,7 +336,35 @@ const SidePanel = () => {
     post({ type: 'voice_start', windowId: await currentWindowId() });
   };
 
+  // Sends a knowledge base request and waits for its reply
+  const kbRequest = <T,>(message: Record<string, unknown>) =>
+    new Promise<T>((resolve, reject) => {
+      const clientId = crypto.randomUUID();
+      pendingKbRef.current.set(clientId, { resolve: value => resolve(value as T), reject });
+      try {
+        post({ ...message, clientId });
+      } catch (error) {
+        pendingKbRef.current.delete(clientId);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+
+  const openCitation = (citation: KbCitation) => {
+    const { anchor } = citation;
+    if (anchor.kind === 'page') {
+      void chrome.tabs.create({ url: anchor.url });
+    } else if (anchor.kind === 'meeting') {
+      setShowKb(false);
+      setShowList(false);
+      setMeetingFocusT(anchor.t);
+      setMeetingId(anchor.meetingId);
+    } else {
+      handleSelect(anchor.threadId);
+    }
+  };
+
   const handleNewThread = () => {
+    setShowKb(false);
     setMeetingId(null);
     setThreadId(null);
     setShowList(false);
@@ -319,6 +372,7 @@ const SidePanel = () => {
   };
 
   const handleSelect = (id: string) => {
+    setShowKb(false);
     setMeetingId(null);
     setThreadId(id);
     setShowList(false);
@@ -406,7 +460,7 @@ const SidePanel = () => {
               aria-expanded={showList}>
               <FiList size={20} className="shrink-0" />
               <span className={`truncate text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                {showList ? t('threads_list_title') : thread?.title || t('threads_untitled')}
+                {showList ? t('threads_list_title') : showKb ? t('kb_title') : thread?.title || t('threads_untitled')}
               </span>
             </button>
           </div>
@@ -451,6 +505,18 @@ const SidePanel = () => {
                 <PiRecordBold size={20} />
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowKb(!showKb);
+                setShowList(false);
+              }}
+              className={headerButton}
+              aria-label={t('kb_title')}
+              aria-pressed={showKb}
+              title={t('kb_title')}>
+              <FiBookOpen size={19} />
+            </button>
             {activeCount > 1 && (
               <button
                 type="button"
@@ -512,6 +578,14 @@ const SidePanel = () => {
             onCancel={() => setConsent(null)}
             isDarkMode={isDarkMode}
           />
+        ) : showKb && !showList ? (
+          <KnowledgeView
+            onAsk={question => kbRequest<KbAnswer>({ type: 'kb_ask', question })}
+            onSavePage={async () => kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId() })}
+            onDelete={itemId => post({ type: 'kb_delete', itemId })}
+            onOpenCitation={openCitation}
+            isDarkMode={isDarkMode}
+          />
         ) : meetingId && !showList ? (
           <>
             {banner && (
@@ -535,6 +609,7 @@ const SidePanel = () => {
                 })
               }
               onRefreshSummary={() => post({ type: 'meeting_summarize', meetingId })}
+              focusT={meetingFocusT}
               isDarkMode={isDarkMode}
             />
           </>
@@ -585,7 +660,14 @@ const SidePanel = () => {
                 onContinue={async () =>
                   post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
                 }
-                onOpenMeeting={thread.meetingId ? () => setMeetingId(thread.meetingId) : undefined}
+                onOpenMeeting={
+                  thread.meetingId
+                    ? () => {
+                        setMeetingFocusT(null);
+                        setMeetingId(thread.meetingId);
+                      }
+                    : undefined
+                }
                 isDarkMode={isDarkMode}
               />
             )}

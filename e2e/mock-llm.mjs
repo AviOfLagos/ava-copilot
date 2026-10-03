@@ -49,6 +49,22 @@ const MEETING_PROMPTS = [
   ['note', 'You write the notes of a meeting'],
 ];
 
+// The system prompt of knowledge base answers, in src/background/kb/answer.ts
+const KB_PROMPT = "You answer questions from the user's own knowledge base";
+
+// Lowercase words hashed into 64 buckets, as a unit vector; the task prefixes are left out
+function bagOfWords(text) {
+  const vector = new Array(64).fill(0);
+  const words = text.replace(/^(task: search result \| query: |title: .*? \| text: )/, '').toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  for (const word of words) {
+    let hash = 0;
+    for (const char of word) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    vector[hash % 64] += 1;
+  }
+  const norm = Math.hypot(...vector) || 1;
+  return vector.map(value => value / norm);
+}
+
 function textCompletion(request, text) {
   return {
     id: 'chatcmpl-mock',
@@ -106,11 +122,28 @@ export async function startMockLlm(scenarios) {
       return res.end(fs.readFileSync(path.join(here, page[1])));
     }
 
+    // Gemini embeddings (the knowledge base): words hashed into buckets, so texts sharing words match
+    if (req.method === 'POST' && req.url.includes(':batchEmbedContents')) {
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      const { requests } = JSON.parse(body);
+      kb.embedded.push(...requests.map(entry => entry.content.parts.map(part => part.text).join(' ')));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ embeddings: requests.map(entry => ({ values: bagOfWords(entry.content.parts[0].text) })) }));
+    }
+
     if (req.method === 'POST' && req.url.endsWith('/chat/completions')) {
       let body = '';
       for await (const chunk of req) body += chunk;
       const request = JSON.parse(body);
       const system = textOf(request.messages[0] ?? {});
+
+      // Knowledge base answers: the scripted answer, with the question and sources kept for checks
+      if (system.includes(KB_PROMPT)) {
+        kb.questions.push(textOf(request.messages[request.messages.length - 1]));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(textCompletion(request, kb.answer)));
+      }
 
       // Meeting notes: transcription, summaries and the final note answer from their own script
       const meetingKind = MEETING_PROMPTS.find(([, marker]) => system.includes(marker))?.[0];
@@ -178,6 +211,9 @@ export async function startMockLlm(scenarios) {
 
     res.writeHead(404).end();
   });
+
+  // What the knowledge base tests see: every text embedded and every question with its sources
+  const kb = { embedded: [], questions: [], answer: 'Stage 2 is due Friday [1].' };
 
   // What the meeting tests see: every audio clip received, and how many lines were handed out
   const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0 };
@@ -341,6 +377,7 @@ export async function startMockLlm(scenarios) {
     runs,
     meeting,
     live,
+    kb,
     start(name) {
       runs.set(name, newRun(name));
       lastStarted = name;

@@ -1,0 +1,408 @@
+import { t } from '@extension/i18n';
+import {
+  generalSettingsStore,
+  kbItemId,
+  kbSettingsStore,
+  kbStore,
+  localDay,
+  meetingStore,
+  threadStore,
+  usageStore,
+} from '@extension/storage';
+import type {
+  KbExport,
+  KbSettingsConfig,
+  KbStore,
+  KnowledgeChunk,
+  KnowledgeItem,
+  KnowledgeSourceType,
+  MeetingStore,
+  ThreadStore,
+} from '@extension/storage';
+import { generatePlainText } from '../llm/generate';
+import { systemMessage, userMessage } from '../llm/messages';
+import type { ChatModel } from '../llm/types';
+import { createLogger } from '../log';
+import { isOverCap } from '../usage/budget';
+import { resolveModels } from '../threads/factory';
+import { readPageText } from '../reader/probes';
+import { ANSWER_INSTRUCTIONS, citationsIn, questionPrompt } from './answer';
+import type { KbAnswer } from './answer';
+import { chunkMeeting, chunkPage, chunkThread, hashText } from './chunker';
+import type { DraftChunk } from './chunker';
+import { createEmbedder } from './embedder';
+import type { Embedder } from './embedder';
+import { KbIndex } from './search';
+import type { SearchHit } from './search';
+
+const logger = createLogger('KnowledgeBase');
+
+// Usage of the knowledge base (embeddings and answers) is counted under this session
+export const KB_SESSION = 'knowledge-base';
+// Chunks embedded per pass
+const EMBED_PASS = 100;
+// The most characters of a page that are saved
+const MAX_PAGE_CHARS = 200_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface KbDeps {
+  store: KbStore;
+  threads: ThreadStore;
+  meetings: MeetingStore;
+  embedder: (settings: KbSettingsConfig) => Promise<Embedder | null>;
+  answerModel: () => Promise<ChatModel>;
+  overCap: () => Promise<boolean>;
+  readTab: (tabId: number) => Promise<{ title: string; url: string; text: string }>;
+}
+
+async function overDailyCap(): Promise<boolean> {
+  const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
+  return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
+}
+
+/** Reads the text a tab shows, the same way the agent's read_page_text does. */
+async function readTab(tabId: number): Promise<{ title: string; url: string; text: string }> {
+  const tab = await chrome.tabs.get(tabId);
+  if (!tab.url || !/^https?:|^file:/.test(tab.url)) {
+    throw new Error(t('kb_pageUnreadable'));
+  }
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: readPageText,
+    args: [{ offset: 0, max: MAX_PAGE_CHARS }],
+  });
+  const text = (result?.result as { text?: string } | undefined)?.text ?? '';
+  return { title: tab.title || tab.url, url: tab.url, text };
+}
+
+const defaultDeps: KbDeps = {
+  store: kbStore,
+  threads: threadStore,
+  meetings: meetingStore,
+  embedder: settings => createEmbedder(settings, KB_SESSION),
+  answerModel: async () => (await resolveModels(null, { sessionId: KB_SESSION, notify: () => {} })).planner,
+  overCap: overDailyCap,
+  readTab,
+};
+
+/**
+ * The knowledge base: past chats, meeting notes and transcripts, and saved pages, searched by
+ * meaning and by keyword, answering with citations. All writes go through one queue, so indexing a
+ * chat while a page is saved never interleaves.
+ */
+export class KnowledgeBase {
+  private readonly deps: KbDeps;
+  private index: KbIndex | null = null;
+  private queue: Promise<unknown> = Promise.resolve();
+  private sweepTimer: ReturnType<typeof setTimeout> | null = null;
+  private embedding: Promise<number> | null = null;
+
+  constructor(deps: Partial<KbDeps> = {}) {
+    this.deps = { ...defaultDeps, ...deps };
+  }
+
+  private serial<T>(work: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(work, work);
+    this.queue = next.catch(() => {});
+    return next;
+  }
+
+  private changed(): void {
+    this.index = null;
+  }
+
+  /**
+   * Stores a source's chunks. A chunk whose text did not change keeps its embedding, so indexing a
+   * long chat again only embeds the new turns.
+   */
+  private async write(
+    fields: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt'>,
+    drafts: DraftChunk[],
+  ): Promise<KnowledgeItem | null> {
+    const id = kbItemId(fields.sourceType, fields.sourceId);
+    if (drafts.length === 0) {
+      await this.deps.store.remove(id);
+      this.changed();
+      return null;
+    }
+    const previous = await this.deps.store.item(id);
+    const old = new Map((await this.deps.store.chunks(id)).map(chunk => [chunk.hash, chunk]));
+    const now = Date.now();
+    const chunks: KnowledgeChunk[] = drafts.map((draft, index) => {
+      const hash = hashText(draft.text);
+      const kept = old.get(hash);
+      return {
+        id: `${id}#${index}`,
+        itemId: id,
+        index,
+        text: draft.text,
+        label: draft.label,
+        anchor: draft.anchor,
+        hash,
+        vector: kept?.vector ?? null,
+        embedModel: kept?.embedModel ?? null,
+      };
+    });
+    const item: KnowledgeItem = {
+      ...fields,
+      id,
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now,
+      chunkCount: chunks.length,
+      unembedded: 0,
+    };
+    await this.deps.store.put(item, chunks);
+    this.changed();
+    return item;
+  }
+
+  /** Adds or refreshes a chat. Meeting threads are skipped: their meeting is indexed instead. */
+  indexThread(threadId: string, force = false): Promise<KnowledgeItem | null> {
+    return this.serial(async () => {
+      const settings = await kbSettingsStore.getSettings();
+      const thread = await this.deps.threads.db.threads.get(threadId);
+      if (!thread) {
+        await this.deps.store.remove(kbItemId('thread', threadId));
+        this.changed();
+        return null;
+      }
+      if ((!settings.indexChats && !force) || thread.meetingId) {
+        return null;
+      }
+      const messages = await this.deps.threads.messages(threadId);
+      return this.write(
+        {
+          sourceType: 'thread',
+          sourceId: threadId,
+          title: thread.title || t('threads_untitled'),
+          url: '',
+          sourceDate: thread.createdAt,
+          sourceUpdatedAt: thread.updatedAt,
+        },
+        chunkThread(threadId, messages),
+      );
+    });
+  }
+
+  /** Adds or refreshes a finished meeting: its note and its transcript. */
+  indexMeeting(meetingId: string, force = false): Promise<KnowledgeItem | null> {
+    return this.serial(async () => {
+      const settings = await kbSettingsStore.getSettings();
+      const meeting = await this.deps.meetings.get(meetingId);
+      if (!meeting || meeting.status !== 'done' || (!settings.indexMeetings && !force)) {
+        return null;
+      }
+      const segments = await this.deps.meetings.segments(meetingId);
+      return this.write(
+        {
+          sourceType: 'meeting',
+          sourceId: meetingId,
+          title: meeting.note?.title || meeting.title || t('meeting_untitled'),
+          url: meeting.url,
+          sourceDate: meeting.startedAt,
+          sourceUpdatedAt: meeting.endedAt ?? meeting.startedAt,
+        },
+        chunkMeeting(meeting, segments),
+      );
+    });
+  }
+
+  /** Saves the page a tab shows. */
+  async savePage(tabId: number): Promise<KnowledgeItem> {
+    const page = await this.deps.readTab(tabId);
+    if (!page.text.trim()) {
+      throw new Error(t('kb_pageEmpty'));
+    }
+    const item = await this.serial(async () => {
+      const now = Date.now();
+      return this.write(
+        {
+          sourceType: 'page',
+          sourceId: page.url,
+          title: page.title,
+          url: page.url,
+          sourceDate: now,
+          sourceUpdatedAt: now,
+        },
+        chunkPage(page.url, page.text),
+      );
+    });
+    void this.embedPending();
+    return item!;
+  }
+
+  remove(itemId: string): Promise<void> {
+    return this.serial(async () => {
+      await this.deps.store.remove(itemId);
+      this.changed();
+    });
+  }
+
+  /** Removes a source's item, e.g. when its chat is deleted. */
+  forget(sourceType: KnowledgeSourceType, sourceId: string): Promise<void> {
+    return this.remove(kbItemId(sourceType, sourceId));
+  }
+
+  wipe(): Promise<void> {
+    return this.serial(async () => {
+      await this.deps.store.wipe();
+      this.changed();
+    });
+  }
+
+  exportAll(): Promise<KbExport> {
+    return this.deps.store.exportAll();
+  }
+
+  async importAll(data: KbExport): Promise<number> {
+    const count = await this.serial(async () => {
+      const added = await this.deps.store.importAll(data);
+      this.changed();
+      return added;
+    });
+    void this.embedPending();
+    return count;
+  }
+
+  /** Drops items older than the retention setting. */
+  async applyRetention(now = Date.now()): Promise<number> {
+    const { retentionDays } = await kbSettingsStore.getSettings();
+    if (retentionDays <= 0) return 0;
+    return this.serial(async () => {
+      const removed = await this.deps.store.removeOlderThan(now - retentionDays * DAY_MS);
+      if (removed > 0) this.changed();
+      return removed;
+    });
+  }
+
+  /**
+   * Brings the knowledge base up to date: applies retention, indexes chats and meetings that
+   * changed since they were last indexed, and embeds whatever is still missing an embedding.
+   */
+  async sweep(): Promise<void> {
+    const settings = await kbSettingsStore.getSettings();
+    await this.applyRetention();
+    const cutoff = settings.retentionDays > 0 ? Date.now() - settings.retentionDays * DAY_MS : 0;
+    const indexed = new Map((await this.deps.store.items()).map(item => [item.id, item]));
+
+    if (settings.indexChats) {
+      for (const thread of await this.deps.threads.db.threads.toArray()) {
+        const item = indexed.get(kbItemId('thread', thread.id));
+        const settled = thread.status === 'idle' || thread.status === 'error';
+        if (
+          settled &&
+          !thread.meetingId &&
+          thread.createdAt >= cutoff &&
+          (!item || item.sourceUpdatedAt < thread.updatedAt)
+        ) {
+          await this.indexThread(thread.id);
+        }
+      }
+    }
+    if (settings.indexMeetings) {
+      for (const meeting of await this.deps.meetings.db.meetings.where('status').equals('done').toArray()) {
+        if (!indexed.has(kbItemId('meeting', meeting.id)) && meeting.startedAt >= cutoff) {
+          await this.indexMeeting(meeting.id);
+        }
+      }
+    }
+    await this.embedPending();
+  }
+
+  /** Runs a sweep a little later, once, however many times it is asked for meanwhile. */
+  scheduleSweep(delayMs = 3000): void {
+    if (this.sweepTimer) return;
+    this.sweepTimer = setTimeout(() => {
+      this.sweepTimer = null;
+      this.sweep().catch(error => logger.error('Knowledge base sweep failed', error));
+    }, delayMs);
+  }
+
+  /** Embeds chunks that have no embedding yet. Failures leave them for the next sweep. */
+  embedPending(): Promise<number> {
+    // One pass at a time, so no chunk is paid for twice
+    this.embedding ??= this.embedAll().finally(() => {
+      this.embedding = null;
+    });
+    return this.embedding;
+  }
+
+  private async embedAll(): Promise<number> {
+    const settings = await kbSettingsStore.getSettings();
+    const embedder = await this.deps.embedder(settings);
+    if (!embedder) return 0;
+    let done = 0;
+    for (;;) {
+      if (await this.deps.overCap()) break;
+      const pending = await this.deps.store.needingEmbedding(embedder.model, EMBED_PASS);
+      if (pending.length === 0) break;
+      try {
+        const titles = await Promise.all(
+          pending.map(async chunk => (await this.deps.store.item(chunk.itemId))?.title ?? ''),
+        );
+        const vectors = await embedder.embed(
+          pending.map(chunk => chunk.text),
+          'document',
+          titles,
+        );
+        if (vectors.length !== pending.length) {
+          throw new Error(`Expected ${pending.length} embeddings, got ${vectors.length}`);
+        }
+        await this.serial(async () => {
+          await this.deps.store.setVectors(
+            pending.map((chunk, index) => ({ id: chunk.id, vector: vectors[index], embedModel: embedder.model })),
+          );
+          this.changed();
+        });
+        done += pending.length;
+      } catch (error) {
+        logger.error('Embedding failed', error);
+        break;
+      }
+    }
+    return done;
+  }
+
+  private async loadIndex(): Promise<KbIndex> {
+    if (!this.index) {
+      this.index = new KbIndex(await this.deps.store.items(), await this.deps.store.chunks());
+    }
+    return this.index;
+  }
+
+  /** The passages that best match a query, by meaning when embeddings are available and by keyword. */
+  async search(query: string, limit = 8): Promise<SearchHit[]> {
+    const index = await this.loadIndex();
+    if (index.size === 0) return [];
+    const settings = await kbSettingsStore.getSettings();
+    let vector: number[] | null = null;
+    const embedder = (await this.deps.overCap()) ? null : await this.deps.embedder(settings);
+    if (embedder) {
+      try {
+        [vector] = await embedder.embed([query], 'query');
+      } catch (error) {
+        // Keyword search still answers
+        logger.error('Could not embed the query', error);
+      }
+    }
+    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null });
+  }
+
+  /** Answers a question from the knowledge base, citing the sources it used. */
+  async ask(question: string): Promise<KbAnswer> {
+    if (await this.deps.overCap()) {
+      throw new Error(t('usage_capReached_short'));
+    }
+    const hits = await this.search(question);
+    if (hits.length === 0) {
+      return { answer: t('kb_answer_nothing'), citations: [] };
+    }
+    const answer = (
+      await generatePlainText({
+        chatModel: await this.deps.answerModel(),
+        messages: [systemMessage(ANSWER_INSTRUCTIONS), userMessage(questionPrompt(question, hits))],
+      })
+    ).trim();
+    return { answer, citations: citationsIn(answer, hits) };
+  }
+}

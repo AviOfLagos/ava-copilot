@@ -25,6 +25,8 @@ export const MODEL_PRICES: ModelPrice[] = [
   },
   { model: 'gemini-3.5-flash', input: 1.5, output: 9 },
   { model: 'gemini-3.5-flash-lite', input: 0.3, output: 2.5 },
+  // Text input; embeddings have no output tokens (read 2026-10-03)
+  { model: 'gemini-embedding-2', input: 0.2, output: 0 },
 ];
 
 // Live API audio is billed by the minute (same source, read 2026-10-03). Replies are suppressed, so

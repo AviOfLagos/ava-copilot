@@ -14,6 +14,8 @@ interface MeetingViewProps {
   // Asks a question about the meeting; resolves once the answer is in the thread
   onAsk: (question: string) => Promise<void>;
   onRefreshSummary: () => void;
+  // Seconds into the meeting to scroll the transcript to, e.g. from a citation
+  focusT?: number | null;
   isDarkMode?: boolean;
 }
 
@@ -73,10 +75,17 @@ export default function MeetingView({
   onOpenThread,
   onAsk,
   onRefreshSummary,
+  focusT = null,
   isDarkMode = false,
 }: MeetingViewProps) {
   const meeting = useLive(() => meetingStore.get(meetingId), [meetingId], undefined);
   const segments = useLive(() => meetingStore.segments(meetingId), [meetingId], []);
+  // The line a citation points at: the first one said at or after its time
+  const focusId =
+    focusT !== null && focusT >= 0 ? (segments.find(segment => segment.tStart >= focusT - 1)?.id ?? null) : null;
+  useEffect(() => {
+    if (focusId) document.getElementById(`segment-${focusId}`)?.scrollIntoView({ block: 'center' });
+  }, [focusId]);
   const threadId = meeting?.threadId ?? null;
   // Questions and answers live in the meeting's thread; the note posted there is shown above instead
   const answers = useLive(
@@ -322,7 +331,12 @@ export default function MeetingView({
         ) : (
           <ol aria-label={t('meeting_transcript')} className="space-y-1">
             {segments.map(segment => (
-              <li key={segment.id}>
+              <li
+                key={segment.id}
+                id={`segment-${segment.id}`}
+                className={
+                  segment.id === focusId ? (isDarkMode ? 'rounded bg-amber-900/60' : 'rounded bg-amber-100') : ''
+                }>
                 <span className={`mr-1 tabular-nums ${muted}`}>{clock(segment.tStart)}</span>
                 {segment.speaker && <span className="font-medium">{segment.speaker}: </span>}
                 {segment.text}

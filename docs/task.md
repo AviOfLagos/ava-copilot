@@ -172,7 +172,7 @@ Known gaps:
 - Speaker labels are per clip, so the same voice can be "Speaker 1" in one chunk and named in the next.
 - The model can occasionally add a word at the end of a clip that was not said.
 - The microphone path is not covered by automated tests (headless Chrome has no microphone).
-- "Saved to the knowledge base" waits for M4; the note is in the meeting and its thread.
+- ~~"Saved to the knowledge base" waits for M4~~: done in M4. A finished meeting's note and transcript join the knowledge base.
 
 ### Voice — talk to the copilot (added 2026-10-03, not in the spec)
 
@@ -187,14 +187,26 @@ Checked against the real API (a probe script, not a test): it hears speech, answ
 
 Rules kept on purpose: it speaks to you, never into a call; a spoken "yes" never confirms, only the click does.
 
-### M4 — Knowledge base (M)
+### M4 — Knowledge base (M) — built 2026-10-03
 
-- [ ] Chunk and embed chats, meetings and saved pages (Gemini embeddings)
-- [ ] Vectors in IndexedDB with brute-force cosine, plus MiniSearch for keywords
-- [ ] Cited answers: meeting + timestamp, thread + message, page URL
-- [ ] Retention, delete one, wipe all, export and import JSON
+- [x] Chunk and embed chats, meetings and saved pages (`src/background/kb`). Chats keep only what the user asked and what the copilot answered, about 1,600 characters a chunk; meetings are the note plus transcript windows of up to two minutes, each anchored at its start time; pages are overlapping chunks.
+- [x] Embeddings: `gemini-embedding-2` at 768 dimensions with the Gemini key ($0.20 per million tokens, counted toward the daily cap under the "knowledge-base" session). It takes no task type, so queries are prefixed `task: search result | query:` and documents `title: … | text:`. Without a Gemini key everything still works by keyword.
+- [x] Vectors in IndexedDB (Dexie v3 `kbItems`, `kbChunks`), brute-force dot product in memory, plus MiniSearch (fuzzy, prefix) for keywords, fused by reciprocal rank. At most three passages per source. Plain time phrases ("yesterday", "last week", "on Tuesday", "past 3 days") raise sources from that time; they never hide others.
+- [x] Re-indexing a chat keeps the embedding of every chunk whose text did not change, so only new turns are paid for.
+- [x] Cited answers from the planner model: the panel's Knowledge view (book icon) shows the answer with numbered chips and a source list. A meeting citation opens the meeting with that transcript line highlighted; a chat citation opens the chat; a page citation opens the page.
+- [x] Added on their own: a chat when its run settles, a meeting when its note is written (a sweep on start-up catches anything missed). "Save this page" in the Knowledge view.
+- [x] The agent has a read-only `search_knowledge` action and both prompts know about it, so "Draft follow-ups from yesterday's meeting" searches the notes first; sending still goes through the gate. Voice has `ask_knowledge`.
+- [x] Settings → General → Knowledge base: add chats, add meetings, keep for (forever, 30 to 365 days), export JSON, import JSON (validated), wipe. Deleting a chat removes it from the knowledge base. Wipe and retention never touch the chats and meetings themselves.
+- [x] Tests: 43 unit tests (chunker, search and time phrases, citations, import validation, the manager on a real IndexedDB); 4 E2E tests (`e2e/kb.e2e.mjs`: a meeting cited at 12:04 and opened at that line, a chat added when its task ends, a saved page found by the agent and removed, export/wipe/import). The mock serves Gemini's `batchEmbedContents`.
 
-**Exit:** U5, U8 pass.
+**Exit:** U5 passes against the mock (question with "last week" → answer citing the meeting and timestamp, click opens the line). U8: the parts are in place (search_knowledge finds the action items; drafting and the gate already work) but not yet run end to end on a real Gmail with a real meeting.
+
+Known gaps:
+
+- A chat citation opens the chat, not the exact message.
+- Checked against the real `gemini-embedding-2` (a probe, not a test): 768-dimension unit vectors, and a Stage 2 question ranks the Stage 2 note first. The API reports no token count, so cost is estimated at four characters a token.
+- A very large knowledge base (tens of thousands of chunks) loads every vector into memory per search after a change. Fine at personal scale.
+- Locales other than English still carry English text, like the rest of the fork.
 
 ### M5 — Skills (M)
 

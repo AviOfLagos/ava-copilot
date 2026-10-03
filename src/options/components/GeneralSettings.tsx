@@ -13,6 +13,7 @@ import {
   type MeetingSettingsConfig,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
+import { KnowledgeSettings } from './KnowledgeSettings';
 
 const GATE_KIND_LABELS = {
   send: 'gate_kind_send',
@@ -467,6 +468,8 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           </div>
         </div>
       </div>
+
+      <KnowledgeSettings isDarkMode={isDarkMode} />
     </section>
   );
 };
