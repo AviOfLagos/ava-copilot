@@ -26,11 +26,15 @@ import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
 import KnowledgeView from './kb/KnowledgeView';
+import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import './SidePanel.css';
 
 const PROGRESS = 'Showing progress...';
+// A thread tag: the user answered "Save as skill?" for this chat
+const SKILL_OFFERED_TAG = 'skill:offered';
+
 const VOICE_LABELS = {
   connecting: 'voice_status_connecting',
   listening: 'voice_status_listening',
@@ -47,6 +51,7 @@ type PanelMessage =
   | { type: 'meeting_answer'; clientId: string; answer: string }
   | ({ type: 'kb_answer'; clientId: string } & KbAnswer)
   | { type: 'kb_saved'; clientId: string; title: string }
+  | { type: 'skill_draft'; clientId: string; markdown: string }
   | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
@@ -61,6 +66,7 @@ const SidePanel = () => {
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [showKb, setShowKb] = useState(false);
+  const [savedSkillIn, setSavedSkillIn] = useState<string | null>(null);
   // Where a citation points in the meeting's transcript, in seconds
   const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
   const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
@@ -96,6 +102,14 @@ const SidePanel = () => {
   const recordingFor = useElapsed(recording);
 
   const isBusy = thread?.status === 'running' || thread?.status === 'waiting_confirm';
+  // After a browsing task that worked, offer once to save what it learned as a skill
+  const canTeach =
+    thread?.status === 'idle' &&
+    !thread.error &&
+    !thread.meetingId &&
+    !thread.tags.includes(SKILL_OFFERED_TAG) &&
+    threadMessages.some(message => message.actor === 'navigator') &&
+    threadMessages.at(-1)?.actor === 'planner';
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-color-scheme: dark)');
@@ -178,6 +192,10 @@ const SidePanel = () => {
           break;
         case 'kb_answer':
           pendingKbRef.current.get(message.clientId)?.resolve({ answer: message.answer, citations: message.citations });
+          pendingKbRef.current.delete(message.clientId);
+          break;
+        case 'skill_draft':
+          pendingKbRef.current.get(message.clientId)?.resolve(message.markdown);
           pendingKbRef.current.delete(message.clientId);
           break;
         case 'kb_saved':
@@ -703,6 +721,18 @@ const SidePanel = () => {
                     isDarkMode={isDarkMode}
                     onBranch={isBusy ? undefined : handleBranch}
                   />
+                  {(canTeach || savedSkillIn === thread?.id) && thread && (
+                    <TeachCard
+                      key={thread.id}
+                      onDraft={() => kbRequest<string>({ type: 'skill_teach', threadId: thread.id })}
+                      onDone={saved => {
+                        // A saved skill keeps its card, to show the name it is called by
+                        if (saved) setSavedSkillIn(thread.id);
+                        void threadStore.update(thread.id, { tags: [...thread.tags, SKILL_OFFERED_TAG] });
+                      }}
+                      isDarkMode={isDarkMode}
+                    />
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
                 {input}

@@ -1562,5 +1562,152 @@
         "example": "12"
       }
     }
+  },
+  "threads_notFound": {
+    "message": "That chat no longer exists."
+  },
+  "skills_using": {
+    "message": "Using skill /$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "gmail"
+      }
+    }
+  },
+  "skills_teach_title": {
+    "message": "Save as skill"
+  },
+  "skills_teach_offer": {
+    "message": "That worked. Save what it learned as a skill for next time?"
+  },
+  "skills_teach_button": {
+    "message": "Save as skill"
+  },
+  "skills_teach_dismiss": {
+    "message": "No thanks"
+  },
+  "skills_teach_writing": {
+    "message": "Writing the skill…"
+  },
+  "skills_teach_review": {
+    "message": "Check the skill before saving. You can edit it."
+  },
+  "skills_teach_save": {
+    "message": "Save skill"
+  },
+  "skills_teach_cancel": {
+    "message": "Cancel"
+  },
+  "skills_teach_saved": {
+    "message": "Saved. It loads on matching pages, or call it with /$NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "zedu-announcements"
+      }
+    }
+  },
+  "options_tabs_skills": {
+    "message": "Skills"
+  },
+  "options_skills_header": {
+    "message": "Skills"
+  },
+  "options_skills_desc": {
+    "message": "Markdown playbooks with tips for a site or kind of task. A skill loads when the page matches one of its URLs or the task uses one of its keywords, or when you type /name in a task. The agent works without any; skills only add what you know."
+  },
+  "options_skills_import": {
+    "message": "Import .md files"
+  },
+  "options_skills_new": {
+    "message": "New skill"
+  },
+  "options_skills_editing": {
+    "message": "Editing /$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "gmail"
+      }
+    }
+  },
+  "options_skills_save": {
+    "message": "Save"
+  },
+  "options_skills_cancel": {
+    "message": "Cancel"
+  },
+  "options_skills_edit": {
+    "message": "Edit"
+  },
+  "options_skills_export": {
+    "message": "Export .md"
+  },
+  "options_skills_delete": {
+    "message": "Delete"
+  },
+  "options_skills_deleteConfirm": {
+    "message": "Delete the skill /$NAME$?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "gmail"
+      }
+    }
+  },
+  "options_skills_on": {
+    "message": "On"
+  },
+  "options_skills_imported": {
+    "message": "Imported $NAMES$",
+    "placeholders": {
+      "names": {
+        "content": "$1",
+        "example": "/zedu-operator"
+      }
+    }
+  },
+  "options_skills_saved": {
+    "message": "Saved /$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "gmail"
+      }
+    }
+  },
+  "options_skills_urls": {
+    "message": "Pages: $URLS$",
+    "placeholders": {
+      "urls": {
+        "content": "$1",
+        "example": "mail.google.com/*"
+      }
+    }
+  },
+  "options_skills_keywords": {
+    "message": "Keywords: $WORDS$",
+    "placeholders": {
+      "words": {
+        "content": "$1",
+        "example": "gmail"
+      }
+    }
+  },
+  "options_skills_slashOnly": {
+    "message": "Only when called with /name"
+  },
+  "options_skills_source_builtin": {
+    "message": "built in"
+  },
+  "options_skills_source_imported": {
+    "message": "imported"
+  },
+  "options_skills_source_taught": {
+    "message": "taught"
+  },
+  "options_skills_source_written": {
+    "message": "written here"
   }
 }

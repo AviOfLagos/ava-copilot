@@ -70,6 +70,7 @@ export class Executor {
 
     this.generalSettings = extraArgs?.generalSettings;
     this.tasks.push(task);
+    context.tasks = this.tasks;
     const stylePrompt = this.generalSettings?.stylePrompt;
     this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep, stylePrompt);
     this.plannerPrompt = new PlannerPrompt(stylePrompt);

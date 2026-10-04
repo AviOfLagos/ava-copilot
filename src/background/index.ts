@@ -1,5 +1,5 @@
 import 'webextension-polyfill';
-import { db, llmProviderStore, meetingStore } from '@extension/storage';
+import { db, llmProviderStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
 import { SpeechToTextService } from './services/speechToText';
@@ -10,6 +10,8 @@ import { VoiceManager } from './voice/manager';
 import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
+import { draftSkill, teachTranscript } from './skills/teach';
+import { resolveModels } from './threads/factory';
 
 const logger = createLogger('background');
 
@@ -179,6 +181,19 @@ function isPanel(port: chrome.runtime.Port): boolean {
   return `${url.origin}${url.pathname}` === SIDE_PANEL_URL;
 }
 
+/** Drafts a skill from a finished chat, with the chat's own model, for the user to review. */
+async function teach(threadId: string): Promise<string> {
+  const thread = await db.threads.get(threadId);
+  if (!thread) throw new Error(t('threads_notFound'));
+  const urls: string[] = [];
+  for (const tabId of thread.boundTabIds) {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab?.url) urls.push(tab.url);
+  }
+  const { planner } = await resolveModels(thread.model, { sessionId: threadId, notify: () => {} });
+  return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
+}
+
 async function transcribe(audio: string): Promise<string> {
   const providers = await llmProviderStore.getAllProviders();
   const speechToTextService = await SpeechToTextService.create(providers);
@@ -275,6 +290,12 @@ chrome.runtime.onConnect.addListener(port => {
           if (tab?.id === undefined) throw new Error(t('kb_pageUnreadable'));
           const item = await kb.savePage(tab.id);
           return port.postMessage({ type: 'kb_saved', clientId: message.clientId, title: item.title });
+        }
+
+        case 'skill_teach': {
+          if (!threadId) return;
+          const markdown = await teach(threadId);
+          return port.postMessage({ type: 'skill_draft', clientId: message.clientId, markdown });
         }
 
         case 'kb_delete':

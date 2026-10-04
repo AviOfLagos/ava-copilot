@@ -15,7 +15,7 @@
     "build": "wxt build",
     "zip": "pnpm build && tsx scripts/zip.ts",
     "test": "vitest run",
-    "test:e2e": "pnpm build && node --test --test-concurrency=1 e2e/gate.e2e.mjs e2e/agent.e2e.mjs e2e/threads.e2e.mjs e2e/meeting.e2e.mjs e2e/voice.e2e.mjs e2e/kb.e2e.mjs",
+    "test:e2e": "pnpm build && node --test --test-concurrency=1 e2e/gate.e2e.mjs e2e/agent.e2e.mjs e2e/threads.e2e.mjs e2e/meeting.e2e.mjs e2e/voice.e2e.mjs e2e/kb.e2e.mjs e2e/skills.e2e.mjs",
     "type-check": "node src/i18n/generate-i18n.mjs && wxt prepare && tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --fix --cache --cache-location node_modules/.cache/.eslintcache",
     "prettier": "prettier . --write --cache --cache-location node_modules/.cache/.prettiercache",

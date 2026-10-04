@@ -30,6 +30,10 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   index; pages send `kb_*` messages and only read the Dexie tables). Chats and meetings are indexed from Dexie
   `updating` hooks on their status in `src/background/index.ts`. The agent reaches it through `kb/shared.ts`, which
   exists so agent actions do not import the thread machinery.
+- Skills: Markdown playbooks in `src/storage/lib/skills` (parser, store, built-ins as `.md?raw`) and
+  `src/background/skills` (matching, injection, teach mode). They reach the agent only through the browser-state
+  message in `agent/prompts/base.ts`. The agent must work with none loaded, and site-specific knowledge goes in a skill,
+  never in core code.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 

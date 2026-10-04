@@ -51,6 +51,8 @@ const MEETING_PROMPTS = [
 
 // The system prompt of knowledge base answers, in src/background/kb/answer.ts
 const KB_PROMPT = "You answer questions from the user's own knowledge base";
+// The system prompt of teach mode, in src/background/skills/teach.ts
+const TEACH_PROMPT = 'You write a skill: a short page of tips';
 
 // Lowercase words hashed into 64 buckets, as a unit vector; the task prefixes are left out
 function bagOfWords(text) {
@@ -138,6 +140,13 @@ export async function startMockLlm(scenarios) {
       const request = JSON.parse(body);
       const system = textOf(request.messages[0] ?? {});
 
+      // Teach mode: the skill drafted from a finished task
+      if (system.includes(TEACH_PROMPT)) {
+        kb.taught.push(textOf(request.messages[request.messages.length - 1]));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(completion(request, kb.skillDraft)));
+      }
+
       // Knowledge base answers: the scripted answer, with the question and sources kept for checks
       if (system.includes(KB_PROMPT)) {
         kb.questions.push(textOf(request.messages[request.messages.length - 1]));
@@ -213,7 +222,20 @@ export async function startMockLlm(scenarios) {
   });
 
   // What the knowledge base tests see: every text embedded and every question with its sources
-  const kb = { embedded: [], questions: [], answer: 'Stage 2 is due Friday [1].' };
+  const kb = {
+    embedded: [],
+    questions: [],
+    answer: 'Stage 2 is due Friday [1].',
+    // Teach mode: task logs received, and the draft returned
+    taught: [],
+    skillDraft: {
+      name: 'fixture-quotes',
+      description: 'Requesting a quote on the fixture page',
+      urls: ['127.0.0.1:*/fixture.html'],
+      keywords: ['quote'],
+      tips: ['The name field is the first box under "Quote request".'],
+    },
+  };
 
   // What the meeting tests see: every audio clip received, and how many lines were handed out
   const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0 };

@@ -51,6 +51,8 @@ export class AgentContext {
   history: AgentStepHistory;
   finalAnswer: string | null;
   confirmGate: ConfirmGate;
+  // The task and its follow-ups, shared with the executor; skills are matched against them
+  tasks: string[] = [];
 
   constructor(
     taskId: string,

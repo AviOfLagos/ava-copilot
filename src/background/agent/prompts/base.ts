@@ -5,6 +5,7 @@ import { wrapUntrustedContent } from '../messages/utils';
 import { createLogger } from '@src/background/log';
 import { reportPageInstructions } from '@src/background/gate/injection';
 import { needsVision } from '@src/background/reader/reader';
+import { skillSectionFor } from '@src/background/skills/inject';
 
 const logger = createLogger('BasePrompt');
 /**
@@ -69,6 +70,7 @@ abstract class BasePrompt {
       }
     }
 
+    const skills = await skillSectionFor(context, browserState.url);
     const currentTab = `{id: ${browserState.tabId}, url: ${browserState.url}, title: ${browserState.title}}`;
     const otherTabs = browserState.tabs
       .filter(tab => tab.id !== browserState.tabId)
@@ -84,7 +86,7 @@ Interactive elements from top layer of the current page inside the viewport:
 ${formattedElementsText}
 ${stepInfoDescription}
 ${actionResultsDescription}
-`;
+${skills}`;
 
     if (browserState.screenshot && useVision) {
       return userMessage([textPart(stateDescription), imagePart(browserState.screenshot, 'image/jpeg')]);

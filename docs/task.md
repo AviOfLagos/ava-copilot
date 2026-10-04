@@ -208,13 +208,22 @@ Known gaps:
 - A very large knowledge base (tens of thousands of chunks) loads every vector into memory per search after a change. Fine at personal scale.
 - Locales other than English still carry English text, like the rest of the fork.
 
-### M5 — Skills (M)
+### M5 — Skills (M) — built 2026-10-04
 
-- [ ] Frontmatter parser, registry, URL and keyword matching, `/skillname`
-- [ ] Three shipped examples, import and export
-- [ ] Teach mode: "Save as skill?" after a successful task
+- [x] Skills are Markdown files with frontmatter `name`, `description`, `match: {urls, keywords}` (`urls`/`keywords` may also be top level; a file with no frontmatter takes its file name). The parser reads only the YAML subset skills need: no new dependency. `src/storage/lib/skills`.
+- [x] Registry in `chrome.storage.local`: the user's skills plus three built-ins (`gmail`, `google-forms`, `chat-apps`, shipped as `.md` files). A user skill with a built-in's name replaces it; deleting it brings the built-in back. Built-ins can be turned off.
+- [x] Matching (`src/background/skills/match.ts`): `/name` anywhere in the task, then URL patterns against the current page (`*` globs; a bare domain covers its subdomains; `*.x.com` also covers `x.com`), then whole-word keywords in the task. At most three skills, 8,000 characters between them.
+- [x] Loaded per step into the browser-state message, so a task that moves to another site picks up that site's skill. The thread says "Using skill /name" the first time. The section restates that commits still wait for confirmation, and the gate does not read skills at all.
+- [x] Settings → Skills: import `.md` files (several at once), write a new one, edit (a built-in edited becomes your own), turn on or off, export `.md`, delete.
+- [x] Teach mode: after a browsing task that finished without error, the chat offers "Save as skill?". The chat's model drafts name, description, URL patterns, keywords and tips from the task log (no passwords or message contents); you review and edit the Markdown before it is saved. Asked once per chat.
+- [x] Tests: 23 unit tests (frontmatter, parse and write back, store, URL globs, keywords, `/name`, ranking, limits, teach transcript and draft); 4 E2E tests (`e2e/skills.e2e.mjs`).
 
-**Exit:** `zedu-operator.md` imports and loads on Zedu with no core change.
+**Exit:** passes with a stand-in. `e2e/zedu-operator.md` (the fixture page plays Zedu) imports through the settings page and loads on its site with no core change. Avi's real `zedu-operator.md` was not on this machine; import it under Settings → Skills and check its `match.urls` cover Zedu's domain.
+
+Known gaps:
+
+- No `/` autocomplete in the chat box yet; type the name.
+- A skill is matched against the task and the current page only, not against pages the planner intends to visit.
 
 ---
 
