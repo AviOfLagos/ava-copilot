@@ -192,7 +192,9 @@ test('a thread branches from a message into a new thread with the conversation u
   const original = await waitForThread(session.panel, 'branchable', t => t.status === 'idle' && !t.forkedFrom);
 
   await session.panel.evaluate(() => {
-    [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'Branch from here').click();
+    [...document.querySelectorAll('button')]
+      .find(b => b.innerText.trim() === 'Branch from here' || b.getAttribute('aria-label') === 'Branch from here')
+      .click();
   });
   const fork = await waitForThread(session.panel, 'branchable. (branch)');
   assert.deepEqual(fork.forkedFrom, { threadId: original.id, seq: 1 });

@@ -34,6 +34,11 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   `src/background/skills` (matching, injection, teach mode). They reach the agent only through the browser-state
   message in `agent/prompts/base.ts`. The agent must work with none loaded, and site-specific knowledge goes in a skill,
   never in core code.
+- Side panel look: tokens in `src/side-panel/index.css` (`--color-*`, `--primary-rgb`, `--hold-rgb`, `--call-rgb`) and
+  `docs/DIRECTION.md`. Amber (`hold`) is only for "waits for the user's click". Components in
+  `src/side-panel/components/ai` are ported from AI Elements (Apache 2.0, keep the header notice); `components/ui` holds
+  the orbs (MorphOrb, LiveOrb, the dotted ThinkingOrb) and primitives. MorphOrb animates on animation frames, so E2E
+  tests bring the panel tab to the front before using it.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 

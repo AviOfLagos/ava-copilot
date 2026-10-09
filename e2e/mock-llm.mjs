@@ -57,7 +57,11 @@ const TEACH_PROMPT = 'You write a skill: a short page of tips';
 // Lowercase words hashed into 64 buckets, as a unit vector; the task prefixes are left out
 function bagOfWords(text) {
   const vector = new Array(64).fill(0);
-  const words = text.replace(/^(task: search result \| query: |title: .*? \| text: )/, '').toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  const words =
+    text
+      .replace(/^(task: search result \| query: |title: .*? \| text: )/, '')
+      .toLowerCase()
+      .match(/[a-z0-9]+/g) ?? [];
   for (const word of words) {
     let hash = 0;
     for (const char of word) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
@@ -131,7 +135,9 @@ export async function startMockLlm(scenarios) {
       const { requests } = JSON.parse(body);
       kb.embedded.push(...requests.map(entry => entry.content.parts.map(part => part.text).join(' ')));
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ embeddings: requests.map(entry => ({ values: bagOfWords(entry.content.parts[0].text) })) }));
+      return res.end(
+        JSON.stringify({ embeddings: requests.map(entry => ({ values: bagOfWords(entry.content.parts[0].text) })) }),
+      );
     }
 
     if (req.method === 'POST' && req.url.endsWith('/chat/completions')) {

@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiBookOpen, FiExternalLink, FiList, FiSettings } from 'react-icons/fi';
-import { PiMicrophoneBold, PiPlusBold, PiRecordBold } from 'react-icons/pi';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import {
-  type Message,
-  Actors,
   AgentNameEnum,
   ProviderTypeEnum,
   agentModelStore,
@@ -16,11 +13,19 @@ import {
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
-import MessageList from './components/MessageList';
-import ChatInput from './components/ChatInput';
+import Composer from './components/Composer';
 import ConfirmCard from './components/ConfirmCard';
-import UsageBadge from './components/UsageBadge';
 import BookmarkList from './components/BookmarkList';
+import { Button } from './components/ui/button';
+import { LiveOrb } from './components/ui/live-orb';
+import { ThinkingOrb } from './components/ui/thinking-orb';
+import ChatView from './chat/ChatView';
+import Header from './layout/Header';
+import { useTheme } from './layout/theme';
+import HomeView from './home/HomeView';
+import VoiceView from './voice/VoiceView';
+import TodayView from './today/TodayView';
+import SettingsView from './settings/SettingsView';
 import ThreadList from './threads/ThreadList';
 import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
@@ -29,17 +34,10 @@ import KnowledgeView from './kb/KnowledgeView';
 import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
-import './SidePanel.css';
 
-const PROGRESS = 'Showing progress...';
 // A thread tag: the user answered "Save as skill?" for this chat
 const SKILL_OFFERED_TAG = 'skill:offered';
 
-const VOICE_LABELS = {
-  connecting: 'voice_status_connecting',
-  listening: 'voice_status_listening',
-  speaking: 'voice_status_speaking',
-} as const;
 const HEARTBEAT_MS = 25_000;
 
 // A popped-out panel opens on the thread named in its address
@@ -59,13 +57,17 @@ type PanelMessage =
   | { type: 'heartbeat_ack' };
 
 const SidePanel = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { dark: isDarkMode } = useTheme();
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
   const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
   const [showList, setShowList] = useState(false);
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [showKb, setShowKb] = useState(false);
+  // The voice screen was put away while the conversation goes on
+  const [voiceHidden, setVoiceHidden] = useState(false);
+  const [showToday, setShowToday] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [savedSkillIn, setSavedSkillIn] = useState<string | null>(null);
   // Where a citation points in the meeting's transcript, in seconds
   const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
@@ -74,12 +76,13 @@ const SidePanel = () => {
   const [voiceStatus, setVoiceStatus] = useState<'off' | 'connecting' | 'listening' | 'speaking'>('off');
   // A problem to show above the input that belongs to no message, e.g. a send that was refused
   const [banner, setBanner] = useState<string | null>(null);
+  // A short good-news line, e.g. a page saved
+  const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [favoritePrompts, setFavoritePrompts] = useState<FavoritePrompt[]>([]);
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const heartbeatRef = useRef<number | null>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
   // Questions about a meeting waiting for their answer
@@ -110,14 +113,6 @@ const SidePanel = () => {
     !thread.tags.includes(SKILL_OFFERED_TAG) &&
     threadMessages.some(message => message.actor === 'navigator') &&
     threadMessages.at(-1)?.actor === 'planner';
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(query.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
 
   // A task cannot run without a Navigator model whose provider has an API key
   const checkModelConfiguration = useCallback(async () => {
@@ -350,6 +345,7 @@ const SidePanel = () => {
       post({ type: 'voice_stop' });
       return;
     }
+    setVoiceHidden(false);
     setVoiceStatus('connecting');
     post({ type: 'voice_start', windowId: await currentWindowId() });
   };
@@ -382,6 +378,8 @@ const SidePanel = () => {
   };
 
   const handleNewThread = () => {
+    setShowSettings(false);
+    setShowToday(false);
     setShowKb(false);
     setMeetingId(null);
     setThreadId(null);
@@ -390,6 +388,8 @@ const SidePanel = () => {
   };
 
   const handleSelect = (id: string) => {
+    setShowSettings(false);
+    setShowToday(false);
     setShowKb(false);
     setMeetingId(null);
     setThreadId(id);
@@ -402,10 +402,16 @@ const SidePanel = () => {
     if (id === threadId) setThreadId(null);
   };
 
-  const handleBranch = async (index: number) => {
-    const message = threadMessages[index];
-    if (!threadId || !message) return;
-    const fork = await threadStore.fork(threadId, message.seq);
+  // Good news fades on its own
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const handleBranch = async (seq: number) => {
+    if (!threadId) return;
+    const fork = await threadStore.fork(threadId, seq);
     setThreadId(fork.id);
   };
 
@@ -414,41 +420,76 @@ const SidePanel = () => {
     await chrome.windows.create({ url, type: 'popup', width: 440, height: 760 });
   };
 
-  const messages: Message[] = useMemo(() => {
-    const shown: Message[] = threadMessages.map(message => ({
-      actor: message.actor as Actors,
-      content: message.content,
-      timestamp: message.ts,
-    }));
-    if (thread?.status === 'running' && thread.activity) {
-      shown.push({
-        actor: thread.activity === 'planning' ? Actors.PLANNER : Actors.NAVIGATOR,
-        content: PROGRESS,
-        timestamp: Date.now(),
-      });
+  const savePage = async () => {
+    setBanner(null);
+    try {
+      setNotice(t('kb_saved', [await kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId() })]));
+    } catch (error) {
+      setBanner(error instanceof Error ? error.message : String(error));
     }
-    return shown;
-  }, [threadMessages, thread?.status, thread?.activity]);
+  };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, thread?.pendingRequest]);
+  const openSettings = () => {
+    setShowSettings(!showSettings);
+    setShowList(false);
+  };
 
-  const headerButton = `header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`;
+  const view: 'consent' | 'list' | 'settings' | 'kb' | 'today' | 'meeting' | 'checking' | 'welcome' | 'chat' | 'home' =
+    consent
+      ? 'consent'
+      : showList
+        ? 'list'
+        : showSettings
+          ? 'settings'
+          : showToday
+            ? 'today'
+            : showKb
+              ? 'kb'
+              : meetingId
+                ? 'meeting'
+                : hasConfiguredModels === null
+                  ? 'checking'
+                  : hasConfiguredModels === false
+                    ? 'welcome'
+                    : thread && threadMessages.length > 0
+                      ? 'chat'
+                      : 'home';
 
-  const input = (
-    <div className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
-      {thread?.pendingRequest && (
-        <ConfirmCard request={thread.pendingRequest} onAnswer={handleConfirmAnswer} isDarkMode={isDarkMode} />
-      )}
+  const title =
+    view === 'list'
+      ? t('threads_list_title')
+      : view === 'kb'
+        ? t('kb_title')
+        : view === 'today'
+          ? t('today_title')
+          : view === 'settings'
+            ? t('settings_title')
+            : thread?.title || t('threads_untitled');
+
+  const alerts = (
+    <>
       {banner && (
         <div
           role="alert"
-          className={`mb-2 rounded px-2 py-1 text-sm ${isDarkMode ? 'bg-red-950 text-red-200' : 'bg-red-50 text-red-700'}`}>
+          className="border-destructive/40 bg-destructive/10 mb-2 rounded-xl border px-3 py-2 text-[12.5px]">
           {banner}
         </div>
       )}
-      <ChatInput
+      {notice && (
+        <div role="status" className="border-primary/40 bg-primary/10 mb-2 rounded-xl border px-3 py-2 text-[12.5px]">
+          {notice}
+        </div>
+      )}
+    </>
+  );
+
+  const composer = (
+    <div className="shrink-0 px-2.5 pb-2.5 pt-1">
+      {thread?.pendingRequest && view === 'chat' && (
+        <ConfirmCard request={thread.pendingRequest} onAnswer={handleConfirmAnswer} isDarkMode={isDarkMode} />
+      )}
+      {alerts}
+      <Composer
         onSendMessage={text => void handleSend(text)}
         onStopTask={handleStop}
         onMicClick={() => void speech.toggle()}
@@ -459,180 +500,78 @@ const SidePanel = () => {
         setContent={setter => {
           setInputTextRef.current = setter;
         }}
-        isDarkMode={isDarkMode}
       />
+      <p className="text-muted-foreground mt-1.5 text-center text-[10.5px]">{t('chat_footer_gate')}</p>
     </div>
   );
 
   return (
-    <div>
-      <div
-        className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-sky-800' : 'border-[rgb(186,230,253)]'} rounded-2xl`}>
-        <header className="header relative">
-          <div className="header-logo min-w-0">
-            <button
-              type="button"
-              onClick={() => setShowList(!showList)}
-              className={`${headerButton} flex min-w-0 items-center gap-2`}
-              aria-label={t('threads_list_title')}
-              aria-expanded={showList}>
-              <FiList size={20} className="shrink-0" />
-              <span className={`truncate text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                {showList ? t('threads_list_title') : showKb ? t('kb_title') : thread?.title || t('threads_untitled')}
-              </span>
-            </button>
-          </div>
-          <div className="header-icons">
-            <UsageBadge sessionId={threadId} isDarkMode={isDarkMode} />
-            {voiceStatus === 'off' ? (
-              <button
-                type="button"
-                onClick={() => void toggleVoice()}
-                className={headerButton}
-                aria-label={t('voice_talk')}
-                title={t('voice_talk')}>
-                <PiMicrophoneBold size={20} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void toggleVoice()}
-                className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold text-white ${voiceStatus === 'speaking' ? 'bg-sky-600' : 'bg-emerald-600'}`}
-                aria-label={t('voice_stop')}
-                title={t('voice_stop')}>
-                <span className="inline-block size-2 animate-pulse rounded-full bg-white" />
-                {t(VOICE_LABELS[voiceStatus])}
-              </button>
-            )}
-            {recording ? (
-              <button
-                type="button"
-                onClick={() => void handleTakeNotes()}
-                className="flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white"
-                aria-label={t('meeting_openNotes')}>
-                <span className="inline-block size-2 animate-pulse rounded-full bg-white" />
-                {t('meeting_recordingBadge', [clock(recordingFor)])}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void handleTakeNotes()}
-                className={headerButton}
-                aria-label={t('meeting_take')}
-                title={t('meeting_take')}>
-                <PiRecordBold size={20} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setShowKb(!showKb);
-                setShowList(false);
-              }}
-              className={headerButton}
-              aria-label={t('kb_title')}
-              aria-pressed={showKb}
-              title={t('kb_title')}>
-              <FiBookOpen size={19} />
-            </button>
-            {activeCount > 1 && (
-              <button
-                type="button"
-                onClick={() => post({ type: 'thread_cancel_all' })}
-                className="rounded bg-red-600 px-2 py-0.5 text-xs text-white">
-                {t('threads_stopAll', [String(activeCount)])}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleNewThread}
-              className={headerButton}
-              aria-label={t('threads_new')}
-              title={t('threads_new')}>
-              <PiPlusBold size={20} />
-            </button>
-            <button
-              type="button"
-              onClick={() => void handlePopOut()}
-              className={headerButton}
-              aria-label={t('threads_popOut')}
-              title={t('threads_popOut')}>
-              <FiExternalLink size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => chrome.runtime.openOptionsPage()}
-              className={headerButton}
-              aria-label={t('nav_settings_a11y')}>
-              <FiSettings size={20} />
-            </button>
-          </div>
-        </header>
+    <div className="aura text-foreground relative flex h-screen flex-col overflow-hidden font-sans">
+      {voiceStatus !== 'off' && !voiceHidden && (
+        <VoiceView status={voiceStatus} onEnd={() => void toggleVoice()} onHide={() => setVoiceHidden(true)} />
+      )}
+      <Header
+        title={title}
+        listOpen={showList}
+        onToggleList={() => setShowList(!showList)}
+        busy={activeCount > 0 || voiceStatus !== 'off'}
+        kbOpen={showKb && !showList}
+        onToggleKb={() => {
+          setShowKb(!showKb);
+          setShowList(false);
+          setShowToday(false);
+          setShowSettings(false);
+        }}
+        recordingLabel={recording ? clock(recordingFor) : null}
+        onNotes={() => void handleTakeNotes()}
+        voiceStatus={voiceStatus}
+        // A hidden conversation comes back to the front; otherwise the button starts or ends it
+        onVoice={() => (voiceStatus !== 'off' && voiceHidden ? setVoiceHidden(false) : void toggleVoice())}
+        onNewThread={handleNewThread}
+        onSettings={openSettings}
+        settingsOpen={showSettings}
+        activeCount={activeCount}
+        onStopAll={() => post({ type: 'thread_cancel_all' })}
+      />
 
-        {elsewhere?.pendingRequest && (
-          <div className="px-2 pt-2">
-            <p className={`mb-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {t('threads_waitingElsewhere', [elsewhere.title || t('threads_untitled')])}
-            </p>
-            <ConfirmCard
-              request={elsewhere.pendingRequest}
-              onAnswer={approved =>
-                post({
-                  type: 'confirm_action',
-                  threadId: elsewhere.id,
-                  requestId: elsewhere.pendingRequest!.id,
-                  approved,
-                })
-              }
-              isDarkMode={isDarkMode}
-            />
-          </div>
-        )}
-
-        {consent ? (
-          <ConsentDialog
-            includeMic={consent.includeMic}
-            onStart={withMic => void startNotes(withMic)}
-            onCancel={() => setConsent(null)}
+      {elsewhere?.pendingRequest && (
+        <div className="px-2.5 pt-2">
+          <p className="text-muted-foreground mb-1 text-[11.5px]">
+            {t('threads_waitingElsewhere', [elsewhere.title || t('threads_untitled')])}
+          </p>
+          <ConfirmCard
+            request={elsewhere.pendingRequest}
+            onAnswer={approved =>
+              post({
+                type: 'confirm_action',
+                threadId: elsewhere.id,
+                requestId: elsewhere.pendingRequest!.id,
+                approved,
+              })
+            }
             isDarkMode={isDarkMode}
           />
-        ) : showKb && !showList ? (
-          <KnowledgeView
-            onAsk={question => kbRequest<KbAnswer>({ type: 'kb_ask', question })}
-            onSavePage={async () => kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId() })}
-            onDelete={itemId => post({ type: 'kb_delete', itemId })}
-            onOpenCitation={openCitation}
-            isDarkMode={isDarkMode}
-          />
-        ) : meetingId && !showList ? (
-          <>
-            {banner && (
-              <div
-                role="alert"
-                className={`m-2 rounded px-2 py-1 text-sm ${isDarkMode ? 'bg-red-950 text-red-200' : 'bg-red-50 text-red-700'}`}>
-                {banner}
-              </div>
-            )}
-            <MeetingView
-              meetingId={meetingId}
-              onStop={() => post({ type: 'meeting_stop', meetingId })}
-              onRetry={() => post({ type: 'meeting_retry', meetingId })}
-              onOpenThread={id => handleSelect(id)}
-              onAsk={question =>
-                new Promise<void>(resolve => {
-                  const clientId = crypto.randomUUID();
-                  pendingAsksRef.current.set(clientId, resolve);
-                  setBanner(null);
-                  post({ type: 'meeting_ask', clientId, meetingId, question });
-                })
-              }
-              onRefreshSummary={() => post({ type: 'meeting_summarize', meetingId })}
-              focusT={meetingFocusT}
-              isDarkMode={isDarkMode}
-            />
-          </>
-        ) : showList ? (
-          <div className="flex-1 overflow-hidden">
+        </div>
+      )}
+
+      {view === 'consent' && consent && (
+        <ConsentDialog
+          includeMic={consent.includeMic}
+          onStart={withMic => void startNotes(withMic)}
+          onCancel={() => setConsent(null)}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {view === 'list' && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex justify-end px-3 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => void handlePopOut()} aria-label={t('threads_popOut')}>
+              <ExternalLink className="size-3.5" />
+              {t('threads_popOut')}
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
             <ThreadList
               activeThreadId={threadId}
               onSelect={handleSelect}
@@ -640,107 +579,153 @@ const SidePanel = () => {
               isDarkMode={isDarkMode}
             />
           </div>
-        ) : hasConfiguredModels === null ? (
-          <div
-            className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
-            <div className="text-center">
-              <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent"></div>
-              <p>{t('status_checkingConfig')}</p>
-            </div>
+        </div>
+      )}
+
+      {view === 'kb' && (
+        <KnowledgeView
+          onAsk={question => kbRequest<KbAnswer>({ type: 'kb_ask', question })}
+          onSavePage={async () => kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId() })}
+          onDelete={itemId => post({ type: 'kb_delete', itemId })}
+          onOpenCitation={openCitation}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {view === 'settings' && <SettingsView onBack={() => setShowSettings(false)} />}
+
+      {view === 'today' && (
+        <>
+          <div className="px-3 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowToday(false)}>
+              <ArrowLeft className="size-3.5" />
+              {t('today_back')}
+            </Button>
           </div>
-        ) : hasConfiguredModels === false ? (
-          <div
-            className={`flex flex-1 items-center justify-center p-8 ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
-            <div className="max-w-md text-center">
-              <img src="/icon-128.png" alt="Avi Copilot Logo" className="mx-auto mb-4 size-12" />
-              <h3 className={`mb-2 text-lg font-semibold ${isDarkMode ? 'text-sky-200' : 'text-sky-700'}`}>
-                {t('welcome_title')}
-              </h3>
-              <p className="mb-4">{t('welcome_instruction')}</p>
-              <button
-                type="button"
-                onClick={() => chrome.runtime.openOptionsPage()}
-                className={`my-4 rounded-lg px-4 py-2 font-medium transition-colors ${
-                  isDarkMode ? 'bg-sky-600 text-white hover:bg-sky-700' : 'bg-sky-500 text-white hover:bg-sky-600'
-                }`}>
-                {t('welcome_openSettings')}
-              </button>
-            </div>
+          <TodayView />
+        </>
+      )}
+
+      {view === 'meeting' && meetingId && (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="px-2.5 pt-2">{alerts}</div>
+          <MeetingView
+            meetingId={meetingId}
+            onStop={() => post({ type: 'meeting_stop', meetingId })}
+            onRetry={() => post({ type: 'meeting_retry', meetingId })}
+            onOpenThread={id => handleSelect(id)}
+            onAsk={question =>
+              new Promise<void>(resolve => {
+                const clientId = crypto.randomUUID();
+                pendingAsksRef.current.set(clientId, resolve);
+                setBanner(null);
+                post({ type: 'meeting_ask', clientId, meetingId, question });
+              })
+            }
+            onRefreshSummary={() => post({ type: 'meeting_summarize', meetingId })}
+            focusT={meetingFocusT}
+            isDarkMode={isDarkMode}
+          />
+        </div>
+      )}
+
+      {view === 'checking' && (
+        <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-4">
+          <ThinkingOrb size={72} />
+          <p className="text-sm">{t('status_checkingConfig')}</p>
+        </div>
+      )}
+
+      {view === 'welcome' && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 p-8 text-center">
+          <LiveOrb size={132} label={t('home_orb')} />
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium tracking-tight">{t('welcome_title')}</h3>
+            <p className="text-muted-foreground text-sm">{t('welcome_instruction')}</p>
           </div>
-        ) : (
-          <>
-            {thread && (
-              <ThreadBar
-                thread={thread}
-                onRebind={async () =>
-                  post({ type: 'thread_rebind', threadId: thread.id, windowId: await currentWindowId() })
-                }
-                onContinue={async () =>
-                  post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
-                }
-                onOpenMeeting={
-                  thread.meetingId
-                    ? () => {
-                        setMeetingFocusT(null);
-                        setMeetingId(thread.meetingId);
-                      }
-                    : undefined
-                }
-                isDarkMode={isDarkMode}
-              />
-            )}
-            {messages.length === 0 ? (
-              <>
-                {input}
-                <div className="flex-1 overflow-y-auto">
-                  <BookmarkList
-                    bookmarks={favoritePrompts}
-                    onBookmarkSelect={content => setInputTextRef.current?.(content)}
-                    onBookmarkUpdateTitle={async (id, title) => {
-                      await favoritesStorage.updatePromptTitle(id, title);
-                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
-                    }}
-                    onBookmarkDelete={async id => {
-                      await favoritesStorage.removePrompt(id);
-                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
-                    }}
-                    onBookmarkReorder={async (draggedId, targetId) => {
-                      await favoritesStorage.reorderPrompts(draggedId, targetId);
-                      setFavoritePrompts(await favoritesStorage.getAllPrompts());
-                    }}
-                    isDarkMode={isDarkMode}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div
-                  className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
-                  <MessageList
-                    messages={messages}
-                    isDarkMode={isDarkMode}
-                    onBranch={isBusy ? undefined : handleBranch}
-                  />
-                  {(canTeach || savedSkillIn === thread?.id) && thread && (
-                    <TeachCard
-                      key={thread.id}
-                      onDraft={() => kbRequest<string>({ type: 'skill_teach', threadId: thread.id })}
-                      onDone={saved => {
-                        // A saved skill keeps its card, to show the name it is called by
-                        if (saved) setSavedSkillIn(thread.id);
-                        void threadStore.update(thread.id, { tags: [...thread.tags, SKILL_OFFERED_TAG] });
-                      }}
-                      isDarkMode={isDarkMode}
-                    />
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-                {input}
-              </>
-            )}
-          </>
-        )}
-      </div>
+          <Button size="lg" onClick={() => chrome.runtime.openOptionsPage()}>
+            {t('welcome_openSettings')}
+          </Button>
+        </div>
+      )}
+
+      {view === 'chat' && thread && (
+        <>
+          <ThreadBar
+            thread={thread}
+            onPopOut={() => void handlePopOut()}
+            onRebind={async () =>
+              post({ type: 'thread_rebind', threadId: thread.id, windowId: await currentWindowId() })
+            }
+            onContinue={async () =>
+              post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
+            }
+            onOpenMeeting={
+              thread.meetingId
+                ? () => {
+                    setMeetingFocusT(null);
+                    setMeetingId(thread.meetingId);
+                  }
+                : undefined
+            }
+            isDarkMode={isDarkMode}
+          />
+          <ChatView
+            thread={thread}
+            messages={threadMessages}
+            onBranch={isBusy ? undefined : seq => void handleBranch(seq)}
+            footer={
+              (canTeach || savedSkillIn === thread.id) && (
+                <TeachCard
+                  key={thread.id}
+                  onDraft={() => kbRequest<string>({ type: 'skill_teach', threadId: thread.id })}
+                  onDone={saved => {
+                    // A saved skill keeps its card, to show the name it is called by
+                    if (saved) setSavedSkillIn(thread.id);
+                    void threadStore.update(thread.id, { tags: [...thread.tags, SKILL_OFFERED_TAG] });
+                  }}
+                  isDarkMode={isDarkMode}
+                />
+              )
+            }
+          />
+          {composer}
+        </>
+      )}
+
+      {view === 'home' && (
+        <>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <HomeView
+              onPrompt={text => setInputTextRef.current?.(text)}
+              onOpenKb={() => setShowKb(true)}
+              onTakeNotes={() => void handleTakeNotes()}
+              onSavePage={() => void savePage()}
+              onOpenToday={() => setShowToday(true)}>
+              {favoritePrompts.length > 0 && (
+                <BookmarkList
+                  bookmarks={favoritePrompts}
+                  onBookmarkSelect={content => setInputTextRef.current?.(content)}
+                  onBookmarkUpdateTitle={async (id, title) => {
+                    await favoritesStorage.updatePromptTitle(id, title);
+                    setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                  }}
+                  onBookmarkDelete={async id => {
+                    await favoritesStorage.removePrompt(id);
+                    setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                  }}
+                  onBookmarkReorder={async (draggedId, targetId) => {
+                    await favoritesStorage.reorderPrompts(draggedId, targetId);
+                    setFavoritePrompts(await favoritesStorage.getAllPrompts());
+                  }}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+            </HomeView>
+          </div>
+          {composer}
+        </>
+      )}
     </div>
   );
 };

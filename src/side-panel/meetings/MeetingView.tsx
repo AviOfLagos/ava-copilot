@@ -5,6 +5,7 @@ import { t } from '@extension/i18n';
 import { meetingStore, threadStore } from '@extension/storage';
 import type { MeetingRecord, MeetingWarning } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
+import { buttonClasses } from '../components/ui/button';
 
 interface MeetingViewProps {
   meetingId: string;
@@ -76,7 +77,6 @@ export default function MeetingView({
   onAsk,
   onRefreshSummary,
   focusT = null,
-  isDarkMode = false,
 }: MeetingViewProps) {
   const meeting = useLive(() => meetingStore.get(meetingId), [meetingId], undefined);
   const segments = useLive(() => meetingStore.segments(meetingId), [meetingId], []);
@@ -112,8 +112,8 @@ export default function MeetingView({
 
   if (!meeting) return null;
 
-  const muted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
-  const card = `rounded-lg border p-3 ${isDarkMode ? 'border-slate-700 bg-slate-800 text-gray-200' : 'border-sky-100 bg-white text-gray-800'}`;
+  const muted = 'text-muted-foreground';
+  const card = 'glass rounded-2xl p-3 text-[13px] text-foreground';
   const heading = 'mb-1 text-sm font-semibold';
   const note = meeting.note;
 
@@ -144,9 +144,9 @@ export default function MeetingView({
             </p>
             <p
               role="status"
-              className={`mt-1 flex items-center gap-1 ${meeting.status === 'recording' ? 'text-red-600' : muted}`}>
+              className={`mt-1 flex items-center gap-1 ${meeting.status === 'recording' ? 'text-destructive' : muted}`}>
               {meeting.status === 'recording' && (
-                <span className="inline-block size-2 animate-pulse rounded-full bg-red-600" />
+                <span className="bg-destructive inline-block size-2 animate-pulse rounded-full" />
               )}
               {status}
             </p>
@@ -155,14 +155,14 @@ export default function MeetingView({
             <button
               type="button"
               onClick={onStop}
-              className="flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-white">
+              className="border-destructive/60 bg-destructive/25 flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3">
               <PiStopFill size={14} />
               {t('meeting_stop')}
             </button>
           )}
           {(meeting.status === 'failed' ||
             (meeting.status === 'finishing' && meeting.warnings.includes('transcription'))) && (
-            <button type="button" onClick={onRetry} className="shrink-0 rounded-md bg-sky-600 px-3 py-1.5 text-white">
+            <button type="button" onClick={onRetry} className={buttonClasses('default', 'sm')}>
               {t('meeting_retry')}
             </button>
           )}
@@ -170,10 +170,7 @@ export default function MeetingView({
         {meeting.warnings.length > 0 && (
           <ul className="mt-2 space-y-1">
             {meeting.warnings.map(warning => (
-              <li
-                key={warning}
-                role="alert"
-                className={`rounded px-2 py-1 text-xs ${isDarkMode ? 'bg-amber-950 text-amber-200' : 'bg-amber-50 text-amber-800'}`}>
+              <li key={warning} role="alert" className="bg-muted rounded-xl border px-2.5 py-1.5 text-xs">
                 {t(WARNINGS[warning])}
               </li>
             ))}
@@ -261,7 +258,7 @@ export default function MeetingView({
           <div className={card}>
             <div className="flex items-center justify-between">
               <h3 className={heading}>{t('meeting_summarySoFar')}</h3>
-              <button type="button" onClick={onRefreshSummary} className="text-xs text-sky-600 underline">
+              <button type="button" onClick={onRefreshSummary} className="text-primary text-xs hover:underline">
                 {t('meeting_refreshSummary')}
               </button>
             </div>
@@ -312,12 +309,9 @@ export default function MeetingView({
               onChange={event => setQuestion(event.target.value)}
               placeholder={t('meeting_ask_placeholder')}
               aria-label={t('meeting_ask_placeholder')}
-              className={`min-w-0 flex-1 rounded-md border px-2 py-1 ${isDarkMode ? 'border-slate-600 bg-slate-900' : 'border-sky-100 bg-white'}`}
+              className="bg-card text-foreground placeholder:text-muted-foreground focus:border-primary/50 min-w-0 flex-1 rounded-full border px-3 py-1.5 outline-none"
             />
-            <button
-              type="submit"
-              disabled={asking}
-              className="rounded-md bg-sky-600 px-3 py-1 text-white disabled:opacity-50">
+            <button type="submit" disabled={asking} className={buttonClasses('default', 'sm')}>
               {asking ? t('meeting_asking') : t('meeting_ask_button')}
             </button>
           </form>
@@ -334,9 +328,7 @@ export default function MeetingView({
               <li
                 key={segment.id}
                 id={`segment-${segment.id}`}
-                className={
-                  segment.id === focusId ? (isDarkMode ? 'rounded bg-amber-900/60' : 'rounded bg-amber-100') : ''
-                }>
+                className={segment.id === focusId ? 'bg-primary/15 rounded' : ''}>
                 <span className={`mr-1 tabular-nums ${muted}`}>{clock(segment.tStart)}</span>
                 {segment.speaker && <span className="font-medium">{segment.speaker}: </span>}
                 {segment.text}

@@ -1,0 +1,592 @@
+/*
+ * MorphOrb styles. The keyframes came with the component; the rest is written to its runtime's
+ * contract: the runtime sets --w --h --r and the --o* opacities on .mo-actor, --sOp and --sTy on
+ * .mo-status, and --oCenter on .mo-root, once per frame.
+ */
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes mo-spin {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes mo-drift {
+  from {
+    transform: translateX(-14%);
+  }
+  to {
+    transform: translateX(14%);
+  }
+}
+
+@keyframes mo-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes mo-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@keyframes mo-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mo-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes mo-shake {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  25% {
+    transform: translate(calc(-50% - 4px), -50%);
+  }
+  75% {
+    transform: translate(calc(-50% + 4px), -50%);
+  }
+}
+
+.mo-root {
+  --oCenter: 0;
+  --mint: rgb(var(--primary-rgb));
+  --peri: rgb(var(--call-rgb));
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The light behind the thinking orb */
+.mo-halo {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 420px;
+  height: 420px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--primary-rgb) / 0.18), transparent 62%);
+  opacity: var(--oCenter);
+  pointer-events: none;
+}
+
+.mo-mover {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+
+.mo-trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, rgb(var(--primary-rgb) / 0.55), rgb(var(--primary-rgb) / 0) 70%);
+  pointer-events: none;
+}
+
+.mo-actor {
+  --w: 320px;
+  --h: 56px;
+  --r: 999px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--h);
+  border-radius: var(--r);
+  transform: translate(-50%, -50%);
+}
+
+.mo-actor[data-shake] {
+  animation: mo-shake 0.26s ease-in-out;
+}
+
+.mo-actor > * {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* Glow under the pill */
+.mo-underglow {
+  inset: 30% 8% -30% 8%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(var(--primary-rgb) / 0.35), rgb(var(--call-rgb) / 0.3));
+  filter: blur(22px);
+  opacity: calc(var(--oGlow, 1) * 0.55);
+  pointer-events: none;
+}
+
+.mo-actor[data-typing] .mo-underglow {
+  opacity: calc(var(--oGlow, 1) * 0.85);
+}
+
+.mo-halo-green {
+  inset: -40%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--primary-rgb) / 0.5), transparent 65%);
+  opacity: var(--oHalo, 0);
+  pointer-events: none;
+}
+
+/* The pill: frosted glass with a slow aurora inside */
+.mo-surface {
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
+  border: 1px solid var(--color-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  opacity: var(--oPill, 1);
+}
+
+.mo-aurora {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--oAur, 1) * 0.55);
+  filter: blur(18px);
+}
+
+.mo-aurora i {
+  position: absolute;
+  top: -40%;
+  width: 45%;
+  height: 180%;
+  border-radius: 50%;
+  animation: mo-drift 6s ease-in-out infinite alternate;
+}
+
+.mo-aurora i:nth-child(1) {
+  left: -10%;
+  background: rgb(var(--primary-rgb) / 0.35);
+}
+
+.mo-aurora i:nth-child(2) {
+  left: 25%;
+  background: rgb(var(--call-rgb) / 0.28);
+  animation-duration: 7.5s;
+  animation-delay: -2s;
+}
+
+.mo-aurora i:nth-child(3) {
+  left: 55%;
+  background: rgb(var(--primary-rgb) / 0.22);
+  animation-duration: 9s;
+  animation-delay: -4s;
+}
+
+.mo-aurora i:nth-child(4) {
+  left: 80%;
+  background: rgba(232, 180, 212, 0.18);
+  animation-duration: 8s;
+  animation-delay: -1s;
+}
+
+/* The pill condensed into a lit ball before it flies */
+.mo-ball {
+  background: radial-gradient(circle at 35% 30%, #fff, rgb(var(--primary-rgb)) 45%, rgb(var(--primary-rgb) / 0.2) 75%);
+  box-shadow: 0 0 24px rgb(var(--primary-rgb) / 0.55);
+  opacity: var(--oBall, 0);
+}
+
+/* The answer, condensed: a mint disc that springs open */
+.mo-green {
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgb(var(--primary-rgb)),
+    rgb(var(--primary-rgb) / 0.75) 60%,
+    rgb(var(--primary-rgb) / 0.4)
+  );
+  box-shadow: 0 0 40px rgb(var(--primary-rgb) / 0.5);
+  opacity: var(--oGreen, 0);
+  transform: scale(var(--gs, 0.55));
+}
+
+.mo-card {
+  background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
+  border: 1px solid var(--color-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 0 calc(var(--bloom, 1) * 40px) rgb(var(--primary-rgb) / 0.18),
+    var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  opacity: var(--oCard, 0);
+  transform: scale(var(--cs, 1));
+}
+
+/* A slow lit edge around the pill */
+.mo-ring {
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0deg,
+    rgb(var(--primary-rgb) / 0.75) 60deg,
+    transparent 120deg,
+    rgb(var(--call-rgb) / 0.5) 220deg,
+    transparent 300deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  opacity: calc(var(--oRing, 1) * 0.55);
+  animation: mo-spin 6s linear infinite;
+  pointer-events: none;
+}
+
+.mo-actor[data-typing] .mo-ring {
+  opacity: var(--oRing, 1);
+  animation-duration: 2.4s;
+}
+
+.mo-actor[data-flash] .mo-ring {
+  opacity: 1;
+  background: conic-gradient(
+    from var(--angle),
+    rgb(var(--hold-rgb) / 0.9),
+    transparent 50%,
+    rgb(var(--hold-rgb) / 0.9)
+  );
+}
+
+.mo-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 18px;
+  opacity: var(--oInput, 1);
+  transform: scale(var(--inScale, 1));
+}
+
+.mo-spark {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: rgb(var(--primary-rgb));
+}
+
+.mo-field {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 14px;
+}
+
+.mo-field::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+.mo-send {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.mo-send svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mo-send[data-ready] {
+  border-color: rgb(var(--primary-rgb) / 0.6);
+  background: linear-gradient(180deg, rgb(var(--primary-rgb) / 0.35), rgb(var(--primary-rgb) / 0.12));
+  color: var(--color-foreground);
+  box-shadow: 0 0 16px rgb(var(--primary-rgb) / 0.3);
+}
+
+.mo-orb {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: 220px;
+  height: 220px;
+  border-radius: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.mo-pulse {
+  border: 2px solid rgb(var(--primary-rgb));
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mo-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  opacity: var(--hOp, 0);
+  overflow-y: auto;
+  outline: none;
+  pointer-events: none;
+}
+
+[data-phase='answered'] .mo-answer {
+  pointer-events: auto;
+}
+
+.mo-a-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.mo-a-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(var(--primary-rgb));
+  box-shadow: 0 0 8px rgb(var(--primary-rgb));
+  transform: scale(var(--dotS, 0));
+}
+
+.mo-a-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-foreground);
+}
+
+.mo-w {
+  display: inline-block;
+  opacity: 0;
+}
+
+.mo-status {
+  --sOp: 0;
+  --sTy: 6px;
+  position: absolute;
+  left: 50%;
+  top: calc(46% + 88px);
+  height: 24px;
+  width: 220px;
+  transform: translate(-50%, var(--sTy));
+  opacity: var(--sOp);
+  pointer-events: none;
+}
+
+.mo-lab {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.mo-in {
+  animation: mo-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mo-out {
+  animation: mo-out 0.24s ease-in both;
+}
+
+.mo-lab-t {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted-foreground) 35%,
+    var(--color-foreground) 50%,
+    var(--color-muted-foreground) 65%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: mo-shimmer 2.2s linear infinite;
+}
+
+.mo-lab-done {
+  color: rgb(var(--primary-rgb));
+  font-weight: 500;
+}
+
+.mo-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.mo-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-muted-foreground);
+  animation: mo-dot 1.2s infinite;
+}
+
+.mo-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.mo-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* "New question" sits where the pill was, once an answer is shown */
+.mo-reset {
+  position: absolute;
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+[data-phase='answered'] .mo-reset {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mo-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-aurora i,
+  .mo-ring,
+  .mo-lab-t,
+  .mo-dots i {
+    animation: none;
+  }
+}
+
+/* The same pill as the chat composer: in the page flow, growing with its text */
+.mo-pill {
+  position: relative;
+  border-radius: 26px;
+}
+
+.mo-pill > .mo-underglow,
+.mo-pill > .mo-surface,
+.mo-pill > .mo-ring {
+  position: absolute;
+  border-radius: inherit;
+}
+
+.mo-pill > .mo-surface,
+.mo-pill > .mo-ring {
+  inset: 0;
+}
+
+.mo-pill[data-typing] .mo-underglow {
+  opacity: 0.85;
+}
+
+.mo-pill[data-typing] .mo-ring,
+.mo-pill:focus-within .mo-ring {
+  opacity: 1;
+  animation-duration: 2.4s;
+}
+
+.mo-pill[data-flash] .mo-ring {
+  opacity: 1;
+  background: conic-gradient(
+    from var(--angle),
+    rgb(var(--hold-rgb) / 0.9),
+    transparent 50%,
+    rgb(var(--hold-rgb) / 0.9)
+  );
+}
+
+.mo-pill[data-shake] {
+  animation: mo-pill-shake 0.26s ease-in-out;
+}
+
+@keyframes mo-pill-shake {
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}

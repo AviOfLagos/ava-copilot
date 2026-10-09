@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { t } from '@extension/i18n';
 import { skillStore } from '@extension/storage';
+import { buttonClasses } from '../components/ui/button';
 
 interface TeachCardProps {
   // Resolves with the drafted skill as Markdown
@@ -14,15 +15,15 @@ interface TeachCardProps {
  * Offered after a task that worked: "Save as skill?". The drafted skill is shown as Markdown to
  * read and edit before it is saved.
  */
-export default function TeachCard({ onDraft, onDone, isDarkMode = false }: TeachCardProps) {
+export default function TeachCard({ onDraft, onDone }: TeachCardProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
-  const box = `rounded-lg border p-2 text-sm ${isDarkMode ? 'border-slate-700 bg-slate-800 text-gray-200' : 'border-sky-100 bg-white/90 text-gray-800'}`;
-  const quiet = `rounded-md border px-2 py-1 text-xs font-medium ${isDarkMode ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-300 bg-white hover:bg-gray-100'}`;
-  const primary = 'rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50';
+  const box = 'glass rounded-2xl p-3 text-[13px]';
+  const quiet = buttonClasses('glass', 'sm');
+  const primary = buttonClasses('default', 'sm');
 
   const write = async () => {
     setBusy(true);
@@ -80,7 +81,7 @@ export default function TeachCard({ onDraft, onDone, isDarkMode = false }: Teach
             value={draft}
             onChange={event => setDraft(event.target.value)}
             rows={12}
-            className={`w-full rounded border p-2 font-mono text-xs ${isDarkMode ? 'border-slate-600 bg-slate-900' : 'border-gray-300 bg-white'}`}
+            className="text-foreground focus:border-primary/50 w-full rounded-xl border bg-black/20 p-2.5 font-mono text-[11.5px] leading-relaxed outline-none"
           />
           <div className="mt-1 flex justify-end gap-1">
             <button type="button" className={quiet} onClick={() => onDone(false)}>
@@ -93,7 +94,7 @@ export default function TeachCard({ onDraft, onDone, isDarkMode = false }: Teach
         </>
       )}
       {error && (
-        <p role="alert" className="mt-1 text-xs text-red-600">
+        <p role="alert" className="text-destructive mt-1 text-xs">
           {error}
         </p>
       )}

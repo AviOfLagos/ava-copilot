@@ -143,7 +143,7 @@ test('model calls are counted per chat and shown in the header', async () => {
   await session.waitForEnd();
 
   // The scripted model has no price, so the badge shows tokens instead of dollars
-  const badge = await session.panel.waitForSelector('header span[title]', { timeout: 5000 });
+  const badge = await session.panel.waitForSelector('span[data-usage]', { timeout: 5000 });
   assert.match(await badge.evaluate(el => el.innerText), /^\d+ tok$/);
   await finish(session);
 });

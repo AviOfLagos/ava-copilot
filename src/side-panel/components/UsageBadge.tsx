@@ -40,7 +40,9 @@ export default function UsageBadge({ sessionId, isDarkMode = false }: UsageBadge
   return (
     <span
       title={t('usage_badge_title', [tokens, formatUsd(today.costUsd)])}
-      className={`mr-1 text-xs tabular-nums ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+      data-usage
+      data-dark={isDarkMode || undefined}
+      className="text-muted-foreground shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] tabular-nums">
       {label}
     </span>
   );

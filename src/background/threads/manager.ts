@@ -195,9 +195,10 @@ export class ThreadManager {
       return false;
     }
     const subject = request.target || request.intent;
+    // A note on the run, not a new request: the chat shows it as a step
     await this.store.addMessage(
       threadId,
-      'user',
+      'system',
       approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
     );
     await this.store.update(threadId, { pendingRequest: null, status: 'running' });

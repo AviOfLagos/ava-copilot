@@ -24,10 +24,10 @@ function timeAgo(timestamp: number): string {
 
 export function StatusDot({ thread }: { thread: Pick<ThreadRecord, 'status'> }) {
   const styles = {
-    idle: 'bg-gray-300',
-    running: 'animate-pulse bg-sky-500',
-    waiting_confirm: 'bg-amber-500',
-    error: 'bg-red-500',
+    idle: 'bg-muted-foreground/40',
+    running: 'animate-pulse bg-primary',
+    waiting_confirm: 'bg-hold',
+    error: 'bg-destructive',
   } as const;
   const labels = {
     idle: 'threads_status_idle',
@@ -48,15 +48,15 @@ export function StatusDot({ thread }: { thread: Pick<ThreadRecord, 'status'> }) 
 /**
  * Every thread, pinned first, with search, rename, pin, archive and delete.
  */
-export default function ThreadList({ activeThreadId, onSelect, onDelete, isDarkMode = false }: ThreadListProps) {
+export default function ThreadList({ activeThreadId, onSelect, onDelete }: ThreadListProps) {
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const threads = useLive(() => threadStore.list({ archived: showArchived, search }), [showArchived, search], []);
 
-  const muted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
-  const iconButton = `rounded p-1 ${isDarkMode ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200' : 'text-gray-500 hover:bg-sky-100 hover:text-gray-800'}`;
+  const muted = 'text-muted-foreground';
+  const iconButton = 'rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground';
 
   const saveRename = async () => {
     if (renaming && renaming.title.trim()) {
@@ -73,14 +73,14 @@ export default function ThreadList({ activeThreadId, onSelect, onDelete, isDarkM
         onChange={e => setSearch(e.target.value)}
         placeholder={t('threads_search_placeholder')}
         aria-label={t('threads_search_placeholder')}
-        className={`mb-2 w-full rounded-md border px-3 py-1.5 text-sm ${isDarkMode ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-sky-100 bg-white text-gray-800'}`}
+        className="glass text-foreground placeholder:text-muted-foreground focus:border-primary/50 mb-2 w-full rounded-xl px-3 py-2 text-[13px] outline-none"
       />
       <ul className="flex-1 space-y-1 overflow-y-auto">
         {threads.length === 0 && <li className={`p-2 text-sm ${muted}`}>{t('threads_empty')}</li>}
         {threads.map(thread => (
           <li
             key={thread.id}
-            className={`group rounded-md px-2 py-1.5 ${thread.id === activeThreadId ? (isDarkMode ? 'bg-slate-700' : 'bg-sky-100') : isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-white/70'}`}>
+            className={`group rounded-xl px-2.5 py-2 ${thread.id === activeThreadId ? 'glass' : 'hover:bg-accent'}`}>
             {renaming?.id === thread.id ? (
               <input
                 // eslint-disable-next-line jsx-a11y/no-autofocus
@@ -93,17 +93,15 @@ export default function ThreadList({ activeThreadId, onSelect, onDelete, isDarkM
                   if (e.key === 'Enter') void saveRename();
                   if (e.key === 'Escape') setRenaming(null);
                 }}
-                className={`w-full rounded border px-2 py-1 text-sm ${isDarkMode ? 'border-slate-500 bg-slate-800 text-gray-200' : 'border-sky-200 bg-white'}`}
+                className="text-foreground focus:border-primary/50 w-full rounded-lg border bg-transparent px-2 py-1 text-[13px] outline-none"
               />
             ) : confirmDelete === thread.id ? (
               <div className="flex items-center justify-between gap-2 text-sm">
-                <span className={isDarkMode ? 'text-red-300' : 'text-red-600'}>
-                  {t('threads_action_confirmDelete')}
-                </span>
+                <span className="text-destructive">{t('threads_action_confirmDelete')}</span>
                 <span className="flex gap-1">
                   <button
                     type="button"
-                    className="rounded bg-red-600 px-2 py-0.5 text-white"
+                    className="border-destructive/60 bg-destructive/25 rounded-full border px-2 py-0.5"
                     onClick={() => onDelete(thread.id)}>
                     {t('threads_action_delete')}
                   </button>
@@ -118,7 +116,7 @@ export default function ThreadList({ activeThreadId, onSelect, onDelete, isDarkM
                 <button
                   type="button"
                   onClick={() => onSelect(thread.id)}
-                  className={`min-w-0 flex-1 text-left text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  className="text-foreground min-w-0 flex-1 text-left text-[13px]">
                   <span className="block truncate font-medium">{thread.title || t('threads_untitled')}</span>
                   <span className={`text-xs ${muted}`}>{timeAgo(thread.updatedAt)}</span>
                 </button>

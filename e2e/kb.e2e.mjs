@@ -93,23 +93,26 @@ async function waitForItem(page, predicate, timeout = 20000) {
 }
 
 async function openKnowledge(session) {
-  await session.panel.evaluate(() => document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click());
-  await session.panel.waitForFunction(() => document.body.innerText.includes('In your knowledge base'), {
-    polling: 300,
-    timeout: 10000,
-  });
+  await session.panel.evaluate(() =>
+    document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click(),
+  );
+  await session.panel.waitForSelector('[role="tablist"][aria-label="Knowledge base"]', { timeout: 10000 });
 }
 
 async function ask(session, question) {
+  // MorphOrb animates on animation frames, which a background tab does not get
+  await session.panel.bringToFront();
   await session.panel.evaluate(text => {
     const input = document.querySelector('input[aria-label^="Ask about past"]');
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }, question);
   await sleep(100);
-  await session.click('Ask');
-  await session.panel.waitForSelector('section[aria-label="Answer"]', { timeout: 20000 });
-  return (await session.panel.$eval('section[aria-label="Answer"]', el => el.innerText)).replace(/\s+/g, ' ');
+  await session.panel.evaluate(() => document.querySelector('.mo-send').click());
+  await session.panel.waitForSelector('.mo-root[data-phase="answered"]', { timeout: 30000 });
+  const answer = await session.panel.$eval('[role="group"][aria-label="Answer"]', el => el.innerText);
+  const sources = await session.panel.$eval('section[aria-label="Sources"]', el => el.innerText).catch(() => '');
+  return `${answer} ${sources}`.replace(/\s+/g, ' ');
 }
 
 test('a finished meeting joins the knowledge base, and an answer cites it at the line that was said', async () => {
@@ -151,7 +154,15 @@ test('a finished meeting joins the knowledge base, and an answer cites it at the
     },
   ]);
   await writeStore(session.panel, 'segments', [
-    { id: crypto.randomUUID(), meetingId, tStart: 5, tEnd: 9, speaker: 'Ada', text: 'Welcome, everyone.', chunkIndex: 0 },
+    {
+      id: crypto.randomUUID(),
+      meetingId,
+      tStart: 5,
+      tEnd: 9,
+      speaker: 'Ada',
+      text: 'Welcome, everyone.',
+      chunkIndex: 0,
+    },
     {
       id: crypto.randomUUID(),
       meetingId,
@@ -167,7 +178,10 @@ test('a finished meeting joins the knowledge base, and an answer cites it at the
   const item = await waitForItem(session.panel, entry => entry.sourceId === meetingId);
   assert.equal(item.title, 'Stage 2 sync');
   assert.equal(item.unembedded, 0, 'every passage is embedded');
-  assert.ok(mock.kb.embedded.some(text => text.includes('Stage 2 deadline')), 'the meeting was embedded');
+  assert.ok(
+    mock.kb.embedded.some(text => text.includes('Stage 2 deadline')),
+    'the meeting was embedded',
+  );
 
   mock.kb.answer = 'The Stage 2 deadline is Friday 10 October [1][2].';
   await openKnowledge(session);
@@ -182,7 +196,7 @@ test('a finished meeting joins the knowledge base, and an answer cites it at the
 
   // The source at 12:04 opens the meeting with that line in view
   const opened = await session.panel.evaluate(() => {
-    const source = [...document.querySelectorAll('section[aria-label="Answer"] li button')].find(b =>
+    const source = [...document.querySelectorAll('section[aria-label="Sources"] li button')].find(b =>
       b.innerText.includes('12:04'),
     );
     source?.click();
@@ -190,10 +204,10 @@ test('a finished meeting joins the knowledge base, and an answer cites it at the
   });
   assert.ok(opened, 'the 12:04 source is listed');
   await session.panel.waitForFunction(
-    () => [...document.querySelectorAll('li[id^="segment-"]')].some(li => li.className.includes('bg-amber')),
+    () => [...document.querySelectorAll('li[id^="segment-"]')].some(li => li.className.includes('bg-primary')),
     { polling: 300, timeout: 10000 },
   );
-  const focused = await session.panel.$eval('li[id^="segment-"][class*="bg-amber"]', el => el.innerText);
+  const focused = await session.panel.$eval('li[id^="segment-"][class*="bg-primary"]', el => el.innerText);
   assert.match(focused, /Stage 2 deadline is Friday the tenth/);
   assert.deepEqual(session.panelErrors, []);
   await session.close();
@@ -205,7 +219,10 @@ test('a chat joins the knowledge base when its task finishes', async () => {
   await session.send('Run the scripted scenario kb-chat.');
   await session.waitForEnd();
 
-  const item = await waitForItem(session.panel, entry => entry.sourceType === 'thread' && entry.title.includes('kb-chat'));
+  const item = await waitForItem(
+    session.panel,
+    entry => entry.sourceType === 'thread' && entry.title.includes('kb-chat'),
+  );
   const chunks = (await readStore(session.panel, 'kbChunks')).filter(chunk => chunk.itemId === item.id);
   assert.equal(chunks.length, 1);
   assert.match(chunks[0].text, /^User: Run the scripted scenario kb-chat\./);
@@ -229,7 +246,9 @@ test('a saved page is found by the agent with search_knowledge, and can be remov
 
   mock.start('kb-agent');
   // Back to the chat: the header's Knowledge base toggle, not the thread list button titled the same
-  await session.panel.evaluate(() => document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click());
+  await session.panel.evaluate(() =>
+    document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click(),
+  );
   await session.panel.waitForSelector('textarea', { timeout: 10000 });
   await session.send('Run the scripted scenario kb-agent.');
   await session.waitForEnd();
@@ -240,6 +259,10 @@ test('a saved page is found by the agent with search_knowledge, and can be remov
 
   // Removing one item leaves the rest
   await openKnowledge(session);
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('[role="tab"]')].find(tab => tab.innerText.startsWith('Saved')).click(),
+  );
+  await session.panel.waitForSelector('button[aria-label^="Remove"]', { timeout: 10000 });
   await session.click('Remove "Gate fixture" from the knowledge base');
   await session.panel.waitForFunction(() => !document.body.innerText.includes('Gate fixture'), {
     polling: 300,
@@ -272,11 +295,16 @@ test('the knowledge base exports, wipes and imports back', async () => {
   // The settings page shows the section
   const options = await extension.browser.newPage();
   await options.goto(`${extension.origin}/options.html`);
-  await options.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.innerText.trim() === 'General'), {
-    polling: 300,
-    timeout: 10000,
-  });
-  await options.evaluate(() => [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'General').click());
+  await options.waitForFunction(
+    () => [...document.querySelectorAll('button')].some(b => b.innerText.trim() === 'General'),
+    {
+      polling: 300,
+      timeout: 10000,
+    },
+  );
+  await options.evaluate(() =>
+    [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'General').click(),
+  );
   await options.waitForFunction(() => document.body.innerText.includes('Wipe the knowledge base'), {
     polling: 300,
     timeout: 10000,

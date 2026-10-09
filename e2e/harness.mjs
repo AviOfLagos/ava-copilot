@@ -146,7 +146,9 @@ export async function openSession(extension, mock, query = '') {
       }, task);
       await sleep(200);
       await panel.evaluate(() => {
-        [...document.querySelectorAll('button')].find(button => button.innerText.trim() === 'Send').click();
+        [...document.querySelectorAll('button')]
+          .find(button => button.innerText.trim() === 'Send' || button.getAttribute('aria-label') === 'Send')
+          .click();
       });
     },
     /** Waits for the confirm card and returns its text. */
@@ -154,12 +156,19 @@ export async function openSession(extension, mock, query = '') {
       const card = await panel.waitForSelector('[role="alertdialog"]', { timeout });
       return (await card.evaluate(el => el.innerText)).replace(/\s+/g, ' ');
     },
-    /** Clicks a button on the confirm card. */
+    /** Clicks a button on the confirm card. Confirming a commit takes a second click. */
     async answer(label) {
       await panel.evaluate(label => {
         const card = document.querySelector('[role="alertdialog"]');
         [...card.querySelectorAll('button')].find(button => button.innerText.trim() === label).click();
       }, label);
+      await sleep(50);
+      await panel.evaluate(() => {
+        const card = document.querySelector('[role="alertdialog"]');
+        [...(card?.querySelectorAll('button') ?? [])]
+          .find(button => button.innerText.trim() === 'Click again to confirm')
+          ?.click();
+      });
     },
     /** Waits until the task has ended, one way or another, and returns the panel text. */
     async waitForEnd(timeout = 60000) {

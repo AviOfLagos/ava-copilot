@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { FiFileText, FiGlobe, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
-import { PiBookmarkSimpleBold } from 'react-icons/pi';
+import { useRef, useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { BookmarkPlus, FileText, Globe, MessageSquare, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
+import { cn } from '@extension/ui';
 import { kbStore } from '@extension/storage';
 import type { KbAnswer, KbCitation, KnowledgeItem, KnowledgeSourceType } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
+import MorphOrb from '../components/ui/morph-orb';
+import type { MorphOrbPhase } from '../components/ui/morph-orb';
+import { Button } from '../components/ui/button';
 
 interface KnowledgeViewProps {
   // Resolves with the answer, or rejects with a message to show
@@ -15,10 +19,10 @@ interface KnowledgeViewProps {
   isDarkMode?: boolean;
 }
 
-const TYPE_ICONS: Record<KnowledgeSourceType, typeof FiFileText> = {
-  thread: FiMessageSquare,
-  meeting: FiFileText,
-  page: FiGlobe,
+const TYPE_ICONS: Record<KnowledgeSourceType, LucideIcon> = {
+  thread: MessageSquare,
+  meeting: FileText,
+  page: Globe,
 };
 
 const TYPE_LABELS = {
@@ -39,40 +43,46 @@ export function citationText(citation: KbCitation): string {
     .join(' · ');
 }
 
+function itemCitation(item: KnowledgeItem): KbCitation {
+  return {
+    n: 0,
+    sourceType: item.sourceType,
+    title: item.title,
+    label: '',
+    date: item.sourceDate,
+    url: item.url,
+    anchor:
+      item.sourceType === 'thread'
+        ? { kind: 'thread', threadId: item.sourceId, seq: 0 }
+        : item.sourceType === 'meeting'
+          ? { kind: 'meeting', meetingId: item.sourceId, t: -1 }
+          : { kind: 'page', url: item.url },
+  };
+}
+
 /**
- * The knowledge base: ask a question across past chats, meetings and saved pages and get an
- * answer whose citations open the source, save the current page, and see or remove what is in it.
+ * Memory: ask across past chats, meetings and saved pages, and see or remove what is in it. A
+ * question takes MorphOrb's path: the pill becomes a dotted orb while it searches, then unfolds
+ * into the answer, with the sources it cites underneath.
  */
-export default function KnowledgeView({
-  onAsk,
-  onSavePage,
-  onDelete,
-  onOpenCitation,
-  isDarkMode = false,
-}: KnowledgeViewProps) {
+export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitation }: KnowledgeViewProps) {
   const items = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
-  const [question, setQuestion] = useState('');
-  const [asking, setAsking] = useState(false);
-  const [answer, setAnswer] = useState<KbAnswer | null>(null);
+  const [tab, setTab] = useState<'ask' | 'items'>('ask');
+  const [phase, setPhase] = useState<MorphOrbPhase>('idle');
+  const [citations, setCitations] = useState<KbCitation[]>([]);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  const askedRef = useRef(0);
 
-  const muted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
-  const card = `rounded-lg border p-3 text-sm ${isDarkMode ? 'border-slate-700 bg-slate-800 text-gray-200' : 'border-sky-100 bg-white/90 text-gray-800'}`;
-  const chip = `rounded px-1 text-xs font-semibold ${isDarkMode ? 'bg-sky-900 text-sky-200 hover:bg-sky-800' : 'bg-sky-100 text-sky-700 hover:bg-sky-200'}`;
-
-  const ask = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const text = question.trim();
-    if (!text || asking) return;
-    setAsking(true);
-    setNotice(null);
+  const ask = async (question: string) => {
+    const mine = ++askedRef.current;
+    setCitations([]);
     try {
-      setAnswer(await onAsk(text));
+      const result = await onAsk(question);
+      if (mine === askedRef.current) setCitations(result.citations);
+      return result.answer;
     } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : String(error), error: true });
-    } finally {
-      setAsking(false);
+      return error instanceof Error ? error.message : String(error);
     }
   };
 
@@ -88,158 +98,123 @@ export default function KnowledgeView({
     }
   };
 
-  const byNumber = new Map(answer?.citations.map(citation => [citation.n, citation]));
-  // The answer with its [n] markers as buttons that open the source
-  const answerParts = answer
-    ? answer.answer.split(/(\[\d+(?:\s*,\s*\d+)*\])/g).map((part, index) => {
-        const numbers = part
-          .match(/^\[(.+)\]$/)?.[1]
-          .split(',')
-          .map(n => Number(n.trim()));
-        if (!numbers) return <span key={index}>{part}</span>;
-        return (
-          <span key={index}>
-            {numbers.map(n => {
-              const citation = byNumber.get(n);
-              return citation ? (
-                <button
-                  key={n}
-                  type="button"
-                  className={`${chip} mx-0.5 align-super`}
-                  title={`${citation.title} · ${citationText(citation)}`}
-                  onClick={() => onOpenCitation(citation)}>
-                  {n}
-                </button>
-              ) : null;
-            })}
-          </span>
-        );
-      })
-    : null;
+  const tabButton = (id: 'ask' | 'items', label: string) => (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={tab === id}
+      onClick={() => setTab(id)}
+      className={cn(
+        'h-7 rounded-[9px] px-3 text-[12px] transition-colors',
+        tab === id ? 'border bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+      )}>
+      {label}
+    </button>
+  );
 
   return (
-    <div className={`flex-1 space-y-3 overflow-y-auto p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
-      <form onSubmit={event => void ask(event)} className="flex gap-2">
-        <input
-          type="text"
-          value={question}
-          onChange={event => setQuestion(event.target.value)}
-          placeholder={t('kb_ask_placeholder')}
-          aria-label={t('kb_ask_placeholder')}
-          className={`min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm ${isDarkMode ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-sky-200 bg-white'}`}
-        />
-        <button
-          type="submit"
-          disabled={asking || !question.trim()}
-          className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-          {t('kb_ask_button')}
-        </button>
-      </form>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
+        <div role="tablist" aria-label={t('kb_title')} className="glass flex gap-0.5 rounded-xl p-0.5">
+          {tabButton('ask', t('kb_tab_ask'))}
+          {tabButton('items', t('kb_items', [String(items.length)]))}
+        </div>
+        <Button variant="glass" size="sm" onClick={() => void save()} disabled={saving}>
+          <BookmarkPlus className="size-3.5" />
+          {saving ? t('kb_saving') : t('kb_savePage')}
+        </Button>
+      </div>
 
-      {asking && <p className={`text-sm ${muted}`}>{t('kb_asking')}</p>}
       {notice && (
         <p
           role={notice.error ? 'alert' : 'status'}
-          className={`rounded px-2 py-1 text-sm ${
-            notice.error
-              ? isDarkMode
-                ? 'bg-red-950 text-red-200'
-                : 'bg-red-50 text-red-700'
-              : isDarkMode
-                ? 'bg-emerald-950 text-emerald-200'
-                : 'bg-emerald-50 text-emerald-800'
-          }`}>
+          className={cn(
+            'mx-3 mt-2 rounded-xl border px-3 py-2 text-[12.5px]',
+            notice.error ? 'border-destructive/40 bg-destructive/10' : 'border-primary/40 bg-primary/10',
+          )}>
           {notice.text}
         </p>
       )}
 
-      {answer && !asking && (
-        <section className={card} aria-label={t('kb_answer')}>
-          <p className="whitespace-pre-wrap break-words">{answerParts}</p>
-          {answer.citations.length > 0 && (
-            <>
-              <h3 className={`mt-3 text-xs font-semibold uppercase ${muted}`}>{t('kb_sources')}</h3>
-              <ol className="mt-1 space-y-1">
-                {[...answer.citations]
+      {tab === 'ask' ? (
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <MorphOrb
+            className="flex-1"
+            onSubmit={ask}
+            onPhase={setPhase}
+            copy={{
+              placeholder: t('kb_ask_placeholder'),
+              send: t('kb_ask_button'),
+              labels: [t('kb_think_searching'), t('kb_think_reading'), t('kb_think_weighing'), t('kb_think_writing')],
+              done: t('kb_think_done'),
+              answerTitle: t('kb_answer'),
+              reset: t('kb_ask_again'),
+              empty: t('kb_answer_nothing'),
+            }}
+          />
+          {phase === 'answered' && citations.length > 0 && (
+            <section
+              aria-label={t('kb_sources')}
+              className="animate-in fade-in-0 slide-in-from-top-2 absolute inset-x-3 top-3">
+              <h3 className="label-mono mb-1.5">{t('kb_sources')}</h3>
+              <ol className="flex flex-col gap-1">
+                {[...citations]
                   .sort((a, b) => a.n - b.n)
                   .map(citation => (
                     <li key={citation.n}>
                       <button
                         type="button"
                         onClick={() => onOpenCitation(citation)}
-                        className="text-left hover:underline">
-                        <span className={`${chip} mr-1`}>{citation.n}</span>
-                        <span className="font-medium">{citation.title}</span>
-                        <span className={muted}> · {citationText(citation)}</span>
+                        className="glass hover:bg-accent flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-[12px]">
+                        <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-md font-mono text-[10.5px]">
+                          {citation.n}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          <span className="font-medium">{citation.title}</span>
+                          <span className="text-muted-foreground"> · {citationText(citation)}</span>
+                        </span>
                       </button>
                     </li>
                   ))}
               </ol>
-            </>
+            </section>
           )}
-        </section>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-          {t('kb_items', [String(items.length)])}
-        </h3>
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={saving}
-          className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${isDarkMode ? 'border-slate-600 text-sky-300 hover:bg-slate-800' : 'border-sky-200 bg-white text-sky-700 hover:bg-sky-50'}`}>
-          <PiBookmarkSimpleBold size={14} />
-          {saving ? t('kb_saving') : t('kb_savePage')}
-        </button>
-      </div>
-
-      {items.length === 0 ? (
-        <p className={`text-sm ${muted}`}>{t('kb_empty')}</p>
+        </div>
       ) : (
-        <ul aria-label={t('kb_title')} className="space-y-1">
-          {items.map(item => {
-            const Icon = TYPE_ICONS[item.sourceType];
-            return (
-              <li key={item.id} className={`${card} flex items-center gap-2 py-2`}>
-                <Icon size={16} className={`shrink-0 ${muted}`} aria-label={t(TYPE_LABELS[item.sourceType])} />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() =>
-                    onOpenCitation({
-                      n: 0,
-                      sourceType: item.sourceType,
-                      title: item.title,
-                      label: '',
-                      date: item.sourceDate,
-                      url: item.url,
-                      anchor:
-                        item.sourceType === 'thread'
-                          ? { kind: 'thread', threadId: item.sourceId, seq: 0 }
-                          : item.sourceType === 'meeting'
-                            ? { kind: 'meeting', meetingId: item.sourceId, t: -1 }
-                            : { kind: 'page', url: item.url },
-                    })
-                  }>
-                  <span className="block truncate font-medium">{item.title}</span>
-                  <span className={`block text-xs ${muted}`}>
-                    {t(TYPE_LABELS[item.sourceType])} · {shortDate(item.sourceDate)}
-                    {item.unembedded > 0 && ` · ${t('kb_keywordOnly')}`}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(item.id)}
-                  className={`shrink-0 rounded p-1 ${isDarkMode ? 'text-gray-400 hover:bg-slate-700' : 'text-gray-500 hover:bg-gray-100'}`}
-                  aria-label={t('kb_delete', [item.title])}
-                  title={t('kb_delete', [item.title])}>
-                  <FiTrash2 size={14} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {items.length === 0 ? (
+            <p className="text-muted-foreground text-[13px]">{t('kb_empty')}</p>
+          ) : (
+            <ul aria-label={t('kb_title')} className="flex flex-col gap-1.5">
+              {items.map(item => {
+                const Icon = TYPE_ICONS[item.sourceType];
+                return (
+                  <li key={item.id} className="glass flex items-center gap-2.5 rounded-xl px-3 py-2">
+                    <Icon className="text-primary size-4 shrink-0" aria-label={t(TYPE_LABELS[item.sourceType])} />
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => onOpenCitation(itemCitation(item))}>
+                      <span className="block truncate text-[13px] font-medium">{item.title}</span>
+                      <span className="text-muted-foreground block font-mono text-[10.5px]">
+                        {t(TYPE_LABELS[item.sourceType])} · {shortDate(item.sourceDate)}
+                        {item.unembedded > 0 && ` · ${t('kb_keywordOnly')}`}
+                      </span>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onDelete(item.id)}
+                      aria-label={t('kb_delete', [item.title])}
+                      title={t('kb_delete', [item.title])}>
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

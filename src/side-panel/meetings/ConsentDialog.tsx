@@ -18,7 +18,8 @@ export default function ConsentDialog({ includeMic, onStart, onCancel, isDarkMod
       role="dialog"
       aria-modal="true"
       aria-labelledby="consent-title"
-      className={`m-3 rounded-lg border-2 border-red-500 p-4 text-sm ${isDarkMode ? 'bg-slate-900 text-gray-200' : 'bg-white text-gray-800'}`}>
+      data-dark={isDarkMode || undefined}
+      className="glass border-destructive/50 m-3 rounded-2xl p-4 text-[13px]">
       <h2 id="consent-title" className="mb-2 text-base font-semibold">
         {t('meeting_consent_title')}
       </h2>
@@ -34,7 +35,7 @@ export default function ConsentDialog({ includeMic, onStart, onCancel, isDarkMod
         <button
           type="button"
           onClick={() => onStart(withMic)}
-          className="rounded-md bg-red-600 px-3 py-1.5 font-medium text-white">
+          className="border-destructive/60 bg-destructive/25 h-9 rounded-full border px-4 font-medium">
           {t('meeting_consent_start')}
         </button>
       </div>

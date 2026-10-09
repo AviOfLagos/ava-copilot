@@ -1468,7 +1468,7 @@
     "message": "Nothing here yet. Finished chats and meeting notes are added on their own, and you can save any page."
   },
   "kb_items": {
-    "message": "In your knowledge base ($COUNT$)",
+    "message": "Saved ($COUNT$)",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -1709,5 +1709,325 @@
   },
   "options_skills_source_written": {
     "message": "written here"
+  },
+  "chat_input_attach": {
+    "message": "Attach a text file"
+  },
+  "chat_input_attachments": {
+    "message": "Attached files"
+  },
+  "chat_input_removeFile": {
+    "message": "Remove $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "notes.md"
+      }
+    }
+  },
+  "gate_card_confirmAgain": {
+    "message": "Click again to confirm"
+  },
+  "gate_card_holdHint": {
+    "message": "Hold to confirm, or click twice."
+  },
+  "chat_copy": {
+    "message": "Copy"
+  },
+  "chat_run_steps": {
+    "message": "Run · $COUNT$ steps",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "chat_run_held": {
+    "message": "$KIND$, waiting for your click",
+    "placeholders": {
+      "kind": {
+        "content": "$1",
+        "example": "Send a message"
+      }
+    }
+  },
+  "chat_run_planning": {
+    "message": "Planning"
+  },
+  "chat_run_working": {
+    "message": "Working on the page"
+  },
+  "nav_panel": {
+    "message": "Panel"
+  },
+  "home_greeting_night": {
+    "message": "Still up?"
+  },
+  "home_greeting_morning": {
+    "message": "Good morning."
+  },
+  "home_greeting_afternoon": {
+    "message": "Good afternoon."
+  },
+  "home_greeting_evening": {
+    "message": "Good evening."
+  },
+  "home_subtitle": {
+    "message": "What should I take off your plate?"
+  },
+  "home_orb": {
+    "message": "Avi Copilot"
+  },
+  "home_suggestions": {
+    "message": "Suggestions for this page"
+  },
+  "home_starter_skill": {
+    "message": "Work on $HOST$ with its skill",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "mail.google.com"
+      }
+    }
+  },
+  "home_starter_summarize": {
+    "message": "Summarize the page I'm on"
+  },
+  "home_starter_summarizePrompt": {
+    "message": "Summarize this page for me in a few short points."
+  },
+  "home_starter_memory": {
+    "message": "Ask about past chats, calls and pages"
+  },
+  "home_tag_memory": {
+    "message": "memory"
+  },
+  "home_starter_notes": {
+    "message": "Take notes for this call"
+  },
+  "home_starter_save": {
+    "message": "Save this page to memory"
+  },
+  "chat_footer_gate": {
+    "message": "Nothing is sent, posted or deleted without your click."
+  },
+  "kb_tab_ask": {
+    "message": "Ask"
+  },
+  "kb_think_searching": {
+    "message": "Searching"
+  },
+  "kb_think_reading": {
+    "message": "Reading"
+  },
+  "kb_think_weighing": {
+    "message": "Weighing"
+  },
+  "kb_think_writing": {
+    "message": "Writing"
+  },
+  "kb_think_done": {
+    "message": "Found it"
+  },
+  "kb_ask_again": {
+    "message": "Ask another"
+  },
+  "voice_view": {
+    "message": "Voice conversation"
+  },
+  "voice_label": {
+    "message": "Voice"
+  },
+  "voice_neverInCall": {
+    "message": "only you hear it"
+  },
+  "voice_you": {
+    "message": "You"
+  },
+  "voice_hide": {
+    "message": "Hide, keep talking"
+  },
+  "voice_end": {
+    "message": "End the conversation"
+  },
+  "today_title": {
+    "message": "Today"
+  },
+  "today_strip": {
+    "message": "Your day"
+  },
+  "today_strip_hint": {
+    "message": "each mark is an hour"
+  },
+  "today_strip_label": {
+    "message": "Your day, hour by hour: $COUNT$ tasks",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "9"
+      }
+    }
+  },
+  "today_legend_tasks": {
+    "message": "tasks"
+  },
+  "today_legend_held": {
+    "message": "waited for you"
+  },
+  "today_legend_calls": {
+    "message": "calls"
+  },
+  "today_steps": {
+    "message": "Steps you didn't take"
+  },
+  "today_steps_hint": {
+    "message": "clicks, typing and pages done for you"
+  },
+  "today_held": {
+    "message": "Held for you"
+  },
+  "today_held_split": {
+    "message": "$SENT$ you sent · $STOPPED$ you stopped",
+    "placeholders": {
+      "sent": {
+        "content": "$1",
+        "example": "4"
+      },
+      "stopped": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "today_words": {
+    "message": "Words caught"
+  },
+  "today_words_hint": {
+    "message": "$CALLS$ calls · $MINUTES$ min",
+    "placeholders": {
+      "calls": {
+        "content": "$1",
+        "example": "2"
+      },
+      "minutes": {
+        "content": "$2",
+        "example": "64"
+      }
+    }
+  },
+  "today_perTask": {
+    "message": "Per finished task"
+  },
+  "today_cap": {
+    "message": "$SPENT$ of your $CAP$ cap",
+    "placeholders": {
+      "spent": {
+        "content": "$1",
+        "example": "$0.41"
+      },
+      "cap": {
+        "content": "$2",
+        "example": "$5.00"
+      }
+    }
+  },
+  "today_finished": {
+    "message": "Finished"
+  },
+  "today_finished_hint": {
+    "message": "tasks that reached an answer"
+  },
+  "today_sites": {
+    "message": "Where the work happened"
+  },
+  "today_sites_other": {
+    "message": "other"
+  },
+  "today_open": {
+    "message": "Open today's numbers"
+  },
+  "today_mini": {
+    "message": "$STEPS$ steps · $HELD$ held",
+    "placeholders": {
+      "steps": {
+        "content": "$1",
+        "example": "142"
+      },
+      "held": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "today_back": {
+    "message": "Back"
+  },
+  "settings_title": {
+    "message": "Settings"
+  },
+  "settings_model": {
+    "message": "Model"
+  },
+  "settings_model_none": {
+    "message": "not set"
+  },
+  "settings_model_keys": {
+    "message": "Keys: $NAMES$",
+    "placeholders": {
+      "names": {
+        "content": "$1",
+        "example": "Gemini"
+      }
+    }
+  },
+  "settings_model_noKeys": {
+    "message": "No API key yet. Add one in full settings."
+  },
+  "settings_model_roles": {
+    "message": "$PLANNER$ plans · $NAVIGATOR$ acts",
+    "placeholders": {
+      "planner": {
+        "content": "$1",
+        "example": "gemini-3.1-pro-preview"
+      },
+      "navigator": {
+        "content": "$2",
+        "example": "gemini-3.8-flash"
+      }
+    }
+  },
+  "settings_gate_hint": {
+    "message": "Amber ones wait for your click. Tap one to let it act without asking."
+  },
+  "settings_spending": {
+    "message": "Spending"
+  },
+  "settings_cap": {
+    "message": "Daily cap"
+  },
+  "settings_writing": {
+    "message": "How it writes"
+  },
+  "settings_meetings": {
+    "message": "Meetings"
+  },
+  "settings_memory": {
+    "message": "Memory"
+  },
+  "settings_look": {
+    "message": "Look"
+  },
+  "settings_look_dark": {
+    "message": "Dark"
+  },
+  "settings_look_light": {
+    "message": "Light"
+  },
+  "settings_look_system": {
+    "message": "System"
+  },
+  "settings_full": {
+    "message": "Full settings: models, blocked sites, skills"
   }
 }

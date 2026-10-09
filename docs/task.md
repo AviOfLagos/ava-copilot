@@ -225,6 +225,37 @@ Known gaps:
 - No `/` autocomplete in the chat box yet; type the name.
 - A skill is matched against the task and the current page only, not against pages the planner intends to visit.
 
+### Restyle — Graphite glass (added 2026-10-09, not in the spec)
+
+Direction: `docs/DIRECTION.md`; mockups: https://claude.ai/artifact/KnRwLQkugxdVNsyuRGqyQC.
+
+- [x] Tokens in `src/side-panel/index.css`, named like Tailwind 4 (`--color-*`) so ported components read them unchanged. Dark by default, plus Light and System (Settings → Look). Geist and Geist Mono are bundled locally. `tailwindcss-animate` is added.
+- [x] Colour jobs: mint is acting, done and the main action. Amber is only "waits for your click". Periwinkle is calls.
+- [x] Components:
+  - **From the user's MorphOrb:** the composer pill (glass, aurora, lit ring, spark, a send button that lights up) and the full MorphOrb in Memory → Ask. The pill launches into a dotted orb that cycles "Searching / Reading / Weighing / Writing", then unfolds into the answer, with sources underneath. It measures its own box instead of the window, and its card grows to fit. Its `.mo-*` styles were missing from the paste and were written to its CSS-variable contract.
+  - **The dotted orb, split out:** `ui/dotted-orb.ts` and the inline `ThinkingOrb`, shown while a run works and in the header while anything runs.
+  - **From the user's LiveOrb:** the WebGL orb with eyes in the header (idle), home, welcome and voice. The paste stopped mid-file; its render loop, gaze, blink and React wrapper were written here.
+  - **Ported from AI Elements (Vercel, Apache 2.0):** Conversation (stick to bottom), Message (Streamdown markdown, no plugins), Chain of Thought, Shimmer and Suggestion. Chain of Thought becomes the **run trail**: n8n-style nodes on a wire, with a "held" amber diamond and a failed state.
+- [x] Views:
+  - **Header:** presence orb, title, Memory, Notes, Talk, New and Settings.
+  - **Home:** LiveOrb and a greeting. Suggestions fit the tab you're on: its skill, summarize, memory, and notes on meeting sites or save the page elsewhere. Also a Today strip and saved prompts.
+  - **Chat:** turns of request → run trail → answer (`chat/turns.ts`). The newest run stays open.
+  - **Confirm card:** Hold to confirm (0.8 s) or click twice.
+  - **Thread bar:** chips for the tab, the model, cost and pop-out.
+  - **Memory:** Ask and Saved tabs.
+  - **Today:** numbers the extension really records (day strip, steps you didn't take, held for you sent/stopped, words caught, cost per finished task, finished tasks, sites).
+  - **Voice:** a full-panel LiveOrb with the transcript, End and Hide.
+  - **Settings in the panel:** model status, the "ask before it" chips, the daily cap, how it writes, meeting and memory switches, skills on/off, and Look. Full settings stay one tap away.
+- [x] The gate's "Confirmed / Cancelled" note is now a `system` message, so it shows as a step of the run instead of a new request.
+- [x] Voice: a start that fails, such as one with no Gemini key, now answers the panel, so Talk never stays on "Connecting".
+- [x] Tests: `chat/turns.ts` and `today/today.ts` have unit tests. The E2E harness confirms with two clicks and finds icon buttons by name. `e2e/manual/screens.mjs` saves screenshots of every screen.
+
+Known gaps:
+
+- Not yet tried in Brave, whose own sidebar may not show Chrome's extension side panel; the pop-out window is the fallback.
+- `ChatInput.tsx`, `MessageList.tsx` and `SidePanel.css` are no longer used; they are kept until removing them is agreed.
+- The options page keeps its old look; the panel's settings cover the everyday ones.
+
 ---
 
 ## 5. Risks, in order

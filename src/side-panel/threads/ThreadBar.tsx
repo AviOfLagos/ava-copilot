@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import { llmProviderStore, threadStore } from '@extension/storage';
 import type { ThreadRecord } from '@extension/storage';
+import { Cpu, ExternalLink, Globe } from 'lucide-react';
+import UsageBadge from '../components/UsageBadge';
+import { Button } from '../components/ui/button';
 
 interface ThreadBarProps {
   thread: ThreadRecord;
+  onPopOut?: () => void;
   onRebind: () => void;
   onContinue: () => void;
   // Opens the notes of the meeting this thread was made for
@@ -15,11 +19,17 @@ interface ThreadBarProps {
 /**
  * What a thread is attached to and runs on: its tabs, its model, and the error that stopped it.
  */
-export default function ThreadBar({ thread, onRebind, onContinue, onOpenMeeting, isDarkMode = false }: ThreadBarProps) {
+export default function ThreadBar({
+  thread,
+  onRebind,
+  onContinue,
+  onOpenMeeting,
+  onPopOut,
+  isDarkMode = false,
+}: ThreadBarProps) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [models, setModels] = useState<{ value: string; label: string }[]>([]);
   const idle = thread.status === 'idle' || thread.status === 'error';
-  const muted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
 
   useEffect(() => {
     let cancelled = false;
@@ -56,52 +66,75 @@ export default function ThreadBar({ thread, onRebind, onContinue, onOpenMeeting,
     void threadStore.setModel(thread.id, value ? { provider, modelName } : null);
   };
 
+  const chip = 'flex h-6 min-w-0 items-center gap-1.5 rounded-full border bg-card px-2 text-[11px]';
+
   return (
-    <div
-      className={`space-y-1 border-b px-3 py-2 text-xs ${isDarkMode ? 'border-sky-900 text-gray-300' : 'border-sky-100 text-gray-700'}`}>
-      {onOpenMeeting && (
-        <button type="button" onClick={onOpenMeeting} className="font-medium text-sky-600 underline hover:text-sky-700">
-          {t('meeting_openNotes')}
-        </button>
-      )}
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate" title={tabTitle ?? undefined}>
-          {tabTitle !== null
-            ? thread.boundTabIds.length > 1
-              ? t('threads_boundMany', [tabTitle, String(thread.boundTabIds.length - 1)])
-              : t('threads_bound', [tabTitle])
-            : t('threads_notBound')}
+    <div className="border-border/60 shrink-0 space-y-1.5 border-b px-2.5 py-2">
+      <div className="flex items-center gap-1.5">
+        <span className={`${chip} flex-1`} title={tabTitle ?? undefined}>
+          <Globe className="text-primary size-3 shrink-0" />
+          <span className="truncate">
+            {tabTitle !== null
+              ? thread.boundTabIds.length > 1
+                ? t('threads_boundMany', [tabTitle, String(thread.boundTabIds.length - 1)])
+                : t('threads_bound', [tabTitle])
+              : t('threads_notBound')}
+          </span>
         </span>
-        {idle && thread.boundTabIds.length > 0 && (
-          <button type="button" onClick={onRebind} className="shrink-0 text-sky-600 underline hover:text-sky-700">
-            {t('threads_useThisTab')}
-          </button>
+        <label className={`${chip} max-w-[38%] shrink-0`}>
+          <Cpu className="text-muted-foreground size-3 shrink-0" />
+          <span className="sr-only">{t('threads_model_label')}</span>
+          <select
+            value={current}
+            disabled={!idle}
+            onChange={e => changeModel(e.target.value)}
+            className="text-foreground min-w-0 flex-1 cursor-pointer appearance-none truncate bg-transparent text-[11px] outline-none disabled:cursor-default">
+            <option value="">{t('threads_model_default')}</option>
+            {models.map(model => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <UsageBadge sessionId={thread.id} isDarkMode={isDarkMode} />
+        {onPopOut && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onPopOut}
+            aria-label={t('threads_popOut')}
+            title={t('threads_popOut')}>
+            <ExternalLink className="size-3.5" />
+          </Button>
         )}
       </div>
-      <label className="flex items-center gap-2">
-        <span className={muted}>{t('threads_model_label')}</span>
-        <select
-          value={current}
-          disabled={!idle}
-          onChange={e => changeModel(e.target.value)}
-          className={`min-w-0 flex-1 rounded border px-1 py-0.5 ${isDarkMode ? 'border-slate-600 bg-slate-800' : 'border-sky-100 bg-white'}`}>
-          <option value="">{t('threads_model_default')}</option>
-          {models.map(model => (
-            <option key={model.value} value={model.value}>
-              {model.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {(onOpenMeeting || (idle && thread.boundTabIds.length > 0)) && (
+        <div className="flex items-center gap-3 px-1 text-[11px]">
+          {onOpenMeeting && (
+            <button type="button" onClick={onOpenMeeting} className="text-primary hover:underline">
+              {t('meeting_openNotes')}
+            </button>
+          )}
+          {idle && thread.boundTabIds.length > 0 && (
+            <button
+              type="button"
+              onClick={onRebind}
+              className="text-muted-foreground hover:text-foreground hover:underline">
+              {t('threads_useThisTab')}
+            </button>
+          )}
+        </div>
+      )}
       {thread.status === 'error' && thread.error && (
         <div
           role="status"
-          className={`flex items-center justify-between gap-2 rounded px-2 py-1 ${isDarkMode ? 'bg-red-950 text-red-200' : 'bg-red-50 text-red-700'}`}>
+          className="border-destructive/40 bg-destructive/10 flex items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-[12px]">
           <span>{thread.error.message}</span>
           {thread.error.kind !== 'failed' && (
-            <button type="button" onClick={onContinue} className="shrink-0 rounded bg-red-600 px-2 py-0.5 text-white">
+            <Button size="sm" variant="destructive" onClick={onContinue}>
               {thread.error.kind === 'tab_closed' ? t('threads_reopenContinue') : t('threads_continue')}
-            </button>
+            </Button>
           )}
         </div>
       )}
