@@ -19,6 +19,7 @@ import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { quoteTitle } from '../calendar/watcher';
+import { allowedByClick } from './confirm';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
@@ -32,6 +33,16 @@ import { resolveModels } from '../threads/factory';
 const logger = createLogger('Voice');
 
 const WATCH_MS = 2000;
+// Tools that act for the user. In a conversation "Hey Ava" started while something was playing, the
+// order may have come from that sound, so each needs a click; ending a call for everyone always does.
+const GUARDED_TOOLS: Record<string, string> = {
+  run_browser_task: 'Run a task in the browser',
+  open_tab: 'Open a site',
+  join_next_meeting: 'Join your next meeting',
+  leave_call: 'Leave the call',
+  end_call_for_everyone: 'End the call for everyone',
+  remember_this: 'Save to your knowledge base',
+};
 // A conversation "Hey Ava" started ends after this long with nothing said and no task running
 const WAKE_IDLE_MS = 2 * 60 * 1000;
 const KEEP_ALIVE_MS = 20_000;
@@ -59,6 +70,8 @@ export class VoiceManager {
   private announced = new Map<string, string>();
   // Started by the wake word: ends by itself once the user goes quiet
   private wakeSession = false;
+  // Started by "Hey Ava" while a tab was playing sound: that sound may have said it
+  private guarded = false;
   private lastActivity = 0;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
@@ -88,7 +101,7 @@ export class VoiceManager {
    */
   async start(
     windowId?: number,
-    { wake = false }: { wake?: boolean } = {},
+    { wake = false, guarded = false }: { wake?: boolean; guarded?: boolean } = {},
   ): Promise<{ ok: boolean; micDenied?: boolean; error?: string }> {
     if (this.running) return { ok: true };
     const providers = await llmProviderStore.getAllProviders();
@@ -127,6 +140,7 @@ export class VoiceManager {
     this.threadId = thread.id;
     this.windowId = windowId;
     this.wakeSession = wake;
+    this.guarded = wake && guarded;
     this.lastActivity = Date.now();
     // Threads already waiting or finished are not news
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
@@ -169,6 +183,18 @@ export class VoiceManager {
   /** Runs a tool the copilot called and returns what it should know. */
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     this.lastActivity = Date.now();
+    const action = GUARDED_TOOLS[name];
+    if (action && (this.guarded || (this.wakeSession && name === 'end_call_for_everyone'))) {
+      const what = String(args.task ?? args.target ?? args.note ?? '').slice(0, 120);
+      const allowed = await allowedByClick(
+        `Allow Ava to: ${action}?`,
+        what || 'Heard by voice. Click Allow if you asked for this.',
+      );
+      this.lastActivity = Date.now();
+      if (!allowed) {
+        return 'The user did not allow it on screen. It may not have been them speaking: do not try again unless they ask.';
+      }
+    }
     switch (name) {
       case 'run_browser_task': {
         const task = String(args.task ?? '').trim();

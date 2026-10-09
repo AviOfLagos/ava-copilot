@@ -75,8 +75,10 @@ export class WakeWord {
 
   private async heard(): Promise<void> {
     const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
+    // Sound from a tab (a video, a call) can say "Hey Ava" too: then each action needs a click
+    const audible = (await chrome.tabs.query({ audible: true }).catch(() => [])).length > 0;
     const result = await this.voice
-      .start(window?.id, { wake: true })
+      .start(window?.id, { wake: true, guarded: audible })
       .catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
     if (!result.ok) {
       logger.warning('Hey Ava was heard but the conversation did not start', result.error);

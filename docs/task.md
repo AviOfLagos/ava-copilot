@@ -293,6 +293,10 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   `node scripts/wake-word-setup.mjs` (git-ignored `public/wake/`, pinned SHA-256s, the worker made eval-free); the
   manifest allows `'wasm-unsafe-eval'` for it. `scripts/always-on/install.sh` adds a login item that opens Brave at
   login and hourly if it is not running. E2E: `e2e/wake.e2e.mjs` (needs the setup; a recording as the microphone).
+  Only the phrase (the last 1.2 s) and what follows it reach Gemini, never earlier audio. A conversation the wake word
+  started while a tab was playing sound asks for a click on a notification before each action
+  (`GUARDED_TOOLS`, `voice/confirm.ts`), and ending a call for everyone always does. Residual risk: sound from
+  outside the browser (another app, a TV) saying "Hey Ava" is not detected; echo cancellation and headphones help.
 
 ## 5. Risks, in order
 

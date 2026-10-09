@@ -1,14 +1,19 @@
 /**
  * Listens for "Hey Ava" on the device, with the Vosk recogniser in a worker and a grammar of that one
  * phrase: nothing leaves the machine until it is heard. The worker and model come from
- * scripts/wake-word-setup.mjs. When the phrase is heard, the last few seconds of audio are kept so the
- * request said in the same breath ("Hey Ava, what's on my calendar") reaches the copilot too.
+ * scripts/wake-word-setup.mjs. When the phrase is heard, the moment of the phrase and what is said after
+ * it are kept for the conversation, so a request said in the same breath ("Hey Ava, what's on my
+ * calendar") is not lost while it connects. Nothing said before the phrase is kept.
  */
 
 const RATE = 16000;
 export const WAKE_PHRASE = 'hey ava';
-// Audio kept from before the phrase was recognised: the phrase itself and what follows it
-const PREROLL_SECONDS = 3;
+// Audio kept from before the phrase was recognised: only the phrase itself, which ends a moment
+// before the recogniser reports it; anything older is never sent
+const PHRASE_SECONDS = 1.2;
+// Audio kept after the phrase, while the conversation connects
+const CAPTURE_SECONDS = 12;
+const CAPTURE_EXPIRES_MS = 15_000;
 // One wake at a time, however long the phrase echoes in the partial results
 const COOLDOWN_MS = 4000;
 
@@ -47,11 +52,14 @@ export class WakeListener {
   private mic: MediaStream | null = null;
   private input: AudioContext | null = null;
   private readonly recognizerId = crypto.randomUUID();
-  private readonly ring = new AudioRing(RATE * PREROLL_SECONDS);
+  private readonly ring = new AudioRing(RATE * PHRASE_SECONDS);
   private paused = false;
   private lastWake = 0;
+  // After the phrase: what the user goes on to say, kept for the conversation it starts
+  private capture: Float32Array[] | null = null;
+  private captured = 0;
 
-  constructor(private readonly onWake: (preroll: Float32Array[]) => void) {}
+  constructor(private readonly onWake: () => void) {}
 
   get running(): boolean {
     return this.worker !== null;
@@ -117,15 +125,37 @@ export class WakeListener {
   /** While the copilot is talking with the user, the phrase means nothing. */
   pause(): void {
     this.paused = true;
+    this.capture = null;
     this.ring.take();
   }
 
   resume(): void {
     this.paused = false;
+    this.capture = null;
+  }
+
+  /** The phrase and what followed it, once, for the conversation starting now; then listening pauses. */
+  takeCapture(): Float32Array[] | undefined {
+    const capture = this.capture && Date.now() - this.lastWake < CAPTURE_EXPIRES_MS ? this.capture : undefined;
+    this.pause();
+    return capture;
   }
 
   private feed(samples: Float32Array): void {
-    if (this.paused || !this.worker) return;
+    if (!this.worker) return;
+    if (this.capture) {
+      // A wake no conversation took up is dropped, and listening goes on
+      if (Date.now() - this.lastWake > CAPTURE_EXPIRES_MS) {
+        this.resume();
+      } else {
+        if (this.captured < RATE * CAPTURE_SECONDS) {
+          this.capture.push(samples.slice());
+          this.captured += samples.length;
+        }
+        return;
+      }
+    }
+    if (this.paused) return;
     this.ring.push(samples.slice());
     // Kaldi takes 16-bit sample values as floats
     const data = samples.map(value => value * 0x8000);
@@ -136,11 +166,13 @@ export class WakeListener {
   }
 
   private handle(message: WorkerMessage): void {
-    if (message.recognizerId !== this.recognizerId || this.paused) return;
+    if (message.recognizerId !== this.recognizerId || this.paused || this.capture) return;
     const result = message.result as { partial?: string; text?: string } | undefined;
     const text = message.event === 'partialresult' ? result?.partial : message.event === 'result' ? result?.text : '';
     if (!heardWake(text) || Date.now() - this.lastWake < COOLDOWN_MS) return;
     this.lastWake = Date.now();
-    this.onWake(this.ring.take());
+    this.capture = this.ring.take();
+    this.captured = this.capture.reduce((sum, chunk) => sum + chunk.length, 0);
+    this.onWake();
   }
 }

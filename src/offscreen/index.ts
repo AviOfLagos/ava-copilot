@@ -10,11 +10,7 @@ import { WakeListener } from './wake';
  */
 let recorder: Recorder | null = null;
 let voice: VoiceSession | null = null;
-// Audio from the moment "Hey Ava" was heard, for the voice session it starts
-let preroll: { chunks: Float32Array[]; at: number } | null = null;
-const wake = new WakeListener(chunks => {
-  preroll = { chunks, at: Date.now() };
-  wake.pause();
+const wake = new WakeListener(() => {
   chime();
   notify({ type: 'wake_word' });
 });
@@ -75,10 +71,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { ok: true };
       case 'voice_start': {
         if (voice) return { ok: true };
-        wake.pause();
-        // Only audio from a wake just now: a stale one would replay an old request
-        const fresh = preroll && Date.now() - preroll.at < 15_000 ? preroll.chunks : undefined;
-        preroll = null;
+        // The phrase and what followed it, when "Hey Ava" started this; listening pauses either way
+        const fresh = wake.takeCapture();
         const next = new VoiceSession(
           { ...(message.options as VoiceOptions), preroll: fresh },
           {
