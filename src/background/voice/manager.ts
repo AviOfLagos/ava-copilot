@@ -20,7 +20,7 @@ import type { KnowledgeBase } from '../kb/manager';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { quoteTitle } from '../calendar/watcher';
 import { wrapUntrustedContent } from '../agent/messages/utils';
-import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS } from './prompt';
+import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
 import { THINK_INSTRUCTIONS } from './prompt';
 import { generatePlainText } from '../llm/generate';
@@ -39,6 +39,8 @@ export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
  * tools it calls, keeps the conversation in a thread, and tells the user out loud when something
  * they started finishes or waits for their click.
  */
+// Talking again within this time continues the same conversation
+const CONTINUE_WITHIN_MS = 12 * 60 * 60 * 1000;
 // Turns of the user's speech an address may come from
 const RECENT_TURNS = 4;
 
@@ -47,6 +49,8 @@ export class VoiceManager {
   private windowId: number | undefined;
   // What the user said in the last few turns, to check where an address came from
   private recentHeard: string[] = [];
+  // The chat of the last task started by voice, for follow-ups
+  private lastTaskThreadId: string | null = null;
   // What has been said about each thread, so nothing is announced twice
   private announced = new Map<string, string>();
   private watchTimer: ReturnType<typeof setInterval> | null = null;
@@ -84,7 +88,12 @@ export class VoiceManager {
 
     const settings = await meetingSettingsStore.getSettings();
     const { stylePrompt } = await generalSettingsStore.getSettings();
-    const thread = await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] });
+    // A conversation from the last hours goes on where it stopped; an older one starts fresh
+    const previous = (await db.threads.orderBy('updatedAt').reverse().toArray()).find(
+      item => item.tags.includes('voice') && Date.now() - item.updatedAt < CONTINUE_WITHIN_MS,
+    );
+    const thread = previous ?? (await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] }));
+    const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';
 
     await ensureOffscreen();
     const response = await toOffscreen<{ ok?: boolean; error?: string; micDenied?: boolean }>({
@@ -93,14 +102,14 @@ export class VoiceManager {
         endpoint: settings.liveEndpoint,
         apiKey: gemini[1].apiKey,
         model: settings.liveModel,
-        instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`]
+        instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`, history]
           .filter(Boolean)
           .join('\n\n'),
         tools: VOICE_TOOLS,
       },
     });
     if (!response?.ok) {
-      await threadStore.remove(thread.id);
+      if (!previous) await threadStore.remove(thread.id);
       await closeOffscreenIfIdle();
       return { ok: false, micDenied: response?.micDenied, error: response?.error };
     }
@@ -150,7 +159,10 @@ export class VoiceManager {
       case 'run_browser_task': {
         const task = String(args.task ?? '').trim();
         if (!task) return 'No task was given.';
-        const threadId = await this.threads.send({ text: task, windowId: this.windowId });
+        // A follow-up goes to the same chat as the task before it, with its history
+        const follow = args.continue_last === true && this.lastTaskThreadId ? this.lastTaskThreadId : null;
+        const threadId = await this.threads.send({ threadId: follow, text: task, windowId: this.windowId });
+        this.lastTaskThreadId = threadId;
         this.announced.set(threadId, 'running');
         return 'Started in the browser. The user will hear when it finishes or needs their click.';
       }

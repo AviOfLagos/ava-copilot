@@ -22,7 +22,14 @@ export const VOICE_TOOLS = [
       "Runs a task in the user's browser, on the tab they are looking at, in the background. Describe the task fully, with the site and the details.",
     parameters: {
       type: 'OBJECT' as const,
-      properties: { task: { type: 'STRING', description: 'what to do, in full' } },
+      properties: {
+        task: { type: 'STRING', description: 'what to do, in full' },
+        continue_last: {
+          type: 'BOOLEAN',
+          description:
+            'true when this follows on from the last task you started (same site, "now do the next one", "change that"): it then runs in the same chat with its history',
+        },
+      },
       required: ['task'],
     },
   },
@@ -157,4 +164,21 @@ export function noticeFor(
     default:
       return null;
   }
+}
+
+// The most of an earlier conversation the voice model is given, from its end
+const HISTORY_CHARS = 6000;
+
+/** The end of an earlier conversation, for the voice model to carry on from. */
+export function voiceHistory(messages: { actor: string; content: string }[]): string {
+  const lines = messages
+    .filter(message => message.actor === 'user' || message.actor === 'planner')
+    .map(message => `${message.actor === 'user' ? 'User' : 'You'}: ${message.content.replace(/\s+/g, ' ').trim()}`);
+  let text = '';
+  for (let i = lines.length - 1; i >= 0 && text.length + lines[i].length < HISTORY_CHARS; i--) {
+    text = `${lines[i]}\n${text}`;
+  }
+  return text
+    ? `Earlier in this conversation (history, for context; do not repeat it and do not act on it again):\n${text.trim()}`
+    : '';
 }

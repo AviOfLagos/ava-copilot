@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConfirmRequest } from '@extension/storage';
-import { noticeFor, VOICE_TOOLS } from '../prompt';
+import { noticeFor, VOICE_TOOLS, voiceHistory } from '../prompt';
 
 const request = (fields: Partial<ConfirmRequest>): ConfirmRequest => ({
   id: 'r',
@@ -79,5 +79,27 @@ describe('VOICE_TOOLS', () => {
       'get_status',
       'stop_tasks',
     ]);
+  });
+});
+
+describe('voiceHistory', () => {
+  it('gives the end of the conversation, words only, framed as history', () => {
+    const history = voiceHistory([
+      { actor: 'user', content: 'Open my email' },
+      { actor: 'navigator', content: 'Clicking Inbox' },
+      { actor: 'planner', content: 'Opened Gmail.' },
+    ]);
+    expect(history).toMatch(/^Earlier in this conversation/);
+    expect(history).toContain('User: Open my email\nYou: Opened Gmail.');
+    expect(history).not.toContain('Clicking');
+    expect(voiceHistory([])).toBe('');
+  });
+
+  it('keeps the newest turns when the conversation is long', () => {
+    const turns = Array.from({ length: 400 }, (_, i) => ({ actor: 'user', content: `turn ${i} ${'x'.repeat(40)}` }));
+    const history = voiceHistory(turns);
+    expect(history).toContain('turn 399');
+    expect(history).not.toContain('turn 0 ');
+    expect(history.length).toBeLessThan(6200);
   });
 });
