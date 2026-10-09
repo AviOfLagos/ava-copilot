@@ -288,7 +288,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 setCalendarStatus({ text: t('settings_calendar_connecting'), error: false });
                 void chrome.runtime
                   .sendMessage({ type: 'kb_calendar_connect' })
-                  .then(async (reply: { ok: boolean; error?: string } | undefined) => {
+                  .then(async (reply: { ok: boolean; error?: string; calendar?: string } | undefined) => {
                     if (!reply?.ok) {
                       setCalendarStatus({ text: reply?.error ?? t('errors_unknown'), error: true });
                       return;
@@ -296,7 +296,10 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                     const settings = await calendarSettingsStore.getSettings();
                     setCalendar(settings);
                     const { events } = await upcomingEventsStore.get();
-                    setCalendarStatus({ text: t('settings_calendar_ok', [String(events.length)]), error: false });
+                    setCalendarStatus({
+                      text: t('settings_calendar_connected', [reply.calendar ?? '', String(events.length)]),
+                      error: false,
+                    });
                   })
                   .finally(() => setConnecting(false));
               }}>

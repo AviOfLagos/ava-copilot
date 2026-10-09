@@ -18,35 +18,47 @@ export const SECRET_ICS =
  * must be.
  */
 export const findSecretAddress = (): { url: string | null; step: string } => {
-  const pattern = /https:\/\/calendar\.google\.com\/calendar\/ical\/[^/\s"'<>]+\/private-[0-9a-f]{16,}\/basic\.ics/;
-  const fields = Array.from(document.querySelectorAll('input, textarea')) as HTMLInputElement[];
-  for (const field of fields) {
-    const match = pattern.exec(field.value || '');
-    if (match) return { url: match[0], step: 'found' };
-  }
-  const inText = pattern.exec(document.body ? document.body.innerText : '');
-  if (inText) return { url: inText[0], step: 'found' };
-
-  // On a calendar's own settings: reveal the secret address
-  const reveal = Array.from(document.querySelectorAll('button, [role="button"]')).find(element => {
-    const label = `${element.getAttribute('aria-label') || ''} ${element.textContent || ''}`.toLowerCase();
-    return label.includes('secret') && (label.includes('show') || label.includes('reveal') || label.includes('copy'));
-  }) as HTMLElement | undefined;
-  if (reveal) {
-    reveal.click();
-    return { url: null, step: 'revealed' };
-  }
-
-  // On the settings home: open the first calendar under "My calendars"
-  if (!/\/settings\/calendar\//.test(location.pathname)) {
-    const link = Array.from(document.querySelectorAll('a[href*="/settings/calendar/"]'))[0] as HTMLElement | undefined;
-    if (link) {
-      link.click();
-      return { url: null, step: 'opened-calendar' };
+  const pattern = /^https:\/\/calendar\.google\.com\/calendar\/ical\/[^/\s"'<>]+\/private-[0-9a-f]{16,}\/basic\.ics$/;
+  // Only the field Google labels as the secret address on the calendar settings page that is open;
+  // text elsewhere on the page (event details, shared calendars) is never taken
+  if (/\/settings\/calendar\//.test(location.pathname)) {
+    const fields = Array.from(document.querySelectorAll('input, textarea')) as HTMLInputElement[];
+    for (const field of fields) {
+      const value = (field.value || '').trim();
+      if (!pattern.test(value)) continue;
+      let scope: HTMLElement | null = field;
+      for (let depth = 0; scope && depth < 6; depth++, scope = scope.parentElement) {
+        if (/secret address/i.test(scope.innerText || '')) return { url: value, step: 'found' };
+      }
     }
+    const reveal = Array.from(document.querySelectorAll('button, [role="button"]')).find(element => {
+      const label = `${element.getAttribute('aria-label') || ''} ${element.textContent || ''}`.toLowerCase();
+      return label.includes('secret') && (label.includes('show') || label.includes('reveal'));
+    }) as HTMLElement | undefined;
+    if (reveal && reveal.getAttribute('aria-pressed') !== 'true') {
+      reveal.click();
+      return { url: null, step: 'revealed' };
+    }
+    return { url: null, step: 'waiting' };
+  }
+
+  // On the settings home: open the first of "My calendars", the user's own
+  const link = Array.from(document.querySelectorAll('a[href*="/settings/calendar/"]'))[0] as HTMLElement | undefined;
+  if (link) {
+    link.click();
+    return { url: null, step: 'opened-calendar' };
   }
   return { url: null, step: 'waiting' };
 };
+
+/** The calendar a secret address belongs to, as people read it: usually an email address. */
+export function calendarOf(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split('/')[3] ?? '');
+  } catch {
+    return '';
+  }
+}
 
 /**
  * Connects Google Calendar from the browser, where the user is signed in: opens its settings and
@@ -54,7 +66,9 @@ export const findSecretAddress = (): { url: string | null; step: string } => {
  *
  * @returns The address saved, or an error to show
  */
-export async function connectGoogleCalendar(onSaved: () => Promise<unknown>): Promise<{ ok: boolean; error?: string }> {
+export async function connectGoogleCalendar(
+  onSaved: () => Promise<unknown>,
+): Promise<{ ok: boolean; error?: string; calendar?: string }> {
   const tab = await chrome.tabs.create({ url: SETTINGS_URL, active: true });
   if (tab.id === undefined) return { ok: false, error: 'Could not open Google Calendar.' };
   const deadline = Date.now() + WAIT_MS;
@@ -69,7 +83,7 @@ export async function connectGoogleCalendar(onSaved: () => Promise<unknown>): Pr
       if (found?.url && SECRET_ICS.test(found.url)) {
         await calendarSettingsStore.updateSettings({ icsUrl: found.url, reminders: true });
         await onSaved();
-        return { ok: true };
+        return { ok: true, calendar: calendarOf(found.url) };
       }
     } catch (error) {
       // The page is still loading or redirecting to sign-in
