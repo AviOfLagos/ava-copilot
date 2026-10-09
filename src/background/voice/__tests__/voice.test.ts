@@ -100,6 +100,7 @@ describe('voiceHistory', () => {
     const history = voiceHistory(turns);
     expect(history).toContain('turn 399');
     expect(history).not.toContain('turn 0 ');
-    expect(history.length).toBeLessThan(6200);
+    expect(history.length).toBeLessThan(7000);
+    expect(history).toContain('nano_untrusted_content');
   });
 });
