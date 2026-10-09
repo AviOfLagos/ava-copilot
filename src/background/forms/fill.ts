@@ -4,6 +4,7 @@ import type { AgentContext } from '../agent/types';
 import type { ActionSchema } from '../agent/actions/schemas';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { askQuestions, reviewAction } from '../gate/review';
+import { asksForSecret } from '../gate/classify';
 import type { DOMElementNode } from '../browser/dom/views';
 
 export const fillFormActionSchema = {
@@ -114,7 +115,13 @@ export async function fillFormAction(
   if (problems.length) report += ` Not filled: ${problems.join('; ')}.`;
   context.emitEvent(Actors.NAVIGATOR, problems.length ? ExecutionState.ACT_FAIL : ExecutionState.ACT_OK, report);
 
-  const questions = input.questions.map(question => question.trim()).filter(Boolean);
+  const asked = input.questions.map(question => question.trim().slice(0, 200)).filter(Boolean);
+  // Never through the panel: passwords, codes, card numbers and the like are typed by the user on the site
+  const secret = asked.filter(asksForSecret);
+  const questions = asked.filter(question => !asksForSecret(question));
+  if (secret.length) {
+    report += ` Not asked, because the user types these on the site themselves: ${secret.map(q => `"${q}"`).join(', ')}. Leave those fields for them and say so in done.`;
+  }
   if (questions.length) {
     const answers = await askQuestions(context, page, questions, intent);
     if (answers === 'cancelled') return new ActionResult({ error: 'The task was stopped.', includeInMemory: true });

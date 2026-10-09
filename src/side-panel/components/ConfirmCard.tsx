@@ -70,6 +70,7 @@ function QuestionsCard({ request, onAnswer }: ConfirmCardProps) {
           <label key={`${question}-${index}`} className="flex flex-col gap-1">
             <span className="break-words font-medium">{question}</span>
             <input
+              autoComplete="off"
               // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus={index === 0}
               value={replies[index] ?? ''}
@@ -90,6 +91,7 @@ function QuestionsCard({ request, onAnswer }: ConfirmCardProps) {
         </Button>
       </div>
       <p className="text-muted-foreground mt-2 text-center text-[11px]">{t('gate_card_questionsHint')}</p>
+      <p className="mt-1 text-center text-[11px] font-medium">{t('gate_card_questionsNoSecrets')}</p>
     </form>
   );
 }

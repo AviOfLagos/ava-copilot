@@ -2204,5 +2204,8 @@
         "example": "3"
       }
     }
+  },
+  "gate_card_questionsNoSecrets": {
+    "message": "切勿在此輸入密碼、驗證碼或卡號：請直接在網站上輸入。"
   }
 }

@@ -2204,5 +2204,8 @@
         "example": "3"
       }
     }
+  },
+  "gate_card_questionsNoSecrets": {
+    "message": "Nunca digite senha, código ou número de cartão aqui: eles vão no próprio site."
   }
 }

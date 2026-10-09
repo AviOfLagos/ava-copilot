@@ -163,6 +163,7 @@ export async function askQuestions(
   questions: string[],
   intent: string,
 ): Promise<string[] | 'skipped' | 'cancelled'> {
+  if (questions.length === 0) return [];
   const request = await buildRequest(context, page, 'needs_user', 'questions', intent, '', { fields: [], context: '' });
   request.questions = questions;
   const answer = await ask(context, request);

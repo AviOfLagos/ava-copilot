@@ -219,3 +219,12 @@ export function classifyNeedsUser(
   }
   return null;
 }
+
+// Secrets the panel never asks for: a page could word a question to phish them through it
+const SECRET_QUESTION =
+  /pass\s*(word|code|phrase)|\bpin\b|one[- ]time|\botp\b|\b2fa\b|\bmfa\b|verification code|security code|\bcode\b.*\b(sms|text|email|app)\b|\bcvv\b|\bcvc\b|card number|credit card|debit card|expiry|\bssn\b|social security|national id|\bnin\b|\bbvn\b|secret|token|api key|private key|seed|recovery phrase|mnemonic|security question|mother'?s maiden|login|sign[- ]?in|credentials?/i;
+
+/** Whether a question asks for a secret, which the user only ever types into the site themselves. */
+export function asksForSecret(question: string): boolean {
+  return SECRET_QUESTION.test(question);
+}

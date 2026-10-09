@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TARGET, parseKeys } from '../classify';
+import {
+  asksForSecret,
+  classifyClick,
+  classifyKeys,
+  classifyLabel,
+  classifyNeedsUser,
+  EMPTY_TARGET,
+  parseKeys,
+} from '../classify';
 import type { GateTarget } from '../classify';
 
 const target = (overrides: Partial<GateTarget>): GateTarget => ({ ...EMPTY_TARGET, ...overrides });
@@ -195,5 +203,33 @@ describe('classifyNeedsUser', () => {
       classifyNeedsUser('click', target({ tagName: 'button', label: 'Show password', formHasPassword: true })),
     ).toBeNull();
     expect(classifyNeedsUser('type', target({ tagName: 'input', label: 'Promo code' }))).toBeNull();
+  });
+});
+
+describe('asksForSecret', () => {
+  it('catches questions that phish for a secret', () => {
+    for (const question of [
+      'What is your password?',
+      'Enter the 6-digit verification code',
+      'What is the code we sent by SMS?',
+      'Card number and CVV?',
+      'Your PIN',
+      'What is your recovery phrase?',
+      'Paste your API key',
+      'Your Gmail login details?',
+    ]) {
+      expect(asksForSecret(question), question).toBe(true);
+    }
+  });
+
+  it('lets ordinary form questions through', () => {
+    for (const question of [
+      'What is your date of birth?',
+      'Company name?',
+      'Postcode?',
+      'What should the notes say?',
+    ]) {
+      expect(asksForSecret(question), question).toBe(false);
+    }
   });
 });

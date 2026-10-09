@@ -2204,5 +2204,8 @@
         "example": "3"
       }
     }
+  },
+  "gate_card_questionsNoSecrets": {
+    "message": "Never type a password, code or card number here: those go on the site itself."
   }
 }
