@@ -26,6 +26,18 @@ const click = async label => {
     button.click();
   }, label);
 };
+// Opens a section of the meeting view: Summary, Live, Transcript or Ask
+const tab = async label => {
+  await panel.waitForFunction(
+    label => [...document.querySelectorAll('[role="tab"]')].some(t => t.innerText.trim().startsWith(label)),
+    { polling: 250, timeout: 10000 },
+    label,
+  );
+  await panel.evaluate(
+    label => [...document.querySelectorAll('[role="tab"]')].find(t => t.innerText.trim().startsWith(label)).click(),
+    label,
+  );
+};
 // A real click, which Chrome counts as a user gesture
 const press = async label => {
   const handle = await panel.evaluateHandle(
@@ -128,9 +140,11 @@ test('notes record the tab, transcribe live, summarize, and end in a note in its
 
   // The first words show within ten seconds
   const started = Date.now();
+  await tab('Transcript');
   await waitForText('Line 1', 10000);
   assert.ok(Date.now() - started < 10000);
 
+  await tab('Summary');
   await waitForText('Summary:');
   // Headless audio is silent, so the silence warning comes up
   await waitForText('No audio detected');
@@ -205,8 +219,10 @@ test('live captions show while recording, and come back after the connection dro
   assert.deepEqual(second.setups[0].sessionResumption, { handle: `handle-${before + 1}` });
 
   // A question during the meeting is answered from the transcript and the newest captions
+  await tab('Ask');
   await panel.type('input[aria-label="What did they decide about pricing?"]', 'What has been said so far?');
-  await press('Ask');
+  // The tab is also called Ask: send with Enter
+  await panel.keyboard.press('Enter');
   await waitForText('Answer from');
   const answer = await panelText();
   assert.match(answer, /What has been said so far\? Answer from [1-9]\d* transcript lines and \d+ live captions\./);
@@ -215,12 +231,14 @@ test('live captions show while recording, and come back after the connection dro
   const settings = await extension.getStorage('meeting-settings');
   await extension.setStorage({ 'meeting-settings': { ...settings, summaryEverySeconds: 600 } });
   const lines = mock.meeting.lines;
+  await tab('Transcript');
   await panel.waitForFunction(
     n => document.body.innerText.includes(`Line ${n + 1}`),
     { polling: 250, timeout: 15000 },
     lines,
   );
   const summaries = mock.meeting.summaries;
+  await tab('Summary');
   await click('Refresh now');
   for (let i = 0; i < 40 && mock.meeting.summaries === summaries; i++) await sleep(250);
   await extension.setStorage({ 'meeting-settings': settings });
@@ -306,6 +324,7 @@ test('without tab audio, notes come from the meeting captions', async () => {
 
   await press('Take meeting notes');
   await waitForText('from the meeting captions');
+  await tab('Transcript');
   await waitForText('Captions line', 15000);
   await click('Stop');
   await waitForText('Done ·');

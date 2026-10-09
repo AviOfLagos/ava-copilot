@@ -64,6 +64,11 @@ const isAudioRejected = (error: unknown) =>
  * Every chunk of audio is in the database before it is transcribed, so a network drop or a restart
  * of the background loses nothing.
  */
+/** The user's or the calendar's word on what the call is about, as a line for the model. */
+function topicLine(meeting: Pick<MeetingRecord, 'topic'>): string {
+  return meeting.topic ? `What this meeting is about, from the user: ${meeting.topic}\n\n` : '';
+}
+
 export class MeetingManager {
   // The transcription pass running for each meeting; a new pass waits for the one before it
   private readonly passes = new Map<string, Promise<boolean>>();
@@ -80,7 +85,17 @@ export class MeetingManager {
    *
    * @returns The meeting id
    */
-  async start(request: { tabId?: number; windowId?: number; withMic?: boolean }): Promise<string> {
+  /** What the call is about, told by the user or the calendar. */
+  async setTopic(meetingId: string, topic: string): Promise<void> {
+    const meeting = await this.meetings.get(meetingId);
+    const clean = topic.replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!meeting || !clean) return;
+    await this.meetings.update(meetingId, { topic: clean, title: clean.slice(0, 80) });
+    if (meeting.threadId)
+      await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${clean.slice(0, 80)}`);
+  }
+
+  async start(request: { tabId?: number; windowId?: number; withMic?: boolean; auto?: boolean }): Promise<string> {
     if ((await this.meetings.active()).some(meeting => meeting.status === 'recording')) {
       throw new Error(t('meeting_alreadyRecording'));
     }
@@ -108,6 +123,7 @@ export class MeetingManager {
       url: tab.url ?? '',
       source: streamId ? 'audio' : 'captions',
       withMic,
+      auto: request.auto === true,
     });
     await this.threads.update(thread.id, { meetingId: meeting.id, boundUrl: tab.url ?? null });
 
@@ -191,7 +207,7 @@ export class MeetingManager {
         chatModel: await this.transcriber(this.scope(meeting)),
         messages: [
           systemMessage(QA_INSTRUCTIONS),
-          userMessage(`${meetingContext(meeting, segments)}\n\nQuestion: ${question}`),
+          userMessage(`${topicLine(meeting)}${meetingContext(meeting, segments)}\n\nQuestion: ${question}`),
         ],
       })
     ).trim();
@@ -562,7 +578,7 @@ export class MeetingManager {
         messages: [
           systemMessage(ROLLING_SUMMARY_INSTRUCTIONS),
           userMessage(
-            `${meeting.rollingSummary ? `Summary so far:\n${meeting.rollingSummary}\n\n` : ''}New transcript:\n${transcriptText(fresh)}`,
+            `${topicLine(meeting)}${meeting.rollingSummary ? `Summary so far:\n${meeting.rollingSummary}\n\n` : ''}New transcript:\n${transcriptText(fresh)}`,
           ),
         ],
       });
@@ -644,7 +660,7 @@ export class MeetingManager {
       messages: [
         systemMessage(NOTE_INSTRUCTIONS),
         userMessage(
-          `Meeting: ${meeting.title} on ${meeting.platform}, started ${new Date(meeting.startedAt).toISOString()}.\n\nTranscript:\n${body}`,
+          `Meeting: ${meeting.title} on ${meeting.platform}, started ${new Date(meeting.startedAt).toISOString()}.\n${topicLine(meeting)}\nTranscript:\n${body}`,
         ),
       ],
     });

@@ -2141,5 +2141,44 @@
   },
   "settings_calendar_use": {
     "message": "Use this calendar"
+  },
+  "ask_title": {
+    "message": "Taking notes on this call"
+  },
+  "ask_question": {
+    "message": "What is this call about? It helps the summary and notes."
+  },
+  "ask_placeholder": {
+    "message": "e.g. Stage 2 planning with the mentors"
+  },
+  "ask_save": {
+    "message": "Save"
+  },
+  "ask_captions_note": {
+    "message": "Tell the people on the call you're taking notes."
+  },
+  "ask_not_this": {
+    "message": "Don't take notes on this call"
+  },
+  "settings_meetings_auto": {
+    "message": "Take notes when I join a call"
+  },
+  "settings_meetings_auto_hint": {
+    "message": "On Meet, Zoom and Teams, from the call's captions. Alt+Shift+M adds its audio."
+  },
+  "meeting_tabs": {
+    "message": "Meeting sections"
+  },
+  "meeting_tab_summary": {
+    "message": "Summary"
+  },
+  "meeting_tab_live": {
+    "message": "Live"
+  },
+  "meeting_tab_transcript": {
+    "message": "Transcript"
+  },
+  "meeting_tab_ask": {
+    "message": "Ask"
   }
 }

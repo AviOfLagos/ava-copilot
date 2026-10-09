@@ -11,6 +11,7 @@ import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
 import { CalendarWatcher } from './calendar/watcher';
+import { AutoJoin } from './meetings/autojoin';
 import { connectGoogleCalendar } from './calendar/connect';
 import { draftSkill, teachTranscript } from './skills/teach';
 import { resolveModels } from './threads/factory';
@@ -23,6 +24,8 @@ const meetings = new MeetingManager();
 const kb = new KnowledgeBase();
 setKnowledgeBase(kb);
 const calendar = new CalendarWatcher();
+const autoJoin = new AutoJoin(meetings);
+autoJoin.start();
 const voice = new VoiceManager(threads, meetings, kb, calendar);
 calendar.start();
 // A meeting about to start is said aloud when a conversation is on
@@ -144,6 +147,25 @@ db.meetings.hook('updating', (changes: Partial<{ status: string }>, meetingId: s
   if (changes.status === 'done') {
     setTimeout(() => void kb.indexMeeting(meetingId).catch(error => logger.error('Could not index meeting', error)));
   }
+});
+
+// The small window that asks what a call is about
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('meeting-ask.html'))) return;
+  const meetingId = typeof message?.meetingId === 'string' ? message.meetingId : null;
+  if (!meetingId) return;
+  const run = async () => {
+    if (message.type === 'meeting_topic') {
+      await meetings.setTopic(meetingId, String(message.topic ?? ''));
+    } else if (message.type === 'meeting_not_this_call') {
+      const meeting = await meetingStore.get(meetingId);
+      if (meeting?.tabId != null) await autoJoin.decline(meeting.tabId);
+      await meetings.stop(meetingId);
+    }
+    return { ok: true };
+  };
+  run().then(sendResponse, error => sendResponse({ ok: false, error: String(error) }));
+  return true;
 });
 
 // Settings pages manage the knowledge base through the background, which keeps its search index

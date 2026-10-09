@@ -18,6 +18,8 @@ export interface MeetingSettingsConfig {
   silenceWarnSeconds: number;
   // Instant captions from the Gemini Live API, on top of the transcript
   liveCaptions: boolean;
+  // Start notes by themselves when the user joins a call on Meet, Zoom or Teams
+  autoNotes: boolean;
   liveModel: string;
   // The Live API address; tests point it at a local server
   liveEndpoint: string;
@@ -33,6 +35,7 @@ export const DEFAULT_MEETING_SETTINGS: MeetingSettingsConfig = {
   summaryEverySeconds: 150,
   silenceWarnSeconds: 300,
   liveCaptions: true,
+  autoNotes: true,
   liveModel: 'gemini-3.8-live',
   liveEndpoint:
     'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',

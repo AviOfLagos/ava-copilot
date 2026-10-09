@@ -7,6 +7,8 @@ import type { MeetingRecord, MeetingWarning } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import { buttonClasses } from '../components/ui/button';
 
+type MeetingTab = 'summary' | 'live' | 'transcript' | 'ask';
+
 interface MeetingViewProps {
   meetingId: string;
   onStop: () => void;
@@ -97,6 +99,11 @@ export default function MeetingView({
   const [copied, setCopied] = useState(false);
   const [question, setQuestion] = useState('');
   const [asking, setAsking] = useState(false);
+  // Live while recording, the summary once done, the transcript when a citation points into it
+  const [tab, setTab] = useState<MeetingTab>(focusT !== null && focusT >= 0 ? 'transcript' : 'live');
+  useEffect(() => {
+    if (focusT !== null && focusT >= 0) setTab('transcript');
+  }, [focusT]);
 
   const ask = async () => {
     const text = question.trim();
@@ -132,209 +139,259 @@ export default function MeetingView({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  return (
-    <div className="flex-1 space-y-3 overflow-y-auto p-3 text-sm">
-      <div className={card}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold">{note?.title || meeting.title}</h2>
-            <p className={`text-xs ${muted}`}>
-              {meeting.platform}
-              {meeting.source === 'captions' && ` · ${t('meeting_fromCaptions')}`}
-            </p>
-            <p
-              role="status"
-              className={`mt-1 flex items-center gap-1 ${meeting.status === 'recording' ? 'text-destructive' : muted}`}>
-              {meeting.status === 'recording' && (
-                <span className="bg-destructive inline-block size-2 animate-pulse rounded-full" />
-              )}
-              {status}
-            </p>
-          </div>
-          {meeting.status === 'recording' && (
-            <button
-              type="button"
-              onClick={onStop}
-              className="border-destructive/60 bg-destructive/25 flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3">
-              <PiStopFill size={14} />
-              {t('meeting_stop')}
-            </button>
-          )}
-          {(meeting.status === 'failed' ||
-            (meeting.status === 'finishing' && meeting.warnings.includes('transcription'))) && (
-            <button type="button" onClick={onRetry} className={buttonClasses('default', 'sm')}>
-              {t('meeting_retry')}
-            </button>
-          )}
-        </div>
-        {meeting.warnings.length > 0 && (
-          <ul className="mt-2 space-y-1">
-            {meeting.warnings.map(warning => (
-              <li key={warning} role="alert" className="bg-muted rounded-xl border px-2.5 py-1.5 text-xs">
-                {t(WARNINGS[warning])}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+  const tabs: { id: MeetingTab; label: string; count?: number }[] = [
+    { id: 'summary', label: t('meeting_tab_summary') },
+    ...(meeting.status === 'recording' && meeting.live !== 'off'
+      ? [{ id: 'live' as const, label: t('meeting_tab_live') }]
+      : []),
+    { id: 'transcript', label: t('meeting_tab_transcript'), count: segments.length },
+    ...(threadId
+      ? [{ id: 'ask' as const, label: t('meeting_tab_ask'), count: answers.filter(m => m.actor === 'user').length }]
+      : []),
+  ];
+  const shown = tabs.some(item => item.id === tab) ? tab : 'summary';
 
-      {note ? (
-        <div className={`${card} space-y-3`}>
-          <section>
-            <h3 className={heading}>{t('meeting_note_tldr')}</h3>
-            <ul className="list-disc pl-5">
-              {note.tldr.map(line => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </section>
-          <section>
-            <h3 className={heading}>{t('meeting_note_decisions')}</h3>
-            {note.decisions.length ? (
-              <ul className="list-disc pl-5">
-                {note.decisions.map(line => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={muted}>{t('meeting_note_none')}</p>
-            )}
-          </section>
-          <section>
-            <h3 className={heading}>{t('meeting_note_actions')}</h3>
-            {note.actionItems.length ? (
-              <ul className="space-y-1">
-                {note.actionItems.map(item => (
-                  <li key={`${item.owner}-${item.task}`}>
-                    <span className="font-medium">{item.owner}</span>: {item.task}
-                    {item.due && <span className={muted}> ({t('meeting_note_due', [item.due])})</span>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={muted}>{t('meeting_note_none')}</p>
-            )}
-          </section>
-          <section>
-            <h3 className={heading}>{t('meeting_note_questions')}</h3>
-            {note.openQuestions.length ? (
-              <ul className="list-disc pl-5">
-                {note.openQuestions.map(line => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={muted}>{t('meeting_note_none')}</p>
-            )}
-          </section>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className="flex items-center gap-1 rounded-md border px-2 py-1">
-              <FiCopy size={14} />
-              {copied ? t('meeting_copied') : t('meeting_copy')}
-            </button>
-            <button
-              type="button"
-              onClick={() => download(`${(note.title || 'meeting').replace(/[^\w-]+/g, '-')}.md`, meeting.markdown)}
-              className="flex items-center gap-1 rounded-md border px-2 py-1">
-              <FiDownload size={14} />
-              {t('meeting_download')}
-            </button>
-            {meeting.threadId && (
+  return (
+    <div className="flex min-h-0 flex-1 flex-col text-sm">
+      <div className="shrink-0 px-3 pt-3">
+        <div className={card}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold">{note?.title || meeting.title}</h2>
+              <p className={`text-xs ${muted}`}>
+                {meeting.platform}
+                {meeting.source === 'captions' && ` · ${t('meeting_fromCaptions')}`}
+              </p>
+              <p
+                role="status"
+                className={`mt-1 flex items-center gap-1 ${meeting.status === 'recording' ? 'text-destructive' : muted}`}>
+                {meeting.status === 'recording' && (
+                  <span className="bg-destructive inline-block size-2 animate-pulse rounded-full" />
+                )}
+                {status}
+              </p>
+            </div>
+            {meeting.status === 'recording' && (
               <button
                 type="button"
-                onClick={() => onOpenThread(meeting.threadId as string)}
-                className="flex items-center gap-1 rounded-md border px-2 py-1">
-                <FiFileText size={14} />
-                {t('meeting_openThread')}
+                onClick={onStop}
+                className="border-destructive/60 bg-destructive/25 flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3">
+                <PiStopFill size={14} />
+                {t('meeting_stop')}
+              </button>
+            )}
+            {(meeting.status === 'failed' ||
+              (meeting.status === 'finishing' && meeting.warnings.includes('transcription'))) && (
+              <button type="button" onClick={onRetry} className={buttonClasses('default', 'sm')}>
+                {t('meeting_retry')}
               </button>
             )}
           </div>
-        </div>
-      ) : (
-        meeting.status === 'recording' && (
-          <div className={card}>
-            <div className="flex items-center justify-between">
-              <h3 className={heading}>{t('meeting_summarySoFar')}</h3>
-              <button type="button" onClick={onRefreshSummary} className="text-primary text-xs hover:underline">
-                {t('meeting_refreshSummary')}
-              </button>
-            </div>
-            <p className={`whitespace-pre-wrap ${meeting.rollingSummary ? '' : muted}`}>
-              {meeting.rollingSummary || t('meeting_summaryPending')}
-            </p>
-          </div>
-        )
-      )}
-
-      {meeting.status === 'recording' && meeting.live !== 'off' && (
-        <div className={card}>
-          <h3 className={`${heading} flex items-center gap-2`}>
-            {t('meeting_live_title')}
-            <span className={`text-xs font-normal ${muted}`}>{t(LIVE_STATUS[meeting.live])}</span>
-          </h3>
-          <ol aria-label={t('meeting_live_title')} className="space-y-1">
-            {(meeting.liveCaptions ?? []).slice(-6).map(caption => (
-              <li key={`${caption.t}-${caption.text}`}>
-                <span className={`mr-1 tabular-nums ${muted}`}>{clock(caption.t)}</span>
-                {caption.text}
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {threadId && (
-        <div className={card}>
-          <h3 className={heading}>{t('meeting_ask_title')}</h3>
-          {answers.length > 0 && (
-            <ul aria-label={t('meeting_ask_title')} className="mb-2 space-y-2">
-              {answers.map(message => (
-                <li key={message.id} className={message.actor === 'user' ? 'font-medium' : 'whitespace-pre-wrap'}>
-                  {message.content}
+          {meeting.warnings.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {meeting.warnings.map(warning => (
+                <li key={warning} role="alert" className="bg-muted rounded-xl border px-2.5 py-1.5 text-xs">
+                  {t(WARNINGS[warning])}
                 </li>
               ))}
             </ul>
           )}
-          <form
-            className="flex gap-2"
-            onSubmit={event => {
-              event.preventDefault();
-              void ask();
-            }}>
-            <input
-              value={question}
-              onChange={event => setQuestion(event.target.value)}
-              placeholder={t('meeting_ask_placeholder')}
-              aria-label={t('meeting_ask_placeholder')}
-              className="bg-card text-foreground placeholder:text-muted-foreground focus:border-primary/50 min-w-0 flex-1 rounded-full border px-3 py-1.5 outline-none"
-            />
-            <button type="submit" disabled={asking} className={buttonClasses('default', 'sm')}>
-              {asking ? t('meeting_asking') : t('meeting_ask_button')}
-            </button>
-          </form>
         </div>
-      )}
 
-      <div className={card}>
-        <h3 className={heading}>{t('meeting_transcript')}</h3>
-        {segments.length === 0 ? (
-          <p className={muted}>{meeting.status === 'recording' ? t('meeting_listening') : t('meeting_noTranscript')}</p>
-        ) : (
-          <ol aria-label={t('meeting_transcript')} className="space-y-1">
-            {segments.map(segment => (
-              <li
-                key={segment.id}
-                id={`segment-${segment.id}`}
-                className={segment.id === focusId ? 'bg-primary/15 rounded' : ''}>
-                <span className={`mr-1 tabular-nums ${muted}`}>{clock(segment.tStart)}</span>
-                {segment.speaker && <span className="font-medium">{segment.speaker}: </span>}
-                {segment.text}
-              </li>
-            ))}
-          </ol>
+        <div role="tablist" aria-label={t('meeting_tabs')} className="glass mt-2.5 flex gap-0.5 rounded-xl p-0.5">
+          {tabs.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={shown === item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-[9px] text-[12px] transition-colors ${
+                shown === item.id ? 'bg-accent text-foreground border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              {item.id === 'live' && <span className="bg-destructive size-1.5 animate-pulse rounded-full" />}
+              {item.label}
+              {item.count ? <span className="font-mono text-[10px] opacity-70">{item.count}</span> : null}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div role="tabpanel" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+        {shown === 'summary' && (
+          <>
+            {note ? (
+              <div className={`${card} space-y-3`}>
+                <section>
+                  <h3 className={heading}>{t('meeting_note_tldr')}</h3>
+                  <ul className="list-disc pl-5">
+                    {note.tldr.map(line => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </section>
+                <section>
+                  <h3 className={heading}>{t('meeting_note_decisions')}</h3>
+                  {note.decisions.length ? (
+                    <ul className="list-disc pl-5">
+                      {note.decisions.map(line => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={muted}>{t('meeting_note_none')}</p>
+                  )}
+                </section>
+                <section>
+                  <h3 className={heading}>{t('meeting_note_actions')}</h3>
+                  {note.actionItems.length ? (
+                    <ul className="space-y-1">
+                      {note.actionItems.map(item => (
+                        <li key={`${item.owner}-${item.task}`}>
+                          <span className="font-medium">{item.owner}</span>: {item.task}
+                          {item.due && <span className={muted}> ({t('meeting_note_due', [item.due])})</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={muted}>{t('meeting_note_none')}</p>
+                  )}
+                </section>
+                <section>
+                  <h3 className={heading}>{t('meeting_note_questions')}</h3>
+                  {note.openQuestions.length ? (
+                    <ul className="list-disc pl-5">
+                      {note.openQuestions.map(line => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={muted}>{t('meeting_note_none')}</p>
+                  )}
+                </section>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void copy()}
+                    className="flex items-center gap-1 rounded-md border px-2 py-1">
+                    <FiCopy size={14} />
+                    {copied ? t('meeting_copied') : t('meeting_copy')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      download(`${(note.title || 'meeting').replace(/[^\w-]+/g, '-')}.md`, meeting.markdown)
+                    }
+                    className="flex items-center gap-1 rounded-md border px-2 py-1">
+                    <FiDownload size={14} />
+                    {t('meeting_download')}
+                  </button>
+                  {meeting.threadId && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenThread(meeting.threadId as string)}
+                      className="flex items-center gap-1 rounded-md border px-2 py-1">
+                      <FiFileText size={14} />
+                      {t('meeting_openThread')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              meeting.status === 'recording' && (
+                <div className={card}>
+                  <div className="flex items-center justify-between">
+                    <h3 className={heading}>{t('meeting_summarySoFar')}</h3>
+                    <button type="button" onClick={onRefreshSummary} className="text-primary text-xs hover:underline">
+                      {t('meeting_refreshSummary')}
+                    </button>
+                  </div>
+                  <p className={`whitespace-pre-wrap ${meeting.rollingSummary ? '' : muted}`}>
+                    {meeting.rollingSummary || t('meeting_summaryPending')}
+                  </p>
+                </div>
+              )
+            )}
+          </>
+        )}
+        {shown === 'live' && (
+          <>
+            {meeting.status === 'recording' && meeting.live !== 'off' && (
+              <div className={card}>
+                <h3 className={`${heading} flex items-center gap-2`}>
+                  {t('meeting_live_title')}
+                  <span className={`text-xs font-normal ${muted}`}>{t(LIVE_STATUS[meeting.live])}</span>
+                </h3>
+                <ol aria-label={t('meeting_live_title')} className="space-y-1">
+                  {(meeting.liveCaptions ?? []).slice(-6).map(caption => (
+                    <li key={`${caption.t}-${caption.text}`}>
+                      <span className={`mr-1 tabular-nums ${muted}`}>{clock(caption.t)}</span>
+                      {caption.text}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </>
+        )}
+        {shown === 'transcript' && (
+          <>
+            <div className={card}>
+              <h3 className={heading}>{t('meeting_transcript')}</h3>
+              {segments.length === 0 ? (
+                <p className={muted}>
+                  {meeting.status === 'recording' ? t('meeting_listening') : t('meeting_noTranscript')}
+                </p>
+              ) : (
+                <ol aria-label={t('meeting_transcript')} className="space-y-1">
+                  {segments.map(segment => (
+                    <li
+                      key={segment.id}
+                      id={`segment-${segment.id}`}
+                      className={segment.id === focusId ? 'bg-primary/15 rounded' : ''}>
+                      <span className={`mr-1 tabular-nums ${muted}`}>{clock(segment.tStart)}</span>
+                      {segment.speaker && <span className="font-medium">{segment.speaker}: </span>}
+                      {segment.text}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </>
+        )}
+        {shown === 'ask' && (
+          <>
+            {threadId && (
+              <div className={card}>
+                <h3 className={heading}>{t('meeting_ask_title')}</h3>
+                {answers.length > 0 && (
+                  <ul aria-label={t('meeting_ask_title')} className="mb-2 space-y-2">
+                    {answers.map(message => (
+                      <li key={message.id} className={message.actor === 'user' ? 'font-medium' : 'whitespace-pre-wrap'}>
+                        {message.content}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <form
+                  className="flex gap-2"
+                  onSubmit={event => {
+                    event.preventDefault();
+                    void ask();
+                  }}>
+                  <input
+                    value={question}
+                    onChange={event => setQuestion(event.target.value)}
+                    placeholder={t('meeting_ask_placeholder')}
+                    aria-label={t('meeting_ask_placeholder')}
+                    className="bg-card text-foreground placeholder:text-muted-foreground focus:border-primary/50 min-w-0 flex-1 rounded-full border px-3 py-1.5 outline-none"
+                  />
+                  <button type="submit" disabled={asking} className={buttonClasses('default', 'sm')}>
+                    {asking ? t('meeting_asking') : t('meeting_ask_button')}
+                  </button>
+                </form>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

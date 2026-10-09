@@ -76,7 +76,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [connecting, setConnecting] = useState(false);
   // A calendar the connector found, waiting for the user to choose it
   const [found, setFound] = useState<{ calendar: string; url: string } | null>(null);
-  const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true });
+  const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true, autoNotes: true });
   const [memory, setMemory] = useState({
     indexChats: true,
     indexMeetings: true,
@@ -107,7 +107,11 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
       setCalendar(await calendarSettingsStore.getSettings());
       setSpent((await usageStore.getDay(localDay())).costUsd);
       const meetingSettings = await meetingSettingsStore.getSettings();
-      setMeeting({ includeMic: meetingSettings.includeMic, liveCaptions: meetingSettings.liveCaptions });
+      setMeeting({
+        includeMic: meetingSettings.includeMic,
+        liveCaptions: meetingSettings.liveCaptions,
+        autoNotes: meetingSettings.autoNotes,
+      });
       const kb = await kbSettingsStore.getSettings();
       setMemory({
         indexChats: kb.indexChats,
@@ -347,6 +351,13 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
         </Section>
 
         <Section label={t('settings_meetings')}>
+          <Row title={t('settings_meetings_auto')} hint={t('settings_meetings_auto_hint')}>
+            <Switch
+              label={t('settings_meetings_auto')}
+              checked={meeting.autoNotes}
+              onChange={value => void setMeetingSetting({ autoNotes: value })}
+            />
+          </Row>
           <Row title={t('options_meetings_includeMic')}>
             <Switch
               label={t('options_meetings_includeMic')}
