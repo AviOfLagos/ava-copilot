@@ -32,9 +32,14 @@ export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
  * tools it calls, keeps the conversation in a thread, and tells the user out loud when something
  * they started finishes or waits for their click.
  */
+// Turns of the user's speech an address may come from
+const RECENT_TURNS = 4;
+
 export class VoiceManager {
   private threadId: string | null = null;
   private windowId: number | undefined;
+  // What the user said in the last few turns, to check where an address came from
+  private recentHeard: string[] = [];
   // What has been said about each thread, so nothing is announced twice
   private announced = new Map<string, string>();
   private watchTimer: ReturnType<typeof setInterval> | null = null;
@@ -119,13 +124,14 @@ export class VoiceManager {
 
   /** One exchange of the conversation, kept in its thread. */
   async onTurn(heard: string, said: string): Promise<void> {
+    if (heard) this.recentHeard = [...this.recentHeard, heard].slice(-RECENT_TURNS);
     if (!this.threadId) return;
     if (heard) await threadStore.addMessage(this.threadId, 'user', heard);
     if (said) await threadStore.addMessage(this.threadId, 'planner', said);
   }
 
   /** Runs a tool the copilot called and returns what it should know. */
-  async onTool(name: string, args: Record<string, unknown>): Promise<string> {
+  async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     switch (name) {
       case 'run_browser_task': {
         const task = String(args.task ?? '').trim();
@@ -154,7 +160,8 @@ export class VoiceManager {
           tabId => this.threads.holderOf(tabId) !== null,
         );
       case 'open_tab':
-        return openTab(String(args.target ?? ''), this.windowId);
+        // Only a site the user named, or one already open: never one a read page suggested
+        return openTab(String(args.target ?? ''), this.windowId, [...this.recentHeard, heard].join(' '));
       case 'switch_tab':
         return typeof args.tab_id === 'number' ? switchTab(args.tab_id) : 'No tab id was given.';
       case 'get_status':

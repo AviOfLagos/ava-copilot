@@ -52,7 +52,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (voice) return { ok: true };
         const next = new VoiceSession(message.options as VoiceOptions, {
           onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
-          onTool: (name, args) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args }),
+          onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
           onStatus: (status, error) => notify({ type: 'voice_status', status, error }),
           onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
         });

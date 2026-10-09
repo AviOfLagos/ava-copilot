@@ -30,7 +30,8 @@ export interface VoiceEvents {
   // A finished turn: what the user said, what the copilot said
   onTurn: (heard: string, said: string) => void;
   // Runs a tool in the background and returns its result
-  onTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
+  // `heard` is what the user has said so far in this turn, so a tool can tell where its arguments came from
+  onTool: (name: string, args: Record<string, unknown>, heard: string) => Promise<unknown>;
   onStatus: (status: 'connecting' | 'listening' | 'speaking' | 'off', error?: string) => void;
   // Seconds of audio sent and played, for usage
   onUsage: (inputSeconds: number, outputSeconds: number) => void;
@@ -235,7 +236,7 @@ export class VoiceSession {
       for (const call of message.toolCall?.functionCalls ?? []) {
         let response: unknown;
         try {
-          response = { result: await this.events.onTool(call.name, call.args ?? {}) };
+          response = { result: await this.events.onTool(call.name, call.args ?? {}, this.heard) };
         } catch (error) {
           response = { error: String(error) };
         }

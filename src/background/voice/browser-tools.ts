@@ -115,10 +115,33 @@ export function addressFor(target: string, knownHosts: Set<string> = new Set()):
 }
 
 /** Opens a new tab in front, unless the address is on the blocked list. */
-export async function openTab(target: string, windowId?: number): Promise<string> {
+/**
+ * Whether the user named this site: its main name (github for github.com, zedu for zedu.chat) is
+ * among the words they said, spoken or spelled with spaces.
+ */
+export function spokenSite(host: string, spoken: string): boolean {
+  const labels = host.replace(/^www\./, '').split('.');
+  const name = (labels.length > 2 && labels.at(-2)!.length <= 3 ? labels.at(-3) : labels.at(-2)) ?? labels[0];
+  if (!name || name.length < 2) return false;
+  const said = spoken.toLowerCase();
+  return said.includes(name) || said.replace(/[^a-z0-9]/g, '').includes(name.replace(/[^a-z0-9]/g, ''));
+}
+
+/**
+ * Opens a new tab in front. A site opens only if it is already open in a tab or the user named it;
+ * a search is always allowed. Page text the model read cannot choose where the browser goes.
+ *
+ * @param spoken - What the user said recently
+ */
+export async function openTab(target: string, windowId?: number, spoken = ''): Promise<string> {
   const open = await chrome.tabs.query({});
   const knownHosts = new Set(open.map(tab => hostOf(tab.url)).filter(Boolean));
   const url = addressFor(target, knownHosts);
+  const host = new URL(url).hostname.replace(/^www\./, '');
+  const isSearch = host === 'google.com' && new URL(url).pathname === '/search';
+  if (!isSearch && !knownHosts.has(host) && !spokenSite(host, spoken)) {
+    return `Not opened: ${host} is not open and the user did not name it. Ask the user to say the site they want.`;
+  }
   if (!(await allowedByFirewall(url))) {
     return `${hostOf(url)} is on the blocked list, so it was not opened.`;
   }

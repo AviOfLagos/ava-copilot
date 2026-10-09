@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'voice_tool':
       voice
-        .onTool(String(message.name), message.args ?? {})
+        .onTool(String(message.name), message.args ?? {}, String(message.heard ?? ''))
         .then(sendResponse, error =>
           sendResponse(`The tool failed: ${error instanceof Error ? error.message : error}`),
         );

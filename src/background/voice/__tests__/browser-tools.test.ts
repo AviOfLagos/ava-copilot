@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressFor } from '../browser-tools';
+import { addressFor, spokenSite } from '../browser-tools';
 
 describe('addressFor', () => {
   it('keeps addresses, adds https to bare ones, and searches anything else', () => {
@@ -29,5 +29,19 @@ describe('addressFor', () => {
   it('never opens a script or data address as is', () => {
     expect(addressFor('javascript:alert(1)')).toMatch(/^https:\/\/www\.google\.com\/search/);
     expect(addressFor('data:text/html,x')).toMatch(/^https:\/\/www\.google\.com\/search/);
+  });
+});
+
+describe('spokenSite', () => {
+  it('knows a site the user named', () => {
+    expect(spokenSite('github.com', 'open github for me')).toBe(true);
+    expect(spokenSite('zedu.chat', 'go to Zedu')).toBe(true);
+    expect(spokenSite('bbc.co.uk', 'read me the BBC news')).toBe(true);
+    expect(spokenSite('news.ycombinator.com', 'open y combinator news')).toBe(true);
+  });
+
+  it('refuses a site the user never named', () => {
+    expect(spokenSite('evil.example', 'open github for me')).toBe(false);
+    expect(spokenSite('collect-data.net', '')).toBe(false);
   });
 });
