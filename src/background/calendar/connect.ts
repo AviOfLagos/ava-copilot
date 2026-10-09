@@ -1,4 +1,3 @@
-import { calendarSettingsStore } from '@extension/storage';
 import { createLogger } from '../log';
 
 const logger = createLogger('CalendarConnect');
@@ -66,9 +65,12 @@ export function calendarOf(url: string): string {
  *
  * @returns The address saved, or an error to show
  */
-export async function connectGoogleCalendar(
-  onSaved: () => Promise<unknown>,
-): Promise<{ ok: boolean; error?: string; calendar?: string }> {
+export async function connectGoogleCalendar(): Promise<{
+  ok: boolean;
+  error?: string;
+  calendar?: string;
+  url?: string;
+}> {
   const tab = await chrome.tabs.create({ url: SETTINGS_URL, active: true });
   if (tab.id === undefined) return { ok: false, error: 'Could not open Google Calendar.' };
   const deadline = Date.now() + WAIT_MS;
@@ -81,9 +83,8 @@ export async function connectGoogleCalendar(
       const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: findSecretAddress });
       const found = result?.result as { url: string | null } | undefined;
       if (found?.url && SECRET_ICS.test(found.url)) {
-        await calendarSettingsStore.updateSettings({ icsUrl: found.url, reminders: true });
-        await onSaved();
-        return { ok: true, calendar: calendarOf(found.url) };
+        // Found, not saved: the user sees which calendar it is and chooses to use it
+        return { ok: true, calendar: calendarOf(found.url), url: found.url };
       }
     } catch (error) {
       // The page is still loading or redirecting to sign-in

@@ -165,7 +165,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await kb.sweep();
         return { ok: true };
       case 'kb_calendar_connect':
-        return connectGoogleCalendar(() => calendar.refresh());
+        return connectGoogleCalendar();
       case 'kb_calendar_refresh': {
         const error = await calendar.refresh();
         return error ? { ok: false, error } : { ok: true };

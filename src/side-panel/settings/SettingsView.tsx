@@ -74,6 +74,8 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [calendar, setCalendar] = useState({ icsUrl: '', remindMinutes: 5, reminders: true });
   const [calendarStatus, setCalendarStatus] = useState<{ text: string; error: boolean } | null>(null);
   const [connecting, setConnecting] = useState(false);
+  // A calendar the connector found, waiting for the user to choose it
+  const [found, setFound] = useState<{ calendar: string; url: string } | null>(null);
   const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true });
   const [memory, setMemory] = useState({
     indexChats: true,
@@ -288,23 +290,37 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 setCalendarStatus({ text: t('settings_calendar_connecting'), error: false });
                 void chrome.runtime
                   .sendMessage({ type: 'kb_calendar_connect' })
-                  .then(async (reply: { ok: boolean; error?: string; calendar?: string } | undefined) => {
-                    if (!reply?.ok) {
+                  .then((reply: { ok: boolean; error?: string; calendar?: string; url?: string } | undefined) => {
+                    if (!reply?.ok || !reply.url) {
                       setCalendarStatus({ text: reply?.error ?? t('errors_unknown'), error: true });
                       return;
                     }
-                    const settings = await calendarSettingsStore.getSettings();
-                    setCalendar(settings);
-                    const { events } = await upcomingEventsStore.get();
-                    setCalendarStatus({
-                      text: t('settings_calendar_connected', [reply.calendar ?? '', String(events.length)]),
-                      error: false,
-                    });
+                    setCalendarStatus(null);
+                    setFound({ calendar: reply.calendar ?? '', url: reply.url });
                   })
                   .finally(() => setConnecting(false));
               }}>
               {connecting ? t('settings_calendar_connecting_short') : t('settings_calendar_connect')}
             </Button>
+            {found && (
+              <div className="rounded-xl border border-primary/40 bg-primary/10 p-2.5 text-[12px]">
+                <p>{t('settings_calendar_found', [found.calendar])}</p>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const url = found.url;
+                      setFound(null);
+                      void saveCalendar({ icsUrl: url, reminders: true });
+                    }}>
+                    {t('settings_calendar_use')}
+                  </Button>
+                  <Button variant="glass" size="sm" onClick={() => setFound(null)}>
+                    {t('skills_teach_cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
             {calendarStatus && (
               <p className={cn('text-[11.5px]', calendarStatus.error ? 'text-destructive' : 'text-primary')}>
                 {calendarStatus.text}
