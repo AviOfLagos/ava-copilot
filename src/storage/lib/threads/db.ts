@@ -108,6 +108,8 @@ export interface MeetingRecord {
   error: string | null;
   // What the call is about, in the user's words or from the calendar; it guides the summary and notes
   topic?: string;
+  // Who said what it is about: the user, or a calendar invite, which anyone can send
+  topicSource?: 'user' | 'calendar';
   // Started on its own when the user joined a call, rather than by the user
   auto?: boolean;
 }

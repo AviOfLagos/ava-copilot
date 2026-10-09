@@ -137,7 +137,7 @@ export class AutoJoin {
       const { events } = await upcomingEventsStore.get();
       const event = matchEvent(url, events ?? []);
       if (event) {
-        await this.meetings.setTopic(meetingId, event.title);
+        await this.meetings.setTopic(meetingId, event.title, 'calendar');
         await chrome.notifications.create(`autojoin:${meetingId}`, {
           type: 'basic',
           iconUrl: chrome.runtime.getURL('icon-128.png'),
