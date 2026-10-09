@@ -1,6 +1,5 @@
 import { firewallStore } from '@extension/storage';
 import { isUrlAllowed } from '../browser/util';
-import { readPageText } from '../reader/probes';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 
 // What the voice model gets of a page: enough to answer about it, short enough to speak from
@@ -22,6 +21,19 @@ function hostOf(url = ''): string {
     return url;
   }
 }
+
+/**
+ * Runs in the page: its text and the address it was read from, in one step, so the address checked
+ * is the one the text came from. Self-contained, as every function sent to a page must be.
+ */
+export const readPageWithAddress = (max: number): { text: string; total: number; href: string } => {
+  const all = (document.body ? document.body.innerText : '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { text: all.slice(0, max), total: all.length, href: location.href };
+};
 
 /** The open tabs of the window, the one in front first, each with the id the other tools take. */
 export async function listTabs(windowId?: number): Promise<string> {
@@ -58,11 +70,15 @@ export async function readPage(
   }
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    func: readPageText,
-    args: [{ offset: 0, max: PAGE_CHARS }],
+    func: readPageWithAddress,
+    args: [PAGE_CHARS],
   });
-  const slice = result?.result as { text?: string; total?: number } | undefined;
-  const text = slice?.text?.trim() ?? '';
+  const slice = result?.result as { text?: string; total?: number; href?: string } | undefined;
+  // The tab may have moved on between the check above and the read: check the page that was read
+  if (!slice?.href || !/^https?:/.test(slice.href) || !(await allowedByFirewall(slice.href))) {
+    return 'That page changed while it was being read, or cannot be read.';
+  }
+  const text = slice.text?.trim() ?? '';
   if (!text) return `The page "${tab.title}" shows no text.`;
   const cut = (slice?.total ?? 0) > PAGE_CHARS ? ' (the start of a longer page)' : '';
   return `Page "${tab.title}" (${hostOf(tab.url)})${cut}:\n${wrapUntrustedContent(text)}`;
