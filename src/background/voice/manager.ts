@@ -21,6 +21,7 @@ import type { CalendarWatcher } from '../calendar/watcher';
 import { quoteTitle } from '../calendar/watcher';
 import { allowedByClick } from './confirm';
 import { soundRecently } from './sound';
+import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
@@ -34,26 +35,6 @@ import { resolveModels } from '../threads/factory';
 const logger = createLogger('Voice');
 
 const WATCH_MS = 2000;
-// What each tool does, as the click-to-allow notice names it. In a conversation "Hey Ava" started
-// while sound was playing, or with sound playing since, the order may have come from that sound: every
-// tool here needs a click, the ones that only read too, since an answer spoken aloud can reach a call.
-// Ending a call for everyone needs one in any conversation the wake word started.
-const GUARDED_TOOLS: Record<string, string> = {
-  run_browser_task: 'run a task in the browser',
-  open_tab: 'open a site',
-  switch_tab: 'switch tabs',
-  join_next_meeting: 'join your next meeting',
-  leave_call: 'leave the call',
-  end_call_for_everyone: 'end the call for everyone',
-  remember_this: 'save to your knowledge base',
-  read_page: 'read a page aloud',
-  list_tabs: 'list your open tabs',
-  list_frequent_sites: 'list the sites you visit',
-  get_schedule: 'read your calendar',
-  ask_meeting: 'answer from your meeting notes',
-  ask_knowledge: 'answer from your knowledge base',
-  think: 'answer a question',
-};
 // A conversation "Hey Ava" started ends after this long with nothing said and no task running
 const WAKE_IDLE_MS = 2 * 60 * 1000;
 const KEEP_ALIVE_MS = 20_000;
@@ -197,8 +178,12 @@ export class VoiceManager {
   /** Runs a tool the copilot called and returns what it should know. */
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     this.lastActivity = Date.now();
-    const action = GUARDED_TOOLS[name];
-    if (action && this.wakeSession && (this.guarded || name === 'end_call_for_everyone' || (await soundRecently()))) {
+    const action = TOOL_ACTIONS[name] ?? 'act for you';
+    if (
+      !UNGUARDED_TOOLS.has(name) &&
+      this.wakeSession &&
+      (this.guarded || name === 'end_call_for_everyone' || (await soundRecently()))
+    ) {
       if (this.refused) return 'Not allowed: the user refused an action on screen in this conversation.';
       // Fixed words only: nothing the model or the sound chose is shown, so the notice cannot be worded to mislead
       const allowed = await allowedByClick(

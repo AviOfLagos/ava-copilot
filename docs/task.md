@@ -295,7 +295,7 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   login and hourly if it is not running. E2E: `e2e/wake.e2e.mjs` (needs the setup; a recording as the microphone).
   Only the phrase (the last 1.2 s) and what follows it reach Gemini, never earlier audio. A conversation the wake word
   started while a tab was playing sound, or with sound since (`voice/sound.ts`, last 15 s, fails closed), asks for a
-  click on a notification before each tool that acts or reads (`GUARDED_TOOLS`, `voice/confirm.ts`; fixed wording,
+  click on a notification before every tool but `stop_tasks` (`UNGUARDED_TOOLS`, deny by default; `voice/confirm.ts`; fixed wording,
   one refusal refuses the rest of the conversation), and ending a call for everyone always does. Residual risk: sound from
   outside the browser (another app, a TV) saying "Hey Ava" is not detected; echo cancellation and headphones help.
 
