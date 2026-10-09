@@ -262,7 +262,10 @@ chrome.runtime.onConnect.addListener(port => {
           return;
 
         case 'voice_start': {
-          const result = await voice.start(message.windowId);
+          // Every outcome is answered as voice_started, so the panel's Talk button never stays on "Connecting"
+          const result = await voice
+            .start(message.windowId)
+            .catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
           return port.postMessage({ type: 'voice_started', ...result });
         }
 
