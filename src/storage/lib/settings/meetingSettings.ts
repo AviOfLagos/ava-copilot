@@ -20,6 +20,8 @@ export interface MeetingSettingsConfig {
   liveCaptions: boolean;
   // Start notes by themselves when the user joins a call on Meet, Zoom or Teams
   autoNotes: boolean;
+  // Listen on the device for "Hey Ava", which starts a voice conversation; off until the user turns it on
+  wakeWord: boolean;
   liveModel: string;
   // The Live API address; tests point it at a local server
   liveEndpoint: string;
@@ -36,6 +38,7 @@ export const DEFAULT_MEETING_SETTINGS: MeetingSettingsConfig = {
   silenceWarnSeconds: 300,
   liveCaptions: true,
   autoNotes: true,
+  wakeWord: false,
   liveModel: 'gemini-3.8-live',
   liveEndpoint:
     'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',

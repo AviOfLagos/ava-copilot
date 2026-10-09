@@ -32,6 +32,8 @@ import { resolveModels } from '../threads/factory';
 const logger = createLogger('Voice');
 
 const WATCH_MS = 2000;
+// A conversation "Hey Ava" started ends after this long with nothing said and no task running
+const WAKE_IDLE_MS = 2 * 60 * 1000;
 const KEEP_ALIVE_MS = 20_000;
 
 export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
@@ -55,6 +57,9 @@ export class VoiceManager {
   private lastTaskThreadId: string | null = null;
   // What has been said about each thread, so nothing is announced twice
   private announced = new Map<string, string>();
+  // Started by the wake word: ends by itself once the user goes quiet
+  private wakeSession = false;
+  private lastActivity = 0;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
   status: VoiceStatus = 'off';
@@ -81,7 +86,10 @@ export class VoiceManager {
    *
    * @returns micDenied when the microphone has not been allowed yet
    */
-  async start(windowId?: number): Promise<{ ok: boolean; micDenied?: boolean; error?: string }> {
+  async start(
+    windowId?: number,
+    { wake = false }: { wake?: boolean } = {},
+  ): Promise<{ ok: boolean; micDenied?: boolean; error?: string }> {
     if (this.running) return { ok: true };
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
@@ -118,6 +126,8 @@ export class VoiceManager {
 
     this.threadId = thread.id;
     this.windowId = windowId;
+    this.wakeSession = wake;
+    this.lastActivity = Date.now();
     // Threads already waiting or finished are not news
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
     this.watchTimer = setInterval(() => void this.watch(), WATCH_MS);
@@ -149,6 +159,7 @@ export class VoiceManager {
 
   /** One exchange of the conversation, kept in its thread. */
   async onTurn(heard: string, said: string): Promise<void> {
+    this.lastActivity = Date.now();
     if (heard) this.recentHeard = [...this.recentHeard, heard].slice(-RECENT_TURNS);
     if (!this.threadId) return;
     if (heard) await threadStore.addMessage(this.threadId, 'user', heard);
@@ -157,6 +168,7 @@ export class VoiceManager {
 
   /** Runs a tool the copilot called and returns what it should know. */
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
+    this.lastActivity = Date.now();
     switch (name) {
       case 'run_browser_task': {
         const task = String(args.task ?? '').trim();
@@ -355,6 +367,13 @@ export class VoiceManager {
 
   /** Tells the user about threads that finished, failed, or wait for a click, once each. */
   private async watch(): Promise<void> {
+    if (this.wakeSession && Date.now() - this.lastActivity > WAKE_IDLE_MS) {
+      const busy = (await db.threads.toArray()).some(thread => thread.status === 'running');
+      if (!busy) {
+        await this.stop();
+        return;
+      }
+    }
     if (!this.running) return;
     try {
       for (const thread of await db.threads.toArray()) {

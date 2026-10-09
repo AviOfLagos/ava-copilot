@@ -58,6 +58,14 @@ export async function launchExtension(mock) {
       '--autoplay-policy=no-user-gesture-required',
       // A fake microphone for the voice tests; it breaks tab capture, so only those tests use it
       ...(process.env.E2E_FAKE_MIC ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] : []),
+      // A recording played as the microphone, on a loop: the wake word test says "Hey Ava" with it
+      // (the audio service's sandbox would not let it read the file, and it would play silence)
+      ...(process.env.E2E_FAKE_AUDIO_FILE
+        ? [
+            `--use-file-for-fake-audio-capture=${process.env.E2E_FAKE_AUDIO_FILE}`,
+            '--disable-features=AudioServiceSandbox',
+          ]
+        : []),
     ],
   });
 

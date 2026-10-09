@@ -23,11 +23,12 @@ export async function toOffscreen<T = Record<string, unknown>>(message: Record<s
 export async function closeOffscreenIfIdle(): Promise<void> {
   const open = await chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT] });
   if (open.length === 0) return;
-  const [recorder, voice] = await Promise.all([
+  const [recorder, voice, wake] = await Promise.all([
     toOffscreen<{ recording?: boolean }>({ type: 'recorder_status' }).catch(() => ({ recording: false })),
     toOffscreen<{ running?: boolean }>({ type: 'voice_running' }).catch(() => ({ running: false })),
+    toOffscreen<{ running?: boolean }>({ type: 'wake_running' }).catch(() => ({ running: false })),
   ]);
-  if (!recorder.recording && !voice.running) {
+  if (!recorder.recording && !voice.running && !wake.running) {
     await chrome.offscreen.closeDocument().catch(() => {});
   }
 }

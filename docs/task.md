@@ -285,6 +285,15 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   question goes to the user in one card (`ConfirmRequest.kind = 'questions'`, answers via `ConfirmGate.takeReplies`).
   It never submits; the submit click still goes through the gate.
 
+- **"Hey Ava" and always on (built 2026-10-09)**: an on-device Vosk recogniser with a one-phrase grammar
+  (`src/offscreen/wake.ts`) in the offscreen document, kept running by `src/background/voice/wake.ts` (setting
+  `meetingSettings.wakeWord`, off by default; a `wake-check` alarm every minute; `runtime.onStartup`). Hearing it plays
+  a chime and starts a voice conversation with the last 3 s of audio sent first, so "Hey Ava, what's on my calendar"
+  works in one breath; a wake-started conversation ends after 2 minutes of quiet with no task running. Files come from
+  `node scripts/wake-word-setup.mjs` (git-ignored `public/wake/`, pinned SHA-256s, the worker made eval-free); the
+  manifest allows `'wasm-unsafe-eval'` for it. `scripts/always-on/install.sh` adds a login item that opens Brave at
+  login and hourly if it is not running. E2E: `e2e/wake.e2e.mjs` (needs the setup; a recording as the microphone).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -76,7 +76,8 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [connecting, setConnecting] = useState(false);
   // A calendar the connector found, waiting for the user to choose it
   const [found, setFound] = useState<{ calendar: string; url: string } | null>(null);
-  const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true, autoNotes: true });
+  const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true, autoNotes: true, wakeWord: false });
+  const [wakeError, setWakeError] = useState('');
   const [memory, setMemory] = useState({
     indexChats: true,
     indexMeetings: true,
@@ -111,6 +112,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
         includeMic: meetingSettings.includeMic,
         liveCaptions: meetingSettings.liveCaptions,
         autoNotes: meetingSettings.autoNotes,
+        wakeWord: meetingSettings.wakeWord,
       });
       const kb = await kbSettingsStore.getSettings();
       setMemory({
@@ -133,6 +135,28 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const setMeetingSetting = async (changes: Partial<typeof meeting>) => {
     setMeeting({ ...meeting, ...changes });
     await meetingSettingsStore.updateSettings(changes);
+  };
+
+  const setWakeWord = async (on: boolean) => {
+    setWakeError('');
+    await setMeetingSetting({ wakeWord: on });
+    if (!on) return;
+    const result = (await chrome.runtime.sendMessage({ type: 'wake_sync' }).catch(() => null)) as {
+      ok?: boolean;
+      error?: string;
+      micDenied?: boolean;
+    } | null;
+    if (result?.micDenied) {
+      setWakeError(t('voice_micNeeded'));
+      void chrome.windows.create({
+        url: chrome.runtime.getURL('permission/index.html'),
+        type: 'popup',
+        width: 500,
+        height: 600,
+      });
+    } else if (!result?.ok) {
+      setWakeError(result?.error ?? t('settings_wake_failed'));
+    }
   };
 
   const setMemorySetting = async (changes: Partial<typeof memory>) => {
@@ -347,6 +371,12 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 </option>
               ))}
             </select>
+          </Row>
+        </Section>
+
+        <Section label={t('settings_voice')}>
+          <Row title={t('settings_wake')} hint={wakeError || t('settings_wake_hint')}>
+            <Switch label={t('settings_wake')} checked={meeting.wakeWord} onChange={value => void setWakeWord(value)} />
           </Row>
         </Section>
 

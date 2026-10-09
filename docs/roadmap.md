@@ -17,10 +17,10 @@ Eve is not in the project yet; it is added with item 7.
    next or named meeting. If the call already closed, notes stop and the summary comes anyway.
 2. **Forms in one pass** (built 2026-10-09) — scan the whole form once, fill every field it has data for in one action, then ask every
    missing answer in one card, then fill those at once. No field-by-field round trips. Submit still goes through the gate.
-3. **Always on + wake word** — listening keeps running with the panel closed (offscreen document), a local wake word
-   ("Hey Eva", free, on-device, nothing leaves the Mac until it fires), and a macOS LaunchAgent that opens Brave at
+3. **Always on + wake word** (built 2026-10-09) — listening keeps running with the panel closed (offscreen document), a local wake word
+   ("Hey Ava", free, on-device, nothing leaves the Mac until it fires), and a macOS LaunchAgent that opens Brave at
    login and checks every hour that Brave and the extension are up.
-4. **Workspaces** — Nexprove, Tech Ember Fest, Ellum AI (heard as "Elon AI" — confirm), and more added from settings.
+4. **Workspaces** — Nexprove, Tech Ember Fest, Ellum AI, and more added from settings.
    Each has its accounts per platform (Google account for Meet/Calendar, X, LinkedIn, YouTube, Instagram, Slack),
    its own knowledge, and its own call links. Every request is routed to one workspace first; knowledge never mixes
    across workspaces. The agent switches to that workspace's account on the platform before acting.

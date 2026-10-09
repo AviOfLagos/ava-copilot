@@ -2207,5 +2207,17 @@
   },
   "gate_card_questionsNoSecrets": {
     "message": "Never type a password, code or card number here: those go on the site itself."
+  },
+  "settings_voice": {
+    "message": "Voice"
+  },
+  "settings_wake": {
+    "message": "Listen for “Hey Ava”"
+  },
+  "settings_wake_hint": {
+    "message": "Always on, even with this panel closed. It listens on this computer only; nothing is sent until you say “Hey Ava”."
+  },
+  "settings_wake_failed": {
+    "message": "Listening did not start. Run node scripts/wake-word-setup.mjs, rebuild and reload."
   }
 }

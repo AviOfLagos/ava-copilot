@@ -2207,5 +2207,17 @@
   },
   "gate_card_questionsNoSecrets": {
     "message": "切勿在此輸入密碼、驗證碼或卡號：請直接在網站上輸入。"
+  },
+  "settings_voice": {
+    "message": "語音"
+  },
+  "settings_wake": {
+    "message": "聆聽「Hey Ava」"
+  },
+  "settings_wake_hint": {
+    "message": "即使關閉面板也持續開啟。僅在本機聆聽；在您說「Hey Ava」之前不會傳送任何內容。"
+  },
+  "settings_wake_failed": {
+    "message": "聆聽未啟動。請執行 node scripts/wake-word-setup.mjs，重新建置並重新載入。"
   }
 }

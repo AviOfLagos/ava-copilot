@@ -24,6 +24,9 @@ export interface VoiceTool {
 export interface VoiceOptions extends LiveOptions {
   instructions: string;
   tools: VoiceTool[];
+  // Audio from just before the session, when "Hey Ava" started it: sent first, so the request said
+  // in the same breath is heard
+  preroll?: Float32Array[];
 }
 
 export interface VoiceEvents {
@@ -210,6 +213,7 @@ export class VoiceSession {
       if (message.setupComplete) {
         this.ready = true;
         this.events.onStatus('listening');
+        for (const chunk of this.options.preroll?.splice(0) ?? []) this.send(chunk);
         this.flushNotices();
       }
       const content = message.serverContent;

@@ -2207,5 +2207,17 @@
   },
   "gate_card_questionsNoSecrets": {
     "message": "Nunca digite senha, código ou número de cartão aqui: eles vão no próprio site."
+  },
+  "settings_voice": {
+    "message": "Voz"
+  },
+  "settings_wake": {
+    "message": "Ouvir “Hey Ava”"
+  },
+  "settings_wake_hint": {
+    "message": "Sempre ativo, mesmo com o painel fechado. Ouve só neste computador; nada é enviado até você dizer “Hey Ava”."
+  },
+  "settings_wake_failed": {
+    "message": "A escuta não começou. Rode node scripts/wake-word-setup.mjs, recompile e recarregue."
   }
 }

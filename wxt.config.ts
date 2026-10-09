@@ -72,6 +72,8 @@ export default defineConfig({
       'alarms',
       'notifications',
     ],
+    // The on-device "Hey Ava" recogniser is WebAssembly; nothing else is allowed to compile code
+    content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },
     action: { default_icon: 'icon-32.png' },
     commands: {
       'toggle-meeting-notes': {

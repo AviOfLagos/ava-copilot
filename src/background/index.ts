@@ -6,6 +6,7 @@ import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
+import { WakeWord } from './voice/wake';
 import { VoiceManager } from './voice/manager';
 import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
@@ -27,6 +28,8 @@ const calendar = new CalendarWatcher();
 const autoJoin = new AutoJoin(meetings);
 autoJoin.start();
 const voice = new VoiceManager(threads, meetings, kb, calendar);
+const wakeWord = new WakeWord(voice);
+wakeWord.start();
 calendar.start();
 // A meeting about to start is said aloud when a conversation is on
 calendar.onReminder(({ minutes }) => {

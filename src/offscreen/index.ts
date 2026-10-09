@@ -2,6 +2,7 @@ import { Recorder } from './recorder';
 import type { RecorderOptions } from './recorder';
 import { VoiceSession } from './voice';
 import type { VoiceOptions } from './voice';
+import { WakeListener } from './wake';
 
 /**
  * The offscreen document holds the meeting's media streams, which a service worker cannot.
@@ -9,6 +10,30 @@ import type { VoiceOptions } from './voice';
  */
 let recorder: Recorder | null = null;
 let voice: VoiceSession | null = null;
+// Audio from the moment "Hey Ava" was heard, for the voice session it starts
+let preroll: { chunks: Float32Array[]; at: number } | null = null;
+const wake = new WakeListener(chunks => {
+  preroll = { chunks, at: Date.now() };
+  wake.pause();
+  chime();
+  notify({ type: 'wake_word' });
+});
+
+/** A short rising tone: the copilot heard its name. */
+function chime(): void {
+  const context = new AudioContext();
+  const tone = context.createOscillator();
+  const gain = context.createGain();
+  tone.frequency.setValueAtTime(660, context.currentTime);
+  tone.frequency.linearRampToValueAtTime(990, context.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.15, context.currentTime + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.3);
+  tone.connect(gain).connect(context.destination);
+  tone.start();
+  tone.stop(context.currentTime + 0.32);
+  tone.onended = () => void context.close();
+}
 
 const notify = (message: Record<string, unknown>) => {
   chrome.runtime.sendMessage(message).catch(() => {
@@ -50,16 +75,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { ok: true };
       case 'voice_start': {
         if (voice) return { ok: true };
-        const next = new VoiceSession(message.options as VoiceOptions, {
-          onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
-          onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
-          onStatus: (status, error) => notify({ type: 'voice_status', status, error }),
-          onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
-        });
+        wake.pause();
+        // Only audio from a wake just now: a stale one would replay an old request
+        const fresh = preroll && Date.now() - preroll.at < 15_000 ? preroll.chunks : undefined;
+        preroll = null;
+        const next = new VoiceSession(
+          { ...(message.options as VoiceOptions), preroll: fresh },
+          {
+            onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
+            onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
+            onStatus: (status, error) => notify({ type: 'voice_status', status, error }),
+            onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
+          },
+        );
         try {
           await next.start();
         } catch (error) {
           next.stop();
+          wake.resume();
           return {
             ok: false,
             error: String(error),
@@ -72,7 +105,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'voice_stop':
         voice?.stop();
         voice = null;
+        wake.resume();
         return { ok: true };
+      case 'wake_start':
+        try {
+          await wake.start();
+          if (!voice) wake.resume();
+          return { ok: true };
+        } catch (error) {
+          return {
+            ok: false,
+            error: String(error),
+            micDenied: error instanceof DOMException && error.name === 'NotAllowedError',
+          };
+        }
+      case 'wake_stop':
+        wake.stop();
+        return { ok: true };
+      case 'wake_running':
+        return { running: wake.running };
       case 'voice_say':
         voice?.say(String(message.text ?? ''));
         return { ok: voice !== null };
