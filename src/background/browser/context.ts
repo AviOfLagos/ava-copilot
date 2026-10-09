@@ -52,11 +52,26 @@ export default class BrowserContext {
       return;
     }
     // A free tab the user has open may be taken over; one another thread is using may not
-    if (this._binding.canAdopt?.(tabId)) {
+    if ((await this._adoptable(tab)) && this._binding.canAdopt?.(tabId)) {
       this._binding.add(tabId);
       return;
     }
     throw new TabNotBoundError(tabId);
+  }
+
+  /**
+   * Whether a tab outside the binding could be taken over: an ordinary web page, in a window the
+   * binding already works in, not private, and allowed by the firewall.
+   */
+  private async _adoptable(tab: chrome.tabs.Tab): Promise<boolean> {
+    if (!this._binding || tab.incognito || !tab.url || !/^https?:/.test(tab.url)) return false;
+    if (!isUrlAllowed(tab.url, this._config.allowedUrls, this._config.deniedUrls)) return false;
+    const windows = new Set<number>();
+    for (const boundId of this._binding.tabIds) {
+      const bound = await chrome.tabs.get(boundId).catch(() => undefined);
+      if (bound?.windowId !== undefined) windows.add(bound.windowId);
+    }
+    return windows.size === 0 || windows.has(tab.windowId);
   }
 
   public updateCurrentTabId(tabId: number): void {
@@ -359,7 +374,7 @@ export default class BrowserContext {
     for (const tab of tabs) {
       // The model only hears of the tabs it may use: its own, and free web pages it may take over
       if (this._binding && tab.id && !this._binding.has(tab.id)) {
-        const free = this._binding.canAdopt?.(tab.id) && /^https?:/.test(tab.url ?? '');
+        const free = this._binding.canAdopt?.(tab.id) && (await this._adoptable(tab));
         if (!free) continue;
       }
       if (tab.id && tab.url && tab.title) {

@@ -21,6 +21,11 @@ describe('addressFor', () => {
     expect(addressFor(`evil.example/${'a'.repeat(100)}`)).toBe('https://evil.example/');
   });
 
+  it('cuts a long search, so it cannot carry a page of text', () => {
+    const query = decodeURIComponent(addressFor('word '.repeat(100)).split('q=')[1]);
+    expect(query.length).toBe(120);
+  });
+
   it('never opens a script or data address as is', () => {
     expect(addressFor('javascript:alert(1)')).toMatch(/^https:\/\/www\.google\.com\/search/);
     expect(addressFor('data:text/html,x')).toMatch(/^https:\/\/www\.google\.com\/search/);

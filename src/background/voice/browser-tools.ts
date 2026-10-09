@@ -51,6 +51,8 @@ export async function readPage(
       : (await chrome.tabs.query(id !== undefined ? { windowId: id, active: true } : { active: true }))[0];
   if (!tab?.id) return 'There is no such tab.';
   if (heldByThread(tab.id)) return 'A browser task is working in that tab; ask again when it is done.';
+  if (tab.incognito) return 'That tab is private and cannot be read.';
+  if (tab.url && !(await allowedByFirewall(tab.url))) return 'That site is on the blocked list, so it was not read.';
   if (!tab.url || !/^https?:/.test(tab.url)) {
     return `The tab "${tab.title ?? ''}" is a browser page that cannot be read.`;
   }
@@ -70,7 +72,16 @@ export async function readPage(
 const MAX_LABELS = 4;
 const MAX_LABEL = 24;
 
-const searchFor = (text: string) => `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+// A spoken search is a few words; a longer query is cut, so it cannot carry a page's worth of data
+const MAX_QUERY = 120;
+
+const searchFor = (text: string) => `https://www.google.com/search?q=${encodeURIComponent(text.slice(0, MAX_QUERY))}`;
+
+/** Whether the firewall lets the voice tools touch an address, as it does the agent. */
+async function allowedByFirewall(url: string): Promise<boolean> {
+  const firewall = await firewallStore.getFirewall();
+  return !firewall.enabled || isUrlAllowed(url, firewall.allowList, firewall.denyList);
+}
 
 /**
  * A web address from what was said: a site, or a search for anything else. Page text the model has
@@ -108,8 +119,7 @@ export async function openTab(target: string, windowId?: number): Promise<string
   const open = await chrome.tabs.query({});
   const knownHosts = new Set(open.map(tab => hostOf(tab.url)).filter(Boolean));
   const url = addressFor(target, knownHosts);
-  const firewall = await firewallStore.getFirewall();
-  if (firewall.enabled && !isUrlAllowed(url, firewall.allowList, firewall.denyList)) {
+  if (!(await allowedByFirewall(url))) {
     return `${hostOf(url)} is on the blocked list, so it was not opened.`;
   }
   const id = await windowOf(windowId);
@@ -121,6 +131,7 @@ export async function openTab(target: string, windowId?: number): Promise<string
 export async function switchTab(tabId: number): Promise<string> {
   const tab = await chrome.tabs.get(tabId).catch(() => undefined);
   if (!tab?.id) return `There is no tab ${tabId}.`;
+  if (tab.incognito || (tab.url && !(await allowedByFirewall(tab.url)))) return 'That tab cannot be opened from here.';
   await chrome.tabs.update(tab.id, { active: true });
   if (tab.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
   return `Switched to tab ${tab.id}: ${tab.title}.`;
