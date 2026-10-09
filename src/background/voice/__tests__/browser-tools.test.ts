@@ -36,12 +36,17 @@ describe('spokenSite', () => {
   it('knows a site the user named', () => {
     expect(spokenSite('github.com', 'open github for me')).toBe(true);
     expect(spokenSite('zedu.chat', 'go to Zedu')).toBe(true);
-    expect(spokenSite('bbc.co.uk', 'read me the BBC news')).toBe(true);
+    expect(spokenSite('youtube.com', 'put on YouTube')).toBe(true);
     expect(spokenSite('news.ycombinator.com', 'open y combinator news')).toBe(true);
   });
 
   it('refuses a site the user never named', () => {
     expect(spokenSite('evil.example', 'open github for me')).toBe(false);
     expect(spokenSite('collect-data.net', '')).toBe(false);
+    // A common word the user said is not the name of a site called that
+    expect(spokenSite('open.io', 'open github for me')).toBe(false);
+    expect(spokenSite('page.example', 'read this page')).toBe(false);
+    // Part of a word is not the word
+    expect(spokenSite('hub.example', 'open github')).toBe(false);
   });
 });

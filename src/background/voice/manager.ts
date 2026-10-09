@@ -163,7 +163,7 @@ export class VoiceManager {
         // Only a site the user named, or one already open: never one a read page suggested
         return openTab(String(args.target ?? ''), this.windowId, [...this.recentHeard, heard].join(' '));
       case 'switch_tab':
-        return typeof args.tab_id === 'number' ? switchTab(args.tab_id) : 'No tab id was given.';
+        return typeof args.tab_id === 'number' ? switchTab(args.tab_id, this.windowId) : 'No tab id was given.';
       case 'get_status':
         return this.describeStatus();
       case 'stop_tasks':

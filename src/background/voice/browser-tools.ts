@@ -14,11 +14,12 @@ async function windowOf(windowId?: number): Promise<number | undefined> {
   return (await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined))?.id;
 }
 
+/** A page's site, the one way every check here reads it: hostname, lower case, without www. */
 function hostOf(url = ''): string {
   try {
-    return new URL(url).host.replace(/^www\./, '');
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
   } catch {
-    return url;
+    return '';
   }
 }
 
@@ -61,7 +62,7 @@ export async function readPage(
     tabId !== undefined
       ? await chrome.tabs.get(tabId).catch(() => undefined)
       : (await chrome.tabs.query(id !== undefined ? { windowId: id, active: true } : { active: true }))[0];
-  if (!tab?.id) return 'There is no such tab.';
+  if (!tab?.id || (id !== undefined && tab.windowId !== id)) return 'There is no such tab in this window.';
   if (heldByThread(tab.id)) return 'A browser task is working in that tab; ask again when it is done.';
   if (tab.incognito) return 'That tab is private and cannot be read.';
   if (tab.url && !(await allowedByFirewall(tab.url))) return 'That site is on the blocked list, so it was not read.';
@@ -123,7 +124,7 @@ export function addressFor(target: string, knownHosts: Set<string> = new Set()):
     url.hash = '';
     url.username = '';
     url.password = '';
-    if (!knownHosts.has(url.hostname.replace(/^www\./, ''))) url.pathname = '/';
+    if (!knownHosts.has(hostOf(url.toString()))) url.pathname = '/';
     return url.toString();
   } catch {
     return searchFor(text);
@@ -135,12 +136,34 @@ export function addressFor(target: string, knownHosts: Set<string> = new Set()):
  * Whether the user named this site: its main name (github for github.com, zedu for zedu.chat) is
  * among the words they said, spoken or spelled with spaces.
  */
+// Words people say around a site name; a site named like one of them is never taken as named
+const COMMON_WORDS = new Set(
+  'open page site tab tabs read show search find look link here this that what with from your mine please news mail home'.split(
+    ' ',
+  ),
+);
+
 export function spokenSite(host: string, spoken: string): boolean {
-  const labels = host.replace(/^www\./, '').split('.');
+  const labels = host
+    .toLowerCase()
+    .replace(/^www\./, '')
+    .split('.');
   const name = (labels.length > 2 && labels.at(-2)!.length <= 3 ? labels.at(-3) : labels.at(-2)) ?? labels[0];
-  if (!name || name.length < 2) return false;
-  const said = spoken.toLowerCase();
-  return said.includes(name) || said.replace(/[^a-z0-9]/g, '').includes(name.replace(/[^a-z0-9]/g, ''));
+  if (!name || name.length < 4 || COMMON_WORDS.has(name)) return false;
+  const words = spoken
+    .toLowerCase()
+    .split(/[^a-z0-9-]+/)
+    .filter(Boolean);
+  // The name as one word, or spelled across words ("y combinator" for ycombinator)
+  if (words.includes(name)) return true;
+  for (let start = 0; start < words.length; start++) {
+    let joined = '';
+    for (let end = start; end < words.length && joined.length < name.length; end++) {
+      joined += words[end];
+      if (joined === name) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -153,7 +176,7 @@ export async function openTab(target: string, windowId?: number, spoken = ''): P
   const open = await chrome.tabs.query({});
   const knownHosts = new Set(open.map(tab => hostOf(tab.url)).filter(Boolean));
   const url = addressFor(target, knownHosts);
-  const host = new URL(url).hostname.replace(/^www\./, '');
+  const host = hostOf(url);
   const isSearch = host === 'google.com' && new URL(url).pathname === '/search';
   if (!isSearch && !knownHosts.has(host) && !spokenSite(host, spoken)) {
     return `Not opened: ${host} is not open and the user did not name it. Ask the user to say the site they want.`;
@@ -167,9 +190,10 @@ export async function openTab(target: string, windowId?: number, spoken = ''): P
 }
 
 /** Brings a tab to the front. */
-export async function switchTab(tabId: number): Promise<string> {
+export async function switchTab(tabId: number, windowId?: number): Promise<string> {
+  const id = await windowOf(windowId);
   const tab = await chrome.tabs.get(tabId).catch(() => undefined);
-  if (!tab?.id) return `There is no tab ${tabId}.`;
+  if (!tab?.id || (id !== undefined && tab.windowId !== id)) return `There is no tab ${tabId} in this window.`;
   if (tab.incognito || (tab.url && !(await allowedByFirewall(tab.url)))) return 'That tab cannot be opened from here.';
   await chrome.tabs.update(tab.id, { active: true });
   if (tab.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
