@@ -11,6 +11,7 @@ import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
 import { CalendarWatcher } from './calendar/watcher';
+import { connectGoogleCalendar } from './calendar/connect';
 import { draftSkill, teachTranscript } from './skills/teach';
 import { resolveModels } from './threads/factory';
 
@@ -163,6 +164,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'kb_sweep':
         await kb.sweep();
         return { ok: true };
+      case 'kb_calendar_connect':
+        return connectGoogleCalendar(() => calendar.refresh());
       case 'kb_calendar_refresh': {
         const error = await calendar.refresh();
         return error ? { ok: false, error } : { ok: true };

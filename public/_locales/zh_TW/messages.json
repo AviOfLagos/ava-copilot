@@ -2107,5 +2107,14 @@
   },
   "home_now": {
     "message": "now"
+  },
+  "settings_calendar_connect": {
+    "message": "Connect Google Calendar"
+  },
+  "settings_calendar_connecting_short": {
+    "message": "Waiting for Google Calendar…"
+  },
+  "settings_calendar_connecting": {
+    "message": "Google Calendar opened. If the secret address does not show by itself, open your calendar's settings and press show next to \"Secret address in iCal format\"; it is picked up from there."
   }
 }

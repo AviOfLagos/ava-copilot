@@ -73,6 +73,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [highlights, setHighlights] = useState(false);
   const [calendar, setCalendar] = useState({ icsUrl: '', remindMinutes: 5, reminders: true });
   const [calendarStatus, setCalendarStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true });
   const [memory, setMemory] = useState({
     indexChats: true,
@@ -278,6 +279,29 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               className="w-full rounded-xl border bg-transparent px-2.5 py-1.5 font-mono text-[11.5px] text-foreground outline-none focus:border-primary/50"
             />
             <p className="text-[11.5px] text-muted-foreground">{t('settings_calendar_hint')}</p>
+            <Button
+              variant="default"
+              size="sm"
+              disabled={connecting}
+              onClick={() => {
+                setConnecting(true);
+                setCalendarStatus({ text: t('settings_calendar_connecting'), error: false });
+                void chrome.runtime
+                  .sendMessage({ type: 'kb_calendar_connect' })
+                  .then(async (reply: { ok: boolean; error?: string } | undefined) => {
+                    if (!reply?.ok) {
+                      setCalendarStatus({ text: reply?.error ?? t('errors_unknown'), error: true });
+                      return;
+                    }
+                    const settings = await calendarSettingsStore.getSettings();
+                    setCalendar(settings);
+                    const { events } = await upcomingEventsStore.get();
+                    setCalendarStatus({ text: t('settings_calendar_ok', [String(events.length)]), error: false });
+                  })
+                  .finally(() => setConnecting(false));
+              }}>
+              {connecting ? t('settings_calendar_connecting_short') : t('settings_calendar_connect')}
+            </Button>
             {calendarStatus && (
               <p className={cn('text-[11.5px]', calendarStatus.error ? 'text-destructive' : 'text-primary')}>
                 {calendarStatus.text}
