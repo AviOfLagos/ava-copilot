@@ -17,8 +17,13 @@ import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen
 import type { ThreadManager } from '../threads/manager';
 import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
+import type { CalendarWatcher } from '../calendar/watcher';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS } from './prompt';
-import { listTabs, openTab, readPage, switchTab } from './browser-tools';
+import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
+import { THINK_INSTRUCTIONS } from './prompt';
+import { generatePlainText } from '../llm/generate';
+import { systemMessage, userMessage } from '../llm/messages';
+import { resolveModels } from '../threads/factory';
 
 const logger = createLogger('Voice');
 
@@ -50,7 +55,14 @@ export class VoiceManager {
     private readonly threads: ThreadManager,
     private readonly meetings: MeetingManager,
     private readonly kb: KnowledgeBase | null = null,
+    private readonly calendar: CalendarWatcher | null = null,
   ) {}
+
+  /** Says something to the user when a conversation is on, e.g. a meeting about to start. */
+  async announce(text: string): Promise<void> {
+    if (!this.running) return;
+    await toOffscreen({ type: 'voice_say', text: `System notice: ${text}` }).catch(() => {});
+  }
 
   get running(): boolean {
     return this.threadId !== null;
@@ -151,6 +163,48 @@ export class VoiceManager {
         const sources = citations.map(c => `[${c.n}] ${c.title}, ${c.label}`).join('; ');
         return sources ? `${answer}\nSources: ${sources}` : answer;
       }
+      case 'get_schedule': {
+        if (!this.calendar) return 'No calendar is connected.';
+        const events = await this.calendar.upcoming(Number(args.hours) > 0 ? Number(args.hours) : 24);
+        if (events.length === 0)
+          return 'Nothing on the calendar in that time, or no calendar is connected in settings.';
+        return events
+          .map(event => {
+            const at = new Date(event.start).toLocaleString(undefined, {
+              weekday: 'short',
+              hour: 'numeric',
+              minute: '2-digit',
+            });
+            return `${at}: ${event.title}${event.joinUrl ? ' (has a meeting link)' : ''}`;
+          })
+          .join('\n');
+      }
+      case 'join_next_meeting': {
+        const next = (await this.calendar?.upcoming(2))?.find(event => event.joinUrl);
+        if (!next?.joinUrl) return 'No meeting with a link in the next two hours.';
+        await chrome.tabs.create({ url: next.joinUrl, active: true });
+        return `Opened ${next.title}. Pressing Alt+Shift+M on the call starts notes.`;
+      }
+      case 'list_frequent_sites':
+        return listFrequentSites();
+      case 'remember_this': {
+        if (!this.kb) return 'The knowledge base is not available.';
+        const note = String(args.note ?? '').trim();
+        if (note) {
+          const item = await this.kb.saveNote(note, String(args.title ?? ''));
+          return `Saved the note "${item.title}".`;
+        }
+        const [tab] = await chrome.tabs.query(
+          this.windowId !== undefined
+            ? { windowId: this.windowId, active: true }
+            : { active: true, lastFocusedWindow: true },
+        );
+        if (!tab?.id) return 'There is no page in front to save.';
+        const item = await this.kb.savePage(tab.id);
+        return `Saved the page "${item.title}".`;
+      }
+      case 'think':
+        return this.think(String(args.question ?? ''), args.use_page === true);
       case 'list_tabs':
         return listTabs(this.windowId);
       case 'read_page':
@@ -172,6 +226,22 @@ export class VoiceManager {
       default:
         return `There is no tool called ${name}.`;
     }
+  }
+
+  /** Answers a hard question with the planner model, optionally with the page in front. */
+  private async think(question: string, usePage: boolean): Promise<string> {
+    if (!question.trim()) return 'No question was given.';
+    if (await this.overCap()) return t('usage_capReached_short');
+    const page = usePage ? await readPage(this.windowId, undefined, id => this.threads.holderOf(id) !== null) : '';
+    const { planner } = await resolveModels(null, { sessionId: this.threadId ?? 'voice', notify: () => {} });
+    const answer = await generatePlainText({
+      chatModel: planner,
+      messages: [
+        systemMessage(THINK_INSTRUCTIONS),
+        userMessage(page ? `${page}\n\nQuestion: ${question}` : `Question: ${question}`),
+      ],
+    });
+    return answer.trim() || 'No answer came back.';
   }
 
   /** Voice minutes count toward cost; past the daily cap the conversation ends. */

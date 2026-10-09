@@ -8,3 +8,4 @@ export * from './meetingSettings';
 export * from './firewall';
 export * from './speechToText';
 export * from './kbSettings';
+export * from './calendarSettings';

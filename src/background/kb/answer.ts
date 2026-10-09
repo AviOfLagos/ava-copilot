@@ -30,6 +30,8 @@ export function describeSource(hit: Pick<SearchHit, 'item' | 'chunk'>): string {
       return `Meeting "${item.title}", ${day}, ${chunk.label === 'note' ? 'meeting notes' : `at ${chunk.label}`}`;
     case 'thread':
       return `Chat "${item.title}", ${day}, ${chunk.label}`;
+    case 'note':
+      return `Note "${item.title}", saved ${day}`;
     case 'page':
       return `Saved page "${item.title}" (${item.url}), saved ${day}`;
   }

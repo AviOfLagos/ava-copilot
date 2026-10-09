@@ -5,6 +5,8 @@ import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import {
   COMMIT_KINDS,
+  calendarSettingsStore,
+  upcomingEventsStore,
   agentModelStore,
   gateSettingsStore,
   generalSettingsStore,
@@ -69,6 +71,8 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [spent, setSpent] = useState(0);
   const [style, setStyle] = useState('');
   const [highlights, setHighlights] = useState(false);
+  const [calendar, setCalendar] = useState({ icsUrl: '', remindMinutes: 5, reminders: true });
+  const [calendarStatus, setCalendarStatus] = useState<{ text: string; error: boolean } | null>(null);
   const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true });
   const [memory, setMemory] = useState({
     indexChats: true,
@@ -97,6 +101,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
       setCap(general.dailyCostCapUsd);
       setStyle(general.stylePrompt);
       setHighlights(general.displayHighlights);
+      setCalendar(await calendarSettingsStore.getSettings());
       setSpent((await usageStore.getDay(localDay())).costUsd);
       const meetingSettings = await meetingSettingsStore.getSettings();
       setMeeting({ includeMic: meetingSettings.includeMic, liveCaptions: meetingSettings.liveCaptions });
@@ -128,6 +133,22 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
     await kbSettingsStore.updateSettings(changes);
     // Retention and newly added sources apply right away
     await chrome.runtime.sendMessage({ type: 'kb_sweep' }).catch(() => {});
+  };
+
+  const saveCalendar = async (changes: Partial<typeof calendar>) => {
+    const next = { ...calendar, ...changes };
+    setCalendar(next);
+    await calendarSettingsStore.updateSettings(changes);
+    if (!('icsUrl' in changes)) return;
+    setCalendarStatus(null);
+    const reply = await chrome.runtime.sendMessage({ type: 'kb_calendar_refresh' }).catch(() => null);
+    if (!next.icsUrl.trim()) return;
+    if (!reply?.ok) {
+      setCalendarStatus({ text: reply?.error ?? t('errors_unknown'), error: true });
+      return;
+    }
+    const { events } = await upcomingEventsStore.get();
+    setCalendarStatus({ text: t('settings_calendar_ok', [String(events.length)]), error: false });
   };
 
   const select = 'rounded-lg border bg-card px-2 py-1 text-[12px] text-foreground outline-none focus:border-primary/50';
@@ -238,6 +259,47 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 void generalSettingsStore.updateSettings({ displayHighlights: value });
               }}
             />
+          </Row>
+        </Section>
+
+        <Section label={t('settings_calendar')}>
+          <div className="space-y-2 p-3">
+            <label htmlFor="settings-ics" className="block text-[13px]">
+              {t('settings_calendar_url')}
+            </label>
+            <input
+              id="settings-ics"
+              type="password"
+              autoComplete="off"
+              placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+              value={calendar.icsUrl}
+              onChange={event => setCalendar({ ...calendar, icsUrl: event.target.value })}
+              onBlur={() => void saveCalendar({ icsUrl: calendar.icsUrl })}
+              className="w-full rounded-xl border bg-transparent px-2.5 py-1.5 font-mono text-[11.5px] text-foreground outline-none focus:border-primary/50"
+            />
+            <p className="text-[11.5px] text-muted-foreground">{t('settings_calendar_hint')}</p>
+            {calendarStatus && (
+              <p className={cn('text-[11.5px]', calendarStatus.error ? 'text-destructive' : 'text-primary')}>
+                {calendarStatus.text}
+              </p>
+            )}
+          </div>
+          <Row title={t('settings_calendar_remind')}>
+            <select
+              aria-label={t('settings_calendar_remind')}
+              value={calendar.reminders ? calendar.remindMinutes : 0}
+              onChange={event => {
+                const minutes = Number(event.target.value);
+                void saveCalendar(minutes === 0 ? { reminders: false } : { reminders: true, remindMinutes: minutes });
+              }}
+              className={select}>
+              <option value={0}>{t('settings_calendar_off')}</option>
+              {[1, 5, 10, 15].map(minutes => (
+                <option key={minutes} value={minutes}>
+                  {t('settings_calendar_minutes', [String(minutes)])}
+                </option>
+              ))}
+            </select>
           </Row>
         </Section>
 

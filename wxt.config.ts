@@ -66,6 +66,11 @@ export default defineConfig({
       'webNavigation',
       'tabCapture',
       'offscreen',
+      // Voice finds "my email" or "my social media" among the sites the user visits most
+      'topSites',
+      // Meeting reminders from the user's calendar
+      'alarms',
+      'notifications',
     ],
     action: { default_icon: 'icon-32.png' },
     commands: {

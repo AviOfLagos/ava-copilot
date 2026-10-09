@@ -44,11 +44,55 @@ export async function searchKnowledgeAction(
   });
 }
 
+export const saveKnowledgeActionSchema = {
+  name: 'save_to_knowledge',
+  description:
+    "Save something to the user's knowledge base so it can be found later: the current page, or a note you write (facts you found, a summary, a decision). Use it when the user asks you to remember, keep or save something.",
+  schema: z.object({
+    intent: z.string().default('').describe('purpose of this action'),
+    note: z
+      .string()
+      .default('')
+      .describe('the text to keep, written by you; leave empty to save the whole current page instead'),
+    title: z.string().default('').describe('a short title for the note'),
+  }),
+} satisfies ActionSchema;
+
+/**
+ * Handles the save_to_knowledge action. Saving to the user's own knowledge base sends nothing
+ * anywhere, so it needs no confirmation.
+ */
+export async function saveKnowledgeAction(
+  context: AgentContext,
+  input: z.infer<typeof saveKnowledgeActionSchema.schema>,
+): Promise<ActionResult> {
+  context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Saving to the knowledge base');
+  const kb = getKnowledgeBase();
+  if (!kb) {
+    const error = 'The knowledge base is not available.';
+    context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, error);
+    return new ActionResult({ error, includeInMemory: true });
+  }
+  try {
+    const item = input.note.trim()
+      ? await kb.saveNote(input.note, input.title)
+      : await kb.savePage((await context.browserContext.getCurrentPage()).tabId);
+    const message = `Saved "${item.title}" to the knowledge base`;
+    context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, message);
+    return new ActionResult({ extractedContent: message, includeInMemory: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, message);
+    return new ActionResult({ error: message, includeInMemory: true });
+  }
+}
+
 export const navigatorKnowledgeSection = `
 # KNOWLEDGE BASE:
 - search_knowledge searches the user's past chats, meeting notes and transcripts, and saved pages. Use it first when the task refers to something said, decided or read before ("yesterday's meeting", "what we agreed", "the page I saved"), instead of browsing for it.
 - When you use what it found, cite the source as given, e.g. (Meeting "Stage 2 sync", 2026-09-29, at 12:04).
 - Drafting from it (follow-ups, tasks) is fine; sending or posting still needs the user's confirmation like any other commit.
+- save_to_knowledge keeps the current page, or a note you write, in the knowledge base. Use it when the user asks you to remember or save something, or to collect what you found on the web for later.
 `;
 
 export const plannerKnowledgeSection = `

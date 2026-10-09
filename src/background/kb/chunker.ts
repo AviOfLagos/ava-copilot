@@ -165,6 +165,15 @@ export function chunkMeeting(
   return chunks;
 }
 
+/** A note as chunks, each citing the note. */
+export function chunkNote(itemId: string, text: string): DraftChunk[] {
+  return splitText(text, CHUNK_CHARS, PAGE_OVERLAP_CHARS).map((piece, index) => ({
+    text: piece,
+    label: `part ${index + 1}`,
+    anchor: { kind: 'note', itemId },
+  }));
+}
+
 /** A saved page as overlapping chunks, each citing the page URL. */
 export function chunkPage(url: string, text: string): DraftChunk[] {
   return splitText(text, CHUNK_CHARS, PAGE_OVERLAP_CHARS).map((piece, index) => ({

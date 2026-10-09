@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, BookmarkPlus, Disc, FileText, Sparkles } from 'lucide-react';
+import { BookOpen, BookmarkPlus, CalendarClock, Disc, FileText, Sparkles } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { skillStore } from '@extension/storage';
+import { skillStore, upcomingEventsStore } from '@extension/storage';
+import type { UpcomingEvent } from '@extension/storage';
 import { matchSkills } from '@src/background/skills/match';
 import { LiveOrb } from '../components/ui/live-orb';
 import { DayStrip, useToday } from '../today/TodayView';
@@ -56,6 +57,24 @@ function useActiveTab() {
   return tab;
 }
 
+/** The next meeting from the calendar, kept fresh by the background, ticking each minute. */
+function useNextMeeting(): UpcomingEvent | null {
+  const [events, setEvents] = useState<UpcomingEvent[]>([]);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const read = () => void upcomingEventsStore.get().then(value => setEvents(value?.events ?? []));
+    read();
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    const unsubscribe = upcomingEventsStore.subscribe(read);
+    return () => {
+      window.clearInterval(timer);
+      unsubscribe();
+    };
+  }, []);
+  // Within the next 12 hours, or under way
+  return events.find(event => event.end > now && event.start < now + 12 * 3_600_000) ?? null;
+}
+
 /**
  * The first screen: the orb, a greeting, and a few things worth doing on the page you are on.
  */
@@ -69,6 +88,7 @@ export default function HomeView({
 }: HomeViewProps) {
   const tab = useActiveTab();
   const today = useToday();
+  const next = useNextMeeting();
   const [skillId, setSkillId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -127,6 +147,32 @@ export default function HomeView({
           <span className="text-muted-foreground">{t('home_subtitle')}</span>
         </h1>
       </div>
+
+      {next && (
+        <section
+          aria-label={t('home_next_meeting')}
+          className="flex items-center gap-3 rounded-2xl border border-call/40 bg-call/10 p-3.5">
+          <CalendarClock className="size-5 shrink-0 text-call" strokeWidth={1.75} />
+          <div className="min-w-0 flex-1">
+            <div className="label-mono">{t('home_next_meeting')}</div>
+            <div className="truncate text-[13.5px] font-medium">{next.title}</div>
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {new Date(next.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} ·{' '}
+              {next.start <= Date.now()
+                ? t('home_now')
+                : t('home_in_minutes', [String(Math.round((next.start - Date.now()) / 60_000))])}
+            </div>
+          </div>
+          {next.joinUrl && (
+            <button
+              type="button"
+              onClick={() => void chrome.tabs.create({ url: next.joinUrl!, active: true })}
+              className="h-8 shrink-0 rounded-full border border-call/50 bg-call/20 px-3.5 text-[12.5px] font-medium">
+              {t('home_join')}
+            </button>
+          )}
+        </section>
+      )}
 
       <section aria-label={t('home_suggestions')} className="grid grid-cols-2 gap-2.5">
         {starters.slice(0, 4).map(starter => (

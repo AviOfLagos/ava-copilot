@@ -136,14 +136,16 @@ export interface TranscriptSegment {
   chunkIndex: number;
 }
 
-export type KnowledgeSourceType = 'thread' | 'meeting' | 'page';
+export type KnowledgeSourceType = 'thread' | 'meeting' | 'page' | 'note';
 
 // Where a passage came from, precise enough to open it again
 export type KnowledgeAnchor =
   | { kind: 'thread'; threadId: string; seq: number }
   // Seconds from the start of the recording; -1 is the meeting note
   | { kind: 'meeting'; meetingId: string; t: number }
-  | { kind: 'page'; url: string };
+  | { kind: 'page'; url: string }
+  // Something the user asked to remember, by voice or in a task
+  | { kind: 'note'; itemId: string };
 
 export interface KnowledgeItem {
   id: string;

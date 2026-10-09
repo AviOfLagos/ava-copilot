@@ -1,0 +1,207 @@
+/*
+ * Reads an iCalendar (.ics) feed, such as Google Calendar's "secret address in iCal format", into the
+ * events of a time window. Handles what calendars export day to day: time zones, all-day events,
+ * daily and weekly repeats with INTERVAL, BYDAY, COUNT and UNTIL, cancelled dates (EXDATE) and moved
+ * occurrences (RECURRENCE-ID). Monthly and yearly repeats show only their first date.
+ */
+
+export interface CalendarEvent {
+  // Unique per occurrence: the event's UID plus its start
+  id: string;
+  title: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  location: string;
+  // A meeting link found in the location or description (Meet, Zoom, Teams)
+  joinUrl: string | null;
+}
+
+interface Prop {
+  name: string;
+  params: Record<string, string>;
+  value: string;
+}
+
+interface RawEvent {
+  uid: string;
+  props: Prop[];
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+const WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const JOIN_LINK =
+  /https:\/\/(?:meet\.google\.com\/[a-z-]+|[\w.-]*zoom\.us\/j\/[^\s"<>\\]+|teams\.microsoft\.com\/l\/meetup-join\/[^\s"<>\\]+)/i;
+
+/** Lines of the feed with folded continuation lines joined back. */
+function unfold(text: string): string[] {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\n[ \t]/g, '')
+    .split('\n');
+}
+
+function parseLine(line: string): Prop | null {
+  const colon = line.indexOf(':');
+  if (colon === -1) return null;
+  const [name, ...rest] = line.slice(0, colon).split(';');
+  const params: Record<string, string> = {};
+  for (const part of rest) {
+    const eq = part.indexOf('=');
+    if (eq !== -1) params[part.slice(0, eq).toUpperCase()] = part.slice(eq + 1).replace(/^"|"$/g, '');
+  }
+  return { name: name.toUpperCase(), params, value: line.slice(colon + 1) };
+}
+
+function unescape(value: string): string {
+  return value.replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1');
+}
+
+/** Milliseconds a time zone is ahead of UTC at a moment. */
+function zoneOffset(utc: number, timeZone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(new Date(utc));
+    const get = (type: string) => Number(parts.find(part => part.type === type)?.value);
+    return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - utc;
+  } catch {
+    return 0;
+  }
+}
+
+/** A DATE or DATE-TIME value as a moment; floating times are read in the local zone. */
+export function parseTime(value: string, timeZone?: string): { time: number; allDay: boolean } {
+  const match = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(value.trim());
+  if (!match) return { time: NaN, allDay: false };
+  const [, y, mo, d, h, mi, s, z] = match;
+  if (h === undefined) {
+    return { time: new Date(Number(y), Number(mo) - 1, Number(d)).getTime(), allDay: true };
+  }
+  const wall = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s));
+  if (z) return { time: wall, allDay: false };
+  if (timeZone) {
+    // The wall time in that zone: subtract its offset, then correct once around a clock change
+    let utc = wall - zoneOffset(wall, timeZone);
+    utc = wall - zoneOffset(utc, timeZone);
+    return { time: utc, allDay: false };
+  }
+  return {
+    time: new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s)).getTime(),
+    allDay: false,
+  };
+}
+
+function rawEvents(text: string): RawEvent[] {
+  const events: RawEvent[] = [];
+  let current: Prop[] | null = null;
+  for (const line of unfold(text)) {
+    if (line === 'BEGIN:VEVENT') current = [];
+    else if (line === 'END:VEVENT' && current) {
+      events.push({ uid: current.find(prop => prop.name === 'UID')?.value ?? String(events.length), props: current });
+      current = null;
+    } else if (current) {
+      const prop = parseLine(line);
+      if (prop) current.push(prop);
+    }
+  }
+  return events;
+}
+
+function timeOf(event: RawEvent, name: string) {
+  const prop = event.props.find(item => item.name === name);
+  return prop ? parseTime(prop.value, prop.params.TZID) : null;
+}
+
+/** The start times of a repeating event inside a window. */
+export function occurrences(start: number, rule: string, from: number, to: number, exclude: Set<number>): number[] {
+  const parts = Object.fromEntries(rule.split(';').map(part => part.split('=') as [string, string]));
+  const freq = parts.FREQ;
+  const interval = Math.max(1, Number(parts.INTERVAL ?? 1));
+  const count = parts.COUNT ? Number(parts.COUNT) : Infinity;
+  const until = parts.UNTIL ? parseTime(parts.UNTIL).time : Infinity;
+  if (freq !== 'DAILY' && freq !== 'WEEKLY') return start >= from && start < to ? [start] : [];
+
+  const days = parts.BYDAY ? parts.BYDAY.split(',').map(day => WEEKDAYS.indexOf(day.slice(-2))) : null;
+  const first = new Date(start);
+  const out: number[] = [];
+  let seen = 0;
+  // Walk day by day from the first occurrence; the window is short, so this stays cheap
+  for (let day = 0; day < 3700; day++) {
+    const candidate = new Date(first);
+    candidate.setDate(first.getDate() + day);
+    const time = candidate.getTime();
+    if (time > until || seen >= count || time >= to) break;
+    let matches: boolean;
+    if (freq === 'DAILY') {
+      matches = day % interval === 0;
+    } else {
+      const week = Math.floor((day + first.getDay()) / 7);
+      const weekday = candidate.getDay();
+      matches = week % interval === 0 && (days ? days.includes(weekday) : weekday === first.getDay());
+    }
+    if (!matches) continue;
+    seen += 1;
+    if (time >= from && !exclude.has(time)) out.push(time);
+  }
+  return out;
+}
+
+/**
+ * The events of a feed that overlap a window, soonest first.
+ */
+export function eventsBetween(ics: string, from: number, to: number): CalendarEvent[] {
+  const raw = rawEvents(ics);
+  // Occurrences moved to another time replace the ones the rule would have made
+  const moved = new Map<string, Set<number>>();
+  for (const event of raw) {
+    const recurrenceId = timeOf(event, 'RECURRENCE-ID');
+    if (recurrenceId) moved.set(event.uid, (moved.get(event.uid) ?? new Set()).add(recurrenceId.time));
+  }
+
+  const out: CalendarEvent[] = [];
+  for (const event of raw) {
+    const status = event.props.find(prop => prop.name === 'STATUS')?.value;
+    if (status === 'CANCELLED') continue;
+    const start = timeOf(event, 'DTSTART');
+    if (!start || Number.isNaN(start.time)) continue;
+    const endTime = timeOf(event, 'DTEND')?.time;
+    const length = endTime && endTime > start.time ? endTime - start.time : start.allDay ? DAY : 30 * 60 * 1000;
+    const text = (name: string) => unescape(event.props.find(prop => prop.name === name)?.value ?? '');
+    const location = text('LOCATION');
+    const joinUrl = (JOIN_LINK.exec(`${location} ${text('DESCRIPTION')} ${text('URL')}`) ?? [null])[0];
+
+    const rule = event.props.find(prop => prop.name === 'RRULE')?.value;
+    const isOverride = event.props.some(prop => prop.name === 'RECURRENCE-ID');
+    const exclude = new Set<number>(moved.get(event.uid) ?? []);
+    for (const prop of event.props.filter(item => item.name === 'EXDATE')) {
+      for (const value of prop.value.split(',')) exclude.add(parseTime(value, prop.params.TZID).time);
+    }
+    const starts =
+      rule && !isOverride
+        ? occurrences(start.time, rule, from - length, to, exclude)
+        : start.time + length > from && start.time < to
+          ? [start.time]
+          : [];
+    for (const time of starts) {
+      if (time + length <= from) continue;
+      out.push({
+        id: `${event.uid}@${time}`,
+        title: text('SUMMARY') || 'Untitled event',
+        start: time,
+        end: time + length,
+        allDay: start.allDay,
+        location,
+        joinUrl,
+      });
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}

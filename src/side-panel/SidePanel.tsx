@@ -365,7 +365,10 @@ const SidePanel = () => {
 
   const openCitation = (citation: KbCitation) => {
     const { anchor } = citation;
-    if (anchor.kind === 'page') {
+    if (anchor.kind === 'note') {
+      // A note lives in memory itself
+      setShowKb(true);
+    } else if (anchor.kind === 'page') {
       void chrome.tabs.create({ url: anchor.url });
     } else if (anchor.kind === 'meeting') {
       setShowKb(false);

@@ -2050,5 +2050,62 @@
   },
   "settings_embed_local": {
     "message": "Local (Ollama)"
+  },
+  "kb_type_note": {
+    "message": "Note"
+  },
+  "kb_noteEmpty": {
+    "message": "There is nothing to remember."
+  },
+  "settings_calendar": {
+    "message": "Calendar"
+  },
+  "settings_calendar_url": {
+    "message": "Your calendar's secret iCal address"
+  },
+  "settings_calendar_hint": {
+    "message": "Google Calendar → Settings → your calendar → \"Secret address in iCal format\". It stays in this browser and is read every few minutes for reminders."
+  },
+  "settings_calendar_ok": {
+    "message": "Connected: $COUNT$ events in the next day and a half.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "settings_calendar_remind": {
+    "message": "Remind me before meetings"
+  },
+  "settings_calendar_off": {
+    "message": "Off"
+  },
+  "settings_calendar_minutes": {
+    "message": "$MINUTES$ min before",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "home_next_meeting": {
+    "message": "Next on your calendar"
+  },
+  "home_join": {
+    "message": "Join"
+  },
+  "home_in_minutes": {
+    "message": "in $MINUTES$ min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "home_now": {
+    "message": "now"
   }
 }

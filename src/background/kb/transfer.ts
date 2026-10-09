@@ -6,11 +6,12 @@ const anchor = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('thread'), threadId: z.string(), seq: z.number() }),
   z.object({ kind: z.literal('meeting'), meetingId: z.string(), t: z.number() }),
   z.object({ kind: z.literal('page'), url: z.string() }),
+  z.object({ kind: z.literal('note'), itemId: z.string() }),
 ]);
 
 const item = z.object({
   id: z.string().min(1),
-  sourceType: z.enum(['thread', 'meeting', 'page']),
+  sourceType: z.enum(['thread', 'meeting', 'page', 'note']),
   sourceId: z.string(),
   title: z.string(),
   url: z.string().default(''),

@@ -28,7 +28,7 @@ import { resolveModels } from '../threads/factory';
 import { readPageText } from '../reader/probes';
 import { ANSWER_INSTRUCTIONS, citationsIn, questionPrompt } from './answer';
 import type { KbAnswer } from './answer';
-import { chunkMeeting, chunkPage, chunkThread, hashText } from './chunker';
+import { chunkMeeting, chunkNote, chunkPage, chunkThread, hashText } from './chunker';
 import type { DraftChunk } from './chunker';
 import { createEmbedder } from './embedder';
 import type { Embedder } from './embedder';
@@ -225,6 +225,29 @@ export class KnowledgeBase {
           sourceUpdatedAt: now,
         },
         chunkPage(page.url, page.text),
+      );
+    });
+    void this.embedPending();
+    return item!;
+  }
+
+  /** Keeps something the user asked to remember: a fact, a decision, text from a page. */
+  async saveNote(text: string, title?: string): Promise<KnowledgeItem> {
+    const body = text.trim();
+    if (!body) throw new Error(t('kb_noteEmpty'));
+    const sourceId = crypto.randomUUID();
+    const item = await this.serial(async () => {
+      const now = Date.now();
+      return this.write(
+        {
+          sourceType: 'note',
+          sourceId,
+          title: title?.trim() || body.split('\n')[0].slice(0, 60),
+          url: '',
+          sourceDate: now,
+          sourceUpdatedAt: now,
+        },
+        chunkNote(kbItemId('note', sourceId), body),
       );
     });
     void this.embedPending();

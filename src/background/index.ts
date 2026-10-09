@@ -10,6 +10,7 @@ import { VoiceManager } from './voice/manager';
 import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
+import { CalendarWatcher } from './calendar/watcher';
 import { draftSkill, teachTranscript } from './skills/teach';
 import { resolveModels } from './threads/factory';
 
@@ -20,7 +21,13 @@ const threads = new ThreadManager();
 const meetings = new MeetingManager();
 const kb = new KnowledgeBase();
 setKnowledgeBase(kb);
-const voice = new VoiceManager(threads, meetings, kb);
+const calendar = new CalendarWatcher();
+const voice = new VoiceManager(threads, meetings, kb, calendar);
+calendar.start();
+// A meeting about to start is said aloud when a conversation is on
+calendar.onReminder(({ event, minutes }) => {
+  void voice.announce(`${event.title} starts ${minutes <= 0 ? 'now' : `in ${minutes} minutes`}.`);
+});
 const SIDE_PANEL_URL = chrome.runtime.getURL(
   (chrome.runtime.getManifest() as { side_panel?: { default_path?: string } }).side_panel?.default_path ??
     'sidepanel.html',
@@ -152,6 +159,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'kb_sweep':
         await kb.sweep();
         return { ok: true };
+      case 'kb_calendar_refresh': {
+        const error = await calendar.refresh();
+        return error ? { ok: false, error } : { ok: true };
+      }
       default:
         return { ok: false, error: t('errors_cmd_unknown', [message.type]) };
     }

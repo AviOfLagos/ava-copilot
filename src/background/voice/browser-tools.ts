@@ -167,6 +167,27 @@ export function spokenSite(host: string, spoken: string): boolean {
   return false;
 }
 
+/** The sites the user visits most: where they are signed in, and what "my email" most likely means. */
+export async function frequentSites(): Promise<{ host: string; title: string }[]> {
+  const top = await chrome.topSites.get().catch(() => [] as chrome.topSites.MostVisitedURL[]);
+  const seen = new Set<string>();
+  const sites: { host: string; title: string }[] = [];
+  for (const site of top) {
+    const host = hostOf(site.url);
+    if (!host || seen.has(host) || !/^https?:/.test(site.url)) continue;
+    seen.add(host);
+    sites.push({ host, title: site.title });
+  }
+  return sites;
+}
+
+export async function listFrequentSites(): Promise<string> {
+  // The browser keeps this list; the model only reads it
+  const sites = await frequentSites();
+  if (sites.length === 0) return 'The browser has no most-visited sites yet.';
+  return `Sites the user visits most:\n${sites.map(site => `${site.host} — ${site.title}`).join('\n')}`;
+}
+
 /**
  * Opens a new tab in front. A site opens only if it is already open in a tab or the user named it;
  * a search is always allowed. Page text the model read cannot choose where the browser goes.
@@ -189,8 +210,9 @@ export async function openTab(target: string, windowId?: number, spoken = ''): P
   const url = addressFor(target, openPages);
   const host = hostOf(url);
   const isSearch = host === 'google.com' && new URL(url).pathname === '/search';
-  if (!isSearch && !knownHosts.has(host) && !spokenSite(host, spoken)) {
-    return `Not opened: ${host} is not open and the user did not name it. Ask the user to say the site they want.`;
+  const frequent = new Set((await frequentSites()).map(site => site.host));
+  if (!isSearch && !knownHosts.has(host) && !frequent.has(host) && !spokenSite(host, spoken)) {
+    return `Not opened: ${host} is not open, not among the sites the user visits, and the user did not name it. Call list_frequent_sites, or ask which site they mean.`;
   }
   if (!(await allowedByFirewall(url))) {
     return `${hostOf(url)} is on the blocked list, so it was not opened.`;

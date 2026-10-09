@@ -122,6 +122,12 @@ export async function startMockLlm(scenarios) {
     res.setHeader('Access-Control-Allow-Headers', '*');
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
 
+    // A calendar feed, for the reminder tests
+    if (req.method === 'GET' && req.url.startsWith('/calendar.ics')) {
+      res.writeHead(200, { 'Content-Type': 'text/calendar' });
+      return res.end(calendar.ics);
+    }
+
     const page = req.method === 'GET' && /^\/([\w-]+\.html)/.exec(req.url);
     if (page && fs.existsSync(path.join(here, page[1]))) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -226,6 +232,9 @@ export async function startMockLlm(scenarios) {
 
     res.writeHead(404).end();
   });
+
+  // The calendar feed served at /calendar.ics
+  const calendar = { ics: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR' };
 
   // What the knowledge base tests see: every text embedded and every question with its sources
   const kb = {
@@ -406,6 +415,7 @@ export async function startMockLlm(scenarios) {
     meeting,
     live,
     kb,
+    calendar,
     start(name) {
       runs.set(name, newRun(name));
       lastStarted = name;

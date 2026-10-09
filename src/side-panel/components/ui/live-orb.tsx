@@ -344,7 +344,8 @@ export function createLiveOrb(canvas: HTMLCanvasElement, initial: LiveOrbOptions
     const dx = (event.clientX - (rect.left + rect.width / 2)) / (radius * 4);
     const dy = (event.clientY - (rect.top + rect.height / 2)) / (radius * 4);
     targetLook.x = Math.max(-1, Math.min(1, dx));
-    targetLook.y = Math.max(-1, Math.min(1, dy));
+    // Screen y grows downward; the shader's pitch grows upward
+    targetLook.y = Math.max(-1, Math.min(1, -dy));
   };
   const onLeave = () => {
     targetLook.x = 0;
@@ -417,7 +418,7 @@ export function LiveOrb({
   size = 160,
   className,
   label,
-  variant = 'webgl',
+  variant = 'white',
   colors = GRAPHITE_COLORS,
   color,
   eyeColor,

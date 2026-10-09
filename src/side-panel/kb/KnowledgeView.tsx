@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookmarkPlus, FileText, Globe, MessageSquare, Trash2 } from 'lucide-react';
+import { BookmarkPlus, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import { kbStore } from '@extension/storage';
@@ -23,12 +23,14 @@ const TYPE_ICONS: Record<KnowledgeSourceType, LucideIcon> = {
   thread: MessageSquare,
   meeting: FileText,
   page: Globe,
+  note: StickyNote,
 };
 
 const TYPE_LABELS = {
   thread: 'kb_type_thread',
   meeting: 'kb_type_meeting',
   page: 'kb_type_page',
+  note: 'kb_type_note',
 } as const;
 
 function shortDate(ms: number): string {
@@ -38,7 +40,11 @@ function shortDate(ms: number): string {
 /** Where a citation points, as the user reads it: "Meeting · Sep 29 · 12:04". */
 export function citationText(citation: KbCitation): string {
   const place = citation.label === 'note' ? t('kb_place_note') : citation.label;
-  return [t(TYPE_LABELS[citation.sourceType]), shortDate(citation.date), citation.sourceType === 'page' ? '' : place]
+  return [
+    t(TYPE_LABELS[citation.sourceType]),
+    shortDate(citation.date),
+    citation.sourceType === 'page' || citation.sourceType === 'note' ? '' : place,
+  ]
     .filter(Boolean)
     .join(' · ');
 }
@@ -56,7 +62,9 @@ function itemCitation(item: KnowledgeItem): KbCitation {
         ? { kind: 'thread', threadId: item.sourceId, seq: 0 }
         : item.sourceType === 'meeting'
           ? { kind: 'meeting', meetingId: item.sourceId, t: -1 }
-          : { kind: 'page', url: item.url },
+          : item.sourceType === 'note'
+            ? { kind: 'note', itemId: item.id }
+            : { kind: 'page', url: item.url },
   };
 }
 
