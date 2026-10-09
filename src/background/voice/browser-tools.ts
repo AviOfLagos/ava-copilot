@@ -66,38 +66,48 @@ export async function readPage(
   return `Page "${tab.title}" (${hostOf(tab.url)})${cut}:\n${wrapUntrustedContent(text)}`;
 }
 
-// The longest path an opened address keeps; a longer one could carry data out
-const MAX_PATH = 64;
+// A hostname shaped like this is more likely carrying data than naming a site
+const MAX_LABELS = 4;
+const MAX_LABEL = 24;
+
+const searchFor = (text: string) => `https://www.google.com/search?q=${encodeURIComponent(text)}`;
 
 /**
  * A web address from what was said: a site, or a search for anything else. Page text the model has
- * read can carry instructions, so an address it writes never carries data: its query and fragment
- * are dropped, and so is a long path.
+ * read can carry instructions, so an address it writes must not be able to carry data out: the
+ * query, fragment and credentials are dropped, the path is kept only on a site already open in a
+ * tab, and a hostname with many or long labels becomes a search instead.
+ *
+ * @param knownHosts - Hosts of the tabs that are open, whose paths can be trusted
  */
-export function addressFor(target: string): string {
+export function addressFor(target: string, knownHosts: Set<string> = new Set()): string {
   const text = target.trim();
   const candidate = /^https?:\/\//i.test(text)
     ? text
     : /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(text)
       ? `https://${text}`
       : null;
-  if (!candidate) return `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+  if (!candidate) return searchFor(text);
   try {
     const url = new URL(candidate);
+    const labels = url.hostname.split('.');
+    if (labels.length > MAX_LABELS || labels.some(label => label.length > MAX_LABEL)) return searchFor(text);
     url.search = '';
     url.hash = '';
     url.username = '';
     url.password = '';
-    if (url.pathname.length > MAX_PATH) url.pathname = '/';
+    if (!knownHosts.has(url.hostname.replace(/^www\./, ''))) url.pathname = '/';
     return url.toString();
   } catch {
-    return `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+    return searchFor(text);
   }
 }
 
 /** Opens a new tab in front, unless the address is on the blocked list. */
 export async function openTab(target: string, windowId?: number): Promise<string> {
-  const url = addressFor(target);
+  const open = await chrome.tabs.query({});
+  const knownHosts = new Set(open.map(tab => hostOf(tab.url)).filter(Boolean));
+  const url = addressFor(target, knownHosts);
   const firewall = await firewallStore.getFirewall();
   if (firewall.enabled && !isUrlAllowed(url, firewall.allowList, firewall.denyList)) {
     return `${hostOf(url)} is on the blocked list, so it was not opened.`;
