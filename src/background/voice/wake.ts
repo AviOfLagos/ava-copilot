@@ -2,6 +2,7 @@ import { meetingSettingsStore } from '@extension/storage';
 import { createLogger } from '../log';
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
 import type { VoiceManager } from './manager';
+import { soundRecently, watchSound } from './sound';
 
 const logger = createLogger('WakeWord');
 
@@ -30,6 +31,7 @@ export class WakeWord {
   constructor(private readonly voice: VoiceManager) {}
 
   start(): void {
+    watchSound();
     void chrome.alarms.create(WAKE_ALARM, { periodInMinutes: 1 });
     chrome.alarms.onAlarm.addListener(alarm => {
       if (alarm.name === WAKE_ALARM) void this.sync();
@@ -76,9 +78,8 @@ export class WakeWord {
   private async heard(): Promise<void> {
     const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
     // Sound from a tab (a video, a call) can say "Hey Ava" too: then each action needs a click
-    const audible = (await chrome.tabs.query({ audible: true }).catch(() => [])).length > 0;
     const result = await this.voice
-      .start(window?.id, { wake: true, guarded: audible })
+      .start(window?.id, { wake: true, guarded: await soundRecently() })
       .catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
     if (!result.ok) {
       logger.warning('Hey Ava was heard but the conversation did not start', result.error);

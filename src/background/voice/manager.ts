@@ -20,6 +20,7 @@ import type { KnowledgeBase } from '../kb/manager';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { quoteTitle } from '../calendar/watcher';
 import { allowedByClick } from './confirm';
+import { soundRecently } from './sound';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
@@ -33,15 +34,25 @@ import { resolveModels } from '../threads/factory';
 const logger = createLogger('Voice');
 
 const WATCH_MS = 2000;
-// Tools that act for the user. In a conversation "Hey Ava" started while something was playing, the
-// order may have come from that sound, so each needs a click; ending a call for everyone always does.
+// What each tool does, as the click-to-allow notice names it. In a conversation "Hey Ava" started
+// while sound was playing, or with sound playing since, the order may have come from that sound: every
+// tool here needs a click, the ones that only read too, since an answer spoken aloud can reach a call.
+// Ending a call for everyone needs one in any conversation the wake word started.
 const GUARDED_TOOLS: Record<string, string> = {
-  run_browser_task: 'Run a task in the browser',
-  open_tab: 'Open a site',
-  join_next_meeting: 'Join your next meeting',
-  leave_call: 'Leave the call',
-  end_call_for_everyone: 'End the call for everyone',
-  remember_this: 'Save to your knowledge base',
+  run_browser_task: 'run a task in the browser',
+  open_tab: 'open a site',
+  switch_tab: 'switch tabs',
+  join_next_meeting: 'join your next meeting',
+  leave_call: 'leave the call',
+  end_call_for_everyone: 'end the call for everyone',
+  remember_this: 'save to your knowledge base',
+  read_page: 'read a page aloud',
+  list_tabs: 'list your open tabs',
+  list_frequent_sites: 'list the sites you visit',
+  get_schedule: 'read your calendar',
+  ask_meeting: 'answer from your meeting notes',
+  ask_knowledge: 'answer from your knowledge base',
+  think: 'answer a question',
 };
 // A conversation "Hey Ava" started ends after this long with nothing said and no task running
 const WAKE_IDLE_MS = 2 * 60 * 1000;
@@ -72,6 +83,8 @@ export class VoiceManager {
   private wakeSession = false;
   // Started by "Hey Ava" while a tab was playing sound: that sound may have said it
   private guarded = false;
+  // Refused once on screen: the rest of this conversation is refused without asking again
+  private refused = false;
   private lastActivity = 0;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
@@ -141,6 +154,7 @@ export class VoiceManager {
     this.windowId = windowId;
     this.wakeSession = wake;
     this.guarded = wake && guarded;
+    this.refused = false;
     this.lastActivity = Date.now();
     // Threads already waiting or finished are not news
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
@@ -184,15 +198,17 @@ export class VoiceManager {
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     this.lastActivity = Date.now();
     const action = GUARDED_TOOLS[name];
-    if (action && (this.guarded || (this.wakeSession && name === 'end_call_for_everyone'))) {
-      const what = String(args.task ?? args.target ?? args.note ?? '').slice(0, 120);
+    if (action && this.wakeSession && (this.guarded || name === 'end_call_for_everyone' || (await soundRecently()))) {
+      if (this.refused) return 'Not allowed: the user refused an action on screen in this conversation.';
+      // Fixed words only: nothing the model or the sound chose is shown, so the notice cannot be worded to mislead
       const allowed = await allowedByClick(
-        `Allow Ava to: ${action}?`,
-        what || 'Heard by voice. Click Allow if you asked for this.',
+        `Ava wants to ${action}`,
+        'A spoken order after “Hey Ava”. Allow only if you just asked for this yourself.',
       );
       this.lastActivity = Date.now();
       if (!allowed) {
-        return 'The user did not allow it on screen. It may not have been them speaking: do not try again unless they ask.';
+        this.refused = true;
+        return 'The user did not allow it on screen. It may not have been them speaking: do not try again.';
       }
     }
     switch (name) {
