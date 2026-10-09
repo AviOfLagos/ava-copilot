@@ -457,9 +457,9 @@ export function LiveOrb({
       aria-label={label}
       aria-hidden={label ? undefined : true}>
       {hasGl ? (
-        <canvas ref={canvasRef} className="size-full" />
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       ) : (
-        <div className="size-full rounded-full" style={fallbackFaceStyle(resolved)} />
+        <div style={{ width: '100%', height: '100%', borderRadius: '50%', ...fallbackFaceStyle(resolved) }} />
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+@import '../ui/lib/theme.css';
 @config "./tailwind.config.ts";
 
 @tailwind base;
@@ -6,8 +7,29 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
-    'Droid Sans', 'Helvetica Neue', sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Cards on the settings page are the panel's glass */
+main .rounded-lg.border {
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-shadow);
+  border-radius: 18px;
+}
+
+main input,
+main select,
+main textarea {
+  color-scheme: inherit;
+}
+
+::selection {
+  background: rgb(var(--primary-rgb) / 0.3);
 }

@@ -1,76 +1,11 @@
+@import '../ui/lib/theme.css';
 @config "./tailwind.config.ts";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Graphite glass (docs/DIRECTION.md). Colours have jobs:
- * primary (mint) = acting, done, the main action; hold (amber) = waits for the user's click, nothing else;
- * call (periwinkle) = meetings and calls. Variables are named like Tailwind 4's (--color-*) so components
- * ported from AI Elements read them unchanged.
- */
 @layer base {
-  :root {
-    color-scheme: dark;
-    --color-background: #0c0e13;
-    --color-foreground: #e8eaf0;
-    --color-muted: rgba(255, 255, 255, 0.06);
-    --color-muted-foreground: #9097a6;
-    --color-card: rgba(255, 255, 255, 0.05);
-    --color-popover: #14171e;
-    --color-popover-foreground: #e8eaf0;
-    --color-secondary: rgba(255, 255, 255, 0.08);
-    --color-secondary-foreground: #e8eaf0;
-    --color-accent: rgba(255, 255, 255, 0.08);
-    --color-accent-foreground: #e8eaf0;
-    --color-border: rgba(255, 255, 255, 0.09);
-    --color-input: rgba(255, 255, 255, 0.12);
-    --color-ring: rgba(110, 231, 200, 0.6);
-    --primary-rgb: 110 231 200;
-    --color-primary-foreground: #04231d;
-    --hold-rgb: 245 181 68;
-    --color-hold-foreground: #ffe1a6;
-    --call-rgb: 150 160 255;
-    --destructive-rgb: 248 113 113;
-    --glass-top: rgba(255, 255, 255, 0.07);
-    --glass-bottom: rgba(255, 255, 255, 0.03);
-    --glass-highlight: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    --aura-1: rgba(110, 231, 200, 0.14);
-    --aura-2: rgba(120, 140, 255, 0.07);
-  }
-
-  :root[data-theme='light'] {
-    color-scheme: light;
-    --color-background: #f3f4f7;
-    --color-foreground: #12141a;
-    --color-muted: rgba(10, 14, 24, 0.05);
-    --color-muted-foreground: #596070;
-    --color-card: rgba(255, 255, 255, 0.72);
-    --color-popover: #ffffff;
-    --color-popover-foreground: #12141a;
-    --color-secondary: rgba(10, 14, 24, 0.06);
-    --color-secondary-foreground: #12141a;
-    --color-accent: rgba(10, 14, 24, 0.06);
-    --color-accent-foreground: #12141a;
-    --color-border: rgba(10, 14, 24, 0.1);
-    --color-input: rgba(10, 14, 24, 0.14);
-    --color-ring: rgba(13, 148, 122, 0.55);
-    --primary-rgb: 13 148 122;
-    --color-primary-foreground: #ffffff;
-    --hold-rgb: 180 116 12;
-    --color-hold-foreground: #6b4206;
-    --call-rgb: 84 92 214;
-    --destructive-rgb: 200 40 40;
-    --glass-top: rgba(255, 255, 255, 0.85);
-    --glass-bottom: rgba(255, 255, 255, 0.6);
-    --glass-highlight: rgba(255, 255, 255, 0.9);
-    --glass-shadow: 0 8px 24px rgba(20, 24, 40, 0.08);
-    --aura-1: rgba(13, 148, 122, 0.1);
-    --aura-2: rgba(84, 92, 214, 0.06);
-  }
-
   html,
   body,
   #app-container {
@@ -110,24 +45,6 @@
 }
 
 @layer components {
-  /* A frosted surface: lit from the top, one shadow, one border */
-  .glass {
-    background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
-    border: 1px solid var(--color-border);
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      var(--glass-shadow);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-  }
-
-  /* The page behind the glass: one soft light from the top left */
-  .aura {
-    background:
-      radial-gradient(420px 300px at 15% -5%, var(--aura-1), transparent 70%),
-      radial-gradient(380px 320px at 110% 40%, var(--aura-2), transparent 70%), var(--color-background);
-  }
-
   .label-mono {
     font-family: 'Geist Mono Variable', ui-monospace, monospace;
     font-size: 10.5px;

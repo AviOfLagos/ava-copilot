@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './Options.css';
-import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
 import { FiSettings, FiCpu, FiShield, FiHelpCircle, FiBookmark } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
 import { FirewallSettings } from './components/FirewallSettings';
+import { LiveOrb } from '../side-panel/components/ui/live-orb';
+import { useTheme } from '../side-panel/layout/theme';
 import { SkillsSettings } from './components/SkillsSettings';
 
 type TabTypes = 'general' | 'models' | 'skills' | 'firewall' | 'help';
@@ -21,20 +22,10 @@ const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; l
 
 const Options = () => {
   const [activeTab, setActiveTab] = useState<TabTypes>('models');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Check for dark mode preference
-  useEffect(() => {
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(darkModeMediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    darkModeMediaQuery.addEventListener('change', handleChange);
-    return () => darkModeMediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  // The look follows the panel's choice; the page always renders its dark variant, whose colours the
+  // page's Tailwind config maps to the theme (dark or light)
+  useTheme();
+  const isDarkMode = true;
 
   const handleTabClick = (tabId: TabTypes) => {
     if (tabId === 'help') {
@@ -60,37 +51,33 @@ const Options = () => {
   };
 
   return (
-    <div
-      className={`flex min-h-screen min-w-[768px] ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-center"} ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-      {/* Vertical Navigation Bar */}
-      <nav
-        className={`w-48 border-r ${isDarkMode ? 'border-slate-700 bg-slate-800/80' : 'border-white/20 bg-[#0EA5E9]/10'} backdrop-blur-sm`}>
-        <div className="p-4">
-          <h1 className={`mb-6 text-xl font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-            {t('options_nav_header')}
-          </h1>
-          <ul className="space-y-2">
-            {TABS.map(item => (
-              <li key={item.id}>
-                <Button
-                  onClick={() => handleTabClick(item.id)}
-                  className={`flex w-full items-center space-x-2 rounded-lg px-4 py-2 text-left text-base 
-                    ${
-                      activeTab !== item.id
-                        ? `${isDarkMode ? 'bg-slate-700/70 text-gray-300 hover:text-white' : 'bg-[#0EA5E9]/15 font-medium text-gray-700 hover:text-white'} backdrop-blur-sm`
-                        : `${isDarkMode ? 'bg-sky-800/50' : ''} text-white backdrop-blur-sm`
-                    }`}>
-                  <item.icon className="size-4" />
-                  <span>{item.label}</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
+    <div className="aura flex min-h-screen min-w-[768px] font-sans text-foreground">
+      <nav aria-label={t('options_nav_header')} className="glass m-3 w-56 shrink-0 self-start rounded-2xl p-3">
+        <div className="mb-5 flex items-center gap-2.5 px-2 pt-1">
+          <LiveOrb size={28} />
+          <h1 className="text-[15px] font-semibold tracking-tight">{t('options_nav_header')}</h1>
         </div>
+        <ul className="space-y-1">
+          {TABS.map(item => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => handleTabClick(item.id)}
+                aria-current={activeTab === item.id ? 'page' : undefined}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13.5px] transition-colors ${
+                  activeTab === item.id
+                    ? 'border border-[var(--color-border)] bg-[var(--color-accent)] text-[var(--color-foreground)]'
+                    : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
+                }`}>
+                <item.icon className="size-4" />
+                <span>{item.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </nav>
 
-      {/* Main Content Area */}
-      <main className={`flex-1 ${isDarkMode ? 'bg-slate-800/50' : 'bg-white/10'} p-8 backdrop-blur-sm`}>
+      <main className="min-w-0 flex-1 p-8 pl-5">
         <div className="mx-auto min-w-[512px] max-w-screen-lg">{renderTabContent()}</div>
       </main>
     </div>
