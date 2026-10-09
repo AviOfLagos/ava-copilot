@@ -55,6 +55,17 @@ export const MessageActions = ({ className, children, ...props }: MessageActions
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
+/*
+ * Model text can carry words from the pages the agent read, so markdown must not fetch anything by
+ * itself: an image whose address holds data would send it out the moment it rendered. No images or
+ * embedded media, no raw HTML, and links only to http(s) and mailto, opened by the user's click.
+ */
+const BLOCKED_ELEMENTS = ['img', 'picture', 'source', 'video', 'audio', 'iframe', 'object', 'embed'];
+
+export function safeUrl(url: string): string {
+  return /^(https?:|mailto:)/i.test(url.trim()) ? url : '';
+}
+
 /** Markdown from the model, sanitised, with links that open in a new tab. */
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
@@ -67,6 +78,9 @@ export const MessageResponse = memo(
         className,
       )}
       {...props}
+      disallowedElements={BLOCKED_ELEMENTS}
+      skipHtml
+      urlTransform={safeUrl}
     />
   ),
   (prev, next) => prev.children === next.children,
