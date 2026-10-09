@@ -22,7 +22,7 @@ import { quoteTitle } from '../calendar/watcher';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
-import { describeNote, hangUp, meetJoin, spokeEnd, waitForNote } from '../meetings/call-control';
+import { describeNote, hangUp, meetJoin, spokeEnd, spokeJoin, spokeLeave, waitForNote } from '../meetings/call-control';
 import type { CallMode } from '../meetings/call-control';
 import { THINK_INSTRUCTIONS } from './prompt';
 import { generatePlainText } from '../llm/generate';
@@ -203,7 +203,12 @@ export class VoiceManager {
         if (!next?.joinUrl) return 'No meeting with a link in the next two hours.';
         const tab = await chrome.tabs.create({ url: next.joinUrl, active: true });
         // The title comes from an invite; get_schedule gives it, marked untrusted
-        if (tab.id === undefined || !next.joinUrl.startsWith('https://meet.google.com/')) {
+        // Opening is harmless; pressing Join puts the user in front of others, so only on their word
+        if (
+          tab.id === undefined ||
+          !next.joinUrl.startsWith('https://meet.google.com/') ||
+          !spokeJoin(heard, this.turnBefore(heard))
+        ) {
           return 'Opened the next meeting. Notes start once you are in the call.';
         }
         return (await this.pressJoin(tab.id))
@@ -211,10 +216,14 @@ export class VoiceManager {
           : 'Opened the next meeting, but the Join button did not show: press it on the page.';
       }
       case 'leave_call':
+        // Leaving or ending a call only on the user's own words, never on a page's or a guess
+        if (!spokeLeave(heard, this.turnBefore(heard))) {
+          return 'The user did not say to leave the call. Ask first.';
+        }
         return this.hangUp('leave');
       case 'end_call_for_everyone':
         // Ending a call for others only on the user's own words, never on a page's or a guess
-        if (!spokeEnd([...this.recentHeard.slice(-2), heard].join(' '))) {
+        if (!spokeEnd(heard, this.turnBefore(heard))) {
           return 'The user did not say to end the call. Ask whether to end it for everyone or just leave.';
         }
         return this.hangUp('end');
@@ -259,6 +268,14 @@ export class VoiceManager {
       default:
         return `There is no tool called ${name}.`;
     }
+  }
+
+  /** What the user said in the turn before this one, for a plain "yes" to a question. */
+  private turnBefore(heard: string): string {
+    const turns = this.recentHeard.slice();
+    // onTurn may already have recorded this turn
+    if (heard && turns[turns.length - 1] === heard) turns.pop();
+    return turns[turns.length - 1] ?? '';
   }
 
   /** Presses Join on a Meet page once it has loaded. */

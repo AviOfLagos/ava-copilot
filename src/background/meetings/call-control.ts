@@ -73,11 +73,38 @@ export const meetJoin = (): boolean => {
   return !!join;
 };
 
-/** Whether the user's own words asked to end the call for everyone, not just to leave it. */
-export function spokeEnd(heard: string): boolean {
-  return /(?<!\bthe )\bend\b(?! of\b)[^.?!]{0,30}\b(call|meeting)\b|\b(call|meeting)\b[^.?!]{0,20}\bfor (everyone|everybody|all)\b|\bend (it|this) for (everyone|everybody|all)\b/i.test(
-    heard,
-  );
+// A plain yes, said right after the copilot asked
+const AFFIRM =
+  /^\W*(yes|yeah|yep|yup|sure|correct|do it|go ahead|please do|ok(ay)?)(\W+(please|do it|go ahead|for everyone))*\W*$/i;
+const NEGATED = /\b(don'?t|do not|never|not|no need to|stop)\b[^.?!]{0,15}\b(end|close|leave|join|hang)/i;
+
+/** One order in the user's words: the turn itself, or a plain yes to the turn before it. */
+function ordered(order: RegExp, heard: string, before = ''): boolean {
+  const said = (text: string) => order.test(text) && !NEGATED.test(text);
+  return said(heard) || (AFFIRM.test(heard) && said(before));
+}
+
+const END =
+  /\b(end|close|finish|terminate|kill|shut down)\b(?! of\b)\s+(the |this |our |my )?(call|meeting)\b|\bend (it|this|the call|the meeting) for (everyone|everybody|all)\b/i;
+const LEAVE = /\b(leave|exit|drop( off)?( from)?|hang up|get (me )?out of)\b\s*(the |this |my )?(call|meeting)?\b/i;
+const JOIN = /\b(join|enter|get (me )?(in|into)|let me in)\b/i;
+
+/**
+ * Whether the user's own words asked to end the call for everyone, not just to leave it.
+ * Only this turn counts, or a plain yes to the one before: never words from longer ago.
+ */
+export function spokeEnd(heard: string, before = ''): boolean {
+  return ordered(END, heard, before);
+}
+
+/** Whether the user's own words asked to leave the call, or to end it. */
+export function spokeLeave(heard: string, before = ''): boolean {
+  return ordered(LEAVE, heard, before) || spokeEnd(heard, before);
+}
+
+/** Whether the user's own words asked to join a meeting, not just to open it. */
+export function spokeJoin(heard: string, before = ''): boolean {
+  return ordered(JOIN, heard, before);
 }
 
 function isMeet(url = ''): boolean {
