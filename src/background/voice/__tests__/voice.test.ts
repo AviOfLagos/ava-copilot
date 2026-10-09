@@ -71,6 +71,9 @@ describe('VOICE_TOOLS', () => {
       'switch_tab',
       'get_schedule',
       'join_next_meeting',
+      'leave_call',
+      // Acts on others, so it runs only on the user's own words (spokeEnd)
+      'end_call_for_everyone',
       'list_frequent_sites',
       'remember_this',
       'think',

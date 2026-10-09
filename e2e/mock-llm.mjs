@@ -378,7 +378,12 @@ export async function startMockLlm(scenarios) {
             send({ serverContent: { inputTranscription: { text: live.voiceRequest } } });
             send({
               toolCall: {
-                functionCalls: [{ id: 'call-1', name: 'run_browser_task', args: { task: live.voiceRequest } }],
+                functionCalls: [
+                  {
+                    id: 'call-1',
+                    ...(live.voiceTool ?? { name: 'run_browser_task', args: { task: live.voiceRequest } }),
+                  },
+                ],
               },
             });
           }

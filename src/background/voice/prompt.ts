@@ -79,7 +79,18 @@ export const VOICE_TOOLS = [
   },
   {
     name: 'join_next_meeting',
-    description: 'Opens the link of the next meeting on the calendar that has one.',
+    description:
+      'Opens the next meeting on the calendar that has a link and, on Google Meet, presses Join now. Notes start on their own once the user is in.',
+  },
+  {
+    name: 'leave_call',
+    description:
+      'Leaves the Google Meet call quietly; the call goes on for the others. Stops the notes and returns the summary and action points.',
+  },
+  {
+    name: 'end_call_for_everyone',
+    description:
+      'Ends the Google Meet call for everyone in it (host only). Use only when the user said to end the call, never for "leave". Stops the notes and returns the summary and action points.',
   },
   {
     name: 'list_frequent_sites',

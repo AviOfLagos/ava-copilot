@@ -270,6 +270,16 @@ Not yet tried with a real Ollama server on this machine (none installed); the ch
 
 ---
 
+### Roadmap from 2026-10-09
+
+The next stretch of work (call control, one-pass forms, wake word, workspaces, the Eve companion and more) is logged
+in order in [roadmap.md](roadmap.md), with the rules that never bend.
+
+- **Call control (built 2026-10-09)**: voice tools `leave_call` and `end_call_for_everyone` (Google Meet,
+  `src/background/meetings/call-control.ts`). Leaving always picks "just leave"; ending never falls back to leaving,
+  needs the user's own words (`spokeEnd`), and clicks nothing when the user is not the host. Both stop the notes and
+  read back the summary. `join_next_meeting` now presses Join on Meet.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

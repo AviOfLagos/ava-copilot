@@ -22,6 +22,8 @@ import { quoteTitle } from '../calendar/watcher';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
+import { describeNote, hangUp, meetJoin, spokeEnd, waitForNote } from '../meetings/call-control';
+import type { CallMode } from '../meetings/call-control';
 import { THINK_INSTRUCTIONS } from './prompt';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
@@ -199,10 +201,23 @@ export class VoiceManager {
       case 'join_next_meeting': {
         const next = (await this.calendar?.upcoming(2))?.find(event => event.joinUrl);
         if (!next?.joinUrl) return 'No meeting with a link in the next two hours.';
-        await chrome.tabs.create({ url: next.joinUrl, active: true });
+        const tab = await chrome.tabs.create({ url: next.joinUrl, active: true });
         // The title comes from an invite; get_schedule gives it, marked untrusted
-        return 'Opened the next meeting. Pressing Alt+Shift+M on the call starts notes.';
+        if (tab.id === undefined || !next.joinUrl.startsWith('https://meet.google.com/')) {
+          return 'Opened the next meeting. Notes start once you are in the call.';
+        }
+        return (await this.pressJoin(tab.id))
+          ? 'Joined the next meeting. Notes start on their own.'
+          : 'Opened the next meeting, but the Join button did not show: press it on the page.';
       }
+      case 'leave_call':
+        return this.hangUp('leave');
+      case 'end_call_for_everyone':
+        // Ending a call for others only on the user's own words, never on a page's or a guess
+        if (!spokeEnd([...this.recentHeard.slice(-2), heard].join(' '))) {
+          return 'The user did not say to end the call. Ask whether to end it for everyone or just leave.';
+        }
+        return this.hangUp('end');
       case 'list_frequent_sites':
         return listFrequentSites();
       case 'remember_this': {
@@ -244,6 +259,36 @@ export class VoiceManager {
       default:
         return `There is no tool called ${name}.`;
     }
+  }
+
+  /** Presses Join on a Meet page once it has loaded. */
+  private async pressJoin(tabId: number): Promise<boolean> {
+    for (let i = 0; i < 20; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const [result] = await chrome.scripting.executeScript({ target: { tabId }, func: meetJoin }).catch(() => []);
+      if (result?.result === true) return true;
+    }
+    return false;
+  }
+
+  /** Leaves or ends the call, then reads back the meeting's summary once it is written. */
+  private async hangUp(mode: CallMode): Promise<string> {
+    const { result, meetingId } = await hangUp(this.meetings, mode);
+    if (result === 'not-host') {
+      return 'Only the host can end this call for everyone, and the user is not the host. Nothing was clicked; offer to leave instead.';
+    }
+    const what =
+      result === 'ended'
+        ? 'Ended the call for everyone.'
+        : result === 'left'
+          ? 'Left the call.'
+          : 'No Google Meet call was open.';
+    if (!meetingId) return `${what} No notes were being taken.`;
+    const meeting = await waitForNote(meetingId);
+    if (meeting?.note) return wrapUntrustedContent(`${what}\n${describeNote(meeting.note)}`);
+    if (meeting?.status === 'failed')
+      return `${what} The notes could not be finished: ${meeting.error ?? 'unknown error'}.`;
+    return `${what} The summary is still being written; it will be in the side panel.`;
   }
 
   /** Answers a hard question with the planner model, optionally with the page in front. */

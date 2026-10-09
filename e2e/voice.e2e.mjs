@@ -42,6 +42,7 @@ before(async () => {
     },
     'meeting-settings': {
       liveModel: 'gemini-3.8-live',
+      autoNotes: false,
       liveEndpoint: `ws://127.0.0.1:${mock.port}/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent`,
     },
   });
@@ -82,6 +83,8 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'switch_tab',
       'get_schedule',
       'join_next_meeting',
+      'leave_call',
+      'end_call_for_everyone',
       'list_frequent_sites',
       'remember_this',
       'think',
@@ -133,4 +136,89 @@ test('a send started by voice waits for the click, and the copilot says so', asy
   await waitFor(async () => (await session.events()).length === 1, 'the send after the click');
   await session.click('Stop talking');
   await session.close();
+});
+
+// A Google Meet call as far as hanging up goes: Leave, the host's choice to just leave, and the
+// options menu with "End the call for everyone" and its confirm. Every click is logged.
+const MEET_CALL = `<!doctype html><title>Meet</title><body><script>
+  window.clicks = [];
+  const add = (parent, label, role, onClick, aria) => {
+    const element = document.createElement('button');
+    if (role) element.setAttribute('role', role);
+    if (aria) element.setAttribute('aria-label', label); else element.textContent = label;
+    element.onclick = () => { window.clicks.push(label); onClick?.(); };
+    parent.appendChild(element);
+  };
+  const dialog = () => {
+    const box = document.createElement('div');
+    box.setAttribute('role', 'dialog');
+    document.body.appendChild(box);
+    return box;
+  };
+  add(document.body, 'Leave call', null, () => {
+    const box = dialog();
+    add(box, 'Just leave the call');
+    add(box, 'End the call for everyone');
+  }, true);
+  add(document.body, 'End call options', null, () => {
+    const menu = document.createElement('ul');
+    menu.setAttribute('role', 'menu');
+    document.body.appendChild(menu);
+    add(menu, 'End the call for everyone', 'menuitem', () => {
+      const box = dialog();
+      add(box, 'Cancel');
+      add(box, 'End call');
+    });
+  }, true);
+</script></body>`;
+
+async function openMeetCall() {
+  const meet = await extension.browser.newPage();
+  await meet.setRequestInterception(true);
+  meet.on('request', request =>
+    request.url().startsWith('https://meet.google.com/')
+      ? request.respond({ status: 200, contentType: 'text/html', body: MEET_CALL })
+      : request.continue(),
+  );
+  await meet.goto('https://meet.google.com/abc-defg-hij');
+  return meet;
+}
+
+async function speakTool(heard, tool) {
+  mock.live.voiceRequest = heard;
+  mock.live.voiceTool = tool;
+  const before = mock.live.toolResponses.length;
+  const session = await openSession(extension, mock);
+  await session.web.bringToFront();
+  await session.click('Talk to the copilot');
+  await waitFor(() => mock.live.toolResponses.length > before, 'the tool response');
+  const response = JSON.stringify(mock.live.toolResponses[before].response);
+  await session.click('Stop talking');
+  await session.close();
+  mock.live.voiceTool = undefined;
+  return response;
+}
+
+test('"leave the call" leaves quietly and never ends it for the others', async () => {
+  const meet = await openMeetCall();
+  const response = await speakTool('Leave the call', { name: 'leave_call', args: {} });
+  assert.match(response, /Left the call/);
+  assert.deepEqual(await meet.evaluate(() => window.clicks), ['Leave call', 'Just leave the call']);
+  await meet.close();
+});
+
+test('"end the call" ends it for everyone, but only on the user\'s own words', async () => {
+  const meet = await openMeetCall();
+  const refused = await speakTool('What did they say?', { name: 'end_call_for_everyone', args: {} });
+  assert.match(refused, /did not say to end the call/);
+  assert.deepEqual(await meet.evaluate(() => window.clicks), []);
+
+  const response = await speakTool('End the call', { name: 'end_call_for_everyone', args: {} });
+  assert.match(response, /Ended the call for everyone/);
+  assert.deepEqual(await meet.evaluate(() => window.clicks), [
+    'End call options',
+    'End the call for everyone',
+    'End call',
+  ]);
+  await meet.close();
 });
