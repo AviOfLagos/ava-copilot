@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventsBetween, parseTime } from '../ics';
+import { eventsBetween, joinLinkIn, parseTime } from '../ics';
 
 const feed = (...events: string[]) =>
   [
@@ -19,6 +19,17 @@ describe('parseTime', () => {
     // New York is UTC-4 in October
     expect(parseTime('20261009T050000', 'America/New_York').time).toBe(utc('2026-10-09T09:00:00Z'));
     expect(parseTime('20261009')).toMatchObject({ allDay: true });
+  });
+});
+
+describe('joinLinkIn', () => {
+  it('finds links on the meeting services only', () => {
+    expect(joinLinkIn('Join: https://meet.google.com/abc-defg-hij now')).toBe('https://meet.google.com/abc-defg-hij');
+    expect(joinLinkIn('https://acme.zoom.us/j/123456?pwd=x')).toBe('https://acme.zoom.us/j/123456?pwd=x');
+    expect(joinLinkIn('https://evilzoom.us/j/1')).toBeNull();
+    expect(joinLinkIn('https://zoom.us.evil.example/j/1')).toBeNull();
+    expect(joinLinkIn('https://meet.google.com.evil.example/abc-defg-hij')).toBeNull();
+    expect(joinLinkIn('nothing here')).toBeNull();
   });
 });
 

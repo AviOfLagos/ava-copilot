@@ -12,6 +12,15 @@ const HOUR = 60 * 60 * 1000;
 // Reminders already given, kept in session storage so a restarted worker does not repeat them
 const REMINDED_KEY = 'calendar-reminded';
 
+/** A calendar title made safe to speak or show: one line, no quotes, at most 80 characters. */
+export function quoteTitle(title: string): string {
+  return title
+    .replace(/[\r\n"“”]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+}
+
 export interface Reminder {
   event: CalendarEvent;
   minutes: number;
