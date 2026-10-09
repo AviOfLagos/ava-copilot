@@ -188,7 +188,8 @@ export class VoiceManager {
         const next = (await this.calendar?.upcoming(2))?.find(event => event.joinUrl);
         if (!next?.joinUrl) return 'No meeting with a link in the next two hours.';
         await chrome.tabs.create({ url: next.joinUrl, active: true });
-        return `Opened ${next.title}. Pressing Alt+Shift+M on the call starts notes.`;
+        // The title comes from an invite; get_schedule gives it, marked untrusted
+        return 'Opened the next meeting. Pressing Alt+Shift+M on the call starts notes.';
       }
       case 'list_frequent_sites':
         return listFrequentSites();
