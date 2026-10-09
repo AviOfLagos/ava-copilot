@@ -61,6 +61,7 @@ const HELD_LABELS = {
   captcha: 'gate_needsUser_captcha',
   code: 'gate_needsUser_code',
   cap: 'gate_needsUser_cap',
+  questions: 'gate_needsUser_questions',
 } as const;
 
 // The thinking orb's light program for what the agent is doing

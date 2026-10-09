@@ -29,6 +29,7 @@ import { ExecutionState, Actors } from '../event/types';
 import type { ChatModel } from '@src/background/llm/types';
 import { wrapUntrustedContent } from '../messages/utils';
 import { reviewAction, verifyCommit } from '@src/background/gate/review';
+import { fillFormAction, fillFormActionSchema } from '@src/background/forms/fill';
 import { readPageTextAction, readPageTextActionSchema } from '@src/background/reader/reader';
 import {
   saveKnowledgeAction,
@@ -415,6 +416,12 @@ export class ActionBuilder {
       searchKnowledgeActionSchema,
     );
     actions.push(searchKnowledge);
+
+    const fillForm = new Action(
+      async (input: z.infer<typeof fillFormActionSchema.schema>) => fillFormAction(this.context, input),
+      fillFormActionSchema,
+    );
+    actions.push(fillForm);
 
     const saveKnowledge = new Action(
       async (input: z.infer<typeof saveKnowledgeActionSchema.schema>) => saveKnowledgeAction(this.context, input),

@@ -92,4 +92,18 @@ describe('ConfirmGate', () => {
     expect(gate.pendingCount).toBe(0);
     expect(gate.answer('a', true)).toBe(false);
   });
+
+  it('hands the typed answers to the asker once, and only with an approval', async () => {
+    const gate = new ConfirmGate();
+    const asked = gate.ask(request('q'), async () => {});
+    expect(gate.answer('q', true, ['1 May 1990', ''])).toBe(true);
+    expect(await asked).toBe('approved');
+    expect(gate.takeReplies('q')).toEqual(['1 May 1990', '']);
+    expect(gate.takeReplies('q')).toEqual([]);
+
+    const skipped = gate.ask(request('s'), async () => {});
+    gate.answer('s', false, ['ignored']);
+    expect(await skipped).toBe('declined');
+    expect(gate.takeReplies('s')).toEqual([]);
+  });
 });

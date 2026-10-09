@@ -44,7 +44,8 @@ Common action sequences:
 - Actions are executed in the given order
 - If the page changes after an action, the sequence will be interrupted
 - Only provide the action sequence until an action which changes the page state significantly
-- Try to be efficient, e.g. fill forms at once, or chain actions where nothing changes on the page
+- Try to be efficient, e.g. chain actions where nothing changes on the page
+- For a form, use one fill_form with every field you know and every question you have, never one field per step and never one question at a time
 - Do NOT use cache_content action in multiple action sequences
 - only use multiple actions if it makes sense
 

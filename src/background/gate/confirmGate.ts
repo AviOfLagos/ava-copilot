@@ -10,6 +10,8 @@ export type GateAnswer = 'approved' | 'declined' | 'cancelled';
  */
 export class ConfirmGate {
   private readonly waiting = new Map<string, (answer: GateAnswer) => void>();
+  // What the user typed in answer to a request's questions, kept until the asker takes it
+  private readonly replies = new Map<string, string[]>();
 
   /**
    * Shows a request to the user and waits for the answer.
@@ -47,8 +49,16 @@ export class ConfirmGate {
    *
    * @returns false when no such request is waiting, e.g. it was already answered
    */
-  answer(requestId: string, approved: boolean): boolean {
+  answer(requestId: string, approved: boolean, replies?: string[]): boolean {
+    if (approved && replies && this.waiting.has(requestId)) this.replies.set(requestId, replies);
     return this.settle(requestId, approved ? 'approved' : 'declined');
+  }
+
+  /** The user's answers to a request's questions, once; empty when there were none. */
+  takeReplies(requestId: string): string[] {
+    const replies = this.replies.get(requestId) ?? [];
+    this.replies.delete(requestId);
+    return replies;
   }
 
   /**

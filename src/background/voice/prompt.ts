@@ -163,6 +163,9 @@ export function noticeFor(
     case 'waiting_confirm': {
       const request = thread.pendingRequest;
       if (!request) return null;
+      if (request.kind === 'questions') {
+        return `"${thread.title}" filled what it could and has ${request.questions?.length ?? 0} questions for the rest of the form. They answer them in the side panel.`;
+      }
       return request.mode === 'commit'
         ? `"${thread.title}" is ready to ${request.kind}: ${request.target}. It waits for their click on Confirm in the side panel.`
         : `"${thread.title}" needs them on the page: ${request.kind === 'login' ? 'sign in' : request.kind === 'captcha' ? 'solve the CAPTCHA' : request.kind === 'code' ? 'enter the code' : 'raise the daily cost cap'}, then click Continue.`;

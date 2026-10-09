@@ -2180,5 +2180,29 @@
   },
   "meeting_tab_ask": {
     "message": "Ask"
+  },
+  "gate_needsUser_questions": {
+    "message": "A few answers are needed to finish the form."
+  },
+  "gate_card_skipQuestions": {
+    "message": "Skip"
+  },
+  "gate_card_sendAnswers": {
+    "message": "Fill these in"
+  },
+  "gate_card_questionsHint": {
+    "message": "Leave one blank to keep that field empty. Nothing is submitted."
+  },
+  "gate_formQuestionsAnswered": {
+    "message": "Answered the form’s questions"
+  },
+  "gate_card_questionsTitle": {
+    "message": "$COUNT$ questions before filling the rest",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   }
 }

@@ -152,6 +152,27 @@ async function buildRequest(
 }
 
 /**
+ * Asks the user every question the agent has about a form, at once, and waits for the answers.
+ *
+ * @returns One answer per question (blank for one left out), 'skipped' when the user skipped them,
+ *   or 'cancelled' when the task was stopped while it waited
+ */
+export async function askQuestions(
+  context: AgentContext,
+  page: Page,
+  questions: string[],
+  intent: string,
+): Promise<string[] | 'skipped' | 'cancelled'> {
+  const request = await buildRequest(context, page, 'needs_user', 'questions', intent, '', { fields: [], context: '' });
+  request.questions = questions;
+  const answer = await ask(context, request);
+  if (answer === 'cancelled') return 'cancelled';
+  if (answer === 'declined') return 'skipped';
+  const replies = context.confirmGate.takeReplies(request.id);
+  return questions.map((_, index) => (replies[index] ?? '').trim());
+}
+
+/**
  * Hands a step to the user: a sign-in, a CAPTCHA or a one-time code. The action never runs.
  * When the user says they are done, the agent is told to read the page again.
  */

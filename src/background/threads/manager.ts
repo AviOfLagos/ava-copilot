@@ -185,13 +185,15 @@ export class ThreadManager {
    *
    * @returns false when the thread is not waiting on this request
    */
-  async answer(threadId: string, requestId: string, approved: boolean): Promise<boolean> {
+  async answer(threadId: string, requestId: string, approved: boolean, replies?: string[]): Promise<boolean> {
     const runner = this.running.get(threadId);
     const request = (await this.store.get(threadId))?.pendingRequest;
     if (!runner || !request || request.id !== requestId) {
       return false;
     }
-    if (!runner.executor.answerConfirmation(requestId, approved)) {
+    // Answers only for a request that asked questions, one per question
+    const answers = request.questions?.length && replies ? replies.slice(0, request.questions.length) : undefined;
+    if (!runner.executor.answerConfirmation(requestId, approved, answers)) {
       return false;
     }
     const subject = request.target || request.intent;

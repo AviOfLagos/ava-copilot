@@ -2180,5 +2180,29 @@
   },
   "meeting_tab_ask": {
     "message": "Ask"
+  },
+  "gate_needsUser_questions": {
+    "message": "Algumas respostas são necessárias para concluir o formulário."
+  },
+  "gate_card_skipQuestions": {
+    "message": "Pular"
+  },
+  "gate_card_sendAnswers": {
+    "message": "Preencher"
+  },
+  "gate_card_questionsHint": {
+    "message": "Deixe em branco para manter o campo vazio. Nada é enviado."
+  },
+  "gate_formQuestionsAnswered": {
+    "message": "Perguntas do formulário respondidas"
+  },
+  "gate_card_questionsTitle": {
+    "message": "$COUNT$ perguntas antes de preencher o resto",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   }
 }

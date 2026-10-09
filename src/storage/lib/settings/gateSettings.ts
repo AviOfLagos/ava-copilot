@@ -7,7 +7,7 @@ export const COMMIT_KINDS = ['send', 'publish', 'submit', 'delete', 'purchase', 
 export type CommitKind = (typeof COMMIT_KINDS)[number];
 
 // What the agent needs from the user before it can go on: a step on the page, or a higher daily cost cap
-export type NeedsUserKind = 'login' | 'captcha' | 'code' | 'cap';
+export type NeedsUserKind = 'login' | 'captcha' | 'code' | 'cap' | 'questions';
 
 // One piece of content the action would commit, read back from the page
 export interface ConfirmField {
@@ -34,6 +34,8 @@ export interface ConfirmRequest {
   fields: ConfirmField[];
   // Text of the dialog the control sits in, when there is one
   context: string;
+  // What the agent needs to know to finish a form, all asked at once (kind 'questions')
+  questions?: string[];
 }
 
 // Interface for the confirm gate settings

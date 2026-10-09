@@ -280,6 +280,11 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   needs the user's own words (`spokeEnd`), and clicks nothing when the user is not the host. Both stop the notes and
   read back the summary. `join_next_meeting` now presses Join on Meet.
 
+- **Forms in one pass (built 2026-10-09)**: agent action `fill_form` (`src/background/forms/fill.ts`). Every field
+  passes `reviewAction` before any is filled, then all are filled with the indices the model saw, then every open
+  question goes to the user in one card (`ConfirmRequest.kind = 'questions'`, answers via `ConfirmGate.takeReplies`).
+  It never submits; the submit click still goes through the gate.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

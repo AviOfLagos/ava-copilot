@@ -287,10 +287,10 @@ const SidePanel = () => {
 
   const handleStop = () => threadId && post({ type: 'thread_cancel', threadId });
 
-  const handleConfirmAnswer = (approved: boolean) => {
+  const handleConfirmAnswer = (approved: boolean, replies?: string[]) => {
     const request = thread?.pendingRequest;
     if (request && threadId) {
-      post({ type: 'confirm_action', threadId, requestId: request.id, approved });
+      post({ type: 'confirm_action', threadId, requestId: request.id, approved, replies });
     }
   };
 
@@ -544,12 +544,13 @@ const SidePanel = () => {
           </p>
           <ConfirmCard
             request={elsewhere.pendingRequest}
-            onAnswer={approved =>
+            onAnswer={(approved, replies) =>
               post({
                 type: 'confirm_action',
                 threadId: elsewhere.id,
                 requestId: elsewhere.pendingRequest!.id,
                 approved,
+                replies,
               })
             }
             isDarkMode={isDarkMode}

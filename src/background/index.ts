@@ -279,7 +279,12 @@ chrome.runtime.onConnect.addListener(port => {
 
         case 'confirm_action':
           // Only an explicit true approves. Anything else declines.
-          if (threadId) await threads.answer(threadId, String(message.requestId), message.approved === true);
+          if (threadId) {
+            const replies = Array.isArray(message.replies)
+              ? message.replies.slice(0, 20).map((reply: unknown) => String(reply ?? '').slice(0, 2000))
+              : undefined;
+            await threads.answer(threadId, String(message.requestId), message.approved === true, replies);
+          }
           return;
 
         case 'thread_rebind':

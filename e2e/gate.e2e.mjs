@@ -58,6 +58,25 @@ const scenarios = {
     page => [{ input_text: { intent: 'Type the password', index: page.find('input', 'password'), text: 'hunter2' } }],
     done,
   ],
+  'form-fill-once': [
+    // What it knows goes in at once; what it does not is asked in one card
+    page => [
+      {
+        fill_form: {
+          intent: 'Fill the quote form',
+          fields: [{ index: page.find('input', 'name'), value: 'Ada Lovelace' }],
+          questions: ['What should the notes say?', 'Any company name?'],
+        },
+      },
+    ],
+    page => [
+      {
+        fill_form: { intent: 'Fill the rest', fields: [{ index: page.find('textarea', 'notes'), value: 'Two rooms' }] },
+      },
+    ],
+    page => [{ click_element: { intent: 'Submit the form', index: page.find('button', 'Request a quote') } }],
+    done,
+  ],
   'type-login-email': [
     page => [{ input_text: { intent: 'Type the email', index: page.find('input', 'email'), text: 'ada@example.com' } }],
     done,
@@ -243,4 +262,30 @@ test('a kind switched off in settings runs without asking, and is still checked 
       permission: true,
     });
   }
+});
+
+test('a form is filled in one go, and every question is asked at once', async () => {
+  const session = await run('form-fill-once');
+  const card = await session.waitForCard();
+
+  // The known field is already in, before the user is asked anything
+  assert.match(card, /2 questions/);
+  assert.match(card, /What should the notes say\?/);
+  assert.match(card, /Any company name\?/);
+  assert.equal(await session.web.evaluate(() => document.querySelector('#name').value), 'Ada Lovelace');
+
+  await session.panel.type('[role="alertdialog"] input', 'Two rooms');
+  await session.answer('Fill these in');
+
+  // The answers reach the model in one message; a blank one says to leave the field empty
+  const submit = await session.waitForCard();
+  assert.match(submit, /Confirm: Submit a form/);
+  const asked = mock.run.requests.find(text => text.includes('What should the notes say? → Two rooms'));
+  assert.ok(asked, 'the answers reached the model');
+  assert.match(asked, /Any company name\? → \(left blank/);
+
+  await session.answer('Confirm');
+  await session.waitForEnd();
+  assert.deepEqual(await session.events(), [{ type: 'quote', name: 'Ada Lovelace', notes: 'Two rooms' }]);
+  await finish(session);
 });

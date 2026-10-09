@@ -2180,5 +2180,29 @@
   },
   "meeting_tab_ask": {
     "message": "Ask"
+  },
+  "gate_needsUser_questions": {
+    "message": "需要一些回答才能完成表單。"
+  },
+  "gate_card_skipQuestions": {
+    "message": "略過"
+  },
+  "gate_card_sendAnswers": {
+    "message": "填入"
+  },
+  "gate_card_questionsHint": {
+    "message": "留空即保持該欄位空白。不會送出任何內容。"
+  },
+  "gate_formQuestionsAnswered": {
+    "message": "已回答表單問題"
+  },
+  "gate_card_questionsTitle": {
+    "message": "填寫其餘欄位前有 $COUNT$ 個問題",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   }
 }

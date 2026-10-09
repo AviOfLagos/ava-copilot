@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ConfirmRequest } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { Button } from './ui/button';
@@ -5,7 +6,7 @@ import { HoldButton } from './ui/hold-button';
 
 interface ConfirmCardProps {
   request: ConfirmRequest;
-  onAnswer: (approved: boolean) => void;
+  onAnswer: (approved: boolean, replies?: string[]) => void;
   isDarkMode?: boolean;
 }
 
@@ -20,6 +21,7 @@ const KIND_LABELS = {
   captcha: 'gate_needsUser_captcha',
   code: 'gate_needsUser_code',
   cap: 'gate_needsUser_cap',
+  questions: 'gate_needsUser_questions',
 } as const;
 
 function hostOf(url: string): string {
@@ -35,7 +37,67 @@ function hostOf(url: string): string {
  * where the action goes and the content as read back from the page. Committing takes a hold or two
  * clicks; it is the only amber thing in the panel.
  */
-export default function ConfirmCard({ request, onAnswer }: ConfirmCardProps) {
+/**
+ * Everything the agent still needs for a form, asked at once: the user answers what they want and
+ * the agent fills the rest in one go. A blank answer leaves that field empty.
+ */
+function QuestionsCard({ request, onAnswer }: ConfirmCardProps) {
+  const questions = request.questions ?? [];
+  const [replies, setReplies] = useState<string[]>(() => questions.map(() => ''));
+
+  return (
+    <form
+      role="alertdialog"
+      aria-labelledby="confirm-card-title"
+      onSubmit={event => {
+        event.preventDefault();
+        onAnswer(true, replies);
+      }}
+      className="border-hold/45 from-hold/10 to-hold/[0.03] animate-in fade-in-0 slide-in-from-bottom-2 mb-2 rounded-[18px] border bg-gradient-to-b p-3.5 text-[13px] shadow-[0_0_0_4px_rgb(var(--hold-rgb)/0.06),0_12px_30px_rgba(0,0,0,0.35)]">
+      <div className="flex items-start justify-between gap-3">
+        <h3 id="confirm-card-title" className="text-[14px] font-semibold leading-snug">
+          {t('gate_card_questionsTitle', [String(questions.length)])}
+        </h3>
+        {request.pageUrl && (
+          <span className="text-muted-foreground mt-0.5 shrink-0 font-mono text-[10.5px]">
+            {hostOf(request.pageUrl)}
+          </span>
+        )}
+      </div>
+      {request.context && <p className="text-muted-foreground mt-1">{request.context}</p>}
+      <div className="mt-2.5 flex max-h-72 flex-col gap-2.5 overflow-y-auto">
+        {questions.map((question, index) => (
+          <label key={`${question}-${index}`} className="flex flex-col gap-1">
+            <span className="break-words font-medium">{question}</span>
+            <input
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus={index === 0}
+              value={replies[index] ?? ''}
+              onChange={event =>
+                setReplies(current => current.map((reply, at) => (at === index ? event.target.value : reply)))
+              }
+              className="glass rounded-xl px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary/50"
+            />
+          </label>
+        ))}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Button type="button" variant="glass" size="lg" className="flex-1" onClick={() => onAnswer(false)}>
+          {t('gate_card_skipQuestions')}
+        </Button>
+        <Button type="submit" variant="default" size="lg" className="flex-[1.4]">
+          {t('gate_card_sendAnswers')}
+        </Button>
+      </div>
+      <p className="text-muted-foreground mt-2 text-center text-[11px]">{t('gate_card_questionsHint')}</p>
+    </form>
+  );
+}
+
+export default function ConfirmCard({ request, onAnswer, isDarkMode }: ConfirmCardProps) {
+  if (request.kind === 'questions') {
+    return <QuestionsCard request={request} onAnswer={onAnswer} isDarkMode={isDarkMode} />;
+  }
   const isCommit = request.mode === 'commit';
   const kindText = t(KIND_LABELS[request.kind]);
 

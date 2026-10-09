@@ -15,7 +15,7 @@ Eve is not in the project yet; it is added with item 7.
 1. **Call control on Google Meet** (built 2026-10-09) — "leave the call" leaves quietly; "end the call" ends it for everyone (host only, and only on
    Avi's own words); both stop notes and hand back the summary and action points. "Join the call" joins the
    next or named meeting. If the call already closed, notes stop and the summary comes anyway.
-2. **Forms in one pass** — scan the whole form once, fill every field it has data for in one action, then ask every
+2. **Forms in one pass** (built 2026-10-09) — scan the whole form once, fill every field it has data for in one action, then ask every
    missing answer in one card, then fill those at once. No field-by-field round trips. Submit still goes through the gate.
 3. **Always on + wake word** — listening keeps running with the panel closed (offscreen document), a local wake word
    ("Hey Eva", free, on-device, nothing leaves the Mac until it fires), and a macOS LaunchAgent that opens Brave at
