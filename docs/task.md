@@ -256,6 +256,18 @@ Known gaps:
 - `ChatInput.tsx`, `MessageList.tsx` and `SidePanel.css` are no longer used; they are kept until removing them is agreed.
 - The options page keeps its old look; the panel's settings cover the everyday ones.
 
+### Browser reach, local models, quieter pages (added 2026-10-09)
+
+- [x] Voice can see the browser: `list_tabs`, `read_page` (the page in front or a given tab, as untrusted text, first 6,000 characters), `open_tab` (an address or a search; the blocked-sites list applies) and `switch_tab`. These navigate and read; they never commit. `src/background/voice/browser-tools.ts`.
+- [x] The agent sees every free web tab, not only the ones bound to its chat, and can switch to and take over any tab no other running chat holds. A tab held by another chat stays refused.
+- [x] Highlights (numbered boxes over the page) are off by default and switched off once for existing installs. Settings → Agent → "Show what it clicks" brings them back. Vision mode still shows them, because it needs them.
+- [x] Local models:
+  - The agents already run on Ollama: add an Ollama provider in full settings, then pick its model for Planner and Navigator.
+  - Memory search can now embed locally with Ollama's `nomic-embed-text` (Settings → Memory → "Search by meaning with"). On "auto" it uses Gemini when there is a key and Ollama otherwise.
+  - Voice, live captions and meeting transcription stay on Gemini: no local model takes live audio in this setup.
+
+Not yet tried with a real Ollama server on this machine (none installed); the choice between sources is unit-tested.
+
 ---
 
 ## 5. Risks, in order

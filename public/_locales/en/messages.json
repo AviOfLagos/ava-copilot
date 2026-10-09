@@ -2029,5 +2029,26 @@
   },
   "settings_full": {
     "message": "Full settings: models, blocked sites, skills"
+  },
+  "settings_agent": {
+    "message": "Agent"
+  },
+  "settings_highlights": {
+    "message": "Show what it clicks"
+  },
+  "settings_highlights_hint": {
+    "message": "Numbered boxes over the page while it works. Vision mode always shows them."
+  },
+  "settings_embed": {
+    "message": "Search by meaning with"
+  },
+  "settings_embed_hint": {
+    "message": "Local uses your Ollama server and nomic-embed-text: free, and it never runs out."
+  },
+  "settings_embed_auto": {
+    "message": "Gemini if keyed, else local"
+  },
+  "settings_embed_local": {
+    "message": "Local (Ollama)"
   }
 }

@@ -8,6 +8,9 @@ const logger = createLogger('TabBinding');
  */
 export class TabBinding {
   private readonly tabs: Set<number>;
+  // Whether a tab outside the binding may join it: set by the thread manager to "no other running
+  // thread holds it". Unset, only bound tabs and tabs they open are allowed.
+  canAdopt: ((tabId: number) => boolean) | null = null;
 
   constructor(
     tabIds: number[],

@@ -65,6 +65,10 @@ describe('VOICE_TOOLS', () => {
   it('offers no tool that could approve or send on its own', () => {
     expect(VOICE_TOOLS.map(tool => tool.name)).toEqual([
       'run_browser_task',
+      'list_tabs',
+      'read_page',
+      'open_tab',
+      'switch_tab',
       'ask_meeting',
       'ask_knowledge',
       'get_status',

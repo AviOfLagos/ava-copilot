@@ -35,7 +35,8 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   useVision: false,
   useVisionForPlanner: false,
   planningInterval: 3,
-  displayHighlights: true,
+  // The numbered boxes drawn over a page while the agent works; off unless vision needs them
+  displayHighlights: false,
   minWaitPageLoad: 250,
   replayHistoricalTasks: false,
   stylePrompt:

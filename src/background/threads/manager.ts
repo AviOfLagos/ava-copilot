@@ -324,6 +324,11 @@ export class ThreadManager {
   }
 
   private async start(threadId: string, task: string, binding: TabBinding, resumed: boolean): Promise<void> {
+    // The agent may move to any tab no other running thread is using
+    binding.canAdopt = tabId => {
+      const holder = this.holderOf(tabId);
+      return holder === null || holder === threadId;
+    };
     const thread = await this.store.get(threadId);
     if (!thread) {
       throw new Error(`Thread ${threadId} does not exist`);

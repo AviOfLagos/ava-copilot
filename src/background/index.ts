@@ -1,5 +1,5 @@
 import 'webextension-polyfill';
-import { db, llmProviderStore, meetingStore, threadStore } from '@extension/storage';
+import { db, generalSettingsStore, llmProviderStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
 import { SpeechToTextService } from './services/speechToText';
@@ -166,6 +166,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 void threads.recover().catch(error => logger.error('Failed to recover threads', error));
 void meetings.recover().catch(error => logger.error('Failed to recover meetings', error));
 void voice.recover().catch(error => logger.error('Failed to recover voice', error));
+// Highlights used to be on by default; they go off once for every install, and the user's later choice stays
+void chrome.storage.local.get('highlights-default-off').then(async ({ ['highlights-default-off']: done }) => {
+  if (done) return;
+  await generalSettingsStore.updateSettings({ displayHighlights: false });
+  await chrome.storage.local.set({ 'highlights-default-off': true });
+});
+
 // Retention, and anything that changed while the worker was asleep
 kb.scheduleSweep(10_000);
 

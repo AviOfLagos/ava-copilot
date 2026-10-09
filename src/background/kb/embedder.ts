@@ -1,6 +1,8 @@
 import { embedMany } from 'ai';
 import { createGoogle } from '@ai-sdk/google';
-import { llmProviderStore } from '@extension/storage';
+import { createOpenAI } from '@ai-sdk/openai';
+import { llmProviderStore, ProviderTypeEnum } from '@extension/storage';
+import { getOllamaBaseUrl } from '../llm/providers';
 import type { KbSettingsConfig } from '@extension/storage';
 import { recordUsage } from '../usage/meter';
 import { normalize } from './search';
@@ -21,17 +23,49 @@ export function embeddingInput(text: string, kind: 'query' | 'document', title?:
   return kind === 'query' ? `task: search result | query: ${text}` : `title: ${title || 'none'} | text: ${text}`;
 }
 
+/** Nomic's embedding models take their task as a prefix. */
+export function localEmbeddingInput(text: string, kind: 'query' | 'document', title?: string): string {
+  return kind === 'query' ? `search_query: ${text}` : `search_document: ${title ? `${title}. ` : ''}${text}`;
+}
+
+/** The name stored with each vector, so vectors from different models are never compared. */
+export const localModelId = (name: string) => `ollama:${name}`;
+
 /**
- * The Gemini embedding model, with the key of the configured Gemini provider. Without one the
- * knowledge base still works, by keywords only.
+ * The embedding model: Gemini with the configured key, or a local Ollama server, which costs
+ * nothing and never runs out. On "auto", Gemini when there is a key, Ollama otherwise. With neither,
+ * the knowledge base still works, by keywords only.
  *
- * @param sessionId - Where the cost of embedding is counted
+ * @param sessionId - Where the cost of Gemini embeddings is counted
  */
 export async function createEmbedder(settings: KbSettingsConfig, sessionId: string): Promise<Embedder | null> {
-  const providers = await llmProviderStore.getAllProviders();
-  const gemini = Object.entries(providers).find(
-    ([id, provider]) => (provider.type ?? id) === 'gemini' && provider.apiKey,
-  );
+  const providers = Object.entries(await llmProviderStore.getAllProviders());
+  const gemini = providers.find(([id, provider]) => (provider.type ?? id) === 'gemini' && provider.apiKey);
+  const ollama = providers.find(([id, provider]) => (provider.type ?? id) === ProviderTypeEnum.Ollama);
+  const source = settings.embedSource ?? 'auto';
+  const useLocal = source === 'local' || (source === 'auto' && !gemini && ollama);
+
+  if (useLocal) {
+    if (!ollama) return null;
+    const local = createOpenAI({ apiKey: ollama[1].apiKey || 'ollama', baseURL: getOllamaBaseUrl(ollama[1].baseUrl) });
+    const name = settings.localEmbedModel || 'nomic-embed-text';
+    const model = local.embedding(name);
+    return {
+      model: localModelId(name),
+      async embed(texts, kind, titles) {
+        const vectors: number[][] = [];
+        for (let start = 0; start < texts.length; start += BATCH) {
+          const values = texts
+            .slice(start, start + BATCH)
+            .map((text, index) => localEmbeddingInput(text, kind, titles?.[start + index]));
+          const result = await embedMany({ model, values, maxRetries: 2 });
+          vectors.push(...result.embeddings.map(vector => normalize(vector)));
+        }
+        return vectors;
+      },
+    };
+  }
+
   if (!gemini) {
     return null;
   }

@@ -10,6 +10,10 @@ export interface KbSettingsConfig {
   retentionDays: number;
   embedModel: string;
   embedDimensions: number;
+  // Where embeddings come from: Gemini, a local Ollama server, or Gemini when there is a key and Ollama otherwise
+  embedSource: 'auto' | 'gemini' | 'local';
+  // The Ollama embedding model for local search
+  localEmbedModel: string;
 }
 
 export const DEFAULT_KB_SETTINGS: KbSettingsConfig = {
@@ -18,6 +22,8 @@ export const DEFAULT_KB_SETTINGS: KbSettingsConfig = {
   retentionDays: 0,
   embedModel: 'gemini-embedding-2',
   embedDimensions: 768,
+  embedSource: 'auto',
+  localEmbedModel: 'nomic-embed-text',
 };
 
 export type KbSettingsStorage = BaseStorage<KbSettingsConfig> & {

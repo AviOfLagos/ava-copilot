@@ -74,7 +74,17 @@ test('a spoken request runs a browser task, and the copilot says when it is done
   assert.deepEqual(voiceSession.setups[0].generationConfig, { responseModalities: ['AUDIO'] });
   assert.deepEqual(
     voiceSession.setups[0].tools[0].functionDeclarations.map(f => f.name),
-    ['run_browser_task', 'ask_meeting', 'ask_knowledge', 'get_status', 'stop_tasks'],
+    [
+      'run_browser_task',
+      'list_tabs',
+      'read_page',
+      'open_tab',
+      'switch_tab',
+      'ask_meeting',
+      'ask_knowledge',
+      'get_status',
+      'stop_tasks',
+    ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
 

@@ -12,6 +12,8 @@ const settings: KbSettingsConfig = {
   retentionDays: 0,
   embedModel: 'fake-embed',
   embedDimensions: 32,
+  embedSource: 'auto',
+  localEmbedModel: 'nomic-embed-text',
 };
 vi.mock('@extension/storage', async original => ({
   ...(await original<typeof StorageModule>()),

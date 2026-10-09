@@ -68,8 +68,14 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [cap, setCap] = useState(5);
   const [spent, setSpent] = useState(0);
   const [style, setStyle] = useState('');
+  const [highlights, setHighlights] = useState(false);
   const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true });
-  const [memory, setMemory] = useState({ indexChats: true, indexMeetings: true, retentionDays: 0 });
+  const [memory, setMemory] = useState({
+    indexChats: true,
+    indexMeetings: true,
+    retentionDays: 0,
+    embedSource: 'auto' as 'auto' | 'gemini' | 'local',
+  });
   const [skills, setSkills] = useState<SkillRecord[]>([]);
 
   useEffect(() => {
@@ -90,11 +96,17 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
       const general = await generalSettingsStore.getSettings();
       setCap(general.dailyCostCapUsd);
       setStyle(general.stylePrompt);
+      setHighlights(general.displayHighlights);
       setSpent((await usageStore.getDay(localDay())).costUsd);
       const meetingSettings = await meetingSettingsStore.getSettings();
       setMeeting({ includeMic: meetingSettings.includeMic, liveCaptions: meetingSettings.liveCaptions });
       const kb = await kbSettingsStore.getSettings();
-      setMemory({ indexChats: kb.indexChats, indexMeetings: kb.indexMeetings, retentionDays: kb.retentionDays });
+      setMemory({
+        indexChats: kb.indexChats,
+        indexMeetings: kb.indexMeetings,
+        retentionDays: kb.retentionDays,
+        embedSource: kb.embedSource,
+      });
       setSkills(await skillStore.all());
     })();
     return skillStore.subscribe(() => void skillStore.all().then(setSkills));
@@ -216,6 +228,19 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
           </div>
         </Section>
 
+        <Section label={t('settings_agent')}>
+          <Row title={t('settings_highlights')} hint={t('settings_highlights_hint')}>
+            <Switch
+              label={t('settings_highlights')}
+              checked={highlights}
+              onChange={value => {
+                setHighlights(value);
+                void generalSettingsStore.updateSettings({ displayHighlights: value });
+              }}
+            />
+          </Row>
+        </Section>
+
         <Section label={t('settings_meetings')}>
           <Row title={t('options_meetings_includeMic')}>
             <Switch
@@ -247,6 +272,19 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               checked={memory.indexMeetings}
               onChange={value => void setMemorySetting({ indexMeetings: value })}
             />
+          </Row>
+          <Row title={t('settings_embed')} hint={t('settings_embed_hint')}>
+            <select
+              aria-label={t('settings_embed')}
+              value={memory.embedSource}
+              onChange={event =>
+                void setMemorySetting({ embedSource: event.target.value as typeof memory.embedSource })
+              }
+              className={select}>
+              <option value="auto">{t('settings_embed_auto')}</option>
+              <option value="gemini">Gemini</option>
+              <option value="local">{t('settings_embed_local')}</option>
+            </select>
           </Row>
           <Row title={t('options_kb_retention')}>
             <select

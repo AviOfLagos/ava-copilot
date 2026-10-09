@@ -18,6 +18,7 @@ import type { ThreadManager } from '../threads/manager';
 import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS } from './prompt';
+import { listTabs, openTab, readPage, switchTab } from './browser-tools';
 
 const logger = createLogger('Voice');
 
@@ -144,6 +145,18 @@ export class VoiceManager {
         const sources = citations.map(c => `[${c.n}] ${c.title}, ${c.label}`).join('; ');
         return sources ? `${answer}\nSources: ${sources}` : answer;
       }
+      case 'list_tabs':
+        return listTabs(this.windowId);
+      case 'read_page':
+        return readPage(
+          this.windowId,
+          typeof args.tab_id === 'number' ? args.tab_id : undefined,
+          tabId => this.threads.holderOf(tabId) !== null,
+        );
+      case 'open_tab':
+        return openTab(String(args.target ?? ''), this.windowId);
+      case 'switch_tab':
+        return typeof args.tab_id === 'number' ? switchTab(args.tab_id) : 'No tab id was given.';
       case 'get_status':
         return this.describeStatus();
       case 'stop_tasks':

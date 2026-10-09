@@ -51,6 +51,11 @@ export default class BrowserContext {
       this._binding.add(tabId);
       return;
     }
+    // A free tab the user has open may be taken over; one another thread is using may not
+    if (this._binding.canAdopt?.(tabId)) {
+      this._binding.add(tabId);
+      return;
+    }
     throw new TabNotBoundError(tabId);
   }
 
@@ -352,9 +357,10 @@ export default class BrowserContext {
     const tabInfos: TabInfo[] = [];
 
     for (const tab of tabs) {
-      // The model only hears of the tabs it may use
+      // The model only hears of the tabs it may use: its own, and free web pages it may take over
       if (this._binding && tab.id && !this._binding.has(tab.id)) {
-        continue;
+        const free = this._binding.canAdopt?.(tab.id) && /^https?:/.test(tab.url ?? '');
+        if (!free) continue;
       }
       if (tab.id && tab.url && tab.title) {
         tabInfos.push({
