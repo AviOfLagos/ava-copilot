@@ -2129,5 +2129,17 @@
         "example": "4"
       }
     }
+  },
+  "settings_calendar_found": {
+    "message": "Found the calendar $CALENDAR$. Use it for reminders only if it is yours.",
+    "placeholders": {
+      "calendar": {
+        "content": "$1",
+        "example": "avi@example.com"
+      }
+    }
+  },
+  "settings_calendar_use": {
+    "message": "Use this calendar"
   }
 }
