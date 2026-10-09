@@ -106,9 +106,10 @@ async function allowedByFirewall(url: string): Promise<boolean> {
  * query, fragment and credentials are dropped, the path is kept only on a site already open in a
  * tab, and a hostname with many or long labels becomes a search instead.
  *
- * @param knownHosts - Hosts of the tabs that are open, whose paths can be trusted
+ * @param openPages - Pages already open (origin and path); only these keep their path, since
+ *   reopening one carries nothing new, while any other path could carry data even on a known site
  */
-export function addressFor(target: string, knownHosts: Set<string> = new Set()): string {
+export function addressFor(target: string, openPages: Set<string> = new Set()): string {
   const text = target.trim();
   const candidate = /^https?:\/\//i.test(text)
     ? text
@@ -124,7 +125,7 @@ export function addressFor(target: string, knownHosts: Set<string> = new Set()):
     url.hash = '';
     url.username = '';
     url.password = '';
-    if (!knownHosts.has(hostOf(url.toString()))) url.pathname = '/';
+    if (!openPages.has(`${url.origin}${url.pathname}`)) url.pathname = '/';
     return url.toString();
   } catch {
     return searchFor(text);
@@ -175,7 +176,17 @@ export function spokenSite(host: string, spoken: string): boolean {
 export async function openTab(target: string, windowId?: number, spoken = ''): Promise<string> {
   const open = await chrome.tabs.query({});
   const knownHosts = new Set(open.map(tab => hostOf(tab.url)).filter(Boolean));
-  const url = addressFor(target, knownHosts);
+  const openPages = new Set(
+    open.flatMap(tab => {
+      try {
+        const page = new URL(tab.url ?? '');
+        return [`${page.origin}${page.pathname}`];
+      } catch {
+        return [];
+      }
+    }),
+  );
+  const url = addressFor(target, openPages);
   const host = hostOf(url);
   const isSearch = host === 'google.com' && new URL(url).pathname === '/search';
   if (!isSearch && !knownHosts.has(host) && !spokenSite(host, spoken)) {
