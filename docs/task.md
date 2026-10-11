@@ -326,6 +326,15 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   the node in focus with its links grouped by kind, a trail, search and "most connected". Agent action `look_up_graph`
   (scoped to the task's workspace). Screens: `node e2e/manual/graph.mjs <dir>`.
 
+- **Obsidian (built 2026-10-11)**: `src/side-panel/vault` (Settings › Obsidian). The user picks the vault folder (File
+  System Access; the handle is kept in IndexedDB `avi-vault`; Brave may ask again after a restart). Sync runs in the
+  panel on opening and every 10 minutes: the knowledge base and graph are written into `Avi Copilot/<workspace>/`
+  (Chats, Meetings, Pages, Notes, People, Projects, Organizations) as notes with full-path `[[links]]` and a
+  `source: avi-copilot` line; only changed files are written, a file without that line is never overwritten or removed.
+  The user's own notes outside that folder join the knowledge base as `note` items with source id `vault:<path>` (top
+  folder or a `workspace:` line picks the workspace), refreshed when changed and removed when deleted, with no graph
+  model call each. Background accepts them only from extension pages (`kb_vault_import`, `kb_vault_remove`).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

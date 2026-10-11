@@ -2591,5 +2591,54 @@
         "example": "40"
       }
     }
+  },
+  "settings_obsidian": {
+    "message": "Obsidian"
+  },
+  "vault_connect_title": {
+    "message": "連接你的 Obsidian 保管庫"
+  },
+  "vault_connect_hint": {
+    "message": "你的記憶會寫入其中的「Avi Copilot」資料夾並建立 Obsidian 連結，你自己的筆記也會加入知識庫。資料不會離開這台電腦。"
+  },
+  "vault_connect": {
+    "message": "選擇保管庫"
+  },
+  "vault_on": {
+    "message": "面板開啟時每 10 分鐘同步一次。"
+  },
+  "vault_needsAccess": {
+    "message": "Brave 需要你再次允許使用此資料夾。"
+  },
+  "vault_allow": {
+    "message": "允許存取"
+  },
+  "vault_syncNow": {
+    "message": "立即同步"
+  },
+  "vault_syncing": {
+    "message": "同步中…"
+  },
+  "vault_readNotes": {
+    "message": "將我的筆記讀入記憶"
+  },
+  "vault_readNotes_hint": {
+    "message": "Avi Copilot 資料夾以外的筆記。最上層資料夾或「workspace:」行決定其工作區。"
+  },
+  "vault_disconnect": {
+    "message": "中斷連接保管庫"
+  },
+  "vault_synced": {
+    "message": "寫入 $WRITTEN$ 則筆記，讀取你的 $READ$ 則。",
+    "placeholders": {
+      "written": {
+        "content": "$1",
+        "example": "12"
+      },
+      "read": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
   }
 }

@@ -28,6 +28,7 @@ import type { Crumb } from './layout/Breadcrumbs';
 import HelpView from './help/HelpView';
 import MeetingsList from './meetings/MeetingsList';
 import WorkspacePicker from './workspaces/WorkspacePicker';
+import { syncVault } from './vault/vault';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
@@ -420,6 +421,14 @@ const SidePanel = () => {
     post({ type: 'thread_delete', threadId: id });
     if (id === threadId) setThreadId(null);
   };
+
+  // The Obsidian vault, when one is connected: synced on opening and every 10 minutes while open
+  useEffect(() => {
+    const sync = () => void syncVault().catch(error => console.warn('Vault sync failed', error));
+    sync();
+    const timer = window.setInterval(sync, 10 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Good news fades on its own
   useEffect(() => {

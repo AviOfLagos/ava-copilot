@@ -272,6 +272,38 @@ export class KnowledgeBase {
     return item!;
   }
 
+  /** Keeps or refreshes the user's own notes from their Obsidian vault, by path. */
+  async saveVaultNotes(
+    notes: { path: string; title: string; text: string; workspaceId: string | null; modified: number }[],
+  ): Promise<number> {
+    let saved = 0;
+    for (const note of notes) {
+      const sourceId = `vault:${note.path}`;
+      await this.serial(() =>
+        this.write(
+          {
+            sourceType: 'note',
+            sourceId,
+            title: note.title,
+            url: '',
+            sourceDate: note.modified,
+            sourceUpdatedAt: note.modified,
+            workspaceId: note.workspaceId,
+          },
+          chunkNote(kbItemId('note', sourceId), note.text),
+        ),
+      );
+      saved++;
+    }
+    void this.embedPending();
+    return saved;
+  }
+
+  /** Lets go of vault notes the user deleted or moved. */
+  async removeVaultNotes(paths: string[]): Promise<void> {
+    for (const path of paths) await this.remove(kbItemId('note', `vault:${path}`));
+  }
+
   remove(itemId: string): Promise<void> {
     return this.serial(async () => {
       await this.deps.store.remove(itemId);

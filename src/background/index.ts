@@ -75,6 +75,32 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   }
 });
 
+// The user's Obsidian notes, read by an extension page that holds the vault folder
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
+  if (message?.type === 'kb_vault_import' && Array.isArray(message.notes)) {
+    const notes = message.notes
+      .slice(0, 50)
+      .filter((note: Record<string, unknown>) => typeof note?.path === 'string' && typeof note?.text === 'string')
+      .map((note: Record<string, unknown>) => ({
+        path: String(note.path).slice(0, 500),
+        title: String(note.title ?? '').slice(0, 200),
+        text: String(note.text).slice(0, 300_000),
+        workspaceId: typeof note.workspaceId === 'string' ? note.workspaceId : null,
+        modified: Number(note.modified) || Date.now(),
+      }));
+    void kb.saveVaultNotes(notes).then(sendResponse, () => sendResponse(0));
+    return true;
+  }
+  if (message?.type === 'kb_vault_remove' && Array.isArray(message.paths)) {
+    void kb
+      .removeVaultNotes(message.paths.filter((path: unknown) => typeof path === 'string'))
+      .then(() => sendResponse(true));
+    return true;
+  }
+  return;
+});
+
 // Messages from the voice session in the offscreen document; a tool call is answered
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || typeof message?.type !== 'string' || !message.type.startsWith('voice_')) {

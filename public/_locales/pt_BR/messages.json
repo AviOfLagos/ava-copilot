@@ -2591,5 +2591,54 @@
         "example": "40"
       }
     }
+  },
+  "settings_obsidian": {
+    "message": "Obsidian"
+  },
+  "vault_connect_title": {
+    "message": "Conectar seu cofre do Obsidian"
+  },
+  "vault_connect_hint": {
+    "message": "Sua memória é escrita numa pasta “Avi Copilot” dentro dele, com links para o grafo do Obsidian, e suas notas entram na base. Nada sai deste computador."
+  },
+  "vault_connect": {
+    "message": "Escolher cofre"
+  },
+  "vault_on": {
+    "message": "Sincroniza com o painel aberto, a cada 10 minutos."
+  },
+  "vault_needsAccess": {
+    "message": "O Brave precisa do seu OK para usar esta pasta de novo."
+  },
+  "vault_allow": {
+    "message": "Permitir acesso"
+  },
+  "vault_syncNow": {
+    "message": "Sincronizar"
+  },
+  "vault_syncing": {
+    "message": "Sincronizando…"
+  },
+  "vault_readNotes": {
+    "message": "Ler minhas notas para a memória"
+  },
+  "vault_readNotes_hint": {
+    "message": "Notas fora da pasta Avi Copilot. A pasta principal ou uma linha “workspace:” define o espaço."
+  },
+  "vault_disconnect": {
+    "message": "Desconectar cofre"
+  },
+  "vault_synced": {
+    "message": "Escreveu $WRITTEN$ notas, leu $READ$ suas.",
+    "placeholders": {
+      "written": {
+        "content": "$1",
+        "example": "12"
+      },
+      "read": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
   }
 }

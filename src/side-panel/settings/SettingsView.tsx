@@ -20,6 +20,7 @@ import {
 import type { CommitKind, SkillRecord } from '@extension/storage';
 import { Button } from '../components/ui/button';
 import WorkspacesSettings from '../workspaces/WorkspacesSettings';
+import VaultSettings from '../vault/VaultSettings';
 import { Switch } from '../components/ui/switch';
 import { saveTheme, useTheme } from '../layout/theme';
 import type { ThemeChoice } from '../layout/theme';
@@ -381,6 +382,10 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
           <WorkspacesSettings />
         </Section>
         <p className="text-muted-foreground -mt-3 px-1 text-[11.5px]">{t('settings_workspaces_hint')}</p>
+
+        <Section label={t('settings_obsidian')}>
+          <VaultSettings />
+        </Section>
 
         <Section label={t('settings_voice')}>
           <Row title={t('settings_wake')} hint={wakeError || t('settings_wake_hint')}>

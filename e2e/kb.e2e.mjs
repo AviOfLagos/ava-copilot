@@ -344,3 +344,70 @@ test('a saved page joins the knowledge graph, and the graph shows what it is lin
   mock.kb.graphReading = { people: [], organizations: [], projects: [], decisions: [], actions: [] };
   await session.close();
 });
+
+test('an Obsidian vault gets the memory as linked notes, and its own notes join the knowledge base', async () => {
+  const session = await openSession(extension, mock);
+  // The browser's private folder stands in for the vault: the same kind of folder handle, already allowed
+  await session.panel.evaluate(async () => {
+    const root = await navigator.storage.getDirectory();
+    const vault = await root.getDirectoryHandle('vault', { create: true });
+    const write = async (path, text) => {
+      const parts = path.split('/');
+      let folder = vault;
+      for (const part of parts.slice(0, -1)) folder = await folder.getDirectoryHandle(part, { create: true });
+      const writable = await (await folder.getFileHandle(parts.at(-1), { create: true })).createWritable();
+      await writable.write(text);
+      await writable.close();
+    };
+    await write('Nexprove/Pitch notes.md', 'Investor pitch on Monday with Acme Ventures.');
+    // A file of the user's own where the copilot would write: it must stay as it is
+    await write('Avi Copilot/No workspace/Pages/Gate fixture.md', 'My own words');
+    await new Promise((resolve, reject) => {
+      const open = indexedDB.open('avi-vault', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('kv');
+      open.onsuccess = () => {
+        const put = open.result.transaction('kv', 'readwrite').objectStore('kv').put(vault, 'handle');
+        put.onsuccess = resolve;
+        put.onerror = () => reject(put.error);
+      };
+    });
+  });
+
+  await session.click('Menu');
+  await session.click('Settings');
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Sync now'), { polling: 300 });
+  await session.click('Sync now');
+  await session.panel.waitForFunction(() => /Wrote \d+ notes, read 1 of yours/.test(document.body.innerText), {
+    polling: 300,
+    timeout: 20000,
+  });
+
+  const imported = await waitForItem(session.panel, entry => entry.sourceId === 'vault:Nexprove/Pitch notes.md');
+  assert.equal(imported.workspaceId, 'nexprove');
+  const files = await session.panel.evaluate(async () => {
+    const vault = await (await navigator.storage.getDirectory()).getDirectoryHandle('vault');
+    const found = {};
+    const walk = async (folder, prefix) => {
+      for await (const [name, entry] of folder.entries()) {
+        const path = prefix ? `${prefix}/${name}` : name;
+        if (entry.kind === 'directory') await walk(entry, path);
+        else found[path] = await (await entry.getFile()).text();
+      }
+    };
+    await walk(vault, '');
+    return found;
+  });
+  const ours = Object.entries(files).filter(([path]) => path.startsWith('Avi Copilot/'));
+  assert.ok(
+    ours.some(([, text]) => text.includes('source: avi-copilot')),
+    'the memory is written as notes',
+  );
+  assert.ok(
+    ours.some(([path]) => /\/People\//.test(path)),
+    'people get notes of their own',
+  );
+  assert.equal(files['Avi Copilot/No workspace/Pages/Gate fixture.md'], 'My own words');
+  // The user's own note is never written back into the copilot's folder
+  assert.ok(!ours.some(([path]) => path.includes('Pitch notes')));
+  await session.close();
+});

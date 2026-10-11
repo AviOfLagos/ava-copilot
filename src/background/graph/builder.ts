@@ -116,7 +116,9 @@ export class GraphBuilder {
       const note = (await this.deps.meetings.get(item.sourceId))?.note;
       if (note) reading = readingFromNote(note);
     }
-    if (text.trim() && !(await this.deps.overCap())) {
+    // The user's own Obsidian notes join as they are, without a model call each: a vault can be large
+    const fromVault = item.sourceId.startsWith('vault:');
+    if (text.trim() && !fromVault && !(await this.deps.overCap())) {
       try {
         const { output } = await generateStructured({
           chatModel: await this.deps.model(),

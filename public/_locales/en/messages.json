@@ -2591,5 +2591,54 @@
         "example": "40"
       }
     }
+  },
+  "settings_obsidian": {
+    "message": "Obsidian"
+  },
+  "vault_connect_title": {
+    "message": "Connect your Obsidian vault"
+  },
+  "vault_connect_hint": {
+    "message": "Your memory is written into an “Avi Copilot” folder in it, linked for Obsidian’s graph, and your own notes join the knowledge base. Nothing leaves this computer."
+  },
+  "vault_connect": {
+    "message": "Choose vault"
+  },
+  "vault_on": {
+    "message": "Syncing when the panel is open, every 10 minutes."
+  },
+  "vault_needsAccess": {
+    "message": "Brave needs your OK to use this folder again."
+  },
+  "vault_allow": {
+    "message": "Allow access"
+  },
+  "vault_syncNow": {
+    "message": "Sync now"
+  },
+  "vault_syncing": {
+    "message": "Syncing…"
+  },
+  "vault_readNotes": {
+    "message": "Read my notes into memory"
+  },
+  "vault_readNotes_hint": {
+    "message": "Notes outside the Avi Copilot folder. A note’s top folder or a “workspace:” line puts it in a workspace."
+  },
+  "vault_disconnect": {
+    "message": "Disconnect vault"
+  },
+  "vault_synced": {
+    "message": "Wrote $WRITTEN$ notes, read $READ$ of yours.",
+    "placeholders": {
+      "written": {
+        "content": "$1",
+        "example": "12"
+      },
+      "read": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
   }
 }
