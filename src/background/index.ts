@@ -298,6 +298,8 @@ chrome.runtime.onConnect.addListener(port => {
         case 'thread_workspace':
           if (threadId) {
             await threads.setWorkspace(threadId, typeof message.workspaceId === 'string' ? message.workspaceId : null);
+            // Its knowledge moves with it
+            await kb.indexThread(threadId);
           }
           return;
 
@@ -350,14 +352,15 @@ chrome.runtime.onConnect.addListener(port => {
           return;
 
         case 'kb_ask': {
-          const result = await kb.ask(String(message.question ?? ''));
+          const scope = typeof message.workspaceId === 'string' ? message.workspaceId : null;
+          const result = await kb.ask(String(message.question ?? ''), scope);
           return port.postMessage({ type: 'kb_answer', clientId: message.clientId, ...result });
         }
 
         case 'kb_save_page': {
           const [tab] = await chrome.tabs.query({ active: true, windowId: message.windowId });
           if (tab?.id === undefined) throw new Error(t('kb_pageUnreadable'));
-          const item = await kb.savePage(tab.id);
+          const item = await kb.savePage(tab.id, typeof message.workspaceId === 'string' ? message.workspaceId : null);
           return port.postMessage({ type: 'kb_saved', clientId: message.clientId, title: item.title });
         }
 

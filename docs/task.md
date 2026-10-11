@@ -305,6 +305,15 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   place of four show flags. Thread search also matches message text. Knowledge base and Settings left the header for
   the menu. Screens: `node e2e/manual/nav.mjs <dir>`.
 
+- **Workspaces (built 2026-10-11)**: `src/storage/lib/workspaces` (name, about, keywords, accounts per platform;
+  Nexprove, Tech Ember Fest and Ellum AI seeded once; `routeWorkspace` picks one only when exactly one matches;
+  `workspaceForAccount` by Google address or company domain). A new chat goes to the workspace picked on Home or named
+  in its words (`ThreadManager.placeInWorkspace`, with a note in the chat); the chip in the thread bar moves it. The agent
+  gets `[Workspace: …]` with its context and accounts every step (`background/workspaces/inject.ts`) and the built-in
+  `account-switching` skill. Knowledge items carry the workspace of their chat or meeting; a search in a workspace sees
+  its own and unassigned items only (`KbIndex.search({ workspaceId })`, agent actions, Knowledge base filter). A meeting
+  takes the workspace of the Google account shown on the Meet page, else its topic. Settings › Workspaces edits them.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

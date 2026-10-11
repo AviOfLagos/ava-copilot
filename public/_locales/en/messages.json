@@ -2468,5 +2468,8 @@
   },
   "workspace_auto": {
     "message": "Workspace: auto"
+  },
+  "workspace_all": {
+    "message": "All workspaces"
   }
 }

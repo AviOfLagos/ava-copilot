@@ -132,3 +132,27 @@ export function routeWorkspace(text: string, workspaces: Workspace[]): Workspace
   );
   return matched.length === 1 ? matched[0] : null;
 }
+
+// Addresses anyone can have: their domain says nothing about a workspace
+const PUBLIC_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'yahoo.com',
+  'icloud.com',
+]);
+
+/**
+ * The workspace a Google account belongs to: the one set to that account, else the one whose account
+ * shares its company domain.
+ */
+export function workspaceForAccount(email: string, workspaces: Workspace[]): Workspace | null {
+  const address = email.trim().toLowerCase();
+  const exact = workspaces.filter(item => item.accounts.google?.trim().toLowerCase() === address);
+  if (exact.length === 1) return exact[0];
+  const domain = domainOf(address);
+  if (!domain || PUBLIC_DOMAINS.has(domain)) return null;
+  const same = workspaces.filter(item => domainOf(item.accounts.google) === domain);
+  return same.length === 1 ? same[0] : null;
+}

@@ -25,7 +25,7 @@ Eve is not in the project yet; it is added with item 7.
    Previous 7 days / Previous 30 days / by month, each with rename, pin, archive and delete. Breadcrumbs in the header
    (Home › Chats › title, Home › Meetings › meeting). "How do I…" lists everyday tasks, where each lives, and a way
    straight there. A Meetings list.
-4. **Workspaces** — Nexprove, Tech Ember Fest, Ellum AI, and more added from settings.
+4. **Workspaces** (built 2026-10-11) — Nexprove, Tech Ember Fest, Ellum AI, and more added from settings.
    Each has its accounts per platform (Google account for Meet/Calendar, X, LinkedIn, YouTube, Instagram, Slack),
    its own knowledge, and its own call links. Every request is routed to one workspace first; knowledge never mixes
    across workspaces. The agent switches to that workspace's account on the platform before acting.

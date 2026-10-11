@@ -127,16 +127,21 @@ export class KbIndex {
   search(
     query: string,
     queryVector: number[] | null,
-    options: { limit?: number; now?: number; embedModel?: string | null } = {},
+    options: { limit?: number; now?: number; embedModel?: string | null; workspaceId?: string | null } = {},
   ): SearchHit[] {
-    const { limit = 8, now = Date.now(), embedModel = null } = options;
+    const { limit = 8, now = Date.now(), embedModel = null, workspaceId = null } = options;
+    // In a workspace: its own items and those in none, never another workspace's
+    const allowed = (chunkId: string) => {
+      const owner = this.items.get(this.chunks.get(chunkId)?.itemId ?? '')?.workspaceId;
+      return !workspaceId || !owner || owner === workspaceId;
+    };
     const scores = new Map<string, number>();
     const add = (ids: string[]) =>
       ids.forEach((id, rank) => scores.set(id, (scores.get(id) ?? 0) + 1 / (RRF_K + rank + 1)));
 
     if (queryVector) {
       const ranked = [...this.chunks.values()]
-        .filter(chunk => chunk.vector && (!embedModel || chunk.embedModel === embedModel))
+        .filter(chunk => chunk.vector && (!embedModel || chunk.embedModel === embedModel) && allowed(chunk.id))
         .map(chunk => ({ id: chunk.id, similarity: similarity(queryVector, chunk.vector!) }))
         .filter(hit => hit.similarity >= MIN_SIMILARITY)
         .sort((a, b) => b.similarity - a.similarity)
@@ -146,7 +151,7 @@ export class KbIndex {
     if (query.trim()) {
       add(
         this.keywords
-          .search(query)
+          .search(query, { filter: result => allowed(String(result.id)) })
           .slice(0, CANDIDATES)
           .map(result => String(result.id)),
       );

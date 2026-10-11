@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { routeWorkspace, workspaceId } from '../workspaces';
+import { routeWorkspace, workspaceForAccount, workspaceId } from '../workspaces';
 import type { Workspace } from '../workspaces';
 
 const ws = (id: string, name: string, keywords: string[], google?: string): Workspace => ({
@@ -37,5 +37,21 @@ describe('workspaceId', () => {
   it('makes a short unique id from a name', () => {
     expect(workspaceId('Tech Ember Fest!')).toBe('tech-ember-fest');
     expect(workspaceId('Nexprove', ['nexprove'])).toBe('nexprove-2');
+  });
+});
+
+describe('workspaceForAccount', () => {
+  it('finds the workspace of a Google account, by address or company domain', () => {
+    const list = [
+      ws('nexprove', 'Nexprove', [], 'avi@nexprove.com'),
+      ws('personal', 'Personal', [], 'avi@gmail.com'),
+      ws('tef', 'Tech Ember Fest', []),
+    ];
+    expect(workspaceForAccount('AVI@nexprove.com', list)?.id).toBe('nexprove');
+    expect(workspaceForAccount('sam@nexprove.com', list)?.id).toBe('nexprove');
+    expect(workspaceForAccount('avi@gmail.com', list)?.id).toBe('personal');
+    // A public domain says nothing
+    expect(workspaceForAccount('someone@gmail.com', list)).toBeNull();
+    expect(workspaceForAccount('x@unknown.org', list)).toBeNull();
   });
 });

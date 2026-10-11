@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { BookmarkPlus, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
+import WorkspacePicker from '../workspaces/WorkspacePicker';
 import { kbStore } from '@extension/storage';
 import type { KbAnswer, KbCitation, KnowledgeItem, KnowledgeSourceType } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
@@ -12,8 +13,8 @@ import { Button } from '../components/ui/button';
 
 interface KnowledgeViewProps {
   // Resolves with the answer, or rejects with a message to show
-  onAsk: (question: string) => Promise<KbAnswer>;
-  onSavePage: () => Promise<string>;
+  onAsk: (question: string, workspaceId: string | null) => Promise<KbAnswer>;
+  onSavePage: (workspaceId: string | null) => Promise<string>;
   onDelete: (itemId: string) => void;
   onOpenCitation: (citation: KbCitation) => void;
   isDarkMode?: boolean;
@@ -74,7 +75,10 @@ function itemCitation(item: KnowledgeItem): KbCitation {
  * into the answer, with the sources it cites underneath.
  */
 export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitation }: KnowledgeViewProps) {
-  const items = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
+  const allItems = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
+  // One workspace's knowledge, with what belongs to none; all of it when none is picked
+  const [workspace, setWorkspace] = useState<string | null>(null);
+  const items = workspace ? allItems.filter(item => !item.workspaceId || item.workspaceId === workspace) : allItems;
   const [tab, setTab] = useState<'ask' | 'items'>('ask');
   const [phase, setPhase] = useState<MorphOrbPhase>('idle');
   const [citations, setCitations] = useState<KbCitation[]>([]);
@@ -86,7 +90,7 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
     const mine = ++askedRef.current;
     setCitations([]);
     try {
-      const result = await onAsk(question);
+      const result = await onAsk(question, workspace);
       if (mine === askedRef.current) setCitations(result.citations);
       return result.answer;
     } catch (error) {
@@ -98,7 +102,7 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
     setSaving(true);
     setNotice(null);
     try {
-      setNotice({ text: t('kb_saved', [await onSavePage()]), error: false });
+      setNotice({ text: t('kb_saved', [await onSavePage(workspace)]), error: false });
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : String(error), error: true });
     } finally {
@@ -127,6 +131,12 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
           {tabButton('ask', t('kb_tab_ask'))}
           {tabButton('items', t('kb_items', [String(items.length)]))}
         </div>
+        <WorkspacePicker
+          value={workspace}
+          onChange={setWorkspace}
+          emptyLabel={t('workspace_all')}
+          className="min-w-0 max-w-[34%]"
+        />
         <Button variant="glass" size="sm" onClick={() => void save()} disabled={saving}>
           <BookmarkPlus className="size-3.5" />
           {saving ? t('kb_saving') : t('kb_savePage')}

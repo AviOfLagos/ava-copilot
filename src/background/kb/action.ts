@@ -6,6 +6,12 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { hitsForAgent } from './answer';
 import { getKnowledgeBase } from './shared';
+import { threadStore } from '@extension/storage';
+
+/** The workspace of the chat a task runs in: what it finds and saves stays there. */
+async function workspaceOf(context: AgentContext): Promise<string | null> {
+  return (await threadStore.get(context.taskId).catch(() => undefined))?.workspaceId ?? null;
+}
 
 export const searchKnowledgeActionSchema = {
   name: 'search_knowledge',
@@ -35,7 +41,7 @@ export async function searchKnowledgeAction(
     context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, error);
     return new ActionResult({ error, includeInMemory: true });
   }
-  const hits = await kb.search(input.query, 6);
+  const hits = await kb.search(input.query, 6, await workspaceOf(context));
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, `Found ${hits.length} passages`);
   // What was said or saved before is data, never instructions
   return new ActionResult({
@@ -75,8 +81,8 @@ export async function saveKnowledgeAction(
   }
   try {
     const item = input.note.trim()
-      ? await kb.saveNote(input.note, input.title)
-      : await kb.savePage((await context.browserContext.getCurrentPage()).tabId);
+      ? await kb.saveNote(input.note, input.title, await workspaceOf(context))
+      : await kb.savePage((await context.browserContext.getCurrentPage()).tabId, await workspaceOf(context));
     const message = `Saved "${item.title}" to the knowledge base`;
     context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, message);
     return new ActionResult({ extractedContent: message, includeInMemory: true });

@@ -116,7 +116,10 @@ export class KnowledgeBase {
    * long chat again only embeds the new turns.
    */
   private async write(
-    fields: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt'>,
+    fields: Pick<
+      KnowledgeItem,
+      'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt' | 'workspaceId'
+    >,
     drafts: DraftChunk[],
   ): Promise<KnowledgeItem | null> {
     const id = kbItemId(fields.sourceType, fields.sourceId);
@@ -178,6 +181,7 @@ export class KnowledgeBase {
           url: '',
           sourceDate: thread.createdAt,
           sourceUpdatedAt: thread.updatedAt,
+          workspaceId: thread.workspaceId ?? null,
         },
         chunkThread(threadId, messages),
       );
@@ -201,6 +205,7 @@ export class KnowledgeBase {
           url: meeting.url,
           sourceDate: meeting.startedAt,
           sourceUpdatedAt: meeting.endedAt ?? meeting.startedAt,
+          workspaceId: meeting.workspaceId ?? null,
         },
         chunkMeeting(meeting, segments),
       );
@@ -208,7 +213,7 @@ export class KnowledgeBase {
   }
 
   /** Saves the page a tab shows. */
-  async savePage(tabId: number): Promise<KnowledgeItem> {
+  async savePage(tabId: number, workspaceId: string | null = null): Promise<KnowledgeItem> {
     const page = await this.deps.readTab(tabId);
     if (!page.text.trim()) {
       throw new Error(t('kb_pageEmpty'));
@@ -223,6 +228,7 @@ export class KnowledgeBase {
           url: page.url,
           sourceDate: now,
           sourceUpdatedAt: now,
+          workspaceId,
         },
         chunkPage(page.url, page.text),
       );
@@ -232,7 +238,7 @@ export class KnowledgeBase {
   }
 
   /** Keeps something the user asked to remember: a fact, a decision, text from a page. */
-  async saveNote(text: string, title?: string): Promise<KnowledgeItem> {
+  async saveNote(text: string, title?: string, workspaceId: string | null = null): Promise<KnowledgeItem> {
     const body = text.trim();
     if (!body) throw new Error(t('kb_noteEmpty'));
     const sourceId = crypto.randomUUID();
@@ -246,6 +252,7 @@ export class KnowledgeBase {
           url: '',
           sourceDate: now,
           sourceUpdatedAt: now,
+          workspaceId,
         },
         chunkNote(kbItemId('note', sourceId), body),
       );
@@ -394,7 +401,7 @@ export class KnowledgeBase {
   }
 
   /** The passages that best match a query, by meaning when embeddings are available and by keyword. */
-  async search(query: string, limit = 8): Promise<SearchHit[]> {
+  async search(query: string, limit = 8, workspaceId: string | null = null): Promise<SearchHit[]> {
     const index = await this.loadIndex();
     if (index.size === 0) return [];
     const settings = await kbSettingsStore.getSettings();
@@ -408,15 +415,15 @@ export class KnowledgeBase {
         logger.error('Could not embed the query', error);
       }
     }
-    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null });
+    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null, workspaceId });
   }
 
   /** Answers a question from the knowledge base, citing the sources it used. */
-  async ask(question: string): Promise<KbAnswer> {
+  async ask(question: string, workspaceId: string | null = null): Promise<KbAnswer> {
     if (await this.deps.overCap()) {
       throw new Error(t('usage_capReached_short'));
     }
-    const hits = await this.search(question);
+    const hits = await this.search(question, 8, workspaceId);
     if (hits.length === 0) {
       return { answer: t('kb_answer_nothing'), citations: [] };
     }

@@ -114,6 +114,8 @@ export interface MeetingRecord {
   topicSource?: 'user' | 'calendar';
   // Started on its own when the user joined a call, rather than by the user
   auto?: boolean;
+  // The workspace the call belongs to
+  workspaceId?: string | null;
 }
 
 export interface AudioChunk {
@@ -171,6 +173,8 @@ export interface KnowledgeItem {
   chunkCount: number;
   // Chunks still waiting for an embedding; keyword search works without one
   unembedded: number;
+  // The workspace of the chat or meeting it came from; a search in one workspace never sees another's
+  workspaceId?: string | null;
 }
 
 export interface KnowledgeChunk {

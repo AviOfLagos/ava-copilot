@@ -121,4 +121,23 @@ describe('KbIndex', () => {
     const index = new KbIndex([item('a')], [chunk('a', 0, 'kept'), chunk('gone', 0, 'kept too')]);
     expect(index.size).toBe(1);
   });
+
+  it("keeps a search in one workspace away from another workspace's knowledge", () => {
+    const index = new KbIndex(
+      [item('tef', { workspaceId: 'tef' }), item('nex', { workspaceId: 'nexprove' }), item('none')],
+      [
+        chunk('tef', 0, 'sponsor deadline is Friday', [1, 0]),
+        chunk('nex', 0, 'sponsor deadline is Monday', [1, 0]),
+        chunk('none', 0, 'sponsor deadline general note', [1, 0]),
+      ],
+    );
+    const ids = (workspaceId: string | null) =>
+      index
+        .search('sponsor deadline', [1, 0], { workspaceId })
+        .map(hit => hit.item.id)
+        .sort();
+    expect(ids('tef')).toEqual(['none', 'tef']);
+    expect(ids('nexprove')).toEqual(['nex', 'none']);
+    expect(ids(null)).toEqual(['nex', 'none', 'tef']);
+  });
 });

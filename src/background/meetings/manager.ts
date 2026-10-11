@@ -9,6 +9,9 @@ import {
   speechToTextModelStore,
   threadStore,
   usageStore,
+  routeWorkspace,
+  workspaceForAccount,
+  workspaceStore,
 } from '@extension/storage';
 import type {
   AudioChunk,
@@ -97,6 +100,7 @@ export class MeetingManager {
     await this.meetings.update(meetingId, { topic: clean, topicSource: source, title: clean.slice(0, 80) });
     if (meeting.threadId)
       await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${clean.slice(0, 80)}`);
+    await this.placeInWorkspace(meetingId).catch(error => logger.warning('Could not place the meeting', error));
   }
 
   async start(request: { tabId?: number; windowId?: number; withMic?: boolean; auto?: boolean }): Promise<string> {
@@ -164,7 +168,30 @@ export class MeetingManager {
     }
 
     await this.setBadge(tab.id, true);
+    void this.placeInWorkspace(meeting.id).catch(error => logger.warning('Could not place the meeting', error));
     return meeting.id;
+  }
+
+  /**
+   * Puts a meeting, and its notes chat, in a workspace the first time it has none: the one whose Google
+   * account the user is in the call as, else the one its topic names.
+   */
+  async placeInWorkspace(meetingId: string): Promise<void> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.workspaceId) return;
+    const workspaces = await workspaceStore.list();
+    let workspace = null;
+    if (meeting.tabId !== null && meeting.platform === 'Google Meet') {
+      const [found] = await chrome.scripting
+        .executeScript({ target: { tabId: meeting.tabId }, func: meetAccountEmail })
+        .catch(() => []);
+      const email = found?.result as string | null | undefined;
+      if (email) workspace = workspaceForAccount(email, workspaces);
+    }
+    workspace ??= routeWorkspace(`${meeting.topic ?? ''} ${meeting.title}`, workspaces);
+    if (!workspace) return;
+    await this.meetings.update(meetingId, { workspaceId: workspace.id });
+    if (meeting.threadId) await this.threads.update(meeting.threadId, { workspaceId: workspace.id });
   }
 
   /**
@@ -682,3 +709,14 @@ function emptyNote(title: string): MeetingNote {
     participants: [],
   };
 }
+
+/** Runs in a Google Meet page: the signed-in account's address, from Google's account button. */
+export const meetAccountEmail = (): string | null => {
+  for (const element of Array.from(document.querySelectorAll('[aria-label]'))) {
+    const label = element.getAttribute('aria-label') || '';
+    if (!/google account/i.test(label)) continue;
+    const email = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.exec(label);
+    if (email) return email[0].toLowerCase();
+  }
+  return null;
+};
