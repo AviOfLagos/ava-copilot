@@ -30,3 +30,7 @@
 .wxt/
 .output/
 public/wake/
+
+# Packed extension and its signing key (from "Pack extension"); never committed
+*.crx
+*.pem
