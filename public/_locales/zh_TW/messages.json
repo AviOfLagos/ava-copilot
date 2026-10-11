@@ -2408,5 +2408,65 @@
   },
   "nav_popOut": {
     "message": "彈出"
+  },
+  "workspace_placed": {
+    "message": "在 $NAME$ 中工作。可從上方的標籤變更。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_moved": {
+    "message": "已移至 $NAME$。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_none": {
+    "message": "目前不在任何工作區。"
+  },
+  "workspace_label": {
+    "message": "工作區"
+  },
+  "workspace_noneOption": {
+    "message": "無工作區"
+  },
+  "settings_workspaces": {
+    "message": "工作區"
+  },
+  "settings_workspaces_hint": {
+    "message": "每個工作區各自保存對話、會議與知識，代理會以其帳號行事。"
+  },
+  "workspace_add": {
+    "message": "新增工作區"
+  },
+  "workspace_name": {
+    "message": "名稱"
+  },
+  "workspace_about": {
+    "message": "它是什麼，以及助理應該知道的事"
+  },
+  "workspace_keywords": {
+    "message": "代表此工作區的字詞，以逗號分隔"
+  },
+  "workspace_accounts": {
+    "message": "要使用的帳號"
+  },
+  "workspace_save": {
+    "message": "儲存"
+  },
+  "workspace_delete": {
+    "message": "刪除工作區"
+  },
+  "workspace_cancel": {
+    "message": "取消"
+  },
+  "workspace_auto": {
+    "message": "工作區：自動"
   }
 }

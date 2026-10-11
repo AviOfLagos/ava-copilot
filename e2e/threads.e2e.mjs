@@ -30,6 +30,7 @@ const scenarios = {
   'close-my-tab': [writeMessage('Draft for later'), clickSend, done],
   'survive-restart': [writeMessage('Still here'), clickSend, clickSend, done],
   'first-task': [typeName('Grace'), done],
+  'ws-task': [done],
   'second-task': [done],
   branchable: [typeName('Linus'), done],
 };
@@ -218,5 +219,25 @@ test('a thread pops out into its own window', async () => {
   const popout = await target.page();
   await popout.waitForFunction(() => document.body.innerText.includes('E2E scenario finished'), { polling: 300 });
   await popout.close();
+  await session.close();
+});
+
+test('a chat that names a workspace works in it, and the agent is told its context', async () => {
+  mock.start('ws-task');
+  const session = await openSession(extension, mock);
+  await session.send('Run the scripted scenario ws-task. It is for Tech Ember Fest.');
+  await session.waitForEnd();
+
+  const thread = (await readThreads(session.panel)).find(t => t.title.includes('ws-task'));
+  assert.equal(thread.workspaceId, 'tech-ember-fest');
+  assert.match(await session.panelText(), /Working in Tech Ember Fest/);
+  assert.ok(
+    mock.run.requests.some(text => text.includes('[Workspace: Tech Ember Fest]')),
+    'the agent sees the workspace',
+  );
+
+  // The chip moves it; the agent then sees no workspace
+  await session.panel.select('select:has(option[value="tech-ember-fest"])', '');
+  await waitForThread(session.panel, 'ws-task', t => !t.workspaceId);
   await session.close();
 });

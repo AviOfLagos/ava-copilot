@@ -27,6 +27,7 @@ import type { Place } from './layout/Sidebar';
 import type { Crumb } from './layout/Breadcrumbs';
 import HelpView from './help/HelpView';
 import MeetingsList from './meetings/MeetingsList';
+import WorkspacePicker from './workspaces/WorkspacePicker';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
@@ -68,6 +69,8 @@ const SidePanel = () => {
   // Where the user is, and whether the menu (places and chat history) is open
   const [place, setPlace] = useState<Place>('chat');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The workspace for the next new chat, picked on Home; none lets the chat's words choose
+  const [nextWorkspace, setNextWorkspace] = useState<string | null>(null);
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
   // The voice screen was put away while the conversation goes on
@@ -282,7 +285,15 @@ const SidePanel = () => {
       setSending(true);
     }
     try {
-      post({ type: 'thread_send', clientId, threadId, text: trimmed, windowId: await currentWindowId() });
+      post({
+        type: 'thread_send',
+        clientId,
+        threadId,
+        text: trimmed,
+        windowId: await currentWindowId(),
+        // A new chat goes to the workspace picked on Home; otherwise its words choose one
+        workspaceId: threadId ? null : nextWorkspace,
+      });
     } catch (error) {
       pendingSendsRef.current.delete(clientId);
       setSending(false);
@@ -695,6 +706,7 @@ const SidePanel = () => {
               post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
             }
             onOpenMeeting={thread.meetingId ? () => openMeeting(thread.meetingId!) : undefined}
+            onWorkspace={workspaceId => post({ type: 'thread_workspace', threadId: thread.id, workspaceId })}
             isDarkMode={isDarkMode}
           />
           <ChatView
@@ -749,6 +761,14 @@ const SidePanel = () => {
                 />
               )}
             </HomeView>
+          </div>
+          <div className="flex shrink-0 justify-center px-2.5">
+            <WorkspacePicker
+              value={nextWorkspace}
+              onChange={setNextWorkspace}
+              emptyLabel={t('workspace_auto')}
+              className="max-w-[60%]"
+            />
           </div>
           {composer}
         </>

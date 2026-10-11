@@ -1,5 +1,5 @@
 import { t } from '@extension/i18n';
-import { generalSettingsStore, threadStore } from '@extension/storage';
+import { generalSettingsStore, routeWorkspace, threadStore, workspaceStore } from '@extension/storage';
 import type { ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
 import type BrowserContext from '../browser/context';
 import type { Executor } from '../agent/executor';
@@ -94,7 +94,12 @@ export class ThreadManager {
    * @param windowId - The window the user sent from; its tabs are bound when the thread has none
    * @returns The id of the thread
    */
-  async send(request: { threadId?: string | null; text: string; windowId?: number }): Promise<string> {
+  async send(request: {
+    threadId?: string | null;
+    text: string;
+    windowId?: number;
+    workspaceId?: string | null;
+  }): Promise<string> {
     const text = request.text.trim();
     if (!text) {
       throw new Error(t('bg_cmd_newTask_noTask'));
@@ -107,8 +112,35 @@ export class ThreadManager {
     const binding = await this.bindingFor(thread, request.windowId);
 
     await this.store.addMessage(thread.id, 'user', text);
+    await this.placeInWorkspace(thread, text, request.workspaceId);
     await this.start(thread.id, text, binding, false);
     return thread.id;
+  }
+
+  /**
+   * Puts a chat in a workspace the first time it has none: the one the user picked, else the one its
+   * words name. Says so in the chat, so a wrong guess is seen and changed.
+   */
+  private async placeInWorkspace(thread: ThreadRecord, text: string, picked?: string | null): Promise<void> {
+    if (thread.workspaceId) return;
+    // A chat with no workspace still runs: placing it never fails a send
+    const workspaces = await workspaceStore.list().catch(() => []);
+    const workspace = picked ? workspaces.find(item => item.id === picked) : routeWorkspace(text, workspaces);
+    if (!workspace) return;
+    await this.store.update(thread.id, { workspaceId: workspace.id });
+    await this.store.addMessage(thread.id, 'system', t('workspace_placed', [workspace.name]));
+  }
+
+  /** Moves a chat to another workspace, or out of any. */
+  async setWorkspace(threadId: string, workspaceId: string | null): Promise<void> {
+    const workspace = await workspaceStore.get(workspaceId);
+    if (workspaceId && !workspace) return;
+    await this.store.update(threadId, { workspaceId: workspace?.id ?? null });
+    await this.store.addMessage(
+      threadId,
+      'system',
+      workspace ? t('workspace_moved', [workspace.name]) : t('workspace_none'),
+    );
   }
 
   /**

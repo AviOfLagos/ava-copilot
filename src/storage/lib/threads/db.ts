@@ -41,6 +41,8 @@ export interface ThreadRecord {
   forkedFrom: { threadId: string; seq: number } | null;
   // The meeting this thread holds the notes of
   meetingId: string | null;
+  // The workspace it belongs to: its context and accounts guide the agent, and its knowledge stays there
+  workspaceId?: string | null;
 }
 
 export interface ThreadMessage {

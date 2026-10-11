@@ -5,6 +5,7 @@ import type { ThreadRecord } from '@extension/storage';
 import { Cpu, ExternalLink, Globe } from 'lucide-react';
 import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
+import WorkspacePicker from '../workspaces/WorkspacePicker';
 
 interface ThreadBarProps {
   thread: ThreadRecord;
@@ -13,6 +14,7 @@ interface ThreadBarProps {
   onContinue: () => void;
   // Opens the notes of the meeting this thread was made for
   onOpenMeeting?: () => void;
+  onWorkspace: (workspaceId: string | null) => void;
   isDarkMode?: boolean;
 }
 
@@ -25,6 +27,7 @@ export default function ThreadBar({
   onContinue,
   onOpenMeeting,
   onPopOut,
+  onWorkspace,
   isDarkMode = false,
 }: ThreadBarProps) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
@@ -109,23 +112,28 @@ export default function ThreadBar({
           </Button>
         )}
       </div>
-      {(onOpenMeeting || (idle && thread.boundTabIds.length > 0)) && (
-        <div className="flex items-center gap-3 px-1 text-[11px]">
-          {onOpenMeeting && (
-            <button type="button" onClick={onOpenMeeting} className="text-primary hover:underline">
-              {t('meeting_openNotes')}
-            </button>
-          )}
-          {idle && thread.boundTabIds.length > 0 && (
-            <button
-              type="button"
-              onClick={onRebind}
-              className="text-muted-foreground hover:text-foreground hover:underline">
-              {t('threads_useThisTab')}
-            </button>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-3 text-[11px]">
+        <WorkspacePicker
+          value={thread.workspaceId ?? null}
+          onChange={onWorkspace}
+          emptyLabel={t('workspace_noneOption')}
+          disabled={!idle}
+          className="max-w-[48%] shrink-0"
+        />
+        {onOpenMeeting && (
+          <button type="button" onClick={onOpenMeeting} className="text-primary hover:underline">
+            {t('meeting_openNotes')}
+          </button>
+        )}
+        {idle && thread.boundTabIds.length > 0 && (
+          <button
+            type="button"
+            onClick={onRebind}
+            className="text-muted-foreground hover:text-foreground hover:underline">
+            {t('threads_useThisTab')}
+          </button>
+        )}
+      </div>
       {thread.status === 'error' && thread.error && (
         <div
           role="status"

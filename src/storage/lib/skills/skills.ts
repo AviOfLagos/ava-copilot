@@ -3,6 +3,7 @@ import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
 import { parseSkill, skillId } from './parse';
 import type { SkillRecord, SkillSource } from './parse';
+import accountSwitching from './builtin/account-switching.md?raw';
 import chatApps from './builtin/chat-apps.md?raw';
 import gmail from './builtin/gmail.md?raw';
 import googleForms from './builtin/google-forms.md?raw';
@@ -10,6 +11,7 @@ import googleForms from './builtin/google-forms.md?raw';
 // The skills that ship with the extension: generic tips, never needed for the agent to work
 export const BUILTIN_SKILL_FILES: Record<string, string> = {
   'chat-apps.md': chatApps,
+  'account-switching.md': accountSwitching,
   'gmail.md': gmail,
   'google-forms.md': googleForms,
 };

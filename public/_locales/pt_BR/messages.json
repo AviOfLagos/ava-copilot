@@ -2408,5 +2408,65 @@
   },
   "nav_popOut": {
     "message": "Destacar"
+  },
+  "workspace_placed": {
+    "message": "Trabalhando em $NAME$. Mude pelo chip acima.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_moved": {
+    "message": "Movido para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_none": {
+    "message": "Fora de qualquer espaço de trabalho agora."
+  },
+  "workspace_label": {
+    "message": "Espaço de trabalho"
+  },
+  "workspace_noneOption": {
+    "message": "Sem espaço de trabalho"
+  },
+  "settings_workspaces": {
+    "message": "Espaços de trabalho"
+  },
+  "settings_workspaces_hint": {
+    "message": "Cada um mantém seus chats, reuniões e conhecimento separados, e o agente age com as contas dele."
+  },
+  "workspace_add": {
+    "message": "Adicionar espaço"
+  },
+  "workspace_name": {
+    "message": "Nome"
+  },
+  "workspace_about": {
+    "message": "O que é, e o que o copiloto deve saber"
+  },
+  "workspace_keywords": {
+    "message": "Palavras que indicam este espaço, separadas por vírgulas"
+  },
+  "workspace_accounts": {
+    "message": "Contas a usar"
+  },
+  "workspace_save": {
+    "message": "Salvar"
+  },
+  "workspace_delete": {
+    "message": "Excluir espaço"
+  },
+  "workspace_cancel": {
+    "message": "Cancelar"
+  },
+  "workspace_auto": {
+    "message": "Espaço: automático"
   }
 }

@@ -269,7 +269,12 @@ chrome.runtime.onConnect.addListener(port => {
           return port.postMessage({ type: 'heartbeat_ack' });
 
         case 'thread_send': {
-          const id = await threads.send({ threadId, text: String(message.text ?? ''), windowId: message.windowId });
+          const id = await threads.send({
+            threadId,
+            text: String(message.text ?? ''),
+            windowId: message.windowId,
+            workspaceId: typeof message.workspaceId === 'string' ? message.workspaceId : null,
+          });
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
 
@@ -287,6 +292,12 @@ chrome.runtime.onConnect.addListener(port => {
               ? message.replies.slice(0, 20).map((reply: unknown) => String(reply ?? '').slice(0, 2000))
               : undefined;
             await threads.answer(threadId, String(message.requestId), message.approved === true, replies);
+          }
+          return;
+
+        case 'thread_workspace':
+          if (threadId) {
+            await threads.setWorkspace(threadId, typeof message.workspaceId === 'string' ? message.workspaceId : null);
           }
           return;
 

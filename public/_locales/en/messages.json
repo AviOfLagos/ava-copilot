@@ -2408,5 +2408,65 @@
   },
   "nav_popOut": {
     "message": "Pop out"
+  },
+  "workspace_placed": {
+    "message": "Working in $NAME$. Change it from the chip above.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_moved": {
+    "message": "Moved to $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "workspace_none": {
+    "message": "Not in a workspace now."
+  },
+  "workspace_label": {
+    "message": "Workspace"
+  },
+  "workspace_noneOption": {
+    "message": "No workspace"
+  },
+  "settings_workspaces": {
+    "message": "Workspaces"
+  },
+  "settings_workspaces_hint": {
+    "message": "Each keeps its chats, meetings and knowledge apart, and the agent acts as its accounts."
+  },
+  "workspace_add": {
+    "message": "Add workspace"
+  },
+  "workspace_name": {
+    "message": "Name"
+  },
+  "workspace_about": {
+    "message": "What it is, and what the copilot should know"
+  },
+  "workspace_keywords": {
+    "message": "Words that mean this workspace, separated by commas"
+  },
+  "workspace_accounts": {
+    "message": "Accounts to act as"
+  },
+  "workspace_save": {
+    "message": "Save"
+  },
+  "workspace_delete": {
+    "message": "Delete workspace"
+  },
+  "workspace_cancel": {
+    "message": "Cancel"
+  },
+  "workspace_auto": {
+    "message": "Workspace: auto"
   }
 }
