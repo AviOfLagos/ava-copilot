@@ -173,21 +173,22 @@ export class MeetingManager {
   }
 
   /**
-   * Puts a meeting, and its notes chat, in a workspace the first time it has none: the one whose Google
-   * account the user is in the call as, else the one the user's own words about it name. Never from an
-   * invite's or a page's title: anyone can write those.
+   * Puts a meeting, and its notes chat, in a workspace. What the user typed the call is about comes
+   * first and overrides any earlier choice, since one company's call link serves many workspaces. Else,
+   * once, the workspace of the Google account the user is in the call as. Never from an invite's or a
+   * page's title: anyone can write those.
    */
   async placeInWorkspace(meetingId: string): Promise<void> {
     const meeting = await this.meetings.get(meetingId);
-    if (!meeting || meeting.workspaceId) return;
+    if (!meeting) return;
     const workspaces = await workspaceStore.list();
-    let workspace = null;
-    const email = meeting.tabId !== null ? await this.meetAccount(meeting.tabId) : null;
-    if (email) workspace = workspaceForAccount(email, workspaces);
-    if (!workspace && meeting.topicSource === 'user' && meeting.topic) {
-      workspace = routeWorkspace(meeting.topic, workspaces);
+    let workspace = meeting.topicSource === 'user' && meeting.topic ? routeWorkspace(meeting.topic, workspaces) : null;
+    if (!workspace) {
+      if (meeting.workspaceId) return;
+      const email = meeting.tabId !== null ? await this.meetAccount(meeting.tabId) : null;
+      if (email) workspace = workspaceForAccount(email, workspaces);
     }
-    if (!workspace) return;
+    if (!workspace || workspace.id === meeting.workspaceId) return;
     await this.meetings.update(meetingId, { workspaceId: workspace.id });
     if (meeting.threadId) await this.threads.update(meeting.threadId, { workspaceId: workspace.id });
   }

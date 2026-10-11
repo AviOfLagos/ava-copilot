@@ -312,8 +312,9 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   gets `[Workspace: …]` with its context and accounts every step (`background/workspaces/inject.ts`) and the built-in
   `account-switching` skill. Knowledge items carry the workspace of their chat or meeting; a search in a workspace sees
   its own and unassigned items only (`KbIndex.search({ workspaceId })`, agent actions, Knowledge base filter). A meeting
-  takes the workspace of the Google account in Meet's own account button (read only while the tab is on Meet), else
-  the topic the user typed; never an invite's or a page's title. Settings › Workspaces edits them.
+  takes the workspace the topic the user typed names (first, and it overrides an earlier choice: one company's
+  call link serves many workspaces), else the Google account in Meet's own account button (read only while the tab is
+  on Meet); never an invite's or a page's title. Settings › Workspaces edits them.
 
 ## 5. Risks, in order
 
