@@ -59,20 +59,22 @@ function yamlValue(value: string): string {
 }
 
 /**
- * Makes words from web pages, meetings and chats inert in Obsidian, which can run what a note holds:
- * code blocks lose their language (Dataview and similar plugins run `dataviewjs` blocks), inline queries
- * and Templater tags are broken up, HTML shows as text, and images and embeds become plain links so
- * nothing loads from elsewhere when the note opens.
+ * Makes words from web pages, meetings and chats inert in Obsidian, which can run or load what a note
+ * holds. Rather than look for dangerous patterns, it escapes the characters they are made of, so none
+ * can form: backslashes first (so text cannot pre-escape an escape), then every backtick and tilde (no
+ * code block, so nothing for Dataview or a plugin to run, and no inline query), every "!" before "[" (no
+ * image or embed loads), and "&" and "<" (no HTML, no Templater tag). Links that would act inside
+ * Obsidian or run script are cut. Text stays readable; it just never runs.
  */
 export function defang(text: string): string {
   return text
-    .replace(/^(\s*)(`{3,}|~{3,})[^\n`~]*$/gm, (_, indent: string, fence: string) => `${indent}${fence}text`)
-    .replace(/`(\$?=)/g, '`\u200b$1')
-    .replace(/<%/g, '<\u200b%')
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/~/g, '\\~')
+    .replace(/!(?=\s*\[)/g, '\\!')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/!\[\[/g, '[[')
-    .replace(/!\[([^\]]*)\]\(/g, '[$1](');
+    .replace(/\b(javascript|vbscript|data|obsidian|file):/gi, '$1\u200b:');
 }
 
 /** A name or title as one inert line. */

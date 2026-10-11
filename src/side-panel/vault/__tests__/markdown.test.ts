@@ -77,24 +77,37 @@ describe('safeName and readFrontmatter', () => {
 });
 
 describe('defang', () => {
-  it('leaves nothing Obsidian would run or load from elsewhere', () => {
-    const text = defang(
-      [
-        '```dataviewjs',
-        'app.vault.adapter.write("x", "y")',
-        '```',
-        'Inline `$= dv.current()` and `= this.file.name`',
-        '<% tp.system.prompt() %>',
-        '<img src="https://evil.test/p.png"> <script>x</script>',
-        '![pixel](https://evil.test/p.png) ![[Secret note]]',
-      ].join('\n'),
-    );
-    expect(text).not.toMatch(/```dataviewjs/);
-    expect(text).toMatch(/^```text$/m);
-    expect(text).not.toMatch(/`\$=|`=/);
-    expect(text).not.toContain('<%');
-    expect(text).not.toMatch(/<img|<script/);
-    expect(text).not.toMatch(/!\[/);
-    expect(text).toContain('[pixel](https://evil.test/p.png)');
+  // A character Markdown would act on: one with an even number of backslashes before it
+  const unescaped = (text: string, char: string) =>
+    [...text].some((c, at) => {
+      if (c !== char) return false;
+      let slashes = 0;
+      for (let back = at - 1; back >= 0 && text[back] === '\\'; back--) slashes++;
+      return slashes % 2 === 0;
+    });
+
+  it('leaves nothing Obsidian would run or load from elsewhere, however it is written', () => {
+    const attacks = [
+      '```dataviewjs\napp.vault.adapter.write("x", "y")\n```',
+      '> ```dataviewjs\n> run()\n> ```',
+      '- ~~~dataviewjs ~x\n  run()\n  ~~~',
+      '\\```dataviewjs\nrun()\n```',
+      'Inline `$= dv.current()` and ``= this.file.name``',
+      '<% tp.system.prompt() %> <img src="https://evil.test/p.png">',
+      '![pixel](https://evil.test/p.png) ![a\\]b](https://evil.test/q.png) ![[Secret note]]',
+      '![ref][r]\n\n[r]: https://evil.test/r.png',
+      '[run](obsidian://advanced-uri?commandid=x) [js](javascript:alert(1))',
+    ];
+    for (const attack of attacks) {
+      const text = defang(attack);
+      expect(unescaped(text, '`'), attack).toBe(false);
+      expect(unescaped(text, '~'), attack).toBe(false);
+      expect(text, attack).not.toMatch(/(^|[^\\])(\\\\)*!\[/);
+      expect(text, attack).not.toMatch(/<|obsidian:\/\/|javascript:/i);
+    }
+  });
+
+  it('keeps ordinary words readable', () => {
+    expect(defang('Stage 2 closes Friday, see the deck.')).toBe('Stage 2 closes Friday, see the deck.');
   });
 });

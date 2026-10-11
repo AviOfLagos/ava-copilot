@@ -334,8 +334,9 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   The user's own notes outside that folder join the knowledge base as `note` items with source id `vault:<path>` (top
   folder or a `workspace:` line picks the workspace), refreshed when changed and removed when deleted, with no graph
   model call each. Background accepts them only from extension pages (`kb_vault_import`, `kb_vault_remove`).
-  Everything written is made inert for Obsidian first (`defang`: code blocks lose their language so Dataview cannot run
-  them, inline queries and Templater tags are broken, HTML is escaped, images and embeds become links).
+  Everything written from outside sources is made inert for Obsidian first by escaping, not by looking for patterns
+  (`defang`: backslashes, then every backtick and tilde, every "!" before "[", "&" and "<"; script and `obsidian:` links
+  cut), so no code block, inline query, Templater tag, HTML, image or embed can form.
 
 ## 5. Risks, in order
 
