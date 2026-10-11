@@ -45,6 +45,9 @@ const EMBED_PASS = 100;
 const MAX_PAGE_CHARS = 200_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// A change to the knowledge base: one item put or removed, all of it wiped, or many changed at once
+export type KbChange = { type: 'put' | 'remove'; itemId: string } | { type: 'wipe' } | { type: 'sync' };
+
 export interface KbDeps {
   store: KbStore;
   threads: ThreadStore;
@@ -96,6 +99,7 @@ export class KnowledgeBase {
   private queue: Promise<unknown> = Promise.resolve();
   private sweepTimer: ReturnType<typeof setTimeout> | null = null;
   private embedding: Promise<number> | null = null;
+  private readonly listeners = new Set<(change: KbChange) => void>();
 
   constructor(deps: Partial<KbDeps> = {}) {
     this.deps = { ...defaultDeps, ...deps };
@@ -107,8 +111,15 @@ export class KnowledgeBase {
     return next;
   }
 
-  private changed(): void {
+  private changed(change?: KbChange): void {
     this.index = null;
+    if (change) for (const listener of this.listeners) listener(change);
+  }
+
+  /** Hears every item added, changed or removed, e.g. to keep the knowledge graph in step. */
+  onChange(listener: (change: KbChange) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   /**
@@ -125,7 +136,7 @@ export class KnowledgeBase {
     const id = kbItemId(fields.sourceType, fields.sourceId);
     if (drafts.length === 0) {
       await this.deps.store.remove(id);
-      this.changed();
+      this.changed({ type: 'remove', itemId: id });
       return null;
     }
     const previous = await this.deps.store.item(id);
@@ -155,7 +166,7 @@ export class KnowledgeBase {
       unembedded: 0,
     };
     await this.deps.store.put(item, chunks);
-    this.changed();
+    this.changed({ type: 'put', itemId: item.id });
     return item;
   }
 
@@ -166,7 +177,7 @@ export class KnowledgeBase {
       const thread = await this.deps.threads.db.threads.get(threadId);
       if (!thread) {
         await this.deps.store.remove(kbItemId('thread', threadId));
-        this.changed();
+        this.changed({ type: 'remove', itemId: kbItemId('thread', threadId) });
         return null;
       }
       if ((!settings.indexChats && !force) || thread.meetingId) {
@@ -264,7 +275,7 @@ export class KnowledgeBase {
   remove(itemId: string): Promise<void> {
     return this.serial(async () => {
       await this.deps.store.remove(itemId);
-      this.changed();
+      this.changed({ type: 'remove', itemId });
     });
   }
 
@@ -276,7 +287,7 @@ export class KnowledgeBase {
   wipe(): Promise<void> {
     return this.serial(async () => {
       await this.deps.store.wipe();
-      this.changed();
+      this.changed({ type: 'wipe' });
     });
   }
 
@@ -287,7 +298,7 @@ export class KnowledgeBase {
   async importAll(data: KbExport): Promise<number> {
     const count = await this.serial(async () => {
       const added = await this.deps.store.importAll(data);
-      this.changed();
+      this.changed({ type: 'sync' });
       return added;
     });
     void this.embedPending();
@@ -300,7 +311,7 @@ export class KnowledgeBase {
     if (retentionDays <= 0) return 0;
     return this.serial(async () => {
       const removed = await this.deps.store.removeOlderThan(now - retentionDays * DAY_MS);
-      if (removed > 0) this.changed();
+      if (removed > 0) this.changed({ type: 'sync' });
       return removed;
     });
   }

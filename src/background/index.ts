@@ -6,6 +6,7 @@ import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
+import { GraphBuilder } from './graph/builder';
 import { WakeWord } from './voice/wake';
 import { VoiceManager } from './voice/manager';
 import { KnowledgeBase } from './kb/manager';
@@ -24,6 +25,10 @@ const threads = new ThreadManager();
 const meetings = new MeetingManager();
 const kb = new KnowledgeBase();
 setKnowledgeBase(kb);
+// The knowledge graph follows the knowledge base; anything missed while the background slept is caught up
+const graph = new GraphBuilder();
+kb.onChange(change => void graph.handle(change));
+setTimeout(() => void graph.sync(), 30_000);
 const calendar = new CalendarWatcher();
 const autoJoin = new AutoJoin(meetings);
 autoJoin.start();

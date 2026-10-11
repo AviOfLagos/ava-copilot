@@ -6,6 +6,8 @@ export interface KbSettingsConfig {
   // Add chats and meeting notes to the knowledge base on their own; saved pages are always added
   indexChats: boolean;
   indexMeetings: boolean;
+  // Read what each item talks about into the knowledge graph: one small model call per changed chat, page or note
+  buildGraph: boolean;
   // Remove items older than this many days; 0 keeps everything
   retentionDays: number;
   embedModel: string;
@@ -19,6 +21,7 @@ export interface KbSettingsConfig {
 export const DEFAULT_KB_SETTINGS: KbSettingsConfig = {
   indexChats: true,
   indexMeetings: true,
+  buildGraph: true,
   retentionDays: 0,
   embedModel: 'gemini-embedding-2',
   embedDimensions: 768,

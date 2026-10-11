@@ -9,6 +9,7 @@ import { normalize } from '../search';
 const settings: KbSettingsConfig = {
   indexChats: true,
   indexMeetings: true,
+  buildGraph: false,
   retentionDays: 0,
   embedModel: 'fake-embed',
   embedDimensions: 32,

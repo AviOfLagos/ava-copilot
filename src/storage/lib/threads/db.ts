@@ -192,6 +192,37 @@ export interface KnowledgeChunk {
   embedModel: string | null;
 }
 
+// What the knowledge graph holds: the sources themselves, and what they talk about
+export type GraphNodeType =
+  'thread' | 'meeting' | 'page' | 'note' | 'person' | 'organization' | 'project' | 'decision' | 'action';
+
+export interface GraphNode {
+  // A source's node has its knowledge item's id; an entity's id comes from its type, workspace and name,
+  // so the same project named in two chats of one workspace is one node
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  workspaceId: string | null;
+  // The knowledge items that mention it; a node no source mentions any more is removed
+  sourceItemIds: string[];
+  // For a source: a hash of what was read, so an unchanged source is not read again
+  hash?: string;
+  // When it happened: a source's date, or the date of the first source that named it
+  date: number;
+  updatedAt: number;
+}
+
+export type GraphEdgeKind = 'mentions' | 'attended' | 'decided_in' | 'raised_in' | 'assigned_to' | 'part_of';
+
+export interface GraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  kind: GraphEdgeKind;
+  // The source whose reading made this link
+  sourceItemId: string;
+}
+
 export class AviCopilotDb extends Dexie {
   threads!: Table<ThreadRecord, string>;
   messages!: Table<ThreadMessage, string>;
@@ -200,6 +231,8 @@ export class AviCopilotDb extends Dexie {
   segments!: Table<TranscriptSegment, string>;
   kbItems!: Table<KnowledgeItem, string>;
   kbChunks!: Table<KnowledgeChunk, string>;
+  graphNodes!: Table<GraphNode, string>;
+  graphEdges!: Table<GraphEdge, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -219,6 +252,10 @@ export class AviCopilotDb extends Dexie {
     this.version(3).stores({
       kbItems: 'id, sourceType, [sourceType+sourceId], updatedAt, sourceDate',
       kbChunks: 'id, itemId',
+    });
+    this.version(4).stores({
+      graphNodes: 'id, type, workspaceId, *sourceItemIds',
+      graphEdges: 'id, from, to, sourceItemId',
     });
   }
 }
