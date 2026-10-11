@@ -174,24 +174,39 @@ export class MeetingManager {
 
   /**
    * Puts a meeting, and its notes chat, in a workspace the first time it has none: the one whose Google
-   * account the user is in the call as, else the one its topic names.
+   * account the user is in the call as, else the one the user's own words about it name. Never from an
+   * invite's or a page's title: anyone can write those.
    */
   async placeInWorkspace(meetingId: string): Promise<void> {
     const meeting = await this.meetings.get(meetingId);
     if (!meeting || meeting.workspaceId) return;
     const workspaces = await workspaceStore.list();
     let workspace = null;
-    if (meeting.tabId !== null && meeting.platform === 'Google Meet') {
-      const [found] = await chrome.scripting
-        .executeScript({ target: { tabId: meeting.tabId }, func: meetAccountEmail })
-        .catch(() => []);
-      const email = found?.result as string | null | undefined;
-      if (email) workspace = workspaceForAccount(email, workspaces);
+    const email = meeting.tabId !== null ? await this.meetAccount(meeting.tabId) : null;
+    if (email) workspace = workspaceForAccount(email, workspaces);
+    if (!workspace && meeting.topicSource === 'user' && meeting.topic) {
+      workspace = routeWorkspace(meeting.topic, workspaces);
     }
-    workspace ??= routeWorkspace(`${meeting.topic ?? ''} ${meeting.title}`, workspaces);
     if (!workspace) return;
     await this.meetings.update(meetingId, { workspaceId: workspace.id });
     if (meeting.threadId) await this.threads.update(meeting.threadId, { workspaceId: workspace.id });
+  }
+
+  /** The Google account a Meet tab is signed in as, read only while the tab is on Google Meet. */
+  private async meetAccount(tabId: number): Promise<string | null> {
+    const onMeet = async () => {
+      const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+      try {
+        return !!tab?.url && new URL(tab.url).hostname === 'meet.google.com';
+      } catch {
+        return false;
+      }
+    };
+    if (!(await onMeet())) return null;
+    const [found] = await chrome.scripting.executeScript({ target: { tabId }, func: meetAccountEmail }).catch(() => []);
+    // The tab may have moved on while it was read
+    if (!(await onMeet())) return null;
+    return (found?.result as string | null | undefined) ?? null;
   }
 
   /**
@@ -710,11 +725,15 @@ function emptyNote(title: string): MeetingNote {
   };
 }
 
-/** Runs in a Google Meet page: the signed-in account's address, from Google's account button. */
+/**
+ * Runs in a Google Meet page: the signed-in account's address, from Google's own account button, a link
+ * to accounts.google.com. Names and text that participants choose are never read.
+ */
 export const meetAccountEmail = (): string | null => {
-  for (const element of Array.from(document.querySelectorAll('[aria-label]'))) {
-    const label = element.getAttribute('aria-label') || '';
-    if (!/google account/i.test(label)) continue;
+  const links = Array.from(document.querySelectorAll('a[href^="https://accounts.google.com/"][aria-label]'));
+  for (const link of links) {
+    const label = link.getAttribute('aria-label') || '';
+    if (!/^google account/i.test(label)) continue;
     const email = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.exec(label);
     if (email) return email[0].toLowerCase();
   }
