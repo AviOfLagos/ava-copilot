@@ -20,10 +20,20 @@ Eve is not in the project yet; it is added with item 7.
 3. **Always on + wake word** (built 2026-10-09) — listening keeps running with the panel closed (offscreen document), a local wake word
    ("Hey Ava", free, on-device, nothing leaves the Mac until it fires), and a macOS LaunchAgent that opens Brave at
    login and checks every hour that Brave and the extension are up.
+3a. **Navigation, breadcrumbs, history** (built 2026-10-11) — a menu drawer from the left, as in ChatGPT and Claude:
+   new chat, search (titles and words said in a chat), every place by name, and chats grouped Today / Yesterday /
+   Previous 7 days / Previous 30 days / by month, each with rename, pin, archive and delete. Breadcrumbs in the header
+   (Home › Chats › title, Home › Meetings › meeting). "How do I…" lists everyday tasks, where each lives, and a way
+   straight there. A Meetings list.
 4. **Workspaces** — Nexprove, Tech Ember Fest, Ellum AI, and more added from settings.
    Each has its accounts per platform (Google account for Meet/Calendar, X, LinkedIn, YouTube, Instagram, Slack),
    its own knowledge, and its own call links. Every request is routed to one workspace first; knowledge never mixes
    across workspaces. The agent switches to that workspace's account on the platform before acting.
+4a. **Knowledge graph** (asked 2026-10-11) — everything as linked nodes: conversations, uploaded and saved
+   knowledge, generated work, decisions, action items, projects, people, meeting summaries; edges such as
+   "decided in", "about", "follows up", "assigned to", "part of". Each node belongs to one workspace. Built on top of
+   the knowledge base (entities and links extracted when a chat or meeting is indexed), viewable as a graph and
+   usable by the agent ("what did we decide about X, and where").
 5. **Morning brief** — every morning, unprompted: today's calendar, open threads, what to prioritise, by workspace.
 6. **Session check and posting** — before acting on a site, check for a signed-in session; if there is none, say
    "I'm on the login page, please sign in" and wait. Scheduling posts on YouTube, Instagram, X and LinkedIn with the

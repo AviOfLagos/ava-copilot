@@ -1,8 +1,10 @@
-import { BookOpen, ChevronDown, Disc, Mic, Plus, SlidersHorizontal } from 'lucide-react';
+import { Disc, Menu, Mic, SquarePen } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import { LiveOrb } from '../components/ui/live-orb';
 import { ThinkingOrb } from '../components/ui/thinking-orb';
+import Breadcrumbs from './Breadcrumbs';
+import type { Crumb } from './Breadcrumbs';
 
 export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking';
 
@@ -13,20 +15,16 @@ const VOICE_LABELS = {
 } as const;
 
 interface HeaderProps {
-  title: string;
-  listOpen: boolean;
-  onToggleList: () => void;
+  crumbs: Crumb[];
+  menuOpen: boolean;
+  onMenu: () => void;
   // Something is running somewhere: the presence orb thinks instead of watching
   busy: boolean;
-  kbOpen: boolean;
-  onToggleKb: () => void;
   recordingLabel: string | null;
   onNotes: () => void;
   voiceStatus: VoiceStatus;
   onVoice: () => void;
   onNewThread: () => void;
-  onSettings: () => void;
-  settingsOpen: boolean;
   activeCount: number;
   onStopAll: () => void;
 }
@@ -46,15 +44,14 @@ export default function Header(props: HeaderProps) {
       </div>
       <button
         type="button"
-        onClick={props.onToggleList}
-        aria-expanded={props.listOpen}
-        aria-label={t('threads_list_title')}
-        className="hover:bg-accent flex min-w-0 flex-1 items-center gap-1 rounded-lg px-1.5 py-1 text-left">
-        <span className="truncate text-[13.5px] font-medium tracking-tight">{props.title}</span>
-        <ChevronDown
-          className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', props.listOpen && 'rotate-180')}
-        />
+        onClick={props.onMenu}
+        aria-expanded={props.menuOpen}
+        aria-label={t('nav_menu')}
+        title={t('nav_menu')}
+        className={iconButton}>
+        <Menu className="size-4" />
       </button>
+      <Breadcrumbs crumbs={props.crumbs} />
 
       {props.activeCount > 1 && (
         <button
@@ -66,15 +63,6 @@ export default function Header(props: HeaderProps) {
       )}
 
       <nav aria-label={t('nav_panel')} className="flex items-center gap-0.5">
-        <button
-          type="button"
-          className={iconButton}
-          onClick={props.onToggleKb}
-          aria-label={t('kb_title')}
-          aria-pressed={props.kbOpen}
-          title={t('kb_title')}>
-          <BookOpen className="size-4" />
-        </button>
         {props.recordingLabel ? (
           <button
             type="button"
@@ -123,16 +111,7 @@ export default function Header(props: HeaderProps) {
           onClick={props.onNewThread}
           aria-label={t('threads_new')}
           title={t('threads_new')}>
-          <Plus className="size-4" />
-        </button>
-        <button
-          type="button"
-          className={iconButton}
-          onClick={props.onSettings}
-          aria-label={t('nav_settings_a11y')}
-          aria-pressed={props.settingsOpen}
-          title={t('nav_settings_a11y')}>
-          <SlidersHorizontal className="size-4" />
+          <SquarePen className="size-4" />
         </button>
       </nav>
     </header>

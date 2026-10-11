@@ -80,6 +80,13 @@ describe('thread store', () => {
     expect((await store.list({ archived: true, search: 'form' })).length).toBe(1);
   });
 
+  it('finds a chat by words said in it, not only by its title', async () => {
+    const a = await store.create({ title: 'Morning' });
+    await store.addMessage(a.id, 'user', 'Draft the Tech Ember Fest sponsor email');
+    await store.create({ title: 'Other' });
+    expect((await store.list({ search: 'sponsor ember' })).map(t => t.title)).toEqual(['Morning']);
+  });
+
   it('deletes a thread with its messages', async () => {
     const thread = await store.create();
     await store.addMessage(thread.id, 'user', 'hello');

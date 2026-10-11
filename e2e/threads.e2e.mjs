@@ -160,7 +160,7 @@ test('an earlier thread opens from the list with its history and continues with 
 
   // Leave the thread, then come back to it from the list
   await session.click('New thread');
-  await session.click('Threads');
+  await session.click('Menu');
   await session.panel.waitForFunction(() => document.body.innerText.includes('first-task'), { polling: 300 });
   await session.click('Run the scripted scenario first-task.');
   await session.panel.waitForFunction(() => document.body.innerText.includes('E2E scenario finished'), {

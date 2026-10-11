@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import {
   AgentNameEnum,
   ProviderTypeEnum,
@@ -10,6 +10,7 @@ import {
   threadStore,
   type KbAnswer,
   type KbCitation,
+  meetingStore,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -21,12 +22,16 @@ import { LiveOrb } from './components/ui/live-orb';
 import { ThinkingOrb } from './components/ui/thinking-orb';
 import ChatView from './chat/ChatView';
 import Header from './layout/Header';
+import Sidebar from './layout/Sidebar';
+import type { Place } from './layout/Sidebar';
+import type { Crumb } from './layout/Breadcrumbs';
+import HelpView from './help/HelpView';
+import MeetingsList from './meetings/MeetingsList';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
 import TodayView from './today/TodayView';
 import SettingsView from './settings/SettingsView';
-import ThreadList from './threads/ThreadList';
 import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
@@ -60,14 +65,13 @@ const SidePanel = () => {
   const { dark: isDarkMode } = useTheme();
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
   const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
-  const [showList, setShowList] = useState(false);
+  // Where the user is, and whether the menu (places and chat history) is open
+  const [place, setPlace] = useState<Place>('chat');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const [showKb, setShowKb] = useState(false);
   // The voice screen was put away while the conversation goes on
   const [voiceHidden, setVoiceHidden] = useState(false);
-  const [showToday, setShowToday] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [savedSkillIn, setSavedSkillIn] = useState<string | null>(null);
   // Where a citation points in the meeting's transcript, in seconds
   const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
@@ -163,8 +167,9 @@ const SidePanel = () => {
           }
           break;
         case 'meeting_started':
+          setPlace('meetings');
           setMeetingId(message.meetingId);
-          setShowList(false);
+          setDrawerOpen(false);
           break;
         case 'voice_started':
           if (message.micDenied) {
@@ -315,10 +320,7 @@ const SidePanel = () => {
 
   const handleTakeNotes = async () => {
     if (recording) {
-      setShowKb(false);
-      setMeetingFocusT(null);
-      setMeetingId(recording.id);
-      setShowList(false);
+      openMeeting(recording.id);
       return;
     }
     const settings = await meetingSettingsStore.getSettings();
@@ -367,37 +369,40 @@ const SidePanel = () => {
     const { anchor } = citation;
     if (anchor.kind === 'note') {
       // A note lives in memory itself
-      setShowKb(true);
+      go('memory');
     } else if (anchor.kind === 'page') {
       void chrome.tabs.create({ url: anchor.url });
     } else if (anchor.kind === 'meeting') {
-      setShowKb(false);
-      setShowList(false);
-      setMeetingFocusT(anchor.t);
-      setMeetingId(anchor.meetingId);
+      openMeeting(anchor.meetingId, anchor.t);
     } else {
       handleSelect(anchor.threadId);
     }
   };
 
-  const handleNewThread = () => {
-    setShowSettings(false);
-    setShowToday(false);
-    setShowKb(false);
+  /** Goes to a place in the copilot; the menu closes behind it. */
+  const go = (next: Place) => {
+    setPlace(next);
     setMeetingId(null);
-    setThreadId(null);
-    setShowList(false);
+    setMeetingFocusT(null);
+    setDrawerOpen(false);
     setBanner(null);
   };
 
+  /** Opens one meeting, at a moment of its transcript when one is given. */
+  const openMeeting = (id: string, focusT: number | null = null) => {
+    go('meetings');
+    setMeetingId(id);
+    setMeetingFocusT(focusT);
+  };
+
+  const handleNewThread = () => {
+    go('chat');
+    setThreadId(null);
+  };
+
   const handleSelect = (id: string) => {
-    setShowSettings(false);
-    setShowToday(false);
-    setShowKb(false);
-    setMeetingId(null);
+    go('chat');
     setThreadId(id);
-    setShowList(false);
-    setBanner(null);
   };
 
   const handleDelete = (id: string) => {
@@ -432,42 +437,73 @@ const SidePanel = () => {
     }
   };
 
-  const openSettings = () => {
-    setShowSettings(!showSettings);
-    setShowList(false);
-  };
-
-  const view: 'consent' | 'list' | 'settings' | 'kb' | 'today' | 'meeting' | 'checking' | 'welcome' | 'chat' | 'home' =
-    consent
-      ? 'consent'
-      : showList
-        ? 'list'
-        : showSettings
-          ? 'settings'
-          : showToday
-            ? 'today'
-            : showKb
-              ? 'kb'
-              : meetingId
+  const view:
+    | 'consent'
+    | 'settings'
+    | 'kb'
+    | 'today'
+    | 'help'
+    | 'meetings'
+    | 'meeting'
+    | 'checking'
+    | 'welcome'
+    | 'chat'
+    | 'home' = consent
+    ? 'consent'
+    : place === 'settings'
+      ? 'settings'
+      : place === 'today'
+        ? 'today'
+        : place === 'memory'
+          ? 'kb'
+          : place === 'help'
+            ? 'help'
+            : place === 'meetings'
+              ? meetingId
                 ? 'meeting'
-                : hasConfiguredModels === null
-                  ? 'checking'
-                  : hasConfiguredModels === false
-                    ? 'welcome'
-                    : thread && threadMessages.length > 0
-                      ? 'chat'
-                      : 'home';
+                : 'meetings'
+              : hasConfiguredModels === null
+                ? 'checking'
+                : hasConfiguredModels === false
+                  ? 'welcome'
+                  : thread && threadMessages.length > 0
+                    ? 'chat'
+                    : 'home';
 
-  const title =
-    view === 'list'
-      ? t('threads_list_title')
-      : view === 'kb'
-        ? t('kb_title')
-        : view === 'today'
-          ? t('today_title')
-          : view === 'settings'
-            ? t('settings_title')
-            : thread?.title || t('threads_untitled');
+  // Where you are, each step back one click away
+  const home: Crumb = { label: t('nav_home'), onClick: handleNewThread };
+  const openedMeeting = useLive(
+    () => (meetingId ? meetingStore.get(meetingId) : Promise.resolve(undefined)),
+    [meetingId],
+    undefined,
+  );
+  const crumbs: Crumb[] =
+    view === 'chat'
+      ? [
+          home,
+          { label: t('nav_chats'), onClick: () => setDrawerOpen(true) },
+          { label: thread?.title || t('threads_untitled') },
+        ]
+      : view === 'meeting'
+        ? [
+            home,
+            { label: t('nav_meetings'), onClick: () => go('meetings') },
+            {
+              label:
+                openedMeeting?.note?.title || openedMeeting?.topic || openedMeeting?.title || t('threads_untitled'),
+            },
+          ]
+        : view === 'meetings'
+          ? [home, { label: t('nav_meetings') }]
+          : view === 'kb'
+            ? [home, { label: t('kb_title') }]
+            : view === 'today'
+              ? [home, { label: t('today_title') }]
+              : view === 'settings'
+                ? [home, { label: t('settings_title') }]
+                : view === 'help'
+                  ? [home, { label: t('nav_help') }]
+                  : [{ label: t('nav_home') }];
 
   const alerts = (
     <>
@@ -513,26 +549,29 @@ const SidePanel = () => {
       {voiceStatus !== 'off' && !voiceHidden && (
         <VoiceView status={voiceStatus} onEnd={() => void toggleVoice()} onHide={() => setVoiceHidden(true)} />
       )}
+      <Sidebar
+        open={drawerOpen}
+        place={place}
+        inChat={view === 'chat'}
+        activeThreadId={threadId}
+        onClose={() => setDrawerOpen(false)}
+        onGo={next => (next === 'chat' ? handleNewThread() : go(next))}
+        onNewChat={handleNewThread}
+        onSelect={handleSelect}
+        onDelete={handleDelete}
+        onPopOut={() => void handlePopOut()}
+      />
       <Header
-        title={title}
-        listOpen={showList}
-        onToggleList={() => setShowList(!showList)}
+        crumbs={crumbs}
+        menuOpen={drawerOpen}
+        onMenu={() => setDrawerOpen(!drawerOpen)}
         busy={activeCount > 0 || voiceStatus !== 'off'}
-        kbOpen={showKb && !showList}
-        onToggleKb={() => {
-          setShowKb(!showKb);
-          setShowList(false);
-          setShowToday(false);
-          setShowSettings(false);
-        }}
         recordingLabel={recording ? clock(recordingFor) : null}
         onNotes={() => void handleTakeNotes()}
         voiceStatus={voiceStatus}
         // A hidden conversation comes back to the front; otherwise the button starts or ends it
         onVoice={() => (voiceStatus !== 'off' && voiceHidden ? setVoiceHidden(false) : void toggleVoice())}
         onNewThread={handleNewThread}
-        onSettings={openSettings}
-        settingsOpen={showSettings}
         activeCount={activeCount}
         onStopAll={() => post({ type: 'thread_cancel_all' })}
       />
@@ -567,25 +606,6 @@ const SidePanel = () => {
         />
       )}
 
-      {view === 'list' && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex justify-end px-3 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => void handlePopOut()} aria-label={t('threads_popOut')}>
-              <ExternalLink className="size-3.5" />
-              {t('threads_popOut')}
-            </Button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <ThreadList
-              activeThreadId={threadId}
-              onSelect={handleSelect}
-              onDelete={handleDelete}
-              isDarkMode={isDarkMode}
-            />
-          </div>
-        </div>
-      )}
-
       {view === 'kb' && (
         <KnowledgeView
           onAsk={question => kbRequest<KbAnswer>({ type: 'kb_ask', question })}
@@ -596,12 +616,22 @@ const SidePanel = () => {
         />
       )}
 
-      {view === 'settings' && <SettingsView onBack={() => setShowSettings(false)} />}
+      {view === 'settings' && <SettingsView onBack={handleNewThread} />}
+
+      {view === 'help' && <HelpView onGo={next => (next === 'chat' ? handleNewThread() : go(next))} />}
+
+      {view === 'meetings' && (
+        <MeetingsList
+          onOpen={id => openMeeting(id)}
+          onTakeNotes={() => void handleTakeNotes()}
+          recordingId={recording?.id ?? null}
+        />
+      )}
 
       {view === 'today' && (
         <>
           <div className="px-3 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowToday(false)}>
+            <Button variant="ghost" size="sm" onClick={handleNewThread}>
               <ArrowLeft className="size-3.5" />
               {t('today_back')}
             </Button>
@@ -664,14 +694,7 @@ const SidePanel = () => {
             onContinue={async () =>
               post({ type: 'thread_continue', threadId: thread.id, windowId: await currentWindowId() })
             }
-            onOpenMeeting={
-              thread.meetingId
-                ? () => {
-                    setMeetingFocusT(null);
-                    setMeetingId(thread.meetingId);
-                  }
-                : undefined
-            }
+            onOpenMeeting={thread.meetingId ? () => openMeeting(thread.meetingId!) : undefined}
             isDarkMode={isDarkMode}
           />
           <ChatView
@@ -702,10 +725,10 @@ const SidePanel = () => {
           <div className="min-h-0 flex-1 overflow-y-auto">
             <HomeView
               onPrompt={text => setInputTextRef.current?.(text)}
-              onOpenKb={() => setShowKb(true)}
+              onOpenKb={() => go('memory')}
               onTakeNotes={() => void handleTakeNotes()}
               onSavePage={() => void savePage()}
-              onOpenToday={() => setShowToday(true)}>
+              onOpenToday={() => go('today')}>
               {favoritePrompts.length > 0 && (
                 <BookmarkList
                   bookmarks={favoritePrompts}

@@ -85,11 +85,22 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
     /** Threads for the list, pinned first. Archived threads only when asked for. */
     async list(options: { archived?: boolean; search?: string } = {}): Promise<ThreadRecord[]> {
       const all = await db.threads.toArray();
+      // A search finds words said in a chat too, as chat apps do, not only its title
+      const said = new Set<string>();
+      const words = (options.search ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+      if (words.length) {
+        await db.messages
+          .filter(message => {
+            const text = message.content.toLowerCase();
+            return words.every(word => text.includes(word));
+          })
+          .each(message => void said.add(message.threadId));
+      }
       return sortThreads(
         all.filter(
           thread =>
             thread.archived === (options.archived ?? false) &&
-            (!options.search || matchesSearch(thread, options.search)),
+            (!options.search || matchesSearch(thread, options.search) || said.has(thread.id)),
         ),
       );
     },

@@ -2219,5 +2219,194 @@
   },
   "settings_wake_failed": {
     "message": "聆聽未啟動。請執行 node scripts/wake-word-setup.mjs，重新建置並重新載入。"
+  },
+  "nav_home": {
+    "message": "首頁"
+  },
+  "nav_meetings": {
+    "message": "會議"
+  },
+  "nav_help": {
+    "message": "如何…"
+  },
+  "nav_menu": {
+    "message": "選單"
+  },
+  "nav_close": {
+    "message": "關閉選單"
+  },
+  "nav_newChat": {
+    "message": "新對話"
+  },
+  "nav_places": {
+    "message": "位置"
+  },
+  "nav_breadcrumbs": {
+    "message": "目前位置"
+  },
+  "nav_chats": {
+    "message": "對話"
+  },
+  "history_title": {
+    "message": "對話紀錄"
+  },
+  "history_search": {
+    "message": "搜尋對話"
+  },
+  "history_noMatch": {
+    "message": "沒有符合的對話。"
+  },
+  "history_pinned": {
+    "message": "已釘選"
+  },
+  "history_today": {
+    "message": "今天"
+  },
+  "history_yesterday": {
+    "message": "昨天"
+  },
+  "history_week": {
+    "message": "過去 7 天"
+  },
+  "history_month": {
+    "message": "過去 30 天"
+  },
+  "meetings_empty": {
+    "message": "尚無會議。加入通話時會自動開始做筆記。"
+  },
+  "help_search": {
+    "message": "你想做什麼？"
+  },
+  "help_go": {
+    "message": "帶我去"
+  },
+  "help_none": {
+    "message": "沒有符合的項目。試試其他字詞，或直接在對話中詢問。"
+  },
+  "history_menu": {
+    "message": "$TITLE$ 的更多選項",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Gmail drafts"
+      }
+    }
+  },
+  "help_task_q": {
+    "message": "在瀏覽器中完成某件事"
+  },
+  "help_task_where": {
+    "message": "首頁 › 在輸入框中輸入"
+  },
+  "help_voice_q": {
+    "message": "用說的代替打字"
+  },
+  "help_voice_where": {
+    "message": "頂部的麥克風按鈕，或說「Hey Ava」"
+  },
+  "help_wake_q": {
+    "message": "開啟「Hey Ava」"
+  },
+  "help_wake_where": {
+    "message": "設定 › 語音"
+  },
+  "help_notes_q": {
+    "message": "為通話做筆記"
+  },
+  "help_notes_where": {
+    "message": "會議 › 做筆記，或在通話中按 Alt+Shift+M"
+  },
+  "help_call_q": {
+    "message": "離開或結束 Google Meet 通話"
+  },
+  "help_call_where": {
+    "message": "說「Hey Ava, leave the call」或「end the call」"
+  },
+  "help_pastmeeting_q": {
+    "message": "找出會議中說過的內容"
+  },
+  "help_pastmeeting_where": {
+    "message": "會議 › 該會議 › 提問"
+  },
+  "help_calendar_q": {
+    "message": "連接 Google 日曆"
+  },
+  "help_calendar_where": {
+    "message": "設定 › 日曆 › 連接"
+  },
+  "help_ask_q": {
+    "message": "詢問過去的對話、會議和已儲存的頁面"
+  },
+  "help_ask_where": {
+    "message": "Knowledge base › 提問"
+  },
+  "help_save_q": {
+    "message": "將頁面儲存到記憶"
+  },
+  "help_save_where": {
+    "message": "Knowledge base › 儲存此頁面，或說「Hey Ava, remember this」"
+  },
+  "help_skill_q": {
+    "message": "教它做某件事的方法"
+  },
+  "help_skill_where": {
+    "message": "完成任務後：儲存為技能。在 設定 › 技能 中管理"
+  },
+  "help_find_q": {
+    "message": "尋找舊的對話"
+  },
+  "help_find_where": {
+    "message": "選單 › 搜尋標題或其中說過的內容"
+  },
+  "help_manage_q": {
+    "message": "重新命名、釘選、封存或刪除對話"
+  },
+  "help_manage_where": {
+    "message": "選單 › 對話旁的 ⋯"
+  },
+  "help_models_q": {
+    "message": "變更 AI 模型或 API 金鑰"
+  },
+  "help_models_where": {
+    "message": "設定 › 模型 › 所有設定"
+  },
+  "help_cap_q": {
+    "message": "限制每日花費"
+  },
+  "help_cap_where": {
+    "message": "設定 › 花費"
+  },
+  "help_confirm_q": {
+    "message": "選擇哪些動作需要先確認"
+  },
+  "help_confirm_where": {
+    "message": "設定 › 執行前確認"
+  },
+  "help_form_q": {
+    "message": "填寫表單"
+  },
+  "help_form_where": {
+    "message": "在對話中提出：它會填入已知內容，其餘在一張卡片中詢問"
+  },
+  "help_popout_q": {
+    "message": "在獨立視窗中開啟助理"
+  },
+  "help_popout_where": {
+    "message": "選單 › 在獨立視窗中開啟"
+  },
+  "help_today_q": {
+    "message": "一眼看到今天的安排"
+  },
+  "help_today_where": {
+    "message": "選單 › 今天"
+  },
+  "history_archived": {
+    "message": "已封存"
+  },
+  "history_live": {
+    "message": "返回對話"
+  },
+  "nav_popOut": {
+    "message": "彈出"
   }
 }

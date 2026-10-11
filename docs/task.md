@@ -299,6 +299,12 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   one refusal refuses the rest of the conversation), and ending a call for everyone always does. Residual risk: sound from
   outside the browser (another app, a TV) saying "Hey Ava" is not detected; echo cancellation and headphones help.
 
+- **Navigation and history (built 2026-10-11)**: `layout/Sidebar.tsx` (menu drawer: places, search, chats by date
+  from `threads/history.ts`), `layout/Breadcrumbs.tsx`, `help/HelpView.tsx` ("How do I…", strings `help_<id>_q/where`),
+  `meetings/MeetingsList.tsx`. The panel has one `place` (`chat | today | meetings | memory | settings | help`) in
+  place of four show flags. Thread search also matches message text. Knowledge base and Settings left the header for
+  the menu. Screens: `node e2e/manual/nav.mjs <dir>`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

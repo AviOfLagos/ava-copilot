@@ -2219,5 +2219,194 @@
   },
   "settings_wake_failed": {
     "message": "A escuta não começou. Rode node scripts/wake-word-setup.mjs, recompile e recarregue."
+  },
+  "nav_home": {
+    "message": "Início"
+  },
+  "nav_meetings": {
+    "message": "Reuniões"
+  },
+  "nav_help": {
+    "message": "Como faço…"
+  },
+  "nav_menu": {
+    "message": "Menu"
+  },
+  "nav_close": {
+    "message": "Fechar menu"
+  },
+  "nav_newChat": {
+    "message": "Novo chat"
+  },
+  "nav_places": {
+    "message": "Lugares"
+  },
+  "nav_breadcrumbs": {
+    "message": "Você está aqui"
+  },
+  "nav_chats": {
+    "message": "Chats"
+  },
+  "history_title": {
+    "message": "Histórico de chats"
+  },
+  "history_search": {
+    "message": "Pesquisar chats"
+  },
+  "history_noMatch": {
+    "message": "Nenhum chat encontrado."
+  },
+  "history_pinned": {
+    "message": "Fixados"
+  },
+  "history_today": {
+    "message": "Hoje"
+  },
+  "history_yesterday": {
+    "message": "Ontem"
+  },
+  "history_week": {
+    "message": "Últimos 7 dias"
+  },
+  "history_month": {
+    "message": "Últimos 30 dias"
+  },
+  "meetings_empty": {
+    "message": "Nenhuma reunião ainda. As anotações começam sozinhas quando você entra numa chamada."
+  },
+  "help_search": {
+    "message": "O que você quer fazer?"
+  },
+  "help_go": {
+    "message": "Ir para lá"
+  },
+  "help_none": {
+    "message": "Nada encontrado. Tente outras palavras ou pergunte no chat."
+  },
+  "history_menu": {
+    "message": "Mais opções para $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Gmail drafts"
+      }
+    }
+  },
+  "help_task_q": {
+    "message": "Fazer algo no navegador"
+  },
+  "help_task_where": {
+    "message": "Início › digite na caixa"
+  },
+  "help_voice_q": {
+    "message": "Falar em vez de digitar"
+  },
+  "help_voice_where": {
+    "message": "O botão de microfone no topo, ou diga “Hey Ava”"
+  },
+  "help_wake_q": {
+    "message": "Ativar “Hey Ava”"
+  },
+  "help_wake_where": {
+    "message": "Configurações › Voz"
+  },
+  "help_notes_q": {
+    "message": "Fazer anotações de uma chamada"
+  },
+  "help_notes_where": {
+    "message": "Reuniões › Fazer anotações, ou Alt+Shift+M na chamada"
+  },
+  "help_call_q": {
+    "message": "Sair ou encerrar uma chamada do Meet"
+  },
+  "help_call_where": {
+    "message": "Diga “Hey Ava, leave the call” ou “end the call”"
+  },
+  "help_pastmeeting_q": {
+    "message": "Encontrar o que foi dito numa reunião"
+  },
+  "help_pastmeeting_where": {
+    "message": "Reuniões › a reunião › Perguntar"
+  },
+  "help_calendar_q": {
+    "message": "Conectar o Google Agenda"
+  },
+  "help_calendar_where": {
+    "message": "Configurações › Agenda › Conectar"
+  },
+  "help_ask_q": {
+    "message": "Perguntar sobre chats, reuniões e páginas salvas"
+  },
+  "help_ask_where": {
+    "message": "Knowledge base › Perguntar"
+  },
+  "help_save_q": {
+    "message": "Salvar uma página na memória"
+  },
+  "help_save_where": {
+    "message": "Knowledge base › Salvar esta página, ou diga “Hey Ava, remember this”"
+  },
+  "help_skill_q": {
+    "message": "Ensinar uma forma de fazer algo"
+  },
+  "help_skill_where": {
+    "message": "Após uma tarefa: Salvar como habilidade. Gerencie em Configurações › Habilidades"
+  },
+  "help_find_q": {
+    "message": "Encontrar um chat antigo"
+  },
+  "help_find_where": {
+    "message": "Menu › pesquisa, pelo título ou algo dito nele"
+  },
+  "help_manage_q": {
+    "message": "Renomear, fixar, arquivar ou excluir um chat"
+  },
+  "help_manage_where": {
+    "message": "Menu › o ⋯ ao lado do chat"
+  },
+  "help_models_q": {
+    "message": "Trocar os modelos de IA ou chaves de API"
+  },
+  "help_models_where": {
+    "message": "Configurações › Modelo › Todas as configurações"
+  },
+  "help_cap_q": {
+    "message": "Limitar o gasto diário"
+  },
+  "help_cap_where": {
+    "message": "Configurações › Gastos"
+  },
+  "help_confirm_q": {
+    "message": "Escolher o que pede confirmação"
+  },
+  "help_confirm_where": {
+    "message": "Configurações › Confirmar antes"
+  },
+  "help_form_q": {
+    "message": "Preencher um formulário"
+  },
+  "help_form_where": {
+    "message": "Peça no chat: preenche o que sabe e pergunta o resto num cartão"
+  },
+  "help_popout_q": {
+    "message": "Abrir o copiloto numa janela própria"
+  },
+  "help_popout_where": {
+    "message": "Menu › Abrir em janela própria"
+  },
+  "help_today_q": {
+    "message": "Ver meu dia num relance"
+  },
+  "help_today_where": {
+    "message": "Menu › Hoje"
+  },
+  "history_archived": {
+    "message": "Arquivados"
+  },
+  "history_live": {
+    "message": "Voltar aos chats"
+  },
+  "nav_popOut": {
+    "message": "Destacar"
   }
 }

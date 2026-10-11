@@ -93,9 +93,8 @@ async function waitForItem(page, predicate, timeout = 20000) {
 }
 
 async function openKnowledge(session) {
-  await session.panel.evaluate(() =>
-    document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click(),
-  );
+  await session.click('Menu');
+  await session.click('Knowledge base');
   await session.panel.waitForSelector('[role="tablist"][aria-label="Knowledge base"]', { timeout: 10000 });
 }
 
@@ -245,10 +244,9 @@ test('a saved page is found by the agent with search_knowledge, and can be remov
   assert.equal(page.url, mock.fixtureUrl);
 
   mock.start('kb-agent');
-  // Back to the chat: the header's Knowledge base toggle, not the thread list button titled the same
-  await session.panel.evaluate(() =>
-    document.querySelector('button[aria-label="Knowledge base"][aria-pressed]').click(),
-  );
+  // Back to the chat, through the menu
+  await session.click('Menu');
+  await session.click('Home');
   await session.panel.waitForSelector('textarea', { timeout: 10000 });
   await session.send('Run the scripted scenario kb-agent.');
   await session.waitForEnd();

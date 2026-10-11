@@ -2219,5 +2219,194 @@
   },
   "settings_wake_failed": {
     "message": "Listening did not start. Run node scripts/wake-word-setup.mjs, rebuild and reload."
+  },
+  "nav_home": {
+    "message": "Home"
+  },
+  "nav_meetings": {
+    "message": "Meetings"
+  },
+  "nav_help": {
+    "message": "How do I…"
+  },
+  "nav_menu": {
+    "message": "Menu"
+  },
+  "nav_close": {
+    "message": "Close menu"
+  },
+  "nav_newChat": {
+    "message": "New chat"
+  },
+  "nav_places": {
+    "message": "Places"
+  },
+  "nav_breadcrumbs": {
+    "message": "You are here"
+  },
+  "nav_chats": {
+    "message": "Chats"
+  },
+  "history_title": {
+    "message": "Chat history"
+  },
+  "history_search": {
+    "message": "Search chats"
+  },
+  "history_noMatch": {
+    "message": "No chat matches."
+  },
+  "history_pinned": {
+    "message": "Pinned"
+  },
+  "history_today": {
+    "message": "Today"
+  },
+  "history_yesterday": {
+    "message": "Yesterday"
+  },
+  "history_week": {
+    "message": "Previous 7 days"
+  },
+  "history_month": {
+    "message": "Previous 30 days"
+  },
+  "meetings_empty": {
+    "message": "No meetings yet. Notes start on their own when you join a call."
+  },
+  "help_search": {
+    "message": "What do you want to do?"
+  },
+  "help_go": {
+    "message": "Take me there"
+  },
+  "help_none": {
+    "message": "Nothing matches. Try other words, or just ask in chat."
+  },
+  "history_menu": {
+    "message": "More for $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Gmail drafts"
+      }
+    }
+  },
+  "help_task_q": {
+    "message": "Get something done in the browser"
+  },
+  "help_task_where": {
+    "message": "Home › type it in the box"
+  },
+  "help_voice_q": {
+    "message": "Talk instead of typing"
+  },
+  "help_voice_where": {
+    "message": "The microphone button at the top, or say “Hey Ava”"
+  },
+  "help_wake_q": {
+    "message": "Turn on “Hey Ava”"
+  },
+  "help_wake_where": {
+    "message": "Settings › Voice"
+  },
+  "help_notes_q": {
+    "message": "Take notes on a call"
+  },
+  "help_notes_where": {
+    "message": "Meetings › Take notes, or Alt+Shift+M on the call"
+  },
+  "help_call_q": {
+    "message": "Leave or end a Google Meet call"
+  },
+  "help_call_where": {
+    "message": "Say “Hey Ava, leave the call” or “end the call”"
+  },
+  "help_pastmeeting_q": {
+    "message": "Find what was said in a meeting"
+  },
+  "help_pastmeeting_where": {
+    "message": "Meetings › the meeting › Ask"
+  },
+  "help_calendar_q": {
+    "message": "Connect Google Calendar"
+  },
+  "help_calendar_where": {
+    "message": "Settings › Calendar › Connect"
+  },
+  "help_ask_q": {
+    "message": "Ask about past chats, meetings and saved pages"
+  },
+  "help_ask_where": {
+    "message": "Knowledge base › Ask"
+  },
+  "help_save_q": {
+    "message": "Save a page to memory"
+  },
+  "help_save_where": {
+    "message": "Knowledge base › Save this page, or say “Hey Ava, remember this”"
+  },
+  "help_skill_q": {
+    "message": "Teach it a way of doing something"
+  },
+  "help_skill_where": {
+    "message": "After a task: Save as skill. Manage them in Settings › Skills"
+  },
+  "help_find_q": {
+    "message": "Find an old chat"
+  },
+  "help_find_where": {
+    "message": "Menu › search, by its title or anything said in it"
+  },
+  "help_manage_q": {
+    "message": "Rename, pin, archive or delete a chat"
+  },
+  "help_manage_where": {
+    "message": "Menu › the ⋯ next to the chat"
+  },
+  "help_models_q": {
+    "message": "Change the AI models or API keys"
+  },
+  "help_models_where": {
+    "message": "Settings › Model › All settings"
+  },
+  "help_cap_q": {
+    "message": "Limit what it spends a day"
+  },
+  "help_cap_where": {
+    "message": "Settings › Spending"
+  },
+  "help_confirm_q": {
+    "message": "Choose what asks before it happens"
+  },
+  "help_confirm_where": {
+    "message": "Settings › Confirm before"
+  },
+  "help_form_q": {
+    "message": "Fill in a form"
+  },
+  "help_form_where": {
+    "message": "Ask in chat: it fills what it knows and asks the rest in one card"
+  },
+  "help_popout_q": {
+    "message": "Open the copilot in its own window"
+  },
+  "help_popout_where": {
+    "message": "Menu › Open in its own window"
+  },
+  "help_today_q": {
+    "message": "See my day at a glance"
+  },
+  "help_today_where": {
+    "message": "Menu › Today"
+  },
+  "history_archived": {
+    "message": "Archived"
+  },
+  "history_live": {
+    "message": "Back to chats"
+  },
+  "nav_popOut": {
+    "message": "Pop out"
   }
 }
