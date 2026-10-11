@@ -59,6 +59,28 @@ function yamlValue(value: string): string {
 }
 
 /**
+ * Makes words from web pages, meetings and chats inert in Obsidian, which can run what a note holds:
+ * code blocks lose their language (Dataview and similar plugins run `dataviewjs` blocks), inline queries
+ * and Templater tags are broken up, HTML shows as text, and images and embeds become plain links so
+ * nothing loads from elsewhere when the note opens.
+ */
+export function defang(text: string): string {
+  return text
+    .replace(/^(\s*)(`{3,}|~{3,})[^\n`~]*$/gm, (_, indent: string, fence: string) => `${indent}${fence}text`)
+    .replace(/`(\$?=)/g, '`\u200b$1')
+    .replace(/<%/g, '<\u200b%')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/!\[\[/g, '[[')
+    .replace(/!\[([^\]]*)\]\(/g, '[$1](');
+}
+
+/** A name or title as one inert line. */
+function oneLine(text: string): string {
+  return defang(text.replace(/\s+/g, ' ').trim());
+}
+
+/**
  * Every note the copilot keeps in the vault, by path: each source with its words, and each person,
  * project and organization with what it is linked to. Links are full paths, so the same name in two
  * workspaces stays two notes.
@@ -83,7 +105,7 @@ export function vaultNotes(source: VaultSource): Map<string, string> {
     paths.set(node.id, path);
     return path;
   };
-  const link = (node: GraphNode) => `[[${pathFor(node)}|${node.label.replace(/[[\]|]/g, ' ')}]]`;
+  const link = (node: GraphNode) => `[[${pathFor(node)}|${defang(node.label).replace(/[[\]|]/g, ' ')}]]`;
 
   // The copilot's own sources; notes read from the vault are not written back
   const items = source.items.filter(item => !item.sourceId.startsWith('vault:'));
@@ -138,17 +160,19 @@ export function vaultNotes(source: VaultSource): Map<string, string> {
     const links = linksOf(item.id);
     const named = (type: GraphNode['type']) =>
       links.filter(entry => entry.other.type === type).map(entry => link(entry.other));
-    const decisions = links.filter(entry => entry.edge.kind === 'decided_in').map(entry => `- ${entry.other.label}`);
+    const decisions = links
+      .filter(entry => entry.edge.kind === 'decided_in')
+      .map(entry => `- ${oneLine(entry.other.label)}`);
     const actions = links
       .filter(entry => entry.edge.kind === 'raised_in')
       .map(entry => {
         const owner = linksOf(entry.other.id).find(link => link.edge.kind === 'assigned_to')?.other;
-        return `- [ ] ${entry.other.label}${owner ? ` (${link(owner)})` : ''}`;
+        return `- [ ] ${oneLine(entry.other.label)}${owner ? ` (${link(owner)})` : ''}`;
       });
     const sections = [
       frontmatter(item.sourceType, item.workspaceId, item.sourceDate, item.id),
-      `# ${item.title}`,
-      body.slice(0, MAX_BODY_CHARS),
+      `# ${oneLine(item.title)}`,
+      defang(body.slice(0, MAX_BODY_CHARS)),
       named('person').length || named('project').length || named('organization').length
         ? [
             '## Linked',
@@ -174,17 +198,17 @@ export function vaultNotes(source: VaultSource): Map<string, string> {
     const assigned = links.filter(entry => entry.edge.kind === 'assigned_to').map(entry => entry.other);
     const sections = [
       frontmatter(node.type, node.workspaceId, node.date, node.id),
-      `# ${node.label}`,
+      `# ${oneLine(node.label)}`,
       sources.length ? `## Appears in\n${sources.map(entry => `- ${link(entry.other)}`).join('\n')}` : '',
       parts.filter(part => part.type === 'decision').length
         ? `## Decisions\n${parts
             .filter(part => part.type === 'decision')
-            .map(part => `- ${part.label}`)
+            .map(part => `- ${oneLine(part.label)}`)
             .join('\n')}`
         : '',
       [...parts.filter(part => part.type === 'action'), ...assigned].length
         ? `## Actions\n${[...new Set([...parts.filter(part => part.type === 'action'), ...assigned])]
-            .map(part => `- [ ] ${part.label}`)
+            .map(part => `- [ ] ${oneLine(part.label)}`)
             .join('\n')}`
         : '',
     ];

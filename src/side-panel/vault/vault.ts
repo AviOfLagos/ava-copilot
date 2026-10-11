@@ -1,6 +1,6 @@
 import { db, graphStore, kbStore, workspaceStore } from '@extension/storage';
 import type { Workspace } from '@extension/storage';
-import { EXPORT_ROOT, MARKER, readFrontmatter, vaultNotes } from './markdown';
+import { EXPORT_ROOT, readFrontmatter, vaultNotes } from './markdown';
 
 /**
  * The Obsidian vault the user connected: the copilot's memory is written into its `Avi Copilot`
@@ -139,7 +139,7 @@ async function writeOut(root: FileSystemDirectoryHandle, files: Map<string, stri
   for (const path of Object.keys(written)) {
     if (next[path]) continue;
     const existing = await readFile(root, path);
-    if (existing === null || !existing.includes(MARKER)) continue;
+    if (existing === null || !readFrontmatter(existing).ours) continue;
     const parts = path.split('/');
     await (
       await folderAt(root, parts.slice(0, -1), false).catch(() => null)

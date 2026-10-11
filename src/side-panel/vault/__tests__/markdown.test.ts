@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphNode, KnowledgeItem, Workspace } from '@extension/storage';
-import { EXPORT_ROOT, readFrontmatter, safeName, vaultNotes } from '../markdown';
+import { defang, EXPORT_ROOT, readFrontmatter, safeName, vaultNotes } from '../markdown';
 
 const ws = (id: string, name: string) =>
   ({ id, name, about: '', keywords: [], accounts: {}, createdAt: 0 }) as Workspace;
@@ -73,5 +73,28 @@ describe('safeName and readFrontmatter', () => {
     });
     expect(readFrontmatter('---\nsource: avi-copilot\n---\nx').ours).toBe(true);
     expect(readFrontmatter('No front matter').workspace).toBeNull();
+  });
+});
+
+describe('defang', () => {
+  it('leaves nothing Obsidian would run or load from elsewhere', () => {
+    const text = defang(
+      [
+        '```dataviewjs',
+        'app.vault.adapter.write("x", "y")',
+        '```',
+        'Inline `$= dv.current()` and `= this.file.name`',
+        '<% tp.system.prompt() %>',
+        '<img src="https://evil.test/p.png"> <script>x</script>',
+        '![pixel](https://evil.test/p.png) ![[Secret note]]',
+      ].join('\n'),
+    );
+    expect(text).not.toMatch(/```dataviewjs/);
+    expect(text).toMatch(/^```text$/m);
+    expect(text).not.toMatch(/`\$=|`=/);
+    expect(text).not.toContain('<%');
+    expect(text).not.toMatch(/<img|<script/);
+    expect(text).not.toMatch(/!\[/);
+    expect(text).toContain('[pixel](https://evil.test/p.png)');
   });
 });
