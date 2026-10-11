@@ -2640,5 +2640,48 @@
         "example": "3"
       }
     }
+  },
+  "brief_title": {
+    "message": "晨間簡報，$DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 12 Oct"
+      }
+    }
+  },
+  "brief_ready": {
+    "message": "你的晨間簡報已準備好"
+  },
+  "brief_counts": {
+    "message": "今天行事曆上有 $MEETINGS$ 項，$WAITING$ 項等你處理。",
+    "placeholders": {
+      "meetings": {
+        "content": "$1",
+        "example": "3"
+      },
+      "waiting": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "brief_open": {
+    "message": "今日簡報"
+  },
+  "settings_brief": {
+    "message": "晨間簡報"
+  },
+  "settings_brief_on": {
+    "message": "每天早上的簡報"
+  },
+  "settings_brief_hint": {
+    "message": "今天的行事曆、待你處理的事、各工作區的待辦，以及三個優先事項。每天一次小型模型呼叫。"
+  },
+  "settings_brief_time": {
+    "message": "時間"
+  },
+  "settings_brief_now": {
+    "message": "立即產生"
   }
 }

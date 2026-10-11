@@ -9,3 +9,4 @@ export * from './firewall';
 export * from './speechToText';
 export * from './kbSettings';
 export * from './calendarSettings';
+export * from './briefSettings';

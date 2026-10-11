@@ -2640,5 +2640,48 @@
         "example": "3"
       }
     }
+  },
+  "brief_title": {
+    "message": "Resumo da manhã, $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 12 Oct"
+      }
+    }
+  },
+  "brief_ready": {
+    "message": "Seu resumo da manhã está pronto"
+  },
+  "brief_counts": {
+    "message": "$MEETINGS$ na agenda hoje, $WAITING$ esperando por você.",
+    "placeholders": {
+      "meetings": {
+        "content": "$1",
+        "example": "3"
+      },
+      "waiting": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "brief_open": {
+    "message": "Resumo de hoje"
+  },
+  "settings_brief": {
+    "message": "Resumo da manhã"
+  },
+  "settings_brief_on": {
+    "message": "Um resumo toda manhã"
+  },
+  "settings_brief_hint": {
+    "message": "Agenda de hoje, o que espera por você, ações abertas por espaço e três prioridades. Uma chamada de modelo por dia."
+  },
+  "settings_brief_time": {
+    "message": "Horário"
+  },
+  "settings_brief_now": {
+    "message": "Fazer agora"
   }
 }

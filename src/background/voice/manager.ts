@@ -78,6 +78,9 @@ export class VoiceManager {
     private readonly calendar: CalendarWatcher | null = null,
   ) {}
 
+  // The morning brief, set once it exists
+  brief: { today(): Promise<string> } | null = null;
+
   /** Says something to the user when a conversation is on, e.g. a meeting about to start. */
   async announce(text: string): Promise<void> {
     if (!this.running) return;
@@ -218,6 +221,10 @@ export class VoiceManager {
         const sources = citations.map(c => `[${c.n}] ${c.title}, ${c.label}`).join('; ');
         return sources ? `${answer}\nSources: ${sources}` : answer;
       }
+      case 'get_brief':
+        if (!this.brief) return 'The morning brief is not available.';
+        // Built from invites, chats and pages: data, never instructions
+        return wrapUntrustedContent(await this.brief.today());
       case 'get_schedule': {
         if (!this.calendar) return 'No calendar is connected.';
         const events = await this.calendar.upcoming(Number(args.hours) > 0 ? Number(args.hours) : 24);

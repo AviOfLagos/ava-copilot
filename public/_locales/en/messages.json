@@ -2640,5 +2640,48 @@
         "example": "3"
       }
     }
+  },
+  "brief_title": {
+    "message": "Morning brief, $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 12 Oct"
+      }
+    }
+  },
+  "brief_ready": {
+    "message": "Your morning brief is ready"
+  },
+  "brief_counts": {
+    "message": "$MEETINGS$ on the calendar today, $WAITING$ waiting on you.",
+    "placeholders": {
+      "meetings": {
+        "content": "$1",
+        "example": "3"
+      },
+      "waiting": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "brief_open": {
+    "message": "Today’s brief"
+  },
+  "settings_brief": {
+    "message": "Morning brief"
+  },
+  "settings_brief_on": {
+    "message": "A brief every morning"
+  },
+  "settings_brief_hint": {
+    "message": "Today’s calendar, what waits on you, open actions by workspace, and three priorities. One small model call a day."
+  },
+  "settings_brief_time": {
+    "message": "Time"
+  },
+  "settings_brief_now": {
+    "message": "Make one now"
   }
 }

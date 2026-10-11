@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, BookmarkPlus, CalendarClock, Disc, FileText, Sparkles } from 'lucide-react';
+import { BookOpen, BookmarkPlus, CalendarClock, Disc, FileText, Sparkles, Sunrise } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { skillStore, upcomingEventsStore } from '@extension/storage';
+import { skillStore, upcomingEventsStore, briefSettingsStore } from '@extension/storage';
 import type { UpcomingEvent } from '@extension/storage';
 import { matchSkills } from '@src/background/skills/match';
 import { LiveOrb } from '../components/ui/live-orb';
@@ -22,7 +22,25 @@ interface HomeViewProps {
   onTakeNotes: () => void;
   onSavePage: () => void;
   onOpenToday: () => void;
+  // Opens a chat by id: today's morning brief
+  onOpenThread: (threadId: string) => void;
   children?: React.ReactNode;
+}
+
+/** Today's morning brief's chat, once it is made. */
+function useTodaysBrief(): string | null {
+  const [threadId, setThreadId] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () =>
+      void briefSettingsStore.getSettings().then(settings => {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        setThreadId(settings.lastDay === today ? settings.lastThreadId : null);
+      });
+    load();
+    return briefSettingsStore.subscribe(load);
+  }, []);
+  return threadId;
 }
 
 const MEETING_HOSTS = /(^|\.)(meet\.google\.com|zoom\.us|teams\.microsoft\.com|teams\.live\.com)$/;
@@ -84,8 +102,10 @@ export default function HomeView({
   onTakeNotes,
   onSavePage,
   onOpenToday,
+  onOpenThread,
   children,
 }: HomeViewProps) {
+  const briefId = useTodaysBrief();
   const tab = useActiveTab();
   const today = useToday();
   const next = useNextMeeting();
@@ -100,6 +120,15 @@ export default function HomeView({
   }, [tab]);
 
   const starters: Starter[] = [];
+  if (briefId) {
+    starters.push({
+      id: 'brief',
+      icon: Sunrise,
+      title: t('brief_open'),
+      tag: t('settings_brief'),
+      run: () => onOpenThread(briefId),
+    });
+  }
   if (tab && skillId) {
     starters.push({
       id: 'skill',

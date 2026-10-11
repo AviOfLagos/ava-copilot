@@ -69,6 +69,7 @@ describe('VOICE_TOOLS', () => {
       'read_page',
       'open_tab',
       'switch_tab',
+      'get_brief',
       'get_schedule',
       'join_next_meeting',
       'leave_call',

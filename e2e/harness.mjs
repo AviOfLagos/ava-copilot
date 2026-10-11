@@ -87,6 +87,8 @@ export async function launchExtension(mock) {
   await options.evaluate(async baseUrl => {
     const model = { provider: 'mock', modelName: 'scripted' };
     await chrome.storage.local.set({
+      // No morning brief of its own in the middle of a test; the brief test makes one
+      'brief-settings': { enabled: false },
       'llm-api-keys': {
         providers: {
           mock: {

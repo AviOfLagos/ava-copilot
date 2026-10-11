@@ -19,4 +19,5 @@ export const TOOL_ACTIONS: Record<string, string> = {
   ask_knowledge: 'answer from your knowledge base',
   think: 'answer a question',
   get_status: 'read out your tasks',
+  get_brief: 'read your morning brief',
 };

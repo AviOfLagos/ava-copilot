@@ -52,6 +52,7 @@ const MEETING_PROMPTS = [
 // The system prompt of knowledge base answers, in src/background/kb/answer.ts
 const KB_PROMPT = "You answer questions from the user's own knowledge base";
 const GRAPH_PROMPT = 'and list what it talks about, for a knowledge graph';
+const BRIEF_PROMPT = "From the morning brief's data, pick at most three things";
 // The system prompt of teach mode, in src/background/skills/teach.ts
 const TEACH_PROMPT = 'You write a skill: a short page of tips';
 
@@ -160,6 +161,13 @@ export async function startMockLlm(scenarios) {
         return res.end(JSON.stringify(completion(request, kb.skillDraft)));
       }
 
+      // The morning brief's priorities
+      if (system.includes(BRIEF_PROMPT)) {
+        kb.briefData.push(textOf(request.messages[request.messages.length - 1]));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(textCompletion(request, kb.briefPriorities)));
+      }
+
       // The knowledge graph's reading of an item
       if (system.includes(GRAPH_PROMPT)) {
         kb.graphReads.push(textOf(request.messages[request.messages.length - 1]));
@@ -251,6 +259,9 @@ export async function startMockLlm(scenarios) {
     answer: 'Stage 2 is due Friday [1].',
     // The knowledge graph: every item read, and what the reading finds
     graphReads: [],
+    // The morning brief: the data it was given, and the priorities it answers with
+    briefData: [],
+    briefPriorities: '- Reply to the waiting post, it blocks the launch\n- Prepare the sponsor sync',
     graphReading: { people: [], organizations: [], projects: [], decisions: [], actions: [] },
     // Teach mode: task logs received, and the draft returned
     taught: [],

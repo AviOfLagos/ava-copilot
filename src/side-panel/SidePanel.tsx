@@ -422,6 +422,17 @@ const SidePanel = () => {
     if (id === threadId) setThreadId(null);
   };
 
+  // A chat the background asked to show, e.g. the morning brief after its notification was clicked
+  useEffect(() => {
+    void chrome.storage.session.get('open-thread').then(stored => {
+      const id = stored['open-thread'];
+      if (typeof id !== 'string') return;
+      void chrome.storage.session.remove('open-thread');
+      handleSelect(id);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The Obsidian vault, when one is connected: synced on opening and every 10 minutes while open
   useEffect(() => {
     const sync = () => void syncVault().catch(error => console.warn('Vault sync failed', error));
@@ -645,7 +656,7 @@ const SidePanel = () => {
         />
       )}
 
-      {view === 'settings' && <SettingsView onBack={handleNewThread} />}
+      {view === 'settings' && <SettingsView onBack={handleNewThread} onOpenThread={handleSelect} />}
 
       {view === 'help' && <HelpView onGo={next => (next === 'chat' ? handleNewThread() : go(next))} />}
 
@@ -758,7 +769,8 @@ const SidePanel = () => {
               onOpenKb={() => go('memory')}
               onTakeNotes={() => void handleTakeNotes()}
               onSavePage={() => void savePage()}
-              onOpenToday={() => go('today')}>
+              onOpenToday={() => go('today')}
+              onOpenThread={handleSelect}>
               {favoritePrompts.length > 0 && (
                 <BookmarkList
                   bookmarks={favoritePrompts}

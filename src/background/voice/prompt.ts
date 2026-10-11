@@ -70,6 +70,11 @@ export const VOICE_TOOLS = [
     },
   },
   {
+    name: 'get_brief',
+    description:
+      "Gets today's morning brief: the day's calendar, what waits on the user, open actions by workspace, and the top priorities. Makes it if there is none yet.",
+  },
+  {
     name: 'get_schedule',
     description: "Lists the user's calendar events for the coming hours, from the calendar connected in settings.",
     parameters: {

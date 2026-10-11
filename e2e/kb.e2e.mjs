@@ -411,3 +411,26 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
   assert.ok(!ours.some(([path]) => path.includes('Pitch notes')));
   await session.close();
 });
+
+test('the morning brief comes as a chat with the priorities first, made from the data as untrusted', async () => {
+  const session = await openSession(extension, mock);
+  await session.click('Menu');
+  await session.click('Settings');
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Make one now'), { polling: 300 });
+  await session.click('Make one now');
+  await session.panel.waitForFunction(() => document.body.innerText.includes("Today's calendar"), {
+    polling: 300,
+    timeout: 20000,
+  });
+  const text = await session.panelText();
+  assert.match(text, /First, today/);
+  assert.match(text, /Reply to the waiting post/);
+  assert.ok(text.indexOf('First, today') < text.indexOf("Today's calendar"));
+  assert.ok(
+    mock.kb.briefData.some(data => /untrusted/i.test(data)),
+    'the data goes to the model as untrusted',
+  );
+  const brief = (await readStore(session.panel, 'threads')).find(thread => thread.tags.includes('brief'));
+  assert.ok(brief, 'the brief is kept as a chat');
+  await session.close();
+});

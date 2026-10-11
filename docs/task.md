@@ -338,6 +338,15 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   (`defang`: backslashes, then every backtick and tilde, every "!" before "[", "&" and "<"; script and `obsidian:` links
   cut), so no code block, inline query, Templater tag, HTML, image or embed can form.
 
+- **Morning brief (built 2026-10-12)**: `src/background/brief` (`MorningBrief`, alarm `morning-brief` every 15
+  minutes, first check a minute after start; `briefSettingsStore`: on by default at 08:00). Once a day it saves a chat
+  tagged `brief`: up to three priorities (the only model call, with the data wrapped as untrusted), today's calendar,
+  chats waiting on the user or stopped, and each workspace's actions of the last 7 days and decisions of the last 3
+  from the graph. Every line from a source is flattened and stripped of Markdown that links or loads. The notification
+  carries counts only; clicking it opens the brief (`open-thread` in session storage). Home shows "Today's brief";
+  Settings › Morning brief sets the time and makes one now; voice tool `get_brief` (guarded). The E2E harness turns the
+  brief off so it never lands in another test.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

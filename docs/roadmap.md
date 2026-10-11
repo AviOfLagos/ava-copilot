@@ -34,7 +34,7 @@ Eve is not in the project yet; it is added with item 7.
    "decided in", "about", "follows up", "assigned to", "part of". Each node belongs to one workspace. Built on top of
    the knowledge base (entities and links extracted when a chat or meeting is indexed), viewable as a graph and
    usable by the agent ("what did we decide about X, and where").
-5. **Morning brief** — every morning, unprompted: today's calendar, open threads, what to prioritise, by workspace.
+5. **Morning brief** (built 2026-10-12) — every morning, unprompted: today's calendar, open threads, what to prioritise, by workspace.
 6. **Session check and posting** — before acting on a site, check for a signed-in session; if there is none, say
    "I'm on the login page, please sign in" and wait. Scheduling posts on YouTube, Instagram, X and LinkedIn with the
    workspace's account; the post itself always goes through the gate.

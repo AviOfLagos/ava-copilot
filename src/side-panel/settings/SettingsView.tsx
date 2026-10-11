@@ -21,6 +21,7 @@ import type { CommitKind, SkillRecord } from '@extension/storage';
 import { Button } from '../components/ui/button';
 import WorkspacesSettings from '../workspaces/WorkspacesSettings';
 import VaultSettings from '../vault/VaultSettings';
+import BriefSettings from './BriefSettings';
 import { Switch } from '../components/ui/switch';
 import { saveTheme, useTheme } from '../layout/theme';
 import type { ThemeChoice } from '../layout/theme';
@@ -59,13 +60,14 @@ function Row({ title, hint, children }: { title: string; hint?: ReactNode; child
 
 interface SettingsViewProps {
   onBack: () => void;
+  onOpenThread: (threadId: string) => void;
 }
 
 /**
  * Settings in the panel: the ones people change, without leaving the page. The full settings page
  * stays one tap away for providers, blocked sites and skill editing.
  */
-export default function SettingsView({ onBack }: SettingsViewProps) {
+export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps) {
   const { choice } = useTheme();
   const [models, setModels] = useState<{ planner: string; navigator: string; keyed: string[] } | null>(null);
   const [confirm, setConfirm] = useState<Record<CommitKind, boolean> | null>(null);
@@ -382,6 +384,10 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
           <WorkspacesSettings />
         </Section>
         <p className="text-muted-foreground -mt-3 px-1 text-[11.5px]">{t('settings_workspaces_hint')}</p>
+
+        <Section label={t('settings_brief')}>
+          <BriefSettings onOpen={onOpenThread} />
+        </Section>
 
         <Section label={t('settings_obsidian')}>
           <VaultSettings />

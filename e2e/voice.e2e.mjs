@@ -81,6 +81,7 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'read_page',
       'open_tab',
       'switch_tab',
+      'get_brief',
       'get_schedule',
       'join_next_meeting',
       'leave_call',

@@ -6,6 +6,7 @@ import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
+import { MorningBrief } from './brief/manager';
 import { GraphBuilder } from './graph/builder';
 import { WakeWord } from './voice/wake';
 import { VoiceManager } from './voice/manager';
@@ -36,6 +37,9 @@ const voice = new VoiceManager(threads, meetings, kb, calendar);
 const wakeWord = new WakeWord(voice);
 wakeWord.start();
 calendar.start();
+const brief = new MorningBrief(calendar);
+brief.start();
+voice.brief = brief;
 // A meeting about to start is said aloud when a conversation is on
 calendar.onReminder(({ minutes }) => {
   // The notice never carries the title: it comes from an invite anyone could send. Voice reads it
