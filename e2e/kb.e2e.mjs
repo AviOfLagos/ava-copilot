@@ -310,3 +310,37 @@ test('the knowledge base exports, wipes and imports back', async () => {
   await options.close();
   await session.close();
 });
+
+test('a saved page joins the knowledge graph, and the graph shows what it is linked to', async () => {
+  mock.kb.graphReading = {
+    people: ['Ada Lovelace'],
+    organizations: [],
+    projects: ['Quote requests'],
+    decisions: [],
+    actions: [{ task: 'Answer the quote requests', owner: 'Ada Lovelace' }],
+  };
+  const session = await openSession(extension, mock);
+  await openKnowledge(session);
+  await session.web.bringToFront();
+  await session.click('Save this page');
+  await waitForItem(session.panel, entry => entry.sourceType === 'page');
+
+  // The page was read as data for the graph
+  const deadline = Date.now() + 20000;
+  while (!(await readStore(session.panel, 'graphNodes')).some(node => node.type === 'project')) {
+    if (Date.now() > deadline) throw new Error('The graph never got the project');
+    await sleep(300);
+  }
+  assert.ok(mock.kb.graphReads.some(text => /untrusted/i.test(text) && text.includes('Gate fixture')));
+
+  await session.panel.bringToFront();
+  await session.click('Graph');
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Quote requests'), { polling: 300 });
+  await session.click('Quote requests');
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Answer the quote requests'), {
+    polling: 300,
+  });
+  assert.match(await session.panelText(), /Mentioned in/i);
+  mock.kb.graphReading = { people: [], organizations: [], projects: [], decisions: [], actions: [] };
+  await session.close();
+});

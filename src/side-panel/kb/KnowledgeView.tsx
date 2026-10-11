@@ -4,7 +4,9 @@ import { BookmarkPlus, FileText, Globe, MessageSquare, StickyNote, Trash2 } from
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
+import GraphView from './GraphView';
 import { kbStore } from '@extension/storage';
+import type { GraphNode } from '@extension/storage';
 import type { KbAnswer, KbCitation, KnowledgeItem, KnowledgeSourceType } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import MorphOrb from '../components/ui/morph-orb';
@@ -17,6 +19,7 @@ interface KnowledgeViewProps {
   onSavePage: (workspaceId: string | null) => Promise<string>;
   onDelete: (itemId: string) => void;
   onOpenCitation: (citation: KbCitation) => void;
+  onOpenSource: (node: GraphNode) => void;
   isDarkMode?: boolean;
 }
 
@@ -74,12 +77,18 @@ function itemCitation(item: KnowledgeItem): KbCitation {
  * question takes MorphOrb's path: the pill becomes a dotted orb while it searches, then unfolds
  * into the answer, with the sources it cites underneath.
  */
-export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitation }: KnowledgeViewProps) {
+export default function KnowledgeView({
+  onAsk,
+  onSavePage,
+  onDelete,
+  onOpenCitation,
+  onOpenSource,
+}: KnowledgeViewProps) {
   const allItems = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
   // One workspace's knowledge, with what belongs to none; all of it when none is picked
   const [workspace, setWorkspace] = useState<string | null>(null);
   const items = workspace ? allItems.filter(item => !item.workspaceId || item.workspaceId === workspace) : allItems;
-  const [tab, setTab] = useState<'ask' | 'items'>('ask');
+  const [tab, setTab] = useState<'ask' | 'items' | 'graph'>('ask');
   const [phase, setPhase] = useState<MorphOrbPhase>('idle');
   const [citations, setCitations] = useState<KbCitation[]>([]);
   const [saving, setSaving] = useState(false);
@@ -110,14 +119,14 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
     }
   };
 
-  const tabButton = (id: 'ask' | 'items', label: string) => (
+  const tabButton = (id: 'ask' | 'items' | 'graph', label: string) => (
     <button
       type="button"
       role="tab"
       aria-selected={tab === id}
       onClick={() => setTab(id)}
       className={cn(
-        'h-7 rounded-[9px] px-3 text-[12px] transition-colors',
+        'h-7 whitespace-nowrap rounded-[9px] px-3 text-[12px] transition-colors',
         tab === id ? 'border bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
       )}>
       {label}
@@ -130,17 +139,21 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
         <div role="tablist" aria-label={t('kb_title')} className="glass flex gap-0.5 rounded-xl p-0.5">
           {tabButton('ask', t('kb_tab_ask'))}
           {tabButton('items', t('kb_items', [String(items.length)]))}
+          {tabButton('graph', t('graph_tab'))}
         </div>
-        <WorkspacePicker
-          value={workspace}
-          onChange={setWorkspace}
-          emptyLabel={t('workspace_all')}
-          className="min-w-0 max-w-[34%]"
-        />
         <Button variant="glass" size="sm" onClick={() => void save()} disabled={saving}>
           <BookmarkPlus className="size-3.5" />
           {saving ? t('kb_saving') : t('kb_savePage')}
         </Button>
+      </div>
+
+      <div className="flex px-3 pt-2">
+        <WorkspacePicker
+          value={workspace}
+          onChange={setWorkspace}
+          emptyLabel={t('workspace_all')}
+          className="max-w-[70%]"
+        />
       </div>
 
       {notice && (
@@ -154,7 +167,9 @@ export default function KnowledgeView({ onAsk, onSavePage, onDelete, onOpenCitat
         </p>
       )}
 
-      {tab === 'ask' ? (
+      {tab === 'graph' ? (
+        <GraphView workspaceId={workspace} onOpenSource={onOpenSource} />
+      ) : tab === 'ask' ? (
         <div className="relative flex min-h-0 flex-1 flex-col">
           <MorphOrb
             className="flex-1"

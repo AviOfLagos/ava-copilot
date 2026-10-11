@@ -316,6 +316,16 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   call link serves many workspaces), else the Google account in Meet's own account button (read only while the tab is
   on Meet); never an invite's or a page's title. Settings › Workspaces edits them.
 
+- **Knowledge graph (built 2026-10-11)**: Dexie v4 `graphNodes` / `graphEdges` (`src/storage/lib/graph`). Every
+  knowledge item is a node; `GraphBuilder` (`src/background/graph/builder.ts`) follows `KnowledgeBase.onChange` and
+  reads each new or changed item once (hash of what was read) with the navigator model for people, organizations,
+  projects, decisions and actions (`extract.ts`, the item wrapped as untrusted); meeting notes add their participants,
+  decisions and action items without a model call. Entities are keyed by type, workspace and name, so a project named in
+  two chats of one workspace is one node and never merges across workspaces; a node no source mentions any more is
+  removed. Setting `kbSettings.buildGraph` (Settings › Memory). Knowledge base › Graph: a force-laid map, type filters,
+  the node in focus with its links grouped by kind, a trail, search and "most connected". Agent action `look_up_graph`
+  (scoped to the task's workspace). Screens: `node e2e/manual/graph.mjs <dir>`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

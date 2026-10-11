@@ -625,6 +625,13 @@ const SidePanel = () => {
           }
           onDelete={itemId => post({ type: 'kb_delete', itemId })}
           onOpenCitation={openCitation}
+          onOpenSource={node => {
+            // A source node's id is its knowledge item's: "<type>:<source id>"
+            const sourceId = node.id.slice(node.type.length + 1);
+            if (node.type === 'thread') handleSelect(sourceId);
+            else if (node.type === 'meeting') openMeeting(sourceId);
+            else if (node.type === 'page' && /^https?:/.test(sourceId)) void chrome.tabs.create({ url: sourceId });
+          }}
           isDarkMode={isDarkMode}
         />
       )}

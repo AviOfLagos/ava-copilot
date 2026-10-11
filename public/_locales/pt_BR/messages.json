@@ -2471,5 +2471,125 @@
   },
   "workspace_all": {
     "message": "Todos os espaços"
+  },
+  "graph_tab": {
+    "message": "Grafo"
+  },
+  "graph_empty": {
+    "message": "Nada no grafo ainda. Ele cresce conforme chats, reuniões e páginas salvas entram na base."
+  },
+  "graph_trail": {
+    "message": "Como você chegou aqui"
+  },
+  "graph_open": {
+    "message": "Abrir"
+  },
+  "graph_search": {
+    "message": "Encontrar pessoa, projeto ou decisão"
+  },
+  "graph_found": {
+    "message": "Encontrados"
+  },
+  "graph_mostConnected": {
+    "message": "Mais conectados"
+  },
+  "graph_type_project": {
+    "message": "Projeto"
+  },
+  "graph_type_person": {
+    "message": "Pessoa"
+  },
+  "graph_type_organization": {
+    "message": "Organização"
+  },
+  "graph_type_decision": {
+    "message": "Decisão"
+  },
+  "graph_type_action": {
+    "message": "Ação"
+  },
+  "graph_type_thread": {
+    "message": "Chat"
+  },
+  "graph_type_meeting": {
+    "message": "Reunião"
+  },
+  "graph_type_page": {
+    "message": "Página salva"
+  },
+  "graph_type_note": {
+    "message": "Nota"
+  },
+  "graph_type_projects": {
+    "message": "Projetos"
+  },
+  "graph_type_people": {
+    "message": "Pessoas"
+  },
+  "graph_type_organizations": {
+    "message": "Organizações"
+  },
+  "graph_type_decisions": {
+    "message": "Decisões"
+  },
+  "graph_type_actions": {
+    "message": "Ações"
+  },
+  "graph_type_meetings": {
+    "message": "Reuniões"
+  },
+  "graph_type_chats": {
+    "message": "Chats"
+  },
+  "graph_edge_mentions": {
+    "message": "Menciona"
+  },
+  "graph_edge_mentionedIn": {
+    "message": "Mencionado em"
+  },
+  "graph_edge_attended": {
+    "message": "Participantes"
+  },
+  "graph_edge_attendedBy": {
+    "message": "Esteve em"
+  },
+  "graph_edge_decidedIn": {
+    "message": "Decidido em"
+  },
+  "graph_edge_decisions": {
+    "message": "Decisões"
+  },
+  "graph_edge_raisedIn": {
+    "message": "Levantado em"
+  },
+  "graph_edge_actions": {
+    "message": "Ações"
+  },
+  "graph_edge_assignedTo": {
+    "message": "Atribuído a"
+  },
+  "graph_edge_assigned": {
+    "message": "Atribuído a esta pessoa"
+  },
+  "graph_edge_partOf": {
+    "message": "Parte de"
+  },
+  "graph_edge_parts": {
+    "message": "Decisões e ações"
+  },
+  "options_kb_buildGraph": {
+    "message": "Montar o grafo de conhecimento"
+  },
+  "options_kb_buildGraph_hint": {
+    "message": "Lê cada chat, página e nota alterados uma vez. Uma pequena chamada de modelo cada."
+  },
+  "graph_map": {
+    "message": "Mapa de $COUNT$ itens conectados",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
   }
 }

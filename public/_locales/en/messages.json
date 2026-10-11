@@ -2471,5 +2471,125 @@
   },
   "workspace_all": {
     "message": "All workspaces"
+  },
+  "graph_tab": {
+    "message": "Graph"
+  },
+  "graph_empty": {
+    "message": "Nothing in the graph yet. It grows as chats, meetings and saved pages join the knowledge base."
+  },
+  "graph_trail": {
+    "message": "How you got here"
+  },
+  "graph_open": {
+    "message": "Open"
+  },
+  "graph_search": {
+    "message": "Find a person, project or decision"
+  },
+  "graph_found": {
+    "message": "Found"
+  },
+  "graph_mostConnected": {
+    "message": "Most connected"
+  },
+  "graph_type_project": {
+    "message": "Project"
+  },
+  "graph_type_person": {
+    "message": "Person"
+  },
+  "graph_type_organization": {
+    "message": "Organization"
+  },
+  "graph_type_decision": {
+    "message": "Decision"
+  },
+  "graph_type_action": {
+    "message": "Action"
+  },
+  "graph_type_thread": {
+    "message": "Chat"
+  },
+  "graph_type_meeting": {
+    "message": "Meeting"
+  },
+  "graph_type_page": {
+    "message": "Saved page"
+  },
+  "graph_type_note": {
+    "message": "Note"
+  },
+  "graph_type_projects": {
+    "message": "Projects"
+  },
+  "graph_type_people": {
+    "message": "People"
+  },
+  "graph_type_organizations": {
+    "message": "Organizations"
+  },
+  "graph_type_decisions": {
+    "message": "Decisions"
+  },
+  "graph_type_actions": {
+    "message": "Actions"
+  },
+  "graph_type_meetings": {
+    "message": "Meetings"
+  },
+  "graph_type_chats": {
+    "message": "Chats"
+  },
+  "graph_edge_mentions": {
+    "message": "Mentions"
+  },
+  "graph_edge_mentionedIn": {
+    "message": "Mentioned in"
+  },
+  "graph_edge_attended": {
+    "message": "Attended by"
+  },
+  "graph_edge_attendedBy": {
+    "message": "Was in"
+  },
+  "graph_edge_decidedIn": {
+    "message": "Decided in"
+  },
+  "graph_edge_decisions": {
+    "message": "Decisions"
+  },
+  "graph_edge_raisedIn": {
+    "message": "Raised in"
+  },
+  "graph_edge_actions": {
+    "message": "Actions"
+  },
+  "graph_edge_assignedTo": {
+    "message": "Assigned to"
+  },
+  "graph_edge_assigned": {
+    "message": "Assigned to them"
+  },
+  "graph_edge_partOf": {
+    "message": "Part of"
+  },
+  "graph_edge_parts": {
+    "message": "Decisions and actions"
+  },
+  "options_kb_buildGraph": {
+    "message": "Build the knowledge graph"
+  },
+  "options_kb_buildGraph_hint": {
+    "message": "Reads each changed chat, page and note once for people, projects, decisions and actions. One small model call each."
+  },
+  "graph_map": {
+    "message": "Map of $COUNT$ connected things",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
   }
 }

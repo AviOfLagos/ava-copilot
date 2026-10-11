@@ -2471,5 +2471,125 @@
   },
   "workspace_all": {
     "message": "所有工作區"
+  },
+  "graph_tab": {
+    "message": "關係圖"
+  },
+  "graph_empty": {
+    "message": "關係圖中還沒有內容。對話、會議與儲存的頁面加入知識庫後會逐漸成形。"
+  },
+  "graph_trail": {
+    "message": "瀏覽路徑"
+  },
+  "graph_open": {
+    "message": "開啟"
+  },
+  "graph_search": {
+    "message": "尋找人物、專案或決定"
+  },
+  "graph_found": {
+    "message": "找到的項目"
+  },
+  "graph_mostConnected": {
+    "message": "連結最多"
+  },
+  "graph_type_project": {
+    "message": "專案"
+  },
+  "graph_type_person": {
+    "message": "人物"
+  },
+  "graph_type_organization": {
+    "message": "組織"
+  },
+  "graph_type_decision": {
+    "message": "決定"
+  },
+  "graph_type_action": {
+    "message": "待辦"
+  },
+  "graph_type_thread": {
+    "message": "對話"
+  },
+  "graph_type_meeting": {
+    "message": "會議"
+  },
+  "graph_type_page": {
+    "message": "已存頁面"
+  },
+  "graph_type_note": {
+    "message": "筆記"
+  },
+  "graph_type_projects": {
+    "message": "專案"
+  },
+  "graph_type_people": {
+    "message": "人物"
+  },
+  "graph_type_organizations": {
+    "message": "組織"
+  },
+  "graph_type_decisions": {
+    "message": "決定"
+  },
+  "graph_type_actions": {
+    "message": "待辦"
+  },
+  "graph_type_meetings": {
+    "message": "會議"
+  },
+  "graph_type_chats": {
+    "message": "對話"
+  },
+  "graph_edge_mentions": {
+    "message": "提及"
+  },
+  "graph_edge_mentionedIn": {
+    "message": "出現在"
+  },
+  "graph_edge_attended": {
+    "message": "與會者"
+  },
+  "graph_edge_attendedBy": {
+    "message": "參加過"
+  },
+  "graph_edge_decidedIn": {
+    "message": "決定於"
+  },
+  "graph_edge_decisions": {
+    "message": "決定"
+  },
+  "graph_edge_raisedIn": {
+    "message": "提出於"
+  },
+  "graph_edge_actions": {
+    "message": "待辦"
+  },
+  "graph_edge_assignedTo": {
+    "message": "指派給"
+  },
+  "graph_edge_assigned": {
+    "message": "指派給此人"
+  },
+  "graph_edge_partOf": {
+    "message": "屬於"
+  },
+  "graph_edge_parts": {
+    "message": "決定與待辦"
+  },
+  "options_kb_buildGraph": {
+    "message": "建立知識關係圖"
+  },
+  "options_kb_buildGraph_hint": {
+    "message": "每個變更的對話、頁面與筆記讀取一次，各需一次小型模型呼叫。"
+  },
+  "graph_map": {
+    "message": "$COUNT$ 個相連項目的關係圖",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
   }
 }

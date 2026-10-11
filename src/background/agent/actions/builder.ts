@@ -30,6 +30,7 @@ import type { ChatModel } from '@src/background/llm/types';
 import { wrapUntrustedContent } from '../messages/utils';
 import { reviewAction, verifyCommit } from '@src/background/gate/review';
 import { fillFormAction, fillFormActionSchema } from '@src/background/forms/fill';
+import { lookUpGraphAction, lookUpGraphActionSchema } from '@src/background/graph/action';
 import { readPageTextAction, readPageTextActionSchema } from '@src/background/reader/reader';
 import {
   saveKnowledgeAction,
@@ -422,6 +423,12 @@ export class ActionBuilder {
       fillFormActionSchema,
     );
     actions.push(fillForm);
+
+    const lookUpGraph = new Action(
+      async (input: z.infer<typeof lookUpGraphActionSchema.schema>) => lookUpGraphAction(this.context, input),
+      lookUpGraphActionSchema,
+    );
+    actions.push(lookUpGraph);
 
     const saveKnowledge = new Action(
       async (input: z.infer<typeof saveKnowledgeActionSchema.schema>) => saveKnowledgeAction(this.context, input),

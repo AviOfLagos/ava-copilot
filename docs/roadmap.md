@@ -29,7 +29,7 @@ Eve is not in the project yet; it is added with item 7.
    Each has its accounts per platform (Google account for Meet/Calendar, X, LinkedIn, YouTube, Instagram, Slack),
    its own knowledge, and its own call links. Every request is routed to one workspace first; knowledge never mixes
    across workspaces. The agent switches to that workspace's account on the platform before acting.
-4a. **Knowledge graph** (asked 2026-10-11) — everything as linked nodes: conversations, uploaded and saved
+4a. **Knowledge graph** (built 2026-10-11) — everything as linked nodes: conversations, uploaded and saved
    knowledge, generated work, decisions, action items, projects, people, meeting summaries; edges such as
    "decided in", "about", "follows up", "assigned to", "part of". Each node belongs to one workspace. Built on top of
    the knowledge base (entities and links extracted when a chat or meeting is indexed), viewable as a graph and

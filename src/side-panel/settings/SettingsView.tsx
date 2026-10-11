@@ -82,6 +82,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [memory, setMemory] = useState({
     indexChats: true,
     indexMeetings: true,
+    buildGraph: true,
     retentionDays: 0,
     embedSource: 'auto' as 'auto' | 'gemini' | 'local',
   });
@@ -119,6 +120,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
       setMemory({
         indexChats: kb.indexChats,
         indexMeetings: kb.indexMeetings,
+        buildGraph: kb.buildGraph,
         retentionDays: kb.retentionDays,
         embedSource: kb.embedSource,
       });
@@ -423,6 +425,13 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               label={t('options_kb_indexMeetings')}
               checked={memory.indexMeetings}
               onChange={value => void setMemorySetting({ indexMeetings: value })}
+            />
+          </Row>
+          <Row title={t('options_kb_buildGraph')} hint={t('options_kb_buildGraph_hint')}>
+            <Switch
+              label={t('options_kb_buildGraph')}
+              checked={memory.buildGraph}
+              onChange={value => void setMemorySetting({ buildGraph: value })}
             />
           </Row>
           <Row title={t('settings_embed')} hint={t('settings_embed_hint')}>
