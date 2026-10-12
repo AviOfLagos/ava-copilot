@@ -38,3 +38,6 @@ public/voice/
 
 # Working copies of Wave 2 stream agents
 .claude/worktrees/
+
+# Release artifacts (scripts/release.mjs): rebuilt from git on every release, never committed
+site/public/download/
