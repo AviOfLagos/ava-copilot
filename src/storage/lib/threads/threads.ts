@@ -176,6 +176,10 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
           memory: source.memoryUpToSeq <= seq ? source.memory : '',
           memoryUpToSeq: source.memoryUpToSeq <= seq ? source.memoryUpToSeq : 0,
           forkedFrom: { threadId, seq },
+          // A branch stays in the same workspace, for the same agent, started the same way
+          workspaceId: source.workspaceId ?? null,
+          agentId: source.agentId ?? null,
+          origin: source.origin,
         });
         await db.threads.add(fork);
         await db.messages.bulkAdd(copied.map(message => ({ ...message, id: crypto.randomUUID(), threadId: fork.id })));

@@ -87,6 +87,13 @@ describe('thread store', () => {
     expect((await store.list({ search: 'sponsor ember' })).map(t => t.title)).toEqual(['Morning']);
   });
 
+  it('keeps a branch in its workspace, for its agent', async () => {
+    const thread = await store.create({ workspaceId: 'tef', agentId: 'scout', origin: 'voice' });
+    await store.addMessage(thread.id, 'user', 'hello');
+    const fork = await store.fork(thread.id, 1);
+    expect(fork).toMatchObject({ workspaceId: 'tef', agentId: 'scout', origin: 'voice' });
+  });
+
   it('deletes a thread with its messages', async () => {
     const thread = await store.create();
     await store.addMessage(thread.id, 'user', 'hello');
