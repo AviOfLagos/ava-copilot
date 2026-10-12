@@ -2695,5 +2695,371 @@
   },
   "threads_retried": {
     "message": "Trying the task again from the start."
+  },
+  "models_title": {
+    "message": "Models & usage"
+  },
+  "models_spend": {
+    "message": "Spending today"
+  },
+  "models_spend_cost": {
+    "message": "Cost cap"
+  },
+  "models_spend_costHint": {
+    "message": "Every model with a known price counts, from any provider. Local models are free."
+  },
+  "models_spend_tokens": {
+    "message": "Tokens with no price"
+  },
+  "models_spend_tokensHint": {
+    "message": "Models whose price is unknown stop at this many tokens a day. 0 means no cap."
+  },
+  "models_tokenCap_reached": {
+    "message": "Daily token cap reached"
+  },
+  "models_tokenCap_detail": {
+    "message": "Tokens today on models with no known price: $1. Cap: $2."
+  },
+  "models_providers": {
+    "message": "Providers"
+  },
+  "models_provider_local": {
+    "message": "Local"
+  },
+  "models_provider_cloud": {
+    "message": "Cloud"
+  },
+  "models_provider_models": {
+    "message": "$1 models"
+  },
+  "models_health_ok": {
+    "message": "Answering"
+  },
+  "models_health_error": {
+    "message": "Not answering"
+  },
+  "models_health_unknown": {
+    "message": "Not checked"
+  },
+  "models_key_label": {
+    "message": "API key"
+  },
+  "models_key_none": {
+    "message": "No key"
+  },
+  "models_key_notNeeded": {
+    "message": "No key needed"
+  },
+  "models_key_replace": {
+    "message": "Replace key"
+  },
+  "models_key_remove": {
+    "message": "Remove key"
+  },
+  "models_key_placeholder": {
+    "message": "Paste the key"
+  },
+  "models_key_keepPlaceholder": {
+    "message": "Paste a new key, or leave empty to keep the saved one"
+  },
+  "models_key_show": {
+    "message": "Show key"
+  },
+  "models_key_hide": {
+    "message": "Hide key"
+  },
+  "models_key_vault": {
+    "message": "Keys are kept encrypted on this computer and only ever sent to their own provider."
+  },
+  "models_chip_remove": {
+    "message": "Remove $1"
+  },
+  "models_name": {
+    "message": "Name"
+  },
+  "models_baseUrl": {
+    "message": "Address"
+  },
+  "models_deployments": {
+    "message": "Deployments, separated by commas"
+  },
+  "models_apiVersion": {
+    "message": "API version"
+  },
+  "models_edit": {
+    "message": "Edit"
+  },
+  "models_save": {
+    "message": "Save"
+  },
+  "models_cancel": {
+    "message": "Cancel"
+  },
+  "models_test": {
+    "message": "Test"
+  },
+  "models_remove": {
+    "message": "Remove"
+  },
+  "models_removeConfirm": {
+    "message": "Click again to remove"
+  },
+  "models_saving": {
+    "message": "Saving…"
+  },
+  "models_checking": {
+    "message": "Asking the provider…"
+  },
+  "models_removing": {
+    "message": "Removing…"
+  },
+  "models_disconnected": {
+    "message": "The extension restarted. Try again."
+  },
+  "models_result_ok": {
+    "message": "It answered with $1 models."
+  },
+  "models_result_unknown": {
+    "message": "Its model list could not be read; chats may still work."
+  },
+  "models_error_generic": {
+    "message": "The model list could not be read. Try again later."
+  },
+  "models_hint_ollama_origins": {
+    "message": "Ollama refused the extension. Quit Ollama and start it with OLLAMA_ORIGINS=chrome-extension://* so the extension may call it."
+  },
+  "models_hint_needs_key": {
+    "message": "This provider needs an API key."
+  },
+  "models_hint_key_rejected": {
+    "message": "The provider refused this key. Check it and save it again."
+  },
+  "models_hint_unreachable": {
+    "message": "Nothing answered at this address. Is it running?"
+  },
+  "models_problem_name": {
+    "message": "Give it a name."
+  },
+  "models_problem_baseUrl": {
+    "message": "Enter its address."
+  },
+  "models_problem_deployment": {
+    "message": "Add at least one deployment."
+  },
+  "models_problem_apiVersion": {
+    "message": "Enter the API version."
+  },
+  "models_problem_key": {
+    "message": "Enter its API key."
+  },
+  "models_add": {
+    "message": "Add"
+  },
+  "models_add_choose": {
+    "message": "Add a provider…"
+  },
+  "models_local_found": {
+    "message": "$1 is running on this computer with $2 models."
+  },
+  "models_local_refused": {
+    "message": "$1 is running on this computer but refuses the extension."
+  },
+  "models_local_add": {
+    "message": "Add $1"
+  },
+  "models_options_listed": {
+    "message": "The provider lists $1 models; pick from them as you type."
+  },
+  "models_catalog": {
+    "message": "Available models"
+  },
+  "models_catalog_search": {
+    "message": "Search models"
+  },
+  "models_catalog_all": {
+    "message": "All"
+  },
+  "models_catalog_refresh": {
+    "message": "Refresh"
+  },
+  "models_catalog_refreshing": {
+    "message": "Refreshing…"
+  },
+  "models_catalog_checked": {
+    "message": "Checked $1"
+  },
+  "models_catalog_never": {
+    "message": "Not checked yet"
+  },
+  "models_catalog_empty": {
+    "message": "No models listed yet. Add a provider, then refresh."
+  },
+  "models_catalog_more": {
+    "message": "Show all $1"
+  },
+  "models_price_title": {
+    "message": "US dollars per million tokens, in / out"
+  },
+  "models_price_free": {
+    "message": "free"
+  },
+  "models_price_unknown": {
+    "message": "price unknown"
+  },
+  "models_context": {
+    "message": "$1 context"
+  },
+  "models_cap_vision": {
+    "message": "images"
+  },
+  "models_cap_audio": {
+    "message": "audio"
+  },
+  "models_cap_tools": {
+    "message": "tools"
+  },
+  "models_cap_embed": {
+    "message": "embeddings"
+  },
+  "models_cap_live": {
+    "message": "live"
+  },
+  "models_cap_speech": {
+    "message": "speech"
+  },
+  "models_cap_search": {
+    "message": "web search"
+  },
+  "models_cap_reasoning": {
+    "message": "reasoning"
+  },
+  "models_roles": {
+    "message": "Which model does what"
+  },
+  "models_roles_hint": {
+    "message": "Features ask for a kind of model, never a name. Automatic picks the best one available, and a local one when the cloud is down."
+  },
+  "models_role_fast": {
+    "message": "Fast"
+  },
+  "models_role_fast_hint": {
+    "message": "Quick, cheap steps: browsing, short answers."
+  },
+  "models_role_smart": {
+    "message": "Smart"
+  },
+  "models_role_smart_hint": {
+    "message": "Planning and hard questions."
+  },
+  "models_role_vision": {
+    "message": "Vision"
+  },
+  "models_role_vision_hint": {
+    "message": "Reads screenshots and images."
+  },
+  "models_role_local": {
+    "message": "Local"
+  },
+  "models_role_local_hint": {
+    "message": "Private work that never leaves this computer."
+  },
+  "models_role_embed": {
+    "message": "Embeddings"
+  },
+  "models_role_embed_hint": {
+    "message": "Search by meaning in memory."
+  },
+  "models_role_transcribe": {
+    "message": "Transcription"
+  },
+  "models_role_transcribe_hint": {
+    "message": "Turns recordings into text."
+  },
+  "models_role_realtime": {
+    "message": "Live voice"
+  },
+  "models_role_realtime_hint": {
+    "message": "Spoken conversations and live captions."
+  },
+  "models_role_tts": {
+    "message": "Speech"
+  },
+  "models_role_tts_hint": {
+    "message": "Reads answers aloud."
+  },
+  "models_role_search": {
+    "message": "Web search"
+  },
+  "models_role_search_hint": {
+    "message": "Answers that look things up on the web."
+  },
+  "models_role_auto": {
+    "message": "Automatic ($1)"
+  },
+  "models_role_autoNone": {
+    "message": "Automatic (none available yet)"
+  },
+  "models_role_pinned": {
+    "message": "Kept once chosen: another model means indexing memory again."
+  },
+  "models_role_standIn": {
+    "message": "Its provider is down; another model stands in."
+  },
+  "models_usage": {
+    "message": "Usage"
+  },
+  "models_usage_range": {
+    "message": "Period"
+  },
+  "models_usage_days": {
+    "message": "$1 d"
+  },
+  "models_usage_by": {
+    "message": "Group by"
+  },
+  "models_usage_byDay": {
+    "message": "Day"
+  },
+  "models_usage_byModel": {
+    "message": "Model"
+  },
+  "models_usage_byAgent": {
+    "message": "Agent"
+  },
+  "models_usage_byWorkflow": {
+    "message": "Routine"
+  },
+  "models_usage_byWorkspace": {
+    "message": "Workspace"
+  },
+  "models_usage_cost": {
+    "message": "cost"
+  },
+  "models_usage_tokens": {
+    "message": "tokens"
+  },
+  "models_usage_calls": {
+    "message": "calls"
+  },
+  "models_usage_unpriced": {
+    "message": "$1 tokens went to models with no known price."
+  },
+  "models_usage_none": {
+    "message": "No model calls in this period."
+  },
+  "models_usage_noAgent": {
+    "message": "You (no agent)"
+  },
+  "models_usage_noWorkflow": {
+    "message": "Not a routine"
+  },
+  "models_usage_noWorkspace": {
+    "message": "No workspace"
+  },
+  "models_usage_other": {
+    "message": "Other"
+  },
+  "models_usage_chart": {
+    "message": "Usage by $1, last $2 days"
   }
 }

@@ -99,7 +99,7 @@ describe('usage totals', () => {
         { inputTokens: 10, outputTokens: 2, costUsd: 0.5, calls: 1, unpricedCalls: 0 },
         { inputTokens: 5, outputTokens: 1, costUsd: 0.25, calls: 1, unpricedCalls: 1 },
       ),
-    ).toEqual({ inputTokens: 15, outputTokens: 3, costUsd: 0.75, calls: 2, unpricedCalls: 1 });
+    ).toEqual({ inputTokens: 15, outputTokens: 3, costUsd: 0.75, calls: 2, unpricedCalls: 1, unpricedTokens: 0 });
   });
 
   it('names a day by the local calendar date', () => {

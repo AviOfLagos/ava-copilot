@@ -1,7 +1,8 @@
 /**
  * Model prices in USD per million tokens, used for the cost shown per chat and for the daily cap.
  * Source: https://ai.google.dev/gemini-api/docs/pricing (paid tier, standard), read 2026-10-02.
- * A model that is not listed has no known price: its tokens are counted and its cost is not.
+ * Other providers' prices come from the model registry (`priceCall`); local models cost nothing. A model
+ * with no known price has its tokens counted, against their own daily cap, and no cost.
  */
 
 export interface ModelPrice {
@@ -69,4 +70,43 @@ export function costOf(
   }
   const rate = price.long && inputTokens > price.long.threshold ? price.long : price;
   return (inputTokens * rate.input + outputTokens * rate.output) / 1_000_000;
+}
+
+/** One model call to price: which provider and model, how many tokens, on which day. */
+export interface PricedCall {
+  // The provider's id in the provider settings; unknown for callers that only name the model
+  providerId?: string;
+  // The provider's kind, when known
+  providerType?: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  day: string;
+}
+
+/** What the model registry knows of a model's price. */
+export interface CatalogPrice {
+  local: boolean;
+  inputUsdPerM: number | null;
+  outputUsdPerM: number | null;
+}
+
+/**
+ * Prices a call from every source there is: local servers cost nothing; Gemini's own table (dated prices,
+ * long-prompt rates) comes first for Gemini and for callers that name only the model; then the price the
+ * registry found (OpenRouter lists one for every model). Anything else has no known price.
+ *
+ * @returns The cost in USD, or null when the price is not known
+ */
+export function priceCall(call: PricedCall, catalogEntry?: CatalogPrice | null): number | null {
+  if (call.providerType === 'ollama' || call.providerType === 'lmstudio') return 0;
+  if (!call.providerId || call.providerType === 'gemini') {
+    const fromTable = costOf(call.model, call.inputTokens, call.outputTokens, call.day);
+    if (fromTable !== null) return fromTable;
+  }
+  if (catalogEntry?.local) return 0;
+  if (catalogEntry && catalogEntry.inputUsdPerM !== null && catalogEntry.outputUsdPerM !== null) {
+    return (call.inputTokens * catalogEntry.inputUsdPerM + call.outputTokens * catalogEntry.outputUsdPerM) / 1_000_000;
+  }
+  return null;
 }

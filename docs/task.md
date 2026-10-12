@@ -373,6 +373,48 @@ Plan: [wave2-plan.md](wave2-plan.md). Built by the lead so the parallel streams 
 - Wave A dependencies: `@xyflow/react`, `@dagrejs/dagre`, `react-force-graph-2d`, `@radix-ui/react-dropdown-menu`,
   `croner`.
 
+### Wave 2 — WS3 Models, vault, usage (built 2026-10-12)
+
+- **Secrets vault** (`src/storage/lib/secrets`): IndexedDB `avi-secrets`, AES-GCM under one non-extractable
+  WebCrypto key made once (first context wins), the ref bound as associated data, every write read back before it
+  counts. Only the background reads or writes secrets (`isBackgroundContext`); anyone may delete or ask `last4`.
+- **Provider keys** (`settings/llmProviders.ts`): stored configs keep `hasKey`, `keyLast4`, `keyRef` and `apiKey: ''`.
+  In the background `getProvider`/`getAllProviders` decrypt transparently; in pages they return `••••last4` (so old
+  "has a key" checks keep working) and never the key. `getProviderSummaries()` is masked everywhere. A plaintext
+  key found in `llm-api-keys` (old installs, tests, other writers) is moved by the background at start and 1 s after
+  any change: vault write, read back, then blank, then `llm-api-keys-vault.migratedAt`. Local stand-ins ('ollama',
+  'lm-studio') are not secrets. The options page's console dump of every provider (keys included) is gone.
+- **NVIDIA NIM and LM Studio** are provider kinds (`nvidia`, `lmstudio`) with their base URLs; they run through
+  createChatModel's OpenAI-compatible path. `llmProviderModelNames` is only a suggestion now.
+- **Model registry** (`src/background/models`): job `models_refresh` (5 s after start when the last refresh is over
+  an hour old, cron every 6 h, 2 s after a provider change, command `models_refresh`) lists Ollama (`/api/tags` +
+  `/api/show`), LM Studio, OpenRouter (prices, context, modalities, tools), NVIDIA, OpenAI, Anthropic (paged),
+  Gemini (key in a header, paged), xAI, DeepSeek, custom `/models`, Azure deployments → `db.modelCatalog`, with
+  health per provider in `model-health` (`ok | error | unknown`, hints `ollama_origins`, `key_rejected`,
+  `needs_key`, `unreachable`). 10 s timeout per try, `withRetry(connectorRead)`, a `CircuitBreaker` per host kept in
+  `storage.session`. Only configured providers are called; the first run also probes `localhost:11434` / `:1234`
+  and offers to add what it finds. Capabilities are tags (`storage/lib/models/capabilities.ts`).
+- **Roles**: `resolveRole(role, { workspaceId, agentId })` and `createRoleModel(role, scope)`
+  (`background/models/roles.ts`; the pure picker is `pickRoleModel` in storage): agent → workspace → user mapping,
+  then the Planner (smart) / Navigator (fast) / speech-to-text (transcribe) settings, then the catalog by capability,
+  health and a score. A provider that is down is stood in for by a healthy local model first; the embedding model is
+  pinned the first time it is chosen automatically.
+- **Usage v2**: every metered call is a `UsageEvent` (`recordUsage`, `recordPricedUsage` for audio minutes) with
+  provider, role, agent, routine, run and workspace (a chat's from its thread). Cost: local servers free, Gemini's
+  table, then the registry's price; unknown → `costUsd: null`, counted in `unpricedTokens`. The daily cost cap now
+  counts every priced provider; models with no price stop at `modelSettings.unpricedDailyTokenCap` (default 2M
+  tokens/day) in `ensureBudget` (and `isOverDailyBudget()` for background work). Retention job: 90 days.
+- **Gemini Live tokens**: `mintLiveToken` (v1beta `auth_tokens`, one use, 30 min) and the constrained Live endpoint
+  with `access_token`; the offscreen document can ask for one (`models_live_token`). Wiring it into voice and
+  captions is the lead's (offscreen files).
+- **Models & usage** page (`src/side-panel/models`, place `models` in the profile group): spending against both
+  caps, providers with masked keys (edit, replace, remove, test through the background), local servers found, the
+  catalog (search, local/cloud, price, context, capabilities, health, refresh), which model does what, and usage by
+  day / model / agent / routine / workspace as SVG bars. The settings page's Models tab runs on the same
+  `useProviders` hook over its own port (`models-settings`, `models_` commands only, extension pages only).
+- Tests: vault, provider keys and migration (fake-indexeddb), discovery per provider (mock fetch), catalog refresh,
+  roles, usage events and caps, Live tokens, commands; `e2e/models.e2e.mjs` (its own model-list server).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

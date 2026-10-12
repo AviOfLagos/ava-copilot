@@ -2695,5 +2695,371 @@
   },
   "threads_retried": {
     "message": "從頭再試一次這項任務。"
+  },
+  "models_title": {
+    "message": "模型與用量"
+  },
+  "models_spend": {
+    "message": "今日花費"
+  },
+  "models_spend_cost": {
+    "message": "費用上限"
+  },
+  "models_spend_costHint": {
+    "message": "計入所有已知價格的模型，不論供應商。本機模型免費。"
+  },
+  "models_spend_tokens": {
+    "message": "無價格的 token"
+  },
+  "models_spend_tokensHint": {
+    "message": "價格不明的模型每日用到這麼多 token 就停止。0 表示不設上限。"
+  },
+  "models_tokenCap_reached": {
+    "message": "已達每日 token 上限"
+  },
+  "models_tokenCap_detail": {
+    "message": "今日價格不明模型的 token：$1。上限：$2。"
+  },
+  "models_providers": {
+    "message": "供應商"
+  },
+  "models_provider_local": {
+    "message": "本機"
+  },
+  "models_provider_cloud": {
+    "message": "雲端"
+  },
+  "models_provider_models": {
+    "message": "$1 個模型"
+  },
+  "models_health_ok": {
+    "message": "回應正常"
+  },
+  "models_health_error": {
+    "message": "沒有回應"
+  },
+  "models_health_unknown": {
+    "message": "尚未檢查"
+  },
+  "models_key_label": {
+    "message": "API 金鑰"
+  },
+  "models_key_none": {
+    "message": "沒有金鑰"
+  },
+  "models_key_notNeeded": {
+    "message": "不需要金鑰"
+  },
+  "models_key_replace": {
+    "message": "更換金鑰"
+  },
+  "models_key_remove": {
+    "message": "移除金鑰"
+  },
+  "models_key_placeholder": {
+    "message": "貼上金鑰"
+  },
+  "models_key_keepPlaceholder": {
+    "message": "貼上新金鑰，或留空以保留已儲存的金鑰"
+  },
+  "models_key_show": {
+    "message": "顯示金鑰"
+  },
+  "models_key_hide": {
+    "message": "隱藏金鑰"
+  },
+  "models_key_vault": {
+    "message": "金鑰加密保存在這台電腦上，只會傳送給對應的供應商。"
+  },
+  "models_chip_remove": {
+    "message": "移除 $1"
+  },
+  "models_name": {
+    "message": "名稱"
+  },
+  "models_baseUrl": {
+    "message": "位址"
+  },
+  "models_deployments": {
+    "message": "部署名稱，以逗號分隔"
+  },
+  "models_apiVersion": {
+    "message": "API 版本"
+  },
+  "models_edit": {
+    "message": "編輯"
+  },
+  "models_save": {
+    "message": "儲存"
+  },
+  "models_cancel": {
+    "message": "取消"
+  },
+  "models_test": {
+    "message": "測試"
+  },
+  "models_remove": {
+    "message": "移除"
+  },
+  "models_removeConfirm": {
+    "message": "再按一次即移除"
+  },
+  "models_saving": {
+    "message": "儲存中…"
+  },
+  "models_checking": {
+    "message": "正在詢問供應商…"
+  },
+  "models_removing": {
+    "message": "移除中…"
+  },
+  "models_disconnected": {
+    "message": "擴充功能已重新啟動，請再試一次。"
+  },
+  "models_result_ok": {
+    "message": "已回應，共 $1 個模型。"
+  },
+  "models_result_unknown": {
+    "message": "無法讀取其模型清單；對話仍可能正常運作。"
+  },
+  "models_error_generic": {
+    "message": "無法讀取模型清單，請稍後再試。"
+  },
+  "models_hint_ollama_origins": {
+    "message": "Ollama 拒絕了擴充功能。請結束 Ollama，再以 OLLAMA_ORIGINS=chrome-extension://* 啟動，讓擴充功能可以呼叫它。"
+  },
+  "models_hint_needs_key": {
+    "message": "此供應商需要 API 金鑰。"
+  },
+  "models_hint_key_rejected": {
+    "message": "供應商拒絕了這把金鑰。請確認後再儲存一次。"
+  },
+  "models_hint_unreachable": {
+    "message": "此位址沒有回應。它正在執行嗎？"
+  },
+  "models_problem_name": {
+    "message": "請輸入名稱。"
+  },
+  "models_problem_baseUrl": {
+    "message": "請輸入位址。"
+  },
+  "models_problem_deployment": {
+    "message": "請至少新增一個部署。"
+  },
+  "models_problem_apiVersion": {
+    "message": "請輸入 API 版本。"
+  },
+  "models_problem_key": {
+    "message": "請輸入 API 金鑰。"
+  },
+  "models_add": {
+    "message": "新增"
+  },
+  "models_add_choose": {
+    "message": "新增供應商…"
+  },
+  "models_local_found": {
+    "message": "$1 正在這台電腦上執行，有 $2 個模型。"
+  },
+  "models_local_refused": {
+    "message": "$1 正在這台電腦上執行，但拒絕了擴充功能。"
+  },
+  "models_local_add": {
+    "message": "新增 $1"
+  },
+  "models_options_listed": {
+    "message": "供應商列出 $1 個模型；輸入時可從中挑選。"
+  },
+  "models_catalog": {
+    "message": "可用模型"
+  },
+  "models_catalog_search": {
+    "message": "搜尋模型"
+  },
+  "models_catalog_all": {
+    "message": "全部"
+  },
+  "models_catalog_refresh": {
+    "message": "重新整理"
+  },
+  "models_catalog_refreshing": {
+    "message": "重新整理中…"
+  },
+  "models_catalog_checked": {
+    "message": "檢查於 $1"
+  },
+  "models_catalog_never": {
+    "message": "尚未檢查"
+  },
+  "models_catalog_empty": {
+    "message": "尚未列出模型。請新增供應商後重新整理。"
+  },
+  "models_catalog_more": {
+    "message": "顯示全部 $1 個"
+  },
+  "models_price_title": {
+    "message": "每百萬 token 美元，輸入 / 輸出"
+  },
+  "models_price_free": {
+    "message": "免費"
+  },
+  "models_price_unknown": {
+    "message": "價格不明"
+  },
+  "models_context": {
+    "message": "上下文 $1"
+  },
+  "models_cap_vision": {
+    "message": "圖片"
+  },
+  "models_cap_audio": {
+    "message": "音訊"
+  },
+  "models_cap_tools": {
+    "message": "工具"
+  },
+  "models_cap_embed": {
+    "message": "向量嵌入"
+  },
+  "models_cap_live": {
+    "message": "即時"
+  },
+  "models_cap_speech": {
+    "message": "語音"
+  },
+  "models_cap_search": {
+    "message": "網路搜尋"
+  },
+  "models_cap_reasoning": {
+    "message": "推理"
+  },
+  "models_roles": {
+    "message": "各項工作使用的模型"
+  },
+  "models_roles_hint": {
+    "message": "各功能只指定模型種類，不指定名稱。「自動」會選出可用的最佳模型，雲端故障時改用本機模型。"
+  },
+  "models_role_fast": {
+    "message": "快速"
+  },
+  "models_role_fast_hint": {
+    "message": "快速、便宜的步驟：瀏覽、簡短回答。"
+  },
+  "models_role_smart": {
+    "message": "聰明"
+  },
+  "models_role_smart_hint": {
+    "message": "規劃與困難的問題。"
+  },
+  "models_role_vision": {
+    "message": "視覺"
+  },
+  "models_role_vision_hint": {
+    "message": "讀取螢幕截圖與圖片。"
+  },
+  "models_role_local": {
+    "message": "本機"
+  },
+  "models_role_local_hint": {
+    "message": "不離開這台電腦的私密工作。"
+  },
+  "models_role_embed": {
+    "message": "向量嵌入"
+  },
+  "models_role_embed_hint": {
+    "message": "依語意搜尋記憶。"
+  },
+  "models_role_transcribe": {
+    "message": "轉錄"
+  },
+  "models_role_transcribe_hint": {
+    "message": "把錄音轉成文字。"
+  },
+  "models_role_realtime": {
+    "message": "即時語音"
+  },
+  "models_role_realtime_hint": {
+    "message": "語音對話與即時字幕。"
+  },
+  "models_role_tts": {
+    "message": "語音合成"
+  },
+  "models_role_tts_hint": {
+    "message": "朗讀回答。"
+  },
+  "models_role_search": {
+    "message": "網路搜尋"
+  },
+  "models_role_search_hint": {
+    "message": "會上網查詢的回答。"
+  },
+  "models_role_auto": {
+    "message": "自動（$1）"
+  },
+  "models_role_autoNone": {
+    "message": "自動（目前沒有可用模型）"
+  },
+  "models_role_pinned": {
+    "message": "選定後固定：換模型就得重新建立記憶索引。"
+  },
+  "models_role_standIn": {
+    "message": "其供應商目前故障，改由其他模型代替。"
+  },
+  "models_usage": {
+    "message": "用量"
+  },
+  "models_usage_range": {
+    "message": "期間"
+  },
+  "models_usage_days": {
+    "message": "$1 天"
+  },
+  "models_usage_by": {
+    "message": "分組依據"
+  },
+  "models_usage_byDay": {
+    "message": "日"
+  },
+  "models_usage_byModel": {
+    "message": "模型"
+  },
+  "models_usage_byAgent": {
+    "message": "代理"
+  },
+  "models_usage_byWorkflow": {
+    "message": "例行工作"
+  },
+  "models_usage_byWorkspace": {
+    "message": "工作區"
+  },
+  "models_usage_cost": {
+    "message": "費用"
+  },
+  "models_usage_tokens": {
+    "message": "token"
+  },
+  "models_usage_calls": {
+    "message": "呼叫次數"
+  },
+  "models_usage_unpriced": {
+    "message": "有 $1 個 token 用在價格不明的模型。"
+  },
+  "models_usage_none": {
+    "message": "此期間沒有模型呼叫。"
+  },
+  "models_usage_noAgent": {
+    "message": "你（非代理）"
+  },
+  "models_usage_noWorkflow": {
+    "message": "非例行工作"
+  },
+  "models_usage_noWorkspace": {
+    "message": "無工作區"
+  },
+  "models_usage_other": {
+    "message": "其他"
+  },
+  "models_usage_chart": {
+    "message": "依$1分組的用量，最近 $2 天"
   }
 }

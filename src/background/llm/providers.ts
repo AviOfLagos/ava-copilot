@@ -12,6 +12,7 @@ import {
   ProviderTypeEnum,
   getDefaultReasoningEffort,
   getProviderTypeByProviderId,
+  isOpenAICompatibleType,
   normalizeReasoningEffort,
 } from '@extension/storage';
 import type { ChatModel, StructuredMode } from './types';
@@ -318,7 +319,7 @@ export function createChatModel(
       };
     }
     default: {
-      // OpenAI and any custom id are treated as OpenAI-compatible chat completions endpoints
+      // OpenAI, NVIDIA NIM, LM Studio and any custom id are OpenAI-compatible chat completions endpoints
       const openai = createOpenAI({
         apiKey,
         ...(providerConfig.baseUrl ? { baseURL: providerConfig.baseUrl } : {}),
@@ -328,8 +329,8 @@ export function createChatModel(
         ...base,
         model: openai.chat(modelName),
         ...getOpenAIFamilyOptions(modelName, effort, {
-          anyModelReasons:
-            (providerConfig.type ?? getProviderTypeByProviderId(provider)) === ProviderTypeEnum.CustomOpenAI,
+          // Custom endpoints, NVIDIA NIM and LM Studio serve any model, so a chosen effort is sent as is
+          anyModelReasons: isOpenAICompatibleType(providerConfig.type ?? getProviderTypeByProviderId(provider)),
         }),
       };
     }
