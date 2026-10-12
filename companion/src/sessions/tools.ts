@@ -16,6 +16,9 @@ import type { ProfileRegistry } from './registry';
  * the profile must list the tool; files stay in the profile's workspace; gh reads stay reads; a write
  * reaches here only after the user's click (eve's approval, relayed from the extension's Inbox); MCP
  * tools must be on the profile's list, and read-only ones must be marked so by the user.
+ *
+ * `approved` is set by the forwarder only for a tool eve held for the user's click (never by the model), and is
+ * checked here again: a profile changed after its session started cannot turn a held call into a free one.
  */
 
 const inputs = {
@@ -61,6 +64,7 @@ export async function runTool(
   profileId: string,
   rawInput: unknown,
   signal: AbortSignal,
+  { approved = false }: { approved?: boolean } = {},
 ): Promise<unknown> {
   const profile = deps.registry.profile(profileId);
   if (!profile) fail('not_found', 'This agent is not known on the Mac; open Avi Copilot to send it again.');
@@ -71,6 +75,9 @@ export async function runTool(
   switch (name) {
     case 'run_command': {
       const input = parsed.data as z.infer<typeof inputs.run_command>;
+      if (profile.sandbox.network === 'open' && !approved) {
+        fail('forbidden', 'A command with network access needs the user’s click first; it was not run.');
+      }
       const result = await deps.sandbox.run({ profileId, command: input.command, policy: profile.sandbox, signal });
       return {
         exitCode: result.exitCode,
@@ -100,8 +107,9 @@ export async function runTool(
       const input = parsed.data as z.infer<typeof inputs.gh_write>;
       const check = classifyGh(input.args);
       if (check.ok && check.kind !== 'write') fail('invalid', 'That only reads; use gh.');
-      // eve held this call until the user approved it in Avi Copilot (approval: always())
-      const result = await deps.gh.run(input.args, { approved: true, signal });
+      // eve holds this call until the user approves it in Avi Copilot (approval: always())
+      if (!approved) fail('forbidden', 'Posting to GitHub needs the user’s click first; nothing was posted.');
+      const result = await deps.gh.run(input.args, { approved, signal });
       return { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr };
     }
     case 'mcp_read':
@@ -113,12 +121,19 @@ export async function runTool(
       if (name === 'mcp_read' && !deps.mcp.isReadOnly(input.server, input.tool)) {
         fail('forbidden', `${input.tool} is not marked read-only; use mcp_call, which asks the user first.`);
       }
+      if (name === 'mcp_call' && !approved) {
+        fail('forbidden', `${input.tool} needs the user’s click first; it was not called.`);
+      }
       const result = await deps.mcp.callTool(input.server, input.tool, input.args, { signal });
       return { isError: result.isError, content: result.content };
     }
     case 'publish_artifact': {
       const input = parsed.data as z.infer<typeof inputs.publish_artifact>;
       if (Boolean(input.files) === Boolean(input.build)) fail('invalid', 'Give either files or a build.');
+      // A build runs a command: only an agent that may run commands builds, within its own sandbox limits
+      if (input.build && !profile.tools.includes('run_command')) {
+        fail('forbidden', 'This agent may not run commands, so it cannot build; give the files instead.');
+      }
       const artifact = await deps.artifacts.create({
         requestId: randomBytes(8).toString('hex'),
         profileId,
@@ -127,6 +142,7 @@ export async function runTool(
         files: input.files,
         build: input.build,
         entry: input.entry,
+        policy: profile.sandbox,
       });
       return { artifactId: artifact.id, title: artifact.title, files: artifact.files };
     }

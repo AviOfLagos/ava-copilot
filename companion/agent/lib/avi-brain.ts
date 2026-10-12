@@ -64,17 +64,26 @@ export async function loadModel(profileId: string): Promise<AviModel> {
 }
 
 /** Runs one of Avi Brain's tools for this session's profile; its rules are checked there. */
+/**
+ * Runs one of the session's tools in Avi Brain. `approved` only from a tool eve holds for the user's click
+ * (approval: always()), so Avi Brain can check the click happened; the model never sets it.
+ */
 export async function callAviBrain(
   name: string,
   input: unknown,
   ctx: Parameters<typeof profileIdOf>[0],
+  { approved = false }: { approved?: boolean } = {},
 ): Promise<unknown> {
   const profileId = profileIdOf(ctx);
   // A sandbox command may run up to an hour; everything else is quick
   const timeoutMs = name === 'run_command' || name === 'publish_artifact' ? 65 * 60_000 : 120_000;
   const response = await internal(
     `/tools/${name}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId, input }) },
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId, input, approved }),
+    },
     timeoutMs,
   );
   const reply = (await response.json()) as { ok?: boolean; output?: unknown; error?: { message?: string } };

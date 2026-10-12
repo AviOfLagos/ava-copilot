@@ -7,3 +7,4 @@ import './account/register';
 import './models/register';
 import './chat/register';
 import './voice-engines/register';
+import './companion/register';

@@ -21,7 +21,7 @@ export default defineDynamic({
                   'Run one shell command line in your sandbox (Linux, Node 24, pnpm, Python 3), in /workspace. It has network access, so the user approves each command.',
                 inputSchema: z.object({ command: z.string().min(1).max(8000) }),
                 approval: always(),
-                execute: (input, toolCtx) => callAviBrain('run_command', input, toolCtx),
+                execute: (input, toolCtx) => callAviBrain('run_command', input, toolCtx, { approved: true }),
               })
             : defineTool({
                 description:
@@ -51,7 +51,7 @@ export default defineDynamic({
             'Post to GitHub with gh: issue create, issue comment or pr comment, with --title/--body given inline. The user approves it first, and it is refused if it contains a secret. Pushing code is never possible.',
           inputSchema: z.object({ args: z.array(z.string().max(8000)).min(1).max(40) }),
           approval: always(),
-          execute: (input, toolCtx) => callAviBrain('gh_write', input, toolCtx),
+          execute: (input, toolCtx) => callAviBrain('gh_write', input, toolCtx, { approved: true }),
         }),
         mcp_read: defineTool({
           description: `Call a read-only tool of an MCP server on the Mac. Allowed: ${mcpList}.`,
@@ -70,7 +70,7 @@ export default defineDynamic({
             args: z.record(z.string(), z.unknown()).optional(),
           }),
           approval: always(),
-          execute: (input, toolCtx) => callAviBrain('mcp_call', input, toolCtx),
+          execute: (input, toolCtx) => callAviBrain('mcp_call', input, toolCtx, { approved: true }),
         }),
         publish_artifact: defineTool({
           description:

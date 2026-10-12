@@ -1,4 +1,3 @@
-import { lookup as dnsLookup } from 'node:dns/promises';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { generateText } from 'ai';
 import { AppError, kindOfStatus, parseRetryAfter, RETRY_POLICIES, toAppError } from '@extension/shared';
@@ -10,6 +9,7 @@ import { compactJson, truncate } from '@engine/template';
 import { sandboxProfileFor } from '@protocol';
 import type { ModelConfig } from '@protocol';
 import type { SandboxManager } from '../sandbox/manager';
+import { publicOnlyFetch, systemResolver } from './publicFetch';
 import type { FileWorkflowStore } from './store';
 
 /**
@@ -87,10 +87,14 @@ export interface MacExecutorDeps {
   lookup?: (host: string) => Promise<{ address: string }[]>;
 }
 
-/** GET on the routine's allowed hosts. On the Mac the name is resolved first, so it cannot lead to a private address. */
+/**
+ * GET on the routine's allowed hosts. The name is resolved and checked first (a clear refusal), and the connection
+ * itself is made only to a checked address (publicFetch.ts), so a second answer from the name's server cannot lead
+ * to a private address either.
+ */
 export function httpGetExecutor(deps: MacExecutorDeps): StepExecutor {
-  const doFetch = deps.fetch ?? fetch;
-  const lookup = deps.lookup ?? ((host: string) => dnsLookup(host, { all: true, verbatim: true }));
+  const lookup = deps.lookup ?? systemResolver;
+  const doFetch = deps.fetch ?? publicOnlyFetch(lookup);
   return {
     retry: RETRY_POLICIES.connectorRead,
     taints: true,

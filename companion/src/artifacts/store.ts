@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { mkdir, open, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { ARTIFACT_LIMITS, artifactSchema, STUDIO_TOKEN_TTL_MS, VIEW_KEY_TTL_MS } from '@protocol';
-import type { Artifact, ArtifactCreateRequest } from '@protocol';
+import type { Artifact, ArtifactCreateRequest, SandboxPolicy } from '@protocol';
 import { privateDir } from '../config';
 import { fail } from '../errors';
 import type { Logger } from '../log';
@@ -83,7 +83,8 @@ export class ArtifactStore {
     }
   }
 
-  async create(request: ArtifactCreateRequest): Promise<Artifact> {
+  /** `policy`: the sandbox limits of the agent that builds it; a build never has network, whatever they say. */
+  async create(request: ArtifactCreateRequest & { policy?: Partial<SandboxPolicy> }): Promise<Artifact> {
     const id = randomBytes(8).toString('hex');
     const dir = join(this.root, id);
     const filesDir = join(dir, 'files');
@@ -104,7 +105,11 @@ export class ArtifactStore {
         files = entries.map(([path]) => path);
       } else {
         const build = request.build!;
-        const result = await this.deps.sandbox.run({ profileId: request.profileId, command: build.command });
+        const result = await this.deps.sandbox.run({
+          profileId: request.profileId,
+          command: build.command,
+          policy: { ...request.policy, network: 'none' },
+        });
         if (result.exitCode !== 0) {
           const tail = result.stderr.trim().split('\n').slice(-5).join('\n');
           fail('invalid', `The build failed (exit ${result.exitCode})${tail ? `:\n${tail}` : '.'}`);

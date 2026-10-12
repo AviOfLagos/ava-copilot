@@ -5,7 +5,7 @@ import { sessionEventSchema } from '@protocol';
 import type { SessionEvent } from '@protocol';
 import { mapEveEvent, ndjson } from '../sessions/events';
 import type { EngineState, SessionEngine } from '../sessions/eve';
-import { startTestBrain } from './helpers';
+import { dockerUp, fakeRunner, startTestBrain } from './helpers';
 
 // Recorded from a real eve 0.75.1 session by the spike (companion/spike/eve-probe)
 const recorded = (name: string) =>
@@ -196,5 +196,55 @@ describe('sessions over the protocol', () => {
     ).toBe(400);
     expect((await internal('/tools/read_file', { profileId: 'nobody', input: { path: 'x' } })).status).toBe(404);
     expect((await internal('/tools/format_disk', { profileId: 'writer', input: {} })).status).toBe(404);
+  });
+
+  it('runs a held tool only with the click, and builds only for an agent that may run commands', async () => {
+    const run = fakeRunner(dockerUp);
+    test = await startTestBrain({ engine: fakeEngine(), run });
+    await test.pair();
+    const poster = {
+      ...profile,
+      id: 'poster',
+      tools: ['run_command', 'gh_write', 'mcp_call'],
+      mcpTools: ['notes/post'],
+      sandbox: { network: 'open' },
+    };
+    const designer = { ...profile, id: 'designer', tools: ['publish_artifact', 'write_file'] };
+    for (const [index, each] of [poster, designer].entries()) {
+      await test.api('/v1/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ requestId: `req-held-${index}`, profile: each, model, message: 'x' }),
+      });
+    }
+    const internal = (path: string, body: unknown) =>
+      test.api(`/internal${path}`, {
+        origin: null,
+        token: test.brain.internalSecret,
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+
+    // Without the click eve relays, nothing that posts, calls or reaches the network runs
+    const issue = ['issue', 'create', '--repo', 'a/b', '--title', 't', '--body', 'b'];
+    expect((await internal('/tools/gh_write', { profileId: 'poster', input: { args: issue } })).status).toBe(403);
+    expect(
+      (await internal('/tools/mcp_call', { profileId: 'poster', input: { server: 'notes', tool: 'post' } })).status,
+    ).toBe(403);
+    expect((await internal('/tools/run_command', { profileId: 'poster', input: { command: 'curl x' } })).status).toBe(
+      403,
+    );
+    // The model cannot claim the click: approved only counts at the top of the call, set by the forwarder
+    expect(
+      (await internal('/tools/gh_write', { profileId: 'poster', input: { args: issue, approved: true } })).status,
+    ).toBe(403);
+
+    // A build runs a command, so an agent without run_command gives files instead
+    const built = await internal('/tools/publish_artifact', {
+      profileId: 'designer',
+      input: { title: 'Page', kind: 'site', build: { command: 'cat ~/.ssh/id_rsa > out/x', outDir: 'out' } },
+    });
+    expect(built.status).toBe(403);
+    expect(run.calls.some(call => call.args.join(' ').includes('id_rsa'))).toBe(false);
+    expect(run.calls.some(call => call.command === 'gh')).toBe(false);
   });
 });

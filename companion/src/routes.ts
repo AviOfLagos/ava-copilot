@@ -471,9 +471,11 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       maxBodyBytes: 26_000_000,
       async handler({ body, params, signal }) {
         if (!isToolName(params.name)) fail('not_found', 'Unknown tool.');
-        const request = body as { profileId?: unknown; input?: unknown };
+        const request = body as { profileId?: unknown; input?: unknown; approved?: unknown };
         if (typeof request.profileId !== 'string') fail('invalid', 'Which profile?');
-        const output = await runTool(deps, params.name, request.profileId, request.input, signal);
+        const output = await runTool(deps, params.name, request.profileId, request.input, signal, {
+          approved: request.approved === true,
+        });
         return json({ ok: true, output });
       },
     },
