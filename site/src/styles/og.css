@@ -1,0 +1,153 @@
+/* Link-preview cards: exactly 1200×630, dark, the product's own UI on the right. */
+
+html,
+body {
+  width: 1200px;
+  height: 630px;
+  overflow: hidden;
+}
+
+/* No grain: noise doesn't survive image compression and would triple the file size */
+body::after {
+  display: none;
+}
+
+.ogc {
+  position: relative;
+  display: grid;
+  grid-template-columns: 540px 1fr;
+  grid-template-rows: 510px;
+  gap: 48px;
+  width: 1200px;
+  height: 630px;
+  padding: 64px 0 0 72px;
+  overflow: hidden;
+}
+
+.ogc__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 510px;
+}
+
+.ogc__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.ogc__brand svg {
+  width: 44px;
+  height: 44px;
+}
+
+.ogc__kicker {
+  margin-bottom: 18px;
+  font-size: 15px;
+}
+
+.ogc__title {
+  color: var(--ink);
+  font-size: 60px;
+  line-height: 1.03;
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.ogc__host {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 17px;
+}
+
+.ogc__visual {
+  position: relative;
+  min-width: 0;
+  height: 566px;
+}
+
+/* Home: the panel alone, scaled so the amber card shows, cropped by the card's edge */
+.ogc[data-slug='home'] .gd {
+  width: 372px;
+  transform: scale(0.82);
+  transform-origin: top left;
+  margin-top: -16px;
+}
+
+.ogc[data-slug='home'] .gd-window {
+  grid-template-columns: 372px;
+  grid-template-rows: var(--gd-h);
+}
+
+.ogc[data-slug='home'] .gd-bar,
+.ogc[data-slug='home'] .gd-page,
+.ogc[data-slug='home'] .gd-caption {
+  display: none;
+}
+
+.ogc__install {
+  display: grid;
+  gap: 20px;
+  width: 520px;
+  margin-top: 64px;
+}
+
+.ogc__install .cmd__code {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.ogc__steps {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.ogc__steps ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.ogc__steps li {
+  position: relative;
+  padding-left: 34px;
+  color: var(--ink-2);
+  font-size: 17px;
+  line-height: 25px;
+  counter-increment: step;
+}
+
+.ogc__steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 7px;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.ogc__browsers {
+  display: flex;
+  gap: 8px;
+}
+
+.ogc[data-slug='privacy'] .plabel {
+  width: 520px;
+}

@@ -1,0 +1,15 @@
+/* Preflight and the utilities the app's widgets use (see tailwind.config.mjs). The site's own styles are in site.css. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The panel's mono label, as src/side-panel/index.css defines it */
+@layer components {
+  .label-mono {
+    font-family: 'Geist Mono Variable', ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+}

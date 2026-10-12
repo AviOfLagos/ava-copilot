@@ -1,0 +1,55 @@
+---
+// A routine as the panel draws it (n8n-style): trigger, steps and outputs on wires. The commit waits in amber.
+import { Clock, Newspaper, Search, Sparkles } from 'lucide-react';
+import { home } from '../content/site';
+
+const { nodes, held, diagramLabel } = home.routines;
+const icons = { clock: Clock, search: Search, sparkles: Sparkles, brief: Newspaper } as const;
+const chain = nodes.slice(0, 3);
+const brief = nodes[3];
+const BriefIcon = icons[brief.icon as keyof typeof icons];
+---
+
+<div class="stage" data-reveal>
+  <div class="flow" role="img" aria-label={diagramLabel}>
+    {
+      chain.map((node, index) => {
+        const Icon = icons[node.icon as keyof typeof icons];
+        return (
+          <>
+            <div class:list={['flow__node', index > 0 && 'flow__node--in']} style={`--i:${index}`}>
+              <span class="flow__icon">
+                <Icon aria-hidden="true" strokeWidth={1.75} />
+              </span>
+              <span class="flow__text">
+                <span class="flow__kind">{node.kind}</span>
+                <span class="flow__title">{node.title}</span>
+              </span>
+            </div>
+            {index < chain.length - 1 && <div class="flow__wire" style={`--i:${index}`} />}
+          </>
+        );
+      })
+    }
+    <div class="flow__split" aria-hidden="true">
+      <i class="stem"></i><i class="bar-l"></i><i class="bar-r"></i><i class="drop-l"></i><i class="drop-r"></i>
+    </div>
+    <div class="flow__branch">
+      <div class="flow__node flow__node--in" style="--i:3">
+        <span class="flow__icon"><BriefIcon aria-hidden="true" strokeWidth={1.75} /></span>
+        <span class="flow__text">
+          <span class="flow__kind">{brief.kind}</span>
+          <span class="flow__title">{brief.title}</span>
+        </span>
+      </div>
+      <div class="flow__node flow__node--in flow__node--held" style="--i:4">
+        <span class="flow__icon"><span class="diamond"></span></span>
+        <span class="flow__text">
+          <span class="flow__kind">{held.kind}</span>
+          <span class="flow__title">{held.title}</span>
+          <span class="flow__note">{held.note}</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,28 @@
+---
+import { ArrowRight } from 'lucide-react';
+import { notFound } from '../content/site';
+import Base from '../layouts/Base.astro';
+---
+
+<Base title={notFound.title} description={notFound.description} path="/404" og="home" ogAlt={notFound.title} noindex>
+  <section class="nf wrap" aria-labelledby="nf-title">
+    <p class="label kicker">{notFound.kicker}</p>
+    <h1 class="display" id="nf-title" style="margin-top: 16px">{notFound.heading}</h1>
+    <p class="lede" style="margin-top: 20px; max-width: 560px">{notFound.body}</p>
+    <ul class="nf__links">
+      {
+        notFound.links.map(link => (
+          <li>
+            <a class="panel-card" href={link.href}>
+              <span class="arrow-link">
+                <span>{link.label}</span>
+                <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+              </span>
+              <span>{link.note}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>

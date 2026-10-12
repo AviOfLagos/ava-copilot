@@ -1,0 +1,17 @@
+---
+// Questions as native disclosure widgets: they work with the keyboard and without JavaScript.
+import { home } from '../content/site';
+---
+
+<ul class="faq">
+  {
+    home.faq.items.map(item => (
+      <li>
+        <details>
+          <summary>{item.q}</summary>
+          <p>{item.a}</p>
+        </details>
+      </li>
+    ))
+  }
+</ul>

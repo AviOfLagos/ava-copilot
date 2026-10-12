@@ -1,0 +1,194 @@
+---
+import { ArrowRight, Check } from 'lucide-react';
+import Faq from '../components/Faq.astro';
+import InstallCommand from '../components/InstallCommand.astro';
+import KnowledgeGraph from '../components/KnowledgeGraph.astro';
+import PrivacyLabel from '../components/PrivacyLabel.astro';
+import RoutineDiagram from '../components/RoutineDiagram.astro';
+import SectionHead from '../components/SectionHead.astro';
+import TrailExample from '../components/TrailExample';
+import { INSTALL_COMMAND, demo, home, links } from '../content/site';
+import GateDemo from '../islands/GateDemo';
+import VoiceDemo from '../islands/VoiceDemo';
+import Base from '../layouts/Base.astro';
+import { homeGraph } from '../lib/seo';
+
+const { hero, gate, trail, models, voice, memory, routines, privacy, faq, closing } = home;
+---
+
+<Base title={home.title} description={home.description} path="/" og="home" ogAlt={home.ogAlt} graph={homeGraph()}>
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <p class="label hero__eyebrow">{hero.eyebrow}</p>
+    <h1 class="display hero__title" id="hero-title">{hero.title}</h1>
+    <div class="hero__grid">
+      <div class="hero__copy">
+        <p class="lede">{hero.lede}</p>
+        <div class="hero__install">
+          <InstallCommand id="hero-command" command={INSTALL_COMMAND} label={hero.installLabel} caption="macOS · Linux" />
+          <p class="hero__note">
+            {hero.installNote}{' '}
+            <a class="link" href={hero.windows.href}>{hero.windows.label}</a>.
+          </p>
+        </div>
+        <div class="hero__links">
+          <a class="arrow-link" href={hero.guide.href}>
+            <span>{hero.guide.label}</span>
+            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+          </a>
+        </div>
+        <ul class="facts">
+          {
+            hero.facts.map(fact => (
+              <li>
+                <Check aria-hidden="true" strokeWidth={1.75} />
+                {fact}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div class="hero__demo">
+        <GateDemo client:load copy={demo} />
+        <noscript><p class="gd-caption">{demo.noscript}</p></noscript>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id={gate.id} aria-labelledby={`${gate.id}-title`}>
+    <div class="split">
+      <SectionHead id={gate.id} kicker={gate.kicker} title={gate.title} body={gate.body} />
+      <div class="stage">
+        <p class="label" style="margin-bottom: 14px">{gate.kindsLabel}</p>
+        <ul class="kinds">
+          {
+            gate.kinds.map(kind => (
+              <li>
+                <span class="diamond" aria-hidden="true" />
+                {kind}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+    <ul class="points">
+      {
+        gate.points.map(point => (
+          <li>
+            <h3 class="h3">{point.title}</h3>
+            <p>{point.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section wrap" id={trail.id} aria-labelledby={`${trail.id}-title`}>
+    <div class="split">
+      <SectionHead id={trail.id} kicker={trail.kicker} title={trail.title} body={trail.body} />
+      <div class="stage trail-stage">
+        <div class="trail-stage__panel">
+          <p class="label" style="margin-bottom: 12px">{trail.example.label}</p>
+          <TrailExample
+            runSteps={demo.runSteps}
+            steps={trail.example.steps}
+            held={trail.example.held}
+            heldDetail={trail.example.heldDetail}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id={privacy.id} aria-labelledby={`${privacy.id}-title`}>
+    <div class="split">
+      <SectionHead id={privacy.id} kicker={privacy.kicker} title={privacy.title} body={privacy.body}>
+        <p style="margin-top: 8px">
+          <a class="arrow-link" href={privacy.more.href}>
+            <span>{privacy.more.label}</span>
+            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+          </a>
+        </p>
+      </SectionHead>
+      <PrivacyLabel level={3} />
+    </div>
+  </section>
+
+  <section class="section wrap" id={models.id} aria-labelledby={`${models.id}-title`}>
+    <div class="split">
+      <SectionHead id={models.id} kicker={models.kicker} title={models.title} body={models.body} />
+      <div class="stage chip-groups">
+        {
+          models.groups.map(group => (
+            <div class="chip-group">
+              <p class="label">{group.label}</p>
+              <ul class="chips">
+                {group.items.map(item => (
+                  <li class:list={['chip', group.kind === 'local' && 'chip--local']}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+        <ul class="notes">
+          {
+            models.notes.map(note => (
+              <li>
+                <h3>{note.title}</h3>
+                <p>{note.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id={voice.id} aria-labelledby={`${voice.id}-title`}>
+    <div class="split">
+      <SectionHead id={voice.id} kicker={voice.kicker} title={voice.title} body={voice.body} />
+      <div class="stage">
+        <VoiceDemo client:visible copy={voice.stage} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id={memory.id} aria-labelledby={`${memory.id}-title`}>
+    <div class="split">
+      <SectionHead id={memory.id} kicker={memory.kicker} title={memory.title} body={memory.body} />
+      <KnowledgeGraph />
+    </div>
+  </section>
+
+  <section class="section wrap" id={routines.id} aria-labelledby={`${routines.id}-title`}>
+    <div class="split">
+      <SectionHead id={routines.id} kicker={routines.kicker} title={routines.title} body={routines.body} />
+      <RoutineDiagram />
+    </div>
+  </section>
+
+  <section class="section wrap" id={faq.id} aria-labelledby={`${faq.id}-title`}>
+    <div class="split split--top">
+      <SectionHead id={faq.id} kicker={faq.kicker} title={faq.title} />
+      <Faq />
+    </div>
+  </section>
+
+  <section class="closing wrap" aria-labelledby="closing-title">
+    <div class="stage closing__card">
+      <div>
+        <h2 class="h2" id="closing-title">{closing.title}</h2>
+        <div class="prose"><p>{closing.body}</p></div>
+      </div>
+      <div class="hero__install">
+        <InstallCommand id="closing-command" command={INSTALL_COMMAND} label={hero.installLabel} caption="macOS · Linux" />
+        <p class="hero__note">
+          <a class="arrow-link" href={links.install}>
+            <span>{hero.guide.label}</span>
+            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>

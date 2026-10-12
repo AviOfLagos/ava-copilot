@@ -1,0 +1,118 @@
+/* The voice vignette: the voice orb as the panel's voice view shows it, and the composer while dictating. */
+
+.vd {
+  display: grid;
+  gap: 14px;
+}
+
+.vd-talk,
+.vd-dictate {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+
+.vd-talk {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 22px;
+  background:
+    radial-gradient(200px 200px at 76px 50%, rgb(var(--primary-rgb) / 0.2), transparent 70%), var(--color-background);
+}
+
+.vd-talk__text {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vd-orb {
+  position: relative;
+  flex: none;
+  width: 112px;
+  height: 112px;
+}
+
+/* Until WebGL draws (or without it), the orb's face as a picture */
+.vd-orb::before {
+  content: '';
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23F4F4F5'/%3E%3Crect x='10.6' y='11.2' width='1.8' height='6.6' rx='.9' fill='%2309090B'/%3E%3Crect x='19.6' y='11.2' width='1.8' height='6.6' rx='.9' fill='%2309090B'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.vd-orb > div {
+  position: relative;
+}
+
+.vd-wake {
+  color: var(--color-foreground);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.vd-talk__note {
+  color: var(--color-muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.vd-dictate {
+  display: grid;
+  gap: 12px;
+  padding: 16px 14px 10px;
+  background: var(--color-background);
+}
+
+.vd-dictate .label {
+  margin-left: 6px;
+}
+
+.vd-dictate form,
+.vd-dictate textarea {
+  min-width: 0;
+}
+
+/* The pill's own ring shows where the focus is, as in the panel */
+.vd .mo-pill textarea:focus-visible {
+  outline: none !important;
+}
+
+.vd-hint {
+  min-height: 20px;
+  color: var(--color-muted-foreground);
+  font-size: 11.5px;
+  line-height: 17px;
+  text-align: center;
+}
+
+/* Narrow phones: finer level bars, so the strip fits next to its buttons */
+@media (max-width: 479px) {
+  .vd-talk {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .vd-orb {
+    width: 88px;
+    height: 88px;
+  }
+
+  .vd-orb > div {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .vd .stt-bars {
+    gap: 1px;
+  }
+
+  .vd .stt-bars span {
+    width: 2px;
+  }
+}

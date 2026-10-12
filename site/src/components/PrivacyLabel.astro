@@ -1,0 +1,35 @@
+---
+// "What leaves your machine", set as a label rather than a policy: rows grouped by where the data goes.
+import { privacy } from '../content/site';
+
+interface Props {
+  // The label's own heading level, so it fits the page's outline
+  level?: 2 | 3;
+}
+const { level = 3 } = Astro.props;
+const Title = `h${level}` as 'h2' | 'h3';
+const Group = `h${level + 1}` as 'h3' | 'h4';
+const { label } = privacy;
+let row = 0;
+---
+
+<section class="plabel" aria-labelledby="plabel-title" data-reveal>
+  <Title class="plabel__title" id="plabel-title">{label.title}</Title>
+  <p class="plabel__caption">{label.caption}</p>
+  {
+    label.groups.map(group => (
+      <div class="plabel__group" data-tone={group.tone}>
+        <Group class="label">{group.heading}</Group>
+        <dl>
+          {group.rows.map(item => (
+            <div class="plabel__row" style={`--i:${row++}`}>
+              <dt>{item.what}</dt>
+              <dd>{item.where}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    ))
+  }
+  <p class="plabel__foot">{label.footnote}</p>
+</section>

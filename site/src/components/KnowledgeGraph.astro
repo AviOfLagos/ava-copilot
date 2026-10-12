@@ -1,0 +1,108 @@
+---
+// A corner of the knowledge graph, drawn with the graph view's colour rules: projects mint, people periwinkle,
+// everything else in the text colour; amber is never used. Then a cited answer from the same memory.
+import { home } from '../content/site';
+
+const { nodes, graphLabel, question, answer, sources } = home.memory;
+
+type Kind = 'project' | 'meeting' | 'decision' | 'person' | 'chat' | 'page';
+const N: Record<Kind, { x: number; y: number; r: number; label: string; kind: string }> = {
+  project: { x: 260, y: 148, r: 19, label: nodes.project, kind: 'Project' },
+  meeting: { x: 104, y: 70, r: 13, label: nodes.meeting, kind: 'Meeting' },
+  decision: { x: 414, y: 66, r: 13, label: nodes.decision, kind: 'Decision' },
+  person: { x: 86, y: 226, r: 13, label: nodes.person, kind: 'Person' },
+  chat: { x: 430, y: 220, r: 13, label: nodes.chat, kind: 'Chat' },
+  page: { x: 262, y: 262, r: 11, label: nodes.page, kind: 'Page' },
+};
+
+// [from, to, lit]: the lit wires are the ones the answer below comes from
+const edges: [Kind, Kind, boolean][] = [
+  ['project', 'meeting', true],
+  ['meeting', 'decision', true],
+  ['project', 'decision', true],
+  ['person', 'meeting', false],
+  ['project', 'person', false],
+  ['project', 'chat', true],
+  ['chat', 'page', false],
+  ['project', 'page', false],
+];
+
+// Quieter nodes at the edge, so it reads as part of something larger
+const faint = [
+  { x: 30, y: 128, to: 'person' as Kind },
+  { x: 190, y: 24, to: 'meeting' as Kind },
+  { x: 500, y: 140, to: 'chat' as Kind },
+  { x: 350, y: 286, to: 'page' as Kind },
+  { x: 498, y: 28, to: 'decision' as Kind },
+];
+
+const curve = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  // Bend each wire a little off the straight line, as a force layout's curved links do
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  return `M${a.x} ${a.y} Q${(mx - dy * 0.12).toFixed(1)} ${(my + dx * 0.12).toFixed(1)} ${b.x} ${b.y}`;
+};
+const order: Kind[] = ['project', 'meeting', 'decision', 'chat', 'person', 'page'];
+---
+
+<div class="stage" data-reveal>
+  <svg class="graph" viewBox="0 0 520 300" role="img" aria-label={graphLabel} style="max-width: 540px; margin-inline: auto">
+    <g>
+      {faint.map((dot, i) => <path class="edge" pathLength="1" d={curve(dot, N[dot.to])} style={`--i:${i}; opacity:.5`} />)}
+      {
+        edges.map(([from, to, lit], i) => (
+          <path class:list={['edge', lit && 'edge--lit']} pathLength="1" d={curve(N[from], N[to])} style={`--i:${i}`} />
+        ))
+      }
+    </g>
+    {
+      faint.map((dot, i) => (
+        <g class="node" style={`--i:${i + 6}`}>
+          <circle class="node-back" cx={dot.x} cy={dot.y} r="5" />
+          <circle class="node-dot" cx={dot.x} cy={dot.y} r="5" style="opacity:.6" />
+        </g>
+      ))
+    }
+    {
+      order.map((key, i) => {
+        const node = N[key];
+        return (
+          <g class="node" style={`--i:${i}`}>
+            <circle class="node-back" cx={node.x} cy={node.y} r={node.r} />
+            <circle
+              class:list={['node-dot', key === 'project' && 'node-dot--project', key === 'person' && 'node-dot--person']}
+              cx={node.x}
+              cy={node.y}
+              r={node.r}
+            />
+            <text class="node-kind" x={node.x} y={node.y - node.r - 8} text-anchor="middle">
+              {node.kind}
+            </text>
+            <text x={node.x} y={node.y + node.r + 18} text-anchor="middle">
+              {node.label}
+            </text>
+          </g>
+        );
+      })
+    }
+  </svg>
+
+  <div class="answer panel-card">
+    <div class="answer__q"><p>{question}</p></div>
+    <p class="answer__a">
+      {answer}
+      <span class="cite">1</span><span class="cite">2</span>
+    </p>
+    <div class="answer__sources">
+      {
+        sources.map((source, i) => (
+          <span class="cite">
+            {i + 1} · {source}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,89 @@
+---
+import PrivacyLabel from '../components/PrivacyLabel.astro';
+import { PRODUCT, links, privacy } from '../content/site';
+import Base from '../layouts/Base.astro';
+import { pageGraph } from '../lib/seo';
+
+const path = links.privacy;
+const { sections, permissions, site } = privacy;
+---
+
+<Base
+  title={privacy.title}
+  description={privacy.description}
+  path={path}
+  og="privacy"
+  ogAlt={privacy.ogAlt}
+  graph={pageGraph(path, privacy.title, privacy.description, privacy.breadcrumb)}>
+  <div class="wrap">
+    <div class="split split--top page-top">
+      <header class="page-head">
+        <nav class="crumbs label" aria-label="Breadcrumb">
+          <ol>
+            <li><a href="/">{PRODUCT}</a></li>
+            <li><span aria-current="page">{privacy.breadcrumb}</span></li>
+          </ol>
+        </nav>
+        <h1 class="display">{privacy.heading}</h1>
+        <p class="lede">{privacy.lede}</p>
+        <p class="label" style="margin-top: 24px">
+          {privacy.updatedLabel} · <time datetime="2026-10-12">{privacy.updated}</time>
+        </p>
+      </header>
+      <PrivacyLabel level={2} />
+    </div>
+
+    {
+      sections.map(section => (
+        <section class="block" id={section.id} aria-labelledby={`${section.id}-title`}>
+          <div class="block-head">
+            <h2 class="h2" id={`${section.id}-title`}>
+              {section.title}
+            </h2>
+          </div>
+          <ul class="facts-list">
+            {section.items.map(item => (
+              <li>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <section class="block" id={permissions.id} aria-labelledby={`${permissions.id}-title`}>
+      <div class="block-head">
+        <h2 class="h2" id={`${permissions.id}-title`}>{permissions.title}</h2>
+        <p class="prose">{permissions.lede}</p>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">{permissions.headers.name}</th>
+            <th scope="col">{permissions.headers.why}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            permissions.items.map(item => (
+              <tr>
+                <th scope="row">{item.name}</th>
+                <td>{item.why}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="block" id={site.id} aria-labelledby={`${site.id}-title`}>
+      <div class="block-head">
+        <h2 class="h2" id={`${site.id}-title`}>{site.title}</h2>
+        <p class="prose">{site.body}</p>
+      </div>
+    </section>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>

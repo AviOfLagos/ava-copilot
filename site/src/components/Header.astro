@@ -1,0 +1,36 @@
+---
+import { PRODUCT, links, nav } from '../content/site';
+import Mark from './Mark.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  path: string;
+}
+const { path } = Astro.props;
+---
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label={nav.home}>
+      <Mark />
+      <span>{PRODUCT}</span>
+    </a>
+    <nav class="site-nav" aria-label={nav.label}>
+      <ul>
+        {
+          nav.items.map(item => (
+            <li>
+              <a href={item.href} aria-current={item.href === path ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <ThemeToggle />
+    <a class="btn btn--primary" href={links.install} aria-current={path === links.install ? 'page' : undefined}>
+      {nav.install}
+    </a>
+  </div>
+</header>
