@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
@@ -13,12 +13,16 @@ import {
   ListTree,
   MousePointerClick,
   PanelTop,
+  RotateCcw,
   Route,
   Search,
   Sparkles,
+  Square,
+  Volume2,
   Workflow,
 } from 'lucide-react';
 import { t } from '@extension/i18n';
+import { ttsSpeakingStore } from '@extension/storage';
 import type { ConfirmRequest, ThreadMessage, ThreadRecord } from '@extension/storage';
 import { Conversation, ConversationContent, ConversationScrollButton } from '../components/ai/conversation';
 import { Message, MessageActions, MessageContent, MessageResponse } from '../components/ai/message';
@@ -71,6 +75,12 @@ interface ChatViewProps {
   thread: ThreadRecord;
   messages: ThreadMessage[];
   onBranch?: (seq: number) => void;
+  // Re-runs the thread's last task with a fresh agent; shown when the thread is idle or errored
+  onRetry?: () => void;
+  // Forks the thread just before a user message and sends it again
+  onRetryFrom?: (seq: number) => void;
+  onSpeak?: (threadId: string, messageId: string, text: string) => void;
+  onStopSpeaking?: () => void;
   footer?: React.ReactNode;
 }
 
@@ -163,9 +173,24 @@ function RunTrail({
  * A thread as a conversation: each request, its run drawn as a trail of steps, and the answer.
  * The newest run stays open; older ones fold to one line.
  */
-export default function ChatView({ thread, messages, onBranch, footer }: ChatViewProps) {
+export default function ChatView({
+  thread,
+  messages,
+  onBranch,
+  onRetry,
+  onRetryFrom,
+  onSpeak,
+  onStopSpeaking,
+  footer,
+}: ChatViewProps) {
   const running = thread.status === 'running' || thread.status === 'waiting_confirm';
+  const idle = thread.status === 'idle' || thread.status === 'error';
   const turns = useMemo(() => toTurns(messages, running), [messages, running]);
+
+  // Who is speaking right now, read live from storage the background writes to; null once nothing is
+  useEffect(() => void ttsSpeakingStore.get(), []);
+  const speakingMessageId =
+    useSyncExternalStore(ttsSpeakingStore.subscribe, ttsSpeakingStore.getSnapshot)?.messageId ?? null;
 
   return (
     <Conversation className="min-h-0">
@@ -174,6 +199,8 @@ export default function ChatView({ thread, messages, onBranch, footer }: ChatVie
           const latest = index === turns.length - 1;
           const held = latest && turn.active ? thread.pendingRequest : null;
           const showTrail = turn.steps.length > 0 || (latest && turn.active);
+          const showFailedRetry = latest && !turn.active && !turn.answer && thread.status === 'error';
+          const speakingThis = latest && !!turn.answer && speakingMessageId === turn.answer.id;
           return (
             <div key={turn.id} className="flex flex-col gap-3">
               {turn.request && (
@@ -181,28 +208,68 @@ export default function ChatView({ thread, messages, onBranch, footer }: ChatVie
                   <MessageContent>
                     <p className="whitespace-pre-wrap break-words">{turn.request.content}</p>
                   </MessageContent>
-                  {onBranch && (
+                  {(onBranch || (onRetryFrom && idle)) && (
                     <MessageActions>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t('threads_branch')}
-                        title={t('threads_branch')}
-                        onClick={() => onBranch(turn.request!.seq)}>
-                        <GitBranch className="size-3.5" />
-                      </Button>
+                      {onBranch && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('threads_branch')}
+                          title={t('threads_branch')}
+                          onClick={() => onBranch(turn.request!.seq)}>
+                          <GitBranch className="size-3.5" />
+                        </Button>
+                      )}
+                      {onRetryFrom && idle && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('retry_fromHere')}
+                          title={t('retry_fromHere')}
+                          onClick={() => onRetryFrom(turn.request!.seq)}>
+                          <RotateCcw className="size-3.5" />
+                        </Button>
+                      )}
                     </MessageActions>
                   )}
                 </Message>
               )}
               {showTrail && <RunTrail turn={turn} held={held} activity={thread.activity} open={latest} />}
+              {showFailedRetry && onRetry && (
+                <div className="pl-1">
+                  <Button variant="outline" size="sm" onClick={onRetry}>
+                    <RotateCcw className="size-3.5" />
+                    {t('retry_action')}
+                  </Button>
+                </div>
+              )}
               {turn.answer && (
                 <Message from="assistant">
                   <MessageContent>
                     <MessageResponse>{turn.answer.content}</MessageResponse>
                   </MessageContent>
-                  <MessageActions>
+                  <MessageActions className={speakingThis ? 'h-7 opacity-100' : undefined}>
                     <CopyButton text={turn.answer.content} />
+                    {onSpeak &&
+                      (speakingThis ? (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('speak_stop')}
+                          title={t('speak_stop')}
+                          onClick={() => onStopSpeaking?.()}>
+                          <Square className="size-3.5" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('speak_action')}
+                          title={t('speak_action')}
+                          onClick={() => onSpeak(thread.id, turn.answer!.id, turn.answer!.content)}>
+                          <Volume2 className="size-3.5" />
+                        </Button>
+                      ))}
                     {onBranch && (
                       <Button
                         variant="ghost"
@@ -211,6 +278,16 @@ export default function ChatView({ thread, messages, onBranch, footer }: ChatVie
                         title={t('threads_branch')}
                         onClick={() => onBranch(turn.answer!.seq)}>
                         <GitBranch className="size-3.5" />
+                      </Button>
+                    )}
+                    {onRetry && latest && idle && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t('retry_action')}
+                        title={t('retry_action')}
+                        onClick={onRetry}>
+                        <RotateCcw className="size-3.5" />
                       </Button>
                     )}
                   </MessageActions>

@@ -2695,5 +2695,62 @@
   },
   "threads_retried": {
     "message": "Tentando a tarefa de novo do início."
+  },
+  "retry_action": {
+    "message": "Tentar de novo"
+  },
+  "retry_fromHere": {
+    "message": "Repetir a partir daqui"
+  },
+  "retry_messageNotFound": {
+    "message": "Essa mensagem não foi encontrada para repetir a partir dela."
+  },
+  "speak_action": {
+    "message": "Ler em voz alta"
+  },
+  "speak_stop": {
+    "message": "Parar a leitura"
+  },
+  "speak_settings_title": {
+    "message": "Saída de voz"
+  },
+  "speak_settings_readAloud_label": {
+    "message": "Ler respostas em voz alta"
+  },
+  "speak_settings_readAloud_off": {
+    "message": "Desligado"
+  },
+  "speak_settings_readAloud_voice": {
+    "message": "Quando usei voz"
+  },
+  "speak_settings_readAloud_always": {
+    "message": "Sempre"
+  },
+  "speak_settings_engine_label": {
+    "message": "Motor de voz"
+  },
+  "speak_settings_engine_system": {
+    "message": "Vozes do sistema"
+  },
+  "speak_settings_engine_gemini": {
+    "message": "Gemini (nuvem)"
+  },
+  "speak_settings_voice_label": {
+    "message": "Voz"
+  },
+  "speak_settings_voice_default": {
+    "message": "Voz padrão"
+  },
+  "speak_settings_rate_label": {
+    "message": "Velocidade da fala"
+  },
+  "speak_settings_gemini_needsKey": {
+    "message": "Adicione uma chave de API do Gemini em Modelos e uso para usar este motor."
+  },
+  "speak_errors_noKey": {
+    "message": "Nenhuma chave de API do Gemini está configurada."
+  },
+  "speak_errors_failed": {
+    "message": "Não foi possível ler a resposta em voz alta."
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import { llmProviderStore, threadStore } from '@extension/storage';
 import type { ThreadRecord } from '@extension/storage';
-import { Cpu, ExternalLink, Globe } from 'lucide-react';
+import { Cpu, ExternalLink, Globe, RotateCcw } from 'lucide-react';
 import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
@@ -12,6 +12,8 @@ interface ThreadBarProps {
   onPopOut?: () => void;
   onRebind: () => void;
   onContinue: () => void;
+  // Re-runs the thread's last task with a fresh agent; shown for every error kind
+  onRetry: () => void;
   // Opens the notes of the meeting this thread was made for
   onOpenMeeting?: () => void;
   onWorkspace: (workspaceId: string | null) => void;
@@ -25,6 +27,7 @@ export default function ThreadBar({
   thread,
   onRebind,
   onContinue,
+  onRetry,
   onOpenMeeting,
   onPopOut,
   onWorkspace,
@@ -139,11 +142,17 @@ export default function ThreadBar({
           role="status"
           className="border-destructive/40 bg-destructive/10 flex items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-[12px]">
           <span>{thread.error.message}</span>
-          {thread.error.kind !== 'failed' && (
-            <Button size="sm" variant="destructive" onClick={onContinue}>
-              {thread.error.kind === 'tab_closed' ? t('threads_reopenContinue') : t('threads_continue')}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {thread.error.kind !== 'failed' && (
+              <Button size="sm" variant="destructive" onClick={onContinue}>
+                {thread.error.kind === 'tab_closed' ? t('threads_reopenContinue') : t('threads_continue')}
+              </Button>
+            )}
+            <Button size="sm" variant="destructive" onClick={onRetry}>
+              <RotateCcw className="size-3.5" />
+              {t('retry_action')}
             </Button>
-          )}
+          </div>
         </div>
       )}
     </div>
