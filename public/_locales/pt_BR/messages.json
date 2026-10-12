@@ -3727,5 +3727,128 @@
   },
   "help_readAloud_where": {
     "message": "Configurações › Voz"
+  },
+  "inbox_title": {
+    "message": "Caixa de entrada"
+  },
+  "inbox_intro_unread": {
+    "message": "$COUNT$ não lida(s).",
+    "placeholders": { "count": { "content": "$1", "example": "3" } }
+  },
+  "inbox_intro_clear": {
+    "message": "Nada pendente agora."
+  },
+  "inbox_filter_all": {
+    "message": "Todas"
+  },
+  "inbox_filter_unread": {
+    "message": "Não lidas"
+  },
+  "inbox_filter_approvals": {
+    "message": "Aprovações"
+  },
+  "inbox_filter_source_all": {
+    "message": "Todas as origens"
+  },
+  "inbox_filter_workspace_all": {
+    "message": "Todos os workspaces"
+  },
+  "inbox_filter_agent_all": {
+    "message": "Todos os agentes"
+  },
+  "inbox_empty_title": {
+    "message": "Nada por aqui"
+  },
+  "inbox_empty_body": {
+    "message": "Agentes, rotinas e conectores deixam aqui o que precisa de você: mensagens, aprovações, resultados e alertas."
+  },
+  "inbox_back": {
+    "message": "Voltar"
+  },
+  "inbox_priority_high": {
+    "message": "Prioridade alta"
+  },
+  "inbox_action_approve": {
+    "message": "Aprovar"
+  },
+  "inbox_action_decline": {
+    "message": "Recusar"
+  },
+  "inbox_action_markDone": {
+    "message": "Marcar como concluído"
+  },
+  "inbox_action_markUnread": {
+    "message": "Marcar como não lido"
+  },
+  "inbox_action_openChat": {
+    "message": "Abrir conversa"
+  },
+  "inbox_action_openWorkflow": {
+    "message": "Abrir workflow"
+  },
+  "inbox_snooze_1h": {
+    "message": "Adiar 1 hora"
+  },
+  "inbox_snooze_tomorrow": {
+    "message": "Adiar até amanhã"
+  },
+  "inbox_status_snoozed": {
+    "message": "Adiado"
+  },
+  "inbox_row_menu_a11y": {
+    "message": "Mais ações"
+  },
+  "inbox_link_open_a11y": {
+    "message": "Abrir $LINK$",
+    "placeholders": { "link": { "content": "$1", "example": "https://example.com" } }
+  },
+  "inbox_settings_title": {
+    "message": "Caixa de entrada"
+  },
+  "inbox_settings_speakUp_label": {
+    "message": "Falar quando algo precisar de mim"
+  },
+  "inbox_settings_speakUp_hint": {
+    "message": "Uma frase curta para um item de alta prioridade, uma aprovação, ou uma reunião prestes a começar."
+  },
+  "inbox_settings_quietHours_label": {
+    "message": "Horário silencioso"
+  },
+  "inbox_settings_quietHours_hint": {
+    "message": "Sem avisos falados nesse período."
+  },
+  "inbox_settings_quietHours_start": {
+    "message": "De"
+  },
+  "inbox_settings_quietHours_end": {
+    "message": "Até"
+  },
+  "inbox_settings_quietHours_off": {
+    "message": "Desativar"
+  },
+  "inbox_settings_watchers_label": {
+    "message": "Ler de abas já abertas"
+  },
+  "inbox_settings_watchers_hint": {
+    "message": "Verifica uma aba aberta a cada poucos minutos por conversas não lidas. Nunca lê uma aba anônima."
+  },
+  "inbox_settings_watchWhatsapp": {
+    "message": "WhatsApp Web"
+  },
+  "inbox_settings_watchSlack": {
+    "message": "Slack"
+  },
+  "inbox_settings_watchGmail": {
+    "message": "Gmail"
+  },
+  "inbox_settings_checkNow": {
+    "message": "Verificar agora"
+  },
+  "inbox_settings_checkNow_busy": {
+    "message": "Verificando…"
+  },
+  "inbox_settings_checkNow_result": {
+    "message": "$COUNT$ novo(s) item(ns) encontrado(s).",
+    "placeholders": { "count": { "content": "$1", "example": "3" } }
   }
 }

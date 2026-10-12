@@ -20,4 +20,7 @@ export interface InboxItem {
   approval: { requestId: string; action: string } | null;
   createdAt: number;
   updatedAt: number;
+  // Set once this item folds together more than one raw message from the same source that arrived
+  // close together, so a burst becomes one line instead of flooding the list. Absent/null otherwise.
+  digestCount?: number | null;
 }

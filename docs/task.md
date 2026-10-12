@@ -592,6 +592,87 @@ that refocuses the web page.
   `identity` permission for connector sign-in. Routines pick models through `createRoleModel`; the graph, the brief and
   routines hold on the shared daily budget (`isOverDailyBudget`).
 
+### Wave 2 — WS5c Inbox & sources (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS5c. One place where agents, routines and connectors leave what needs Avi.
+
+- **Service** (`src/background/inbox/store.ts`): `addInboxItem(draft)` dedupes by `source+externalId` (the same
+  `source|externalId` id convention as `workflows/inbox.ts`'s own `postToInbox`, kept as an independent copy rather
+  than an import so neither stream depends on the other's internal file — both must simply keep agreeing on the
+  format) and folds a source's "message" items into one digest once more than `RATE_LIMIT_THRESHOLD` (5) land
+  within `RATE_LIMIT_WINDOW_MS` (10 min); the digest keeps counting while the burst continues and wakes back up if
+  already marked done when more arrive. Approvals, results and alerts are never folded. `markRead` / `markUnread`
+  / `markDone` / `snoozeItem` (wakes via a one-off job, `inbox-snooze:<id>`, which checks the item is still snoozed
+  before waking it) / `pruneDone` (30 days, daily cron `inbox_retention`).
+- **Badge** (`src/background/inbox/badge.ts`): the global `chrome.action.setBadgeText` (no `tabId`), skipped
+  entirely while any meeting records. Meetings only ever set a *per-tab* override (confirmed by reading
+  `meetings/manager.ts`'s `setBadge`), so the two never collide and no lead change was needed. Two independent
+  Dexie hooks on `db.inbox` / `db.meetings` (the same pattern WS2 used on `db.threads`, in `src/background/inbox/
+  register.ts`) keep the badge, a workflow event trigger (`workflowService.fireEvent('inbox_item', …)`, which
+  self-excludes workflow-sourced items), a throttled desktop notification and the announcer wired for *every*
+  writer to `db.inbox` — including `workflows/inbox.ts`'s own direct `postToInbox` calls, not only this stream's.
+- **Approvals** (`src/background/inbox/approvals.ts`): `registerApprovalHandler(prefix, fn)` dispatches an
+  Inbox answer by its request id's prefix; this stream registers `workflow-step:` → `workflowService.answerRequest`
+  (`APPROVAL_PREFIX` imported from `workflows/inbox.ts`). WS5b and WS4 add their own prefixes later with no change
+  here. Panel: inline Approve/Decline on an approval row and in its detail view (command `inbox_answer`, field
+  named `approvalRequestId` rather than `requestId` — a command's own data must never reuse that name, since
+  `PanelApi.request` already adds a protocol-level `requestId` of its own for reply correlation that would
+  silently clobber it; this exact collision was caught by the E2E approval test before being fixed). An item whose
+  `approval.action === 'open_thread'` carries `thread:<id>` in its request id and opens that chat instead
+  (`meta.ts#openThreadId`) — wired in the panel, with no current producer.
+- **Sources** (`src/background/inbox/watchers/`): tab watchers for WhatsApp Web, Slack web and Gmail web, each a
+  pure URL matcher (unit tested) plus a self-contained `chrome.scripting.executeScript` probe. The probe itself is
+  DOM-touching and, like `gate/probes.ts`'s own `inCall`/`readFocus`, is not unit tested — this project's Vitest
+  has no DOM environment (no jsdom/happy-dom dependency; confirmed before relying on the existing untested-by-design
+  convention rather than guessing) — so it is covered by the E2E fixture test instead. `runWatchers()` (job
+  `inbox_watch`, every 2 minutes, plus a "Check now" button in Inbox settings for an immediate read) reads every
+  open, non-incognito tab matching a watcher the user turned on, respects the firewall (`isUrlAllowed`, the same
+  check `voice/browser-tools.ts` uses), and reads only unread conversations already on screen. A new "message" item
+  is summarised (`summarize.ts`) by a tool-less `generateStructured` call (role `fast`, the same
+  resolve-then-fall-back-to-agent-settings shape as `workflows/models.ts`'s `workflowModel`) into a fixed
+  `{line, whyItMatters}`; the raw snippet is wrapped with `wrapUntrustedContent` first, and the summary replaces
+  the body only — the title (the sender's name) is left alone, and is also as far as the announcer or `read_inbox`
+  ever go verbatim. Skipped, leaving the raw snippet, over budget or on any failure. `addInboxItem` is exported for
+  WS4's connector pollers to call later.
+- **Speaking up** (`src/background/inbox/announcer.ts`): a high-priority item or an approval, or (a second
+  subscription to `CalendarWatcher.onReminder`, alongside `index.ts`'s own) a meeting about to start, becomes one
+  short line — the Live conversation speaks it when one is on, `tts/speak.ts` otherwise — gated by "Speak up when
+  something needs me", quiet hours (wraps past midnight) and a minimum gap between any two announcements. Never
+  reads a body aloud, and never a meeting's title either (matching `index.ts`'s own existing reminder line, which
+  the same reasoning already avoids). Desktop notifications (`notify.ts`) for high priority only, same throttle
+  shape, title only.
+- **Panel** (`src/side-panel/inbox/`): place `inbox` (top, order 10, the shared unread count as its live badge),
+  filters (all / unread / approvals / source / workspace / agent — the workspace and agent filters read
+  `workspaceStore`/`db.agents` directly rather than importing WS1's `useWorkspaces` hook or duplicating a store
+  that does not exist for agents yet, the same choice WS6's `AgentPicker` made), rows with a source icon, title,
+  time and priority dot, a detail view (the body as plain text, a link opens in a new tab only on an explicit
+  click, never automatically), mark done/unread, two snooze presets, "Open chat" for an `open_thread` approval or
+  "Open workflow" otherwise. Settings section "Inbox": the speak-up switch, quiet hours, and the three watcher
+  toggles with "Check now". Voice tool `read_inbox` (counts, how many are approvals, and the top items' titles,
+  `wrapUntrustedContent`-wrapped).
+- Tests: 54 unit tests across 8 files (dedupe, digest fold/reset-after-the-window/wake-on-more-messages, rate
+  limit, retention, snooze set and wake-only-if-still-snoozed, badge vs. a recording meeting, approval routing with
+  a fake stand-in for `workflowService`, announcer quiet hours (including the midnight wrap) and the minimum gap,
+  notify throttle, the summariser with a fake model — untrusted wrapping, a budget skip, a graceful failure
+  fallback — URL matchers, draft normalisation from already-extracted rows). `e2e/inbox.e2e.mjs`, fixtures under
+  `e2e/fixtures/inbox/`: seeded items (straight into IndexedDB, as `e2e/graph.e2e.mjs` and `e2e/kb.e2e.mjs` already
+  do) show with the filters narrowing the list and the badge updating off a real write; a workflow approval seeded
+  straight into `workflows`/`runs`/`runSteps`/`inbox` (no side-effecting step type is wired into the engine yet,
+  so there is no way to reach `waiting_user` by actually running a workflow — seeding is the brief's own sanctioned
+  path) is answered inline and the run/step/item all settle, found by id rather than array position since earlier
+  tests' rows share the same database; a WhatsApp-Web-like fixture page, served by request interception the same
+  way `e2e/voice.e2e.mjs` does for meet.google.com, posts its two unread conversations through the tab watcher and
+  skips the one already read.
+- **Not done**: `registerApprovalHandler` only has the one prefix so far (WS5b/WS4 add theirs when they exist);
+  connector pollers themselves are WS4's, beyond exposing `addInboxItem` for them; "open the related... run" in
+  the panel spec only reaches a *chat* (`PanelApi.go(place: string)` takes no parameters, so a specific workflow
+  run cannot be deep-linked — the detail view's "Open workflow" button opens the Workflows place in general
+  instead, which is as close as the current API allows).
+- **Needs the lead**: nothing required — the badge, the approval wiring and the event trigger were all reachable
+  through existing registration points and Dexie hooks without touching a shared file. If deep-linking an Inbox
+  item straight to one workflow run (rather than the Workflows place in general) is wanted later, `PanelApi.go`
+  would need an optional second argument.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
