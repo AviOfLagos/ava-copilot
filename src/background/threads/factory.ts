@@ -8,7 +8,7 @@ import {
 } from '@extension/storage';
 import type { ModelConfig } from '@extension/storage';
 import BrowserContext from '../browser/context';
-import { isUrlAllowed } from '../browser/util';
+import { isHostName, siteHost } from '../agents/patterns';
 import { Executor } from '../agent/executor';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
@@ -55,18 +55,27 @@ const NO_SITE = 'no-site.invalid';
 
 /**
  * The sites a browser context may open: the firewall's allow list, or, for an agent kept to its own sites, those
- * of them the firewall allows (never "everything" when none is left).
+ * of them the firewall allows as whole sites (never "everything" when none is left). Agent sites are read by the
+ * same parser as the agent's own check (siteHost), and only as plain host names, which the browser's check matches
+ * the same way: the site and its subdomains. A firewall entry for one page never opens a whole site.
  */
 export function allowListFor(
   firewall: { enabled: boolean; allowList: string[]; denyList: string[] },
   onlyDomains: readonly string[] = [],
 ): string[] {
-  const only = onlyDomains.map(entry => entry.trim().toLowerCase().replace(/^\*\./, '')).filter(Boolean);
-  if (!only.length) return firewall.enabled ? firewall.allowList : [];
-  const allowed = only.filter(
-    domain => !firewall.enabled || isUrlAllowed(`https://${domain}/`, firewall.allowList, firewall.denyList),
-  );
-  return allowed.length ? allowed : [NO_SITE];
+  if (!onlyDomains.length) return firewall.enabled ? firewall.allowList : [];
+  // As the browser's check reads them: a plain host name as written covers the site and its subdomains
+  const wholeSites = firewall.allowList.filter(isHostName);
+  const withinFirewall = (host: string) =>
+    !firewall.enabled ||
+    !firewall.allowList.length ||
+    wholeSites.some(site => host === site || host.endsWith(`.${site}`));
+  const allowed = new Set<string>();
+  for (const entry of onlyDomains) {
+    const host = siteHost(entry);
+    if (host !== null && withinFirewall(host)) allowed.add(host);
+  }
+  return allowed.size ? [...allowed] : [NO_SITE];
 }
 
 /**

@@ -92,6 +92,13 @@ export function tabPatternIssue(pattern: string): string | null {
   return null;
 }
 
+const HOST_NAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+
+/** Whether text is a plain host name as written: lower case letters, digits, hyphens and dots, nothing else. */
+export function isHostName(text: string): boolean {
+  return text.length <= 253 && HOST_NAME.test(text);
+}
+
 /**
  * A site as the host name it stands for: lower case, without scheme, path or port; `*.` kept. Null when it
  * is not a host name.
@@ -105,14 +112,17 @@ export function normalizeDomain(entry: string): string | null {
   value = value.split(/[/?#]/)[0] ?? '';
   value = value.replace(/:\d+$/, '').replace(/\.$/, '');
   if (value.startsWith('www.') && !wildcard) value = value.slice(4);
-  if (
-    !value ||
-    value.length > 253 ||
-    !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/.test(value)
-  ) {
-    return null;
-  }
+  if (!value || !isHostName(value)) return null;
   return wildcard ? `*.${value}` : value;
+}
+
+/**
+ * The host name a site entry opens (it and its subdomains), or null when it is not a site. Every check of an
+ * agent's sites goes through this one parser, so they can never disagree about what an entry allows.
+ */
+export function siteHost(entry: string): string | null {
+  const domain = normalizeDomain(entry);
+  return domain === null ? null : domain.replace(/^\*\./, '');
 }
 
 /** Whether a host is one of the agent's sites (or a subdomain of one). An empty list allows every site. */
@@ -120,8 +130,8 @@ export function hostInDomains(hostname: string, domains: readonly string[]): boo
   if (domains.length === 0) return true;
   const host = hostname.toLowerCase().replace(/\.$/, '');
   return domains.some(entry => {
-    const domain = entry.startsWith('*.') ? entry.slice(2) : entry;
-    return host === domain || host.endsWith(`.${domain}`);
+    const domain = siteHost(entry);
+    return domain !== null && (host === domain || host.endsWith(`.${domain}`));
   });
 }
 
