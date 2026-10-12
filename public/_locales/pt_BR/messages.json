@@ -4332,5 +4332,359 @@
   },
   "agents_role_local": {
     "message": "Local (neste Mac)"
+  },
+  "conn_place": {
+    "message": "Conectores"
+  },
+  "conn_act_start": {
+    "message": "Chamando $1"
+  },
+  "conn_act_ok": {
+    "message": "$1 respondeu"
+  },
+  "conn_alert_reconnect_title": {
+    "message": "Entre de novo em $1"
+  },
+  "conn_alert_reconnect_body": {
+    "message": "$1 parou de funcionar: o acesso foi recusado ou expirou. Abra Conectores no menu do perfil e entre de novo."
+  },
+  "conn_back": {
+    "message": "Voltar aos conectores"
+  },
+  "conn_cancel": {
+    "message": "Cancelar"
+  },
+  "conn_save": {
+    "message": "Salvar"
+  },
+  "conn_list_title": {
+    "message": "Seus conectores"
+  },
+  "conn_list_empty": {
+    "message": "Nenhum conector ainda. Adicione um abaixo: o agente e suas rotinas poderão usar as ferramentas dele."
+  },
+  "conn_row_tools": {
+    "message": "$1 ferramentas"
+  },
+  "conn_row_review": {
+    "message": "$1 para revisar"
+  },
+  "conn_row_noWorkspace": {
+    "message": "sem espaço de trabalho"
+  },
+  "conn_catalog_title": {
+    "message": "Adicionar um conector"
+  },
+  "conn_catalog_add": {
+    "message": "Adicionar"
+  },
+  "conn_catalog_addAnother": {
+    "message": "Adicionar outro"
+  },
+  "conn_catalog_addNamed": {
+    "message": "Adicionar $1"
+  },
+  "conn_catalog_github": {
+    "message": "Token de acesso pessoal"
+  },
+  "conn_catalog_signIn": {
+    "message": "Entre com sua conta"
+  },
+  "conn_catalog_slack": {
+    "message": "Entre pelo seu próprio app do Slack (ID e segredo do cliente)"
+  },
+  "conn_catalog_google": {
+    "message": "Entre pelo seu próprio cliente do Google Cloud (ID e segredo)"
+  },
+  "conn_custom_title": {
+    "message": "Servidor personalizado"
+  },
+  "conn_custom_hint": {
+    "message": "Qualquer servidor MCP remoto, pelo endereço"
+  },
+  "conn_custom_add": {
+    "message": "Adicionar servidor"
+  },
+  "conn_mac_title": {
+    "message": "Neste Mac"
+  },
+  "conn_mac_name": {
+    "message": "Companheiro do Mac"
+  },
+  "conn_mac_soon": {
+    "message": "Em breve"
+  },
+  "conn_mac_hint": {
+    "message": "Servidores MCP locais e ferramentas de linha de comando vão rodar pelo Avi Brain no seu Mac, na área isolada dele."
+  },
+  "conn_add_titleNamed": {
+    "message": "Adicionar $1"
+  },
+  "conn_add_titleCustom": {
+    "message": "Adicionar um servidor personalizado"
+  },
+  "conn_add_docs": {
+    "message": "Como configurar"
+  },
+  "conn_add_name": {
+    "message": "Nome"
+  },
+  "conn_add_namePlaceholder": {
+    "message": "ex.: Ferramentas da empresa"
+  },
+  "conn_add_url": {
+    "message": "Endereço"
+  },
+  "conn_add_urlHint": {
+    "message": "O endereço MCP do servidor, muitas vezes terminando em /mcp."
+  },
+  "conn_add_urlInvalid": {
+    "message": "Isso não é um endereço da web."
+  },
+  "conn_add_urlInsecure": {
+    "message": "Use um endereço https:// (http:// só para este computador)."
+  },
+  "conn_add_urlCredentials": {
+    "message": "Não coloque usuário e senha no endereço; use um token."
+  },
+  "conn_add_auth": {
+    "message": "Acesso"
+  },
+  "conn_auth_none": {
+    "message": "Nenhum"
+  },
+  "conn_auth_token": {
+    "message": "Token"
+  },
+  "conn_auth_oauth": {
+    "message": "Entrar"
+  },
+  "conn_add_token": {
+    "message": "Token"
+  },
+  "conn_add_tokenHint": {
+    "message": "Fica criptografado neste computador; só os últimos caracteres aparecem de novo."
+  },
+  "conn_add_redirect": {
+    "message": "URL de redirecionamento para registrar no serviço:"
+  },
+  "conn_add_copyRedirect": {
+    "message": "Copiar a URL de redirecionamento"
+  },
+  "conn_add_clientId": {
+    "message": "ID do cliente"
+  },
+  "conn_add_clientSecret": {
+    "message": "Segredo do cliente"
+  },
+  "conn_add_clientSecretHint": {
+    "message": "Só se o serviço forneceu um. Fica criptografado."
+  },
+  "conn_add_moreOptions": {
+    "message": "Mais opções"
+  },
+  "conn_add_lessOptions": {
+    "message": "Menos opções"
+  },
+  "conn_add_tokenHeader": {
+    "message": "Cabeçalho do token"
+  },
+  "conn_add_tokenHeaderHint": {
+    "message": "Deixe vazio para enviar como Authorization: Bearer."
+  },
+  "conn_add_scope": {
+    "message": "Escopos"
+  },
+  "conn_add_scopeHint": {
+    "message": "Deixe vazio para pedir o que o servidor diz precisar."
+  },
+  "conn_add_timeout": {
+    "message": "Tempo limite por chamada (segundos)"
+  },
+  "conn_add_timeoutHint": {
+    "message": "De 2 a 120; 30 se vazio."
+  },
+  "conn_add_submit": {
+    "message": "Adicionar conector"
+  },
+  "conn_add_adding": {
+    "message": "Adicionando…"
+  },
+  "conn_workspaces": {
+    "message": "Espaços de trabalho"
+  },
+  "conn_workspacesHint": {
+    "message": "Só conversas e rotinas destes espaços de trabalho podem usá-lo."
+  },
+  "conn_workspacesNone": {
+    "message": "Nenhum espaço de trabalho ainda: crie um em Espaços de trabalho."
+  },
+  "conn_workspacesEmpty": {
+    "message": "Nenhum espaço escolhido: nada pode usá-lo ainda."
+  },
+  "conn_detail_gone": {
+    "message": "Este conector foi removido."
+  },
+  "conn_detail_enabled": {
+    "message": "$1 ligado"
+  },
+  "conn_detail_needsSignIn": {
+    "message": "Entre para usar as ferramentas dele."
+  },
+  "conn_detail_refresh": {
+    "message": "Verificar ferramentas"
+  },
+  "conn_detail_remove": {
+    "message": "Remover conector"
+  },
+  "conn_status_connected": {
+    "message": "Conectado"
+  },
+  "conn_status_needsAuth": {
+    "message": "Precisa entrar"
+  },
+  "conn_status_error": {
+    "message": "Com problema"
+  },
+  "conn_status_disabled": {
+    "message": "Desligado"
+  },
+  "conn_signIn_start": {
+    "message": "Entrar"
+  },
+  "conn_signIn_reconnect": {
+    "message": "Reconectar"
+  },
+  "conn_signIn_busy": {
+    "message": "Entrando…"
+  },
+  "conn_signIn_cancelled": {
+    "message": "Acesso cancelado."
+  },
+  "conn_signIn_done": {
+    "message": "Conectado. $1 ferramentas encontradas."
+  },
+  "conn_signIn_doneNoTools": {
+    "message": "Conectado, mas não foi possível ler as ferramentas: $1"
+  },
+  "conn_token_add": {
+    "message": "Adicionar token"
+  },
+  "conn_token_replace": {
+    "message": "Trocar token"
+  },
+  "conn_token_saved": {
+    "message": "Token salvo."
+  },
+  "conn_refresh_done": {
+    "message": "$1 ferramentas: $2 novas, $3 alteradas."
+  },
+  "conn_remove_confirm": {
+    "message": "Remover $1? As ferramentas, suas escolhas para elas e o acesso serão esquecidos."
+  },
+  "conn_tools_title": {
+    "message": "Ferramentas ($1)"
+  },
+  "conn_tools_allAsk": {
+    "message": "Ligar as novas, perguntando antes"
+  },
+  "conn_tools_waiting": {
+    "message": "$1 esperando por você"
+  },
+  "conn_tools_waitingHint": {
+    "message": "Ferramentas novas e alteradas ficam desligadas até você escolher para cada uma."
+  },
+  "conn_tools_none": {
+    "message": "Nenhuma ferramenta ainda. Verifique as ferramentas para lê-las do servidor."
+  },
+  "conn_tools_signInFirst": {
+    "message": "Entre para ver as ferramentas."
+  },
+  "conn_tool_new": {
+    "message": "Nova"
+  },
+  "conn_tool_changed": {
+    "message": "Alterada"
+  },
+  "conn_tool_missing": {
+    "message": "Removida"
+  },
+  "conn_tool_saysReadOnly": {
+    "message": "diz que só lê"
+  },
+  "conn_tool_saysDestructive": {
+    "message": "diz que pode apagar"
+  },
+  "conn_tool_more": {
+    "message": "Mais"
+  },
+  "conn_tool_less": {
+    "message": "Menos"
+  },
+  "conn_tool_args": {
+    "message": "Argumentos"
+  },
+  "conn_tool_changedNote": {
+    "message": "Esta ferramenta mudou desde que você a aprovou. Fica desligada até você escolher de novo."
+  },
+  "conn_tool_before": {
+    "message": "Antes:"
+  },
+  "conn_tool_argsChanged": {
+    "message": "Os argumentos também mudaram."
+  },
+  "conn_tool_policyLabel": {
+    "message": "O que $1 pode fazer"
+  },
+  "conn_policy_off": {
+    "message": "Desligada"
+  },
+  "conn_policy_approve": {
+    "message": "Perguntar antes"
+  },
+  "conn_policy_read": {
+    "message": "Sempre permitir"
+  },
+  "conn_policy_approveHint": {
+    "message": "Cada chamada espera o seu clique."
+  },
+  "conn_policy_readConfirm": {
+    "message": "O servidor não diz que esta ferramenta só lê. Deixar rodar sem perguntar mesmo assim?"
+  },
+  "conn_policy_readAnyway": {
+    "message": "Permitir mesmo assim"
+  },
+  "conn_error_auth": {
+    "message": "$1 não aceitou o acesso. Entre de novo."
+  },
+  "conn_error_forbidden": {
+    "message": "$1 recusou: a conta não tem permissão para isso."
+  },
+  "conn_error_notFound": {
+    "message": "Nenhum servidor MCP responde neste endereço."
+  },
+  "conn_error_rateLimit": {
+    "message": "$1 pediu para ir mais devagar."
+  },
+  "conn_error_timeout": {
+    "message": "$1 não respondeu a tempo."
+  },
+  "conn_error_network": {
+    "message": "Não foi possível alcançar $1."
+  },
+  "conn_error_unavailable": {
+    "message": "$1 está com problemas agora."
+  },
+  "conn_error_invalid": {
+    "message": "$1 recusou o pedido."
+  },
+  "conn_signOut": {
+    "message": "Sair"
+  },
+  "conn_signOut_done": {
+    "message": "Saiu: o acesso foi apagado deste computador."
+  },
+  "conn_gate_kind": {
+    "message": "Usar uma ferramenta de conector"
   }
 }

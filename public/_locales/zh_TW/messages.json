@@ -4332,5 +4332,359 @@
   },
   "agents_role_local": {
     "message": "本機（在這台 Mac）"
+  },
+  "conn_place": {
+    "message": "連接器"
+  },
+  "conn_act_start": {
+    "message": "正在呼叫 $1"
+  },
+  "conn_act_ok": {
+    "message": "$1 已回應"
+  },
+  "conn_alert_reconnect_title": {
+    "message": "請重新登入 $1"
+  },
+  "conn_alert_reconnect_body": {
+    "message": "$1 已停止運作：登入遭拒或已過期。請從個人選單開啟「連接器」並重新登入。"
+  },
+  "conn_back": {
+    "message": "返回連接器"
+  },
+  "conn_cancel": {
+    "message": "取消"
+  },
+  "conn_save": {
+    "message": "儲存"
+  },
+  "conn_list_title": {
+    "message": "你的連接器"
+  },
+  "conn_list_empty": {
+    "message": "尚無連接器。在下方新增一個，代理和你的例行程序就能使用它的工具。"
+  },
+  "conn_row_tools": {
+    "message": "$1 個工具"
+  },
+  "conn_row_review": {
+    "message": "$1 個待檢視"
+  },
+  "conn_row_noWorkspace": {
+    "message": "尚未指定工作區"
+  },
+  "conn_catalog_title": {
+    "message": "新增連接器"
+  },
+  "conn_catalog_add": {
+    "message": "新增"
+  },
+  "conn_catalog_addAnother": {
+    "message": "再新增一個"
+  },
+  "conn_catalog_addNamed": {
+    "message": "新增 $1"
+  },
+  "conn_catalog_github": {
+    "message": "個人存取權杖"
+  },
+  "conn_catalog_signIn": {
+    "message": "使用你的帳號登入"
+  },
+  "conn_catalog_slack": {
+    "message": "透過你自己的 Slack 應用程式登入（用戶端 ID 與密鑰）"
+  },
+  "conn_catalog_google": {
+    "message": "透過你自己的 Google Cloud 用戶端登入（ID 與密鑰）"
+  },
+  "conn_custom_title": {
+    "message": "自訂伺服器"
+  },
+  "conn_custom_hint": {
+    "message": "任何遠端 MCP 伺服器，依其位址新增"
+  },
+  "conn_custom_add": {
+    "message": "新增自訂伺服器"
+  },
+  "conn_mac_title": {
+    "message": "這台 Mac"
+  },
+  "conn_mac_name": {
+    "message": "Mac 助手"
+  },
+  "conn_mac_soon": {
+    "message": "即將推出"
+  },
+  "conn_mac_hint": {
+    "message": "本機 MCP 伺服器與命令列工具將透過你 Mac 上的 Avi Brain，在其沙箱中執行。"
+  },
+  "conn_add_titleNamed": {
+    "message": "新增 $1"
+  },
+  "conn_add_titleCustom": {
+    "message": "新增自訂伺服器"
+  },
+  "conn_add_docs": {
+    "message": "設定方式"
+  },
+  "conn_add_name": {
+    "message": "名稱"
+  },
+  "conn_add_namePlaceholder": {
+    "message": "例如：公司工具"
+  },
+  "conn_add_url": {
+    "message": "位址"
+  },
+  "conn_add_urlHint": {
+    "message": "伺服器的 MCP 位址，通常以 /mcp 結尾。"
+  },
+  "conn_add_urlInvalid": {
+    "message": "這不是網址。"
+  },
+  "conn_add_urlInsecure": {
+    "message": "請使用 https:// 位址（http:// 僅限這台電腦）。"
+  },
+  "conn_add_urlCredentials": {
+    "message": "位址中請勿包含使用者名稱與密碼，請改用權杖。"
+  },
+  "conn_add_auth": {
+    "message": "登入方式"
+  },
+  "conn_auth_none": {
+    "message": "不需要"
+  },
+  "conn_auth_token": {
+    "message": "權杖"
+  },
+  "conn_auth_oauth": {
+    "message": "登入"
+  },
+  "conn_add_token": {
+    "message": "權杖"
+  },
+  "conn_add_tokenHint": {
+    "message": "以加密方式保存在這台電腦，之後只會顯示最後幾個字元。"
+  },
+  "conn_add_redirect": {
+    "message": "要在服務中登記的重新導向網址："
+  },
+  "conn_add_copyRedirect": {
+    "message": "複製重新導向網址"
+  },
+  "conn_add_clientId": {
+    "message": "用戶端 ID"
+  },
+  "conn_add_clientSecret": {
+    "message": "用戶端密鑰"
+  },
+  "conn_add_clientSecretHint": {
+    "message": "僅在服務有提供時填寫，會加密保存。"
+  },
+  "conn_add_moreOptions": {
+    "message": "更多選項"
+  },
+  "conn_add_lessOptions": {
+    "message": "較少選項"
+  },
+  "conn_add_tokenHeader": {
+    "message": "權杖使用的標頭"
+  },
+  "conn_add_tokenHeaderHint": {
+    "message": "留空則以 Authorization: Bearer 傳送。"
+  },
+  "conn_add_scope": {
+    "message": "權限範圍"
+  },
+  "conn_add_scopeHint": {
+    "message": "留空則依伺服器所需的範圍請求。"
+  },
+  "conn_add_timeout": {
+    "message": "每次呼叫的時間上限（秒）"
+  },
+  "conn_add_timeoutHint": {
+    "message": "2 到 120，留空為 30。"
+  },
+  "conn_add_submit": {
+    "message": "新增連接器"
+  },
+  "conn_add_adding": {
+    "message": "新增中…"
+  },
+  "conn_workspaces": {
+    "message": "工作區"
+  },
+  "conn_workspacesHint": {
+    "message": "只有這些工作區中的對話與例行程序可以使用它。"
+  },
+  "conn_workspacesNone": {
+    "message": "尚無工作區：請先在「工作區」中建立。"
+  },
+  "conn_workspacesEmpty": {
+    "message": "尚未選擇工作區：目前沒有任何對話能使用它。"
+  },
+  "conn_detail_gone": {
+    "message": "此連接器已移除。"
+  },
+  "conn_detail_enabled": {
+    "message": "$1 已開啟"
+  },
+  "conn_detail_needsSignIn": {
+    "message": "登入後才能使用它的工具。"
+  },
+  "conn_detail_refresh": {
+    "message": "檢查工具"
+  },
+  "conn_detail_remove": {
+    "message": "移除連接器"
+  },
+  "conn_status_connected": {
+    "message": "已連線"
+  },
+  "conn_status_needsAuth": {
+    "message": "需要登入"
+  },
+  "conn_status_error": {
+    "message": "無法運作"
+  },
+  "conn_status_disabled": {
+    "message": "已關閉"
+  },
+  "conn_signIn_start": {
+    "message": "登入"
+  },
+  "conn_signIn_reconnect": {
+    "message": "重新連線"
+  },
+  "conn_signIn_busy": {
+    "message": "登入中…"
+  },
+  "conn_signIn_cancelled": {
+    "message": "已取消登入。"
+  },
+  "conn_signIn_done": {
+    "message": "已登入，找到 $1 個工具。"
+  },
+  "conn_signIn_doneNoTools": {
+    "message": "已登入，但無法讀取它的工具：$1"
+  },
+  "conn_token_add": {
+    "message": "新增權杖"
+  },
+  "conn_token_replace": {
+    "message": "更換權杖"
+  },
+  "conn_token_saved": {
+    "message": "權杖已儲存。"
+  },
+  "conn_refresh_done": {
+    "message": "共 $1 個工具：$2 個新的，$3 個有變更。"
+  },
+  "conn_remove_confirm": {
+    "message": "要移除 $1 嗎？它的工具、你對工具的設定以及登入資料都會被清除。"
+  },
+  "conn_tools_title": {
+    "message": "工具（$1）"
+  },
+  "conn_tools_allAsk": {
+    "message": "開啟新工具（先詢問）"
+  },
+  "conn_tools_waiting": {
+    "message": "$1 個等你處理"
+  },
+  "conn_tools_waitingHint": {
+    "message": "新的和有變更的工具會保持關閉，直到你逐一選擇。"
+  },
+  "conn_tools_none": {
+    "message": "尚無工具。按「檢查工具」從伺服器讀取。"
+  },
+  "conn_tools_signInFirst": {
+    "message": "登入後即可查看工具。"
+  },
+  "conn_tool_new": {
+    "message": "新的"
+  },
+  "conn_tool_changed": {
+    "message": "已變更"
+  },
+  "conn_tool_missing": {
+    "message": "已移除"
+  },
+  "conn_tool_saysReadOnly": {
+    "message": "自稱只讀取"
+  },
+  "conn_tool_saysDestructive": {
+    "message": "自稱可刪除"
+  },
+  "conn_tool_more": {
+    "message": "更多"
+  },
+  "conn_tool_less": {
+    "message": "收合"
+  },
+  "conn_tool_args": {
+    "message": "參數"
+  },
+  "conn_tool_changedNote": {
+    "message": "這個工具在你核准後有變更，會保持關閉直到你重新選擇。"
+  },
+  "conn_tool_before": {
+    "message": "變更前："
+  },
+  "conn_tool_argsChanged": {
+    "message": "它的參數也有變更。"
+  },
+  "conn_tool_policyLabel": {
+    "message": "$1 的權限"
+  },
+  "conn_policy_off": {
+    "message": "關閉"
+  },
+  "conn_policy_approve": {
+    "message": "先詢問"
+  },
+  "conn_policy_read": {
+    "message": "一律允許"
+  },
+  "conn_policy_approveHint": {
+    "message": "每次呼叫都會等你點擊確認。"
+  },
+  "conn_policy_readConfirm": {
+    "message": "伺服器並未表示這個工具只讀取資料。仍要允許它不經詢問就執行嗎？"
+  },
+  "conn_policy_readAnyway": {
+    "message": "仍要允許"
+  },
+  "conn_error_auth": {
+    "message": "$1 不接受此登入，請重新登入。"
+  },
+  "conn_error_forbidden": {
+    "message": "$1 拒絕了：此帳號沒有這項權限。"
+  },
+  "conn_error_notFound": {
+    "message": "此位址沒有 MCP 伺服器回應。"
+  },
+  "conn_error_rateLimit": {
+    "message": "$1 要求放慢速度。"
+  },
+  "conn_error_timeout": {
+    "message": "$1 未及時回應。"
+  },
+  "conn_error_network": {
+    "message": "無法連到 $1。"
+  },
+  "conn_error_unavailable": {
+    "message": "$1 目前發生問題。"
+  },
+  "conn_error_invalid": {
+    "message": "$1 拒絕了這個請求。"
+  },
+  "conn_signOut": {
+    "message": "登出"
+  },
+  "conn_signOut_done": {
+    "message": "已登出：登入資料已從這台電腦刪除。"
+  },
+  "conn_gate_kind": {
+    "message": "執行連接器工具"
   }
 }

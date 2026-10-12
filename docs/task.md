@@ -649,6 +649,70 @@ Agents that work for Avi on their own, in a window of their own. `src/background
   `e2e/agents.e2e.mjs`: chat → draft → Create → Run now runs in the agents' window (focus and Avi's tab untouched) →
   run log → a matching page Avi opens wakes it again, tainted.
 
+### Wave 2 — WS4 Integrations (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS4. Remote MCP servers become tools the agent and routines can use.
+- **Connectors** (`src/background/integrations`, record types in `src/storage/lib/integrations`): add / edit / remove
+  remote MCP servers (Streamable HTTP; a server that answers the way old servers do, 400/404/405 to a POST, is tried
+  over HTTP+SSE once and the transport kept). Addresses must be https (plain http only for loopback); no
+  credentials in the address. Bound to workspaces (`workspaceIds`, empty = nothing may use it; a chat in no
+  workspace gets none); a chat run as an agent (`thread.agentId`) only gets the connectors its profile lists. One
+  short MCP session per piece of work (`client.ts`: connect, work, DELETE the session), a new session once when the
+  server forgot it (404 with a session id: the request was not handled, so even a write is safe to resend), a time
+  limit per connector (2–120 s, default 30), one `CircuitBreaker` per connector (in `storage.session`), `withRetry`
+  (`connectorRead`, Retry-After honoured) only for reads; a timed-out tool call is never retried. SDK errors map to
+  `AppError` with plain sentences; a server's own words never go into them (only a refused call's detail, wrapped
+  as untrusted). `@cfworker/json-schema` validates arguments and output (no eval; the E2E counts CSP violations).
+- **Sign-in**: none, a token (vault `conn:<id>:token`, header `Authorization: Bearer` or one the user names), or OAuth
+  2.1 + PKCE (`oauth.ts`): 401 challenge → RFC 9728 resource metadata → RFC 8414/OIDC discovery (SDK helpers),
+  dynamic client registration when offered, else the user's client ID (+ secret, vault `conn:<id>:client`); the
+  authorization server and its endpoints must be https (or this computer) before anything goes to them; S256,
+  a 32-byte state, the RFC 8707 resource, the challenge's scope (else the server's). The verifier and state wait in
+  `storage.session` (15 min, single use); **the panel** runs `chrome.identity.launchWebAuthFlow` (redirect
+  `https://<extension id>.chromiumapp.org/`) and hands the answer back (`conn_oauth_finish`), so a background stopped
+  while the user types their password loses nothing. The answer must come to the extension's redirect with a known
+  state and the right `iss` (RFC 9207). Tokens in the vault (`conn:<id>:oauth`), renewed a minute before they run
+  out, one renewal per connector however many calls wait (single flight); a refused token is renewed once and the
+  call tried again; a dead refresh token sets "Needs sign-in" and posts one Inbox alert ("Sign in to X again").
+- **Tools and fingerprints** (`fingerprint.ts`): SHA-256 of name + description + input schema (canonical JSON),
+  read on connect, on "Check tools", every 6 h (job `connectors_refresh`) and before a call when the last reading is
+  over 10 min old. New tools and changed ones are off until the user chooses; a changed tool keeps what it looked like
+  when approved (shown as "Before: …") and loses its old choice. Choices are bound to the hash the user saw
+  (`conn_tool_policy` refuses a tool that changed meanwhile) and written in one Dexie transaction with the listing,
+  so quick clicks and a refresh never undo each other. Policy per tool: **Always allow** (`read`) / **Ask first**
+  (`approve`, the default) / **Off**; "Always allow" on a tool whose server does not even claim `readOnlyHint` takes
+  a second click.
+- **Agent action** `call_tool({connector, tool, args})` (one action for every tool; `args` is JSON text so every
+  provider's structured output takes it): checks scope, approval, policy and the JSON Schema before anything is sent;
+  "ask first" tools go through `reviewToolCall` (`gate.ts`: a `ConfirmRequest`, mode `commit`, target `Connector ›
+  tool`, one field per argument, the server's description deliberately left off the card; a refusal stops the task)
+  and are refused in chats started by a routine, an agent or the brief ("needs an approval item"). Results are
+  wrapped as untrusted, 10 000 characters at most; a write cut off mid-call says it may or may not have happened.
+  The per-step catalogue (`section.ts`, `connectorToolsSectionFor`) lists the chat's usable tools with one-line
+  cleaned descriptions and argument names (≤ 6 000 characters) — it needs one line in `agent/prompts/base.ts`
+  (reported). Without it the agent learns the names from call_tool's refusals.
+- **Routines**: `step.tool` executor (`step.ts`; removed from `NOT_YET_AVAILABLE` in `workflows/spec.ts`). Places in
+  `args` are filled per JSON value (an earlier step's output can never add or change another field); a step marked
+  read-only only runs a tool the user set to "Always allow"; other steps run after the engine's approval, once.
+- **Panel** (`src/side-panel/integrations`, place `connectors`, profile menu): your connectors (status, tools to
+  review), well-known servers checked against their own docs on 2026-10-12 — GitHub (`api.githubcopilot.com/mcp/`,
+  personal access token), Linear (`mcp.linear.app/mcp`) and Notion (`mcp.notion.com/mcp`) with OAuth + dynamic
+  registration, Slack (`mcp.slack.com/mcp`) and Gmail / Google Calendar / Google Drive (`*mcp.googleapis.com/mcp/v1`,
+  Google's documented scopes, `access_type=offline`) with the user's own client — plus "Add custom server" and a
+  disabled "Mac companion" entry. A connector's page: status, workspace chips, sign in / reconnect / replace token,
+  on/off, Check tools, each tool with its badges, arguments, choice and drift warning.
+- **Companion**: `companion.ts` defines `CompanionToolBridge` (`available`, `listTools`, `callTool`) and
+  `registerCompanionToolBridge` for WS7; connectors of kind `mcp_stdio` / `cli` say they need Avi Brain until then.
+- Tests: 69 unit tests (fingerprints and drift, policy, schema checks, OAuth begin/finish/PKCE with a mocked
+  `launchWebAuthFlow`, state/issuer/redirect checks, sign-in addresses that must be https, single-flight renewal,
+  the catalogue's lines, result formatting, the service against the SDK's own server
+  through a fake fetch — 429 retried, writes once, timeouts, session re-init, breaker, concurrent choices — call_tool
+  with the gate, step.tool, the panel's sign-in); `e2e/integrations.e2e.mjs` (10, Brave) with `e2e/mock-mcp.mjs`
+  (read, write, changing, 429, slow and injection tools, plus an OAuth shim): add → tools new → choices → read tool
+  from the agent → confirm card for the write → 429 retried → slow tool cut at 3 s → changed tool off and not
+  called → injection wrapped and blocked → OAuth sign-in through `launchWebAuthFlow` with tokens only in the vault →
+  no CSP violation in the worker or panel. Screens: `node e2e/manual/connectors-shots.mjs <dir>`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
