@@ -3161,6 +3161,12 @@
   "flow_intro": {
     "message": "Rotinas que rodam sozinhas: num horário, quando uma reunião termina ou quando você pede. Cada uma mostra como está ligada."
   },
+  "flow_new": {
+    "message": "Novo fluxo de trabalho"
+  },
+  "flow_new_starter": {
+    "message": "Crie uma rotina que"
+  },
   "flow_section_review": {
     "message": "Aguardando sua revisão"
   },
@@ -3736,6 +3742,12 @@
   },
   "agents_intro": {
     "message": "Os agentes trabalham para você sozinhos, numa janela só deles, nunca nas suas abas. Eles acordam num horário, quando você abre uma página que vigiam ou quando uma mensagem ou outro agente os aciona. Uma vaga de tarefa sempre fica livre para você."
+  },
+  "agents_new": {
+    "message": "Novo agente"
+  },
+  "agents_new_starter": {
+    "message": "Crie um agente que"
   },
   "agents_section_review": {
     "message": "Aguardando sua revisão"
@@ -4362,6 +4374,9 @@
   },
   "conn_list_empty": {
     "message": "Nenhum conector ainda. Adicione um abaixo: o agente e suas rotinas poderão usar as ferramentas dele."
+  },
+  "conn_list_add": {
+    "message": "Adicionar conector"
   },
   "conn_row_tools": {
     "message": "$1 ferramentas"

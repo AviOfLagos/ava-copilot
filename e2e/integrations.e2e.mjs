@@ -400,6 +400,21 @@ test('signing in with OAuth: launchWebAuthFlow, PKCE, the code traded by the bac
   assert.ok(vault.every(record => !record.plain));
 });
 
+test('"Add connector" at the top of the place opens the add-connector form (catalogue + custom URL)', async () => {
+  await openConnectors();
+  // openConnectors only guarantees `[data-place="connectors"]`, which also wraps the detail and add
+  // sub-views; an earlier test may have left one of those open, so get back to the list first.
+  if (!(await session.panel.evaluate(() => document.querySelector('[data-add-connector]') !== null))) {
+    await clickByName('Back to connectors');
+    await session.panel.waitForSelector('[data-add-connector]', { timeout: 10000 });
+  }
+  await session.panel.evaluate(() => document.querySelector('[data-add-connector]').click());
+  await session.panel.waitForSelector('form[aria-labelledby="conn-add-title"]', { timeout: 10000 });
+  // Back to the list, so later tests (and the CSP check) find the place they expect
+  await clickByName('Back to connectors');
+  await session.panel.waitForSelector('[data-add-connector]', { timeout: 10000 });
+});
+
 test('nothing the connectors do is refused by the extension’s content security policy', async () => {
   assert.deepEqual(await worker.evaluate(() => self.__csp), [], 'no violation in the background');
   assert.deepEqual(await session.panel.evaluate(() => window.__csp ?? []), [], 'no violation in the panel');

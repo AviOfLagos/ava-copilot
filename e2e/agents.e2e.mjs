@@ -310,3 +310,24 @@ test('an agent asked for in chat: draft, create, run in its own window, run log,
   await watched.close();
   await session.close();
 });
+
+test('"New agent" opens a new chat with the agent starter in the composer, focused', async () => {
+  const session = await openSession(extension, mock);
+  await session.panel.bringToFront();
+  await session.click('Menu');
+  await session.click('Agents');
+  await session.panel.waitForSelector('[data-new-agent]', { timeout: 10000 });
+  await session.panel.evaluate(() => document.querySelector('[data-new-agent]').click());
+  await session.panel
+    .waitForFunction(
+      () => {
+        const area = document.querySelector('textarea');
+        return Boolean(area && area.value.startsWith('Create an agent that ') && document.activeElement === area);
+      },
+      { timeout: 10000 },
+    )
+    .catch(async error => {
+      throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 800)}`);
+    });
+  await session.close();
+});

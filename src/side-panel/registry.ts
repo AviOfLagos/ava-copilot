@@ -16,6 +16,9 @@ export type RegisteredPlaceId = 'inbox' | 'workflows' | 'agents' | 'connectors' 
 export interface PanelApi {
   go: (place: string) => void;
   openThread: (threadId: string) => void;
+  // Starts a new chat with `prompt` already in the composer, focused, so the user only has to send it.
+  // Used by a place's "New …" button to hand off to the chat agent (create_workflow, create_agent, …).
+  startThread: (prompt: string) => void;
   // A command with a reply: resolves with the reply, rejects with the background's error or a timeout
   request: <T = Record<string, unknown>>(message: Record<string, unknown>, timeoutMs?: number) => Promise<T>;
   // A command with no reply

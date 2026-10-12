@@ -72,7 +72,13 @@ export default function Composer({
   useEffect(() => {
     setContent?.(value => {
       setText(value);
-      requestAnimationFrame(resize);
+      requestAnimationFrame(() => {
+        resize();
+        const area = textareaRef.current;
+        if (!area) return;
+        area.focus();
+        area.setSelectionRange(area.value.length, area.value.length);
+      });
     });
   }, [setContent]);
 

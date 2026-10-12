@@ -132,6 +132,14 @@ function AgentList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => voi
         <p className="text-muted-foreground mt-1 text-[12.5px] leading-relaxed">{t('agents_intro')}</p>
       </header>
 
+      <Button
+        onClick={() => api.startThread(`${t('agents_new_starter')} `)}
+        className="w-full justify-center"
+        data-new-agent>
+        <Plus className="size-4" aria-hidden />
+        {t('agents_new')}
+      </Button>
+
       {error && (
         <div role="alert" className="border-destructive/40 bg-destructive/10 rounded-xl border px-3 py-2 text-[12.5px]">
           {error}

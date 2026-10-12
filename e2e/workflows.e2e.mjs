@@ -385,3 +385,22 @@ test('a routine asked for in chat: draft diagram, create, feedback, run now, and
   assert.deepEqual(session.panelErrors, []);
   await session.close();
 });
+
+test('"New workflow" opens a new chat with the routine starter in the composer, focused', async () => {
+  const session = await openSession(extension, mock);
+  await openWorkflows(session);
+  await session.panel.waitForSelector('[data-new-workflow]', { timeout: 10000 });
+  await session.panel.evaluate(() => document.querySelector('[data-new-workflow]').click());
+  await session.panel
+    .waitForFunction(
+      () => {
+        const area = document.querySelector('textarea');
+        return Boolean(area && area.value.startsWith('Create a routine that ') && document.activeElement === area);
+      },
+      { timeout: 10000 },
+    )
+    .catch(async error => {
+      throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 800)}`);
+    });
+  await session.close();
+});

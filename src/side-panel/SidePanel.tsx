@@ -110,6 +110,9 @@ const SidePanel = () => {
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const heartbeatRef = useRef<number | null>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
+  // A starter a registered place asked for (PanelApi.startThread): delivered once the new chat's
+  // composer has mounted, by the effect below — the composer is not mounted while on another place.
+  const pendingPromptRef = useRef<string | null>(null);
   // Where a dictation's words go: the composer adds them after what is typed, or sends them
   const transcriptSinkRef = useRef<((words: string) => void) | null>(null);
   // Sends waiting to learn the id of the thread they created
@@ -309,6 +312,7 @@ const SidePanel = () => {
   const panelApi: PanelApi = {
     go: next => (next === 'chat' ? handleNewThread() : go(next as Place)),
     openThread: id => handleSelect(id),
+    startThread: prompt => handleStartThread(prompt),
     post,
     request: <T,>(message: Record<string, unknown>, timeoutMs = 30_000) =>
       new Promise<T>((resolve, reject) => {
@@ -491,6 +495,12 @@ const SidePanel = () => {
     setThreadId(null);
   };
 
+  /** A new chat, with `prompt` placed in the composer once it mounts (see the effect below `view`). */
+  const handleStartThread = (prompt: string) => {
+    pendingPromptRef.current = prompt;
+    handleNewThread();
+  };
+
   const handleSelect = (id: string) => {
     go('chat');
     setThreadId(id);
@@ -582,6 +592,15 @@ const SidePanel = () => {
                     : thread && threadMessages.length > 0
                       ? 'chat'
                       : 'home';
+
+  // Delivers a starter from handleStartThread once the new chat's home view (and its composer) is up:
+  // Composer's own [setContent] effect runs first (children commit before parents), so the ref is live.
+  useEffect(() => {
+    if (view !== 'home' || !pendingPromptRef.current) return;
+    const prompt = pendingPromptRef.current;
+    pendingPromptRef.current = null;
+    setInputTextRef.current?.(prompt);
+  }, [view]);
 
   // Where you are, each step back one click away
   const home: Crumb = { label: t('nav_home'), onClick: handleNewThread };

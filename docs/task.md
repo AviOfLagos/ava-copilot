@@ -968,6 +968,40 @@ mixed up on the shared reply queue.
   the panel closed); `e2e/voice.e2e.mjs` unaffected (its fake mic plays `hey-ava.wav` for VAD content with the
   wake listener off, never through this path) — 5/5. `e2e/fixtures/wake/hey-not-ava.wav` is the one fixture kept.
 
+### Dropdowns above their siblings, and a "New"/"Add" button everywhere one was missing (2026-10-12)
+
+- **Cards clipping open dropdowns.** `backdrop-filter` (`.glass`; the settings page's own `main .rounded-lg.border`)
+  gives a card its own stacking context, so a child's z-index can never out-rank a *later* sibling card — the
+  options page drew the "Add New Provider" list under the "Model Selection" card. Fixed globally, not just that
+  list: a card that `:has()` an open `aria-expanded="true"` or `data-state="open"` descendant is lifted above its
+  siblings (`src/ui/lib/theme.css`, shared by the panel, the settings page and the full-tab pages). Audited every
+  absolutely-positioned dropdown/popover/menu in `src/options/**` and `src/side-panel/**`: the Radix `RowMenu`
+  (Sidebar's row and profile menus, InboxRow) already escapes this through a portal; every other `absolute` element
+  found was decorative (hover buttons, a badge, a toggle thumb), not a popover; `ModelSettings.tsx`'s provider
+  selector was the one real instance. New E2E in `e2e/models.e2e.mjs` opens it and checks
+  `document.elementFromPoint` at the overlap lands inside the list, not the card under it.
+- **No way to start a workflow, agent or connector.** Each place that can create something now has a clear
+  button at its top. **New workflow** / **New agent** (`WorkflowsPlace.tsx`, `AgentsPlace.tsx`) open a new chat
+  with a starter already in the composer, focused: `create_workflow`/`create_agent` are chat-only actions with a
+  confirm diff (wave2-plan.md), so this is the path that actually works today without bypassing that review — a
+  by-hand "blank" editor would need a new background create command for each (`AgentEditor.tsx` today only
+  updates an existing profile) and no such path exists for workflows at all. **Add connector**
+  (`ConnectorsPlace.tsx`) reaches the existing `AddConnector` (catalogue + custom URL) from the top of the place,
+  not only from the bottom of the catalogue list. `PanelApi` gained `startThread(prompt)`
+  (`src/side-panel/registry.ts`; wired in `SidePanel.tsx` with a pending-prompt ref delivered once the new
+  chat's composer mounts, since the composer isn't mounted while on another place). `Composer.tsx`'s `setContent`
+  setter now also focuses the textarea (it only set the text before), which incidentally fixes focus for the
+  Home screen's own starter buttons too. Checked Skills, Workspaces, Inbox sources, Knowledge and Meetings: each
+  already has a working create affordance (Save page; + Add workspace; Take notes) or nothing to create (the
+  watcher toggles under Inbox sources; Skills is taught after a task by design, per its own comment), so none
+  needed a new button.
+- New strings under `flow_`, `agents_`, `conn_` in all three locales; `node scripts/check-locales.mjs` passes
+  (1424 keys × 3 locales).
+- Tests: `pnpm type-check`; full `vitest run` (1069/1069, unaffected); touched-file lint (0 errors, only
+  pre-existing warnings on lines not touched); in Brave — `models.e2e.mjs` 6/6 (incl. the new dropdown test),
+  `shell.e2e.mjs` 3/3, `workflows.e2e.mjs` 2/2 (incl. New workflow), `agents.e2e.mjs` 2/2 (incl. New agent),
+  `integrations.e2e.mjs` 11/11 (incl. Add connector).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

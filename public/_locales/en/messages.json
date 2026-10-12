@@ -3161,6 +3161,12 @@
   "flow_intro": {
     "message": "Routines that run on their own: on a schedule, when a meeting ends, or when you ask. Each shows how it is wired."
   },
+  "flow_new": {
+    "message": "New workflow"
+  },
+  "flow_new_starter": {
+    "message": "Create a routine that"
+  },
   "flow_section_review": {
     "message": "Waiting for your review"
   },
@@ -3736,6 +3742,12 @@
   },
   "agents_intro": {
     "message": "Agents work for you on their own, in a window of their own, never in your tabs. They wake on a schedule, when you open a page they watch, or when a message or another agent sets them off. One task slot always stays free for you."
+  },
+  "agents_new": {
+    "message": "New agent"
+  },
+  "agents_new_starter": {
+    "message": "Create an agent that"
   },
   "agents_section_review": {
     "message": "Waiting for your review"
@@ -4362,6 +4374,9 @@
   },
   "conn_list_empty": {
     "message": "No connectors yet. Add one below: the agent and your routines can then use its tools."
+  },
+  "conn_list_add": {
+    "message": "Add connector"
   },
   "conn_row_tools": {
     "message": "$1 tools"
