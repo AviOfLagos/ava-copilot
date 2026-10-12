@@ -883,6 +883,27 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   `step.sandbox` in the authoring instructions (`authoring.ts`); routines "run on the Mac" sync in WS5a's service;
   WS4 to list `companionToolSource()`; WS5b to run agent sessions through `CompanionClient.createSession`.
 
+### Wave 2 — Wave B integration (lead, 2026-10-12)
+
+- **Merged** WS4 → WS5b → WS5c → WS8 → WS7 into `feat/restyle`, each with its wiring: connector tools in the
+  agent's browser state (`connectorToolsSectionFor`) and in workflow authoring (`step.tool`, `step.sandbox`); a
+  "Run a connector tool" kind on the confirm card; economy voice in `VoiceManager.start`, local voices in
+  read-aloud and Voice output; Avi Brain settings in the panel.
+- **Seams closed:** a connector tool that asks first now waits for the click in agent and routine chats too (the
+  Inbox points to the waiting chat), instead of being refused; an agent's chat is kept to the agent's sites from the
+  first step (`allowListFor` in `threads/factory.ts`), with one site parser (`siteHost`) shared with the agent's own
+  check, and a firewall entry for one page never opens a whole site.
+- **Security fixes from review:** tool fingerprints cover title and annotations (a server cannot quietly turn a tool
+  "read-only"); tool listings show only plain names and go in as data; a connector's saved token or client secret
+  never follows it to another server; on the Mac, network commands, GitHub posts and MCP writes need the click as
+  relayed by the forwarder (`approved`), builds need `run_command` and never get network, and routine fetches connect
+  only to the address they checked (`companion/src/workflows/publicFetch.ts`, against DNS rebinding).
+- **Verified:** type-check, 1 052 unit tests, companion 65 tests, full E2E in Brave 87/87 (local voices included,
+  with KittenTTS and Moonshine tiny installed by `scripts/voice-models-setup.mjs`).
+- **Not wired yet:** routines "run on the Mac" (sync with Avi Brain), Avi Brain's MCP tools as a connector
+  (`companionToolSource()`), agent sessions in Avi Brain's sandbox (`CompanionClient.createSession`), local
+  speech-to-text for the chat box's dictation, deep links from an Inbox item to one workflow run.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
