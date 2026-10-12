@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { AudioRing, heardWake } from '../wake';
+import { describe, expect, it, vi } from 'vitest';
+import { AudioRing, heardWake, heyAvaPrefix, WakeListener } from '../wake';
 
 describe('heardWake', () => {
   it('hears the phrase, alone or with a request after it', () => {
@@ -11,11 +11,135 @@ describe('heardWake', () => {
   });
 });
 
+describe('heyAvaPrefix', () => {
+  it('accepts a VERIFY_GRAMMAR transcript that starts with "hey ava"', () => {
+    expect(heyAvaPrefix('hey ava')).toBe(true);
+    // The verified window can run a little past "ava" into the next word, which the verifier's
+    // own grammar then tags as trailing "[unk]" tokens (seen on "Hey Ava, what's on my calendar").
+    expect(heyAvaPrefix('hey ava [unk]')).toBe(true);
+    expect(heyAvaPrefix('hey ava [unk] [unk]')).toBe(true);
+    expect(heyAvaPrefix('HEY AVA')).toBe(true);
+    expect(heyAvaPrefix('  hey   ava  ')).toBe(true);
+  });
+
+  it('rejects everything a "hey"-only or unrelated utterance can decode to in that grammar', () => {
+    expect(heyAvaPrefix('hey')).toBe(false);
+    expect(heyAvaPrefix('ava')).toBe(false);
+    expect(heyAvaPrefix('[unk]')).toBe(false);
+    expect(heyAvaPrefix('[unk] hey')).toBe(false);
+    expect(heyAvaPrefix('[unk] hey ava')).toBe(false); // "ava" must follow "hey" directly
+    expect(heyAvaPrefix('')).toBe(false);
+    expect(heyAvaPrefix(undefined)).toBe(false);
+  });
+});
+
 describe('AudioRing', () => {
   it('keeps only the last seconds, in order, and empties when taken', () => {
     const ring = new AudioRing(4);
     for (const value of [1, 2, 3]) ring.push(new Float32Array([value, value]));
     expect(ring.take().map(chunk => chunk[0])).toEqual([2, 3]);
     expect(ring.take()).toEqual([]);
+  });
+});
+
+describe('WakeListener verification', () => {
+  type Sent = { action: string; recognizerId?: string; grammar?: string; data?: Float32Array };
+
+  /** A listener on a stand-in worker: what it sends is recorded, and replies are handed in by the test. */
+  function listen() {
+    const sent: Sent[] = [];
+    const wakes: number[] = [];
+    const listener = new WakeListener(() => wakes.push(Date.now()));
+    const internals = listener as unknown as {
+      worker: { postMessage: (message: Sent) => void } | null;
+      recognizerId: string;
+      feed: (samples: Float32Array) => void;
+      handle: (message: Record<string, unknown>) => void;
+      capture: Float32Array[] | null;
+    };
+    internals.worker = { postMessage: message => sent.push(message) };
+    const chunk = (value: number) => new Float32Array(1600).fill(value); // 100 ms
+    return {
+      listener,
+      sent,
+      wakes,
+      feed: (value: number, times = 1) => {
+        for (let index = 0; index < times; index++) internals.feed(chunk(value));
+      },
+      // The main recogniser hears the phrase (or thinks it does)
+      candidate: () =>
+        internals.handle({
+          event: 'partialresult',
+          recognizerId: internals.recognizerId,
+          result: { partial: 'hey ava' },
+        }),
+      verifier: () => sent.find(message => message.action === 'create' && message.grammar)?.recognizerId,
+      // The verifier's two answers: the chunk's, then the final one
+      answer: async (text: string) => {
+        const id = sent.find(message => message.action === 'create' && message.grammar)?.recognizerId;
+        internals.handle({ event: 'partialresult', recognizerId: id, result: { partial: '' } });
+        internals.handle({ event: 'result', recognizerId: id, result: { text } });
+        await new Promise(resolve => setTimeout(resolve, 0));
+      },
+      capture: () => internals.capture,
+      mainChunks: () => sent.filter(message => message.action === 'audioChunk' && message.recognizerId !== undefined),
+    };
+  }
+
+  it('wakes only when the second decode hears "hey ava", keeping what was said while it decoded', async () => {
+    const wake = listen();
+    wake.feed(0.125, 3);
+    wake.candidate();
+    expect(wake.wakes).toHaveLength(0);
+    // 250 ms of tail, then the decode starts on a recogniser with the richer grammar
+    wake.feed(0.25, 3);
+    expect(JSON.parse(wake.sent.find(message => message.grammar)?.grammar ?? '[]')).toContain('hey');
+    // Speech goes on while it decodes: kept for the conversation
+    wake.feed(0.5, 2);
+    await wake.answer('hey ava [unk]');
+    expect(wake.wakes).toHaveLength(1);
+    const kept = wake.capture() ?? [];
+    expect(kept.some(chunk => chunk[0] === 0.5)).toBe(true);
+    expect(wake.sent.some(message => message.action === 'remove' && message.recognizerId === wake.verifier())).toBe(
+      true,
+    );
+  });
+
+  it('does not wake on "hey" alone, and listens again', async () => {
+    const wake = listen();
+    wake.feed(0.1, 3);
+    wake.candidate();
+    wake.feed(0.2, 3);
+    await wake.answer('hey [unk]');
+    expect(wake.wakes).toHaveLength(0);
+    expect(wake.capture()).toBeNull();
+    const before = wake.mainChunks().length;
+    wake.feed(0.1, 2);
+    expect(wake.mainChunks().length).toBe(before + 2);
+  });
+
+  it('gives up on a decode that never answers, and listens again', async () => {
+    vi.useFakeTimers();
+    try {
+      const wake = listen();
+      wake.candidate();
+      wake.feed(0.2, 3);
+      await vi.advanceTimersByTimeAsync(3100);
+      expect(wake.wakes).toHaveLength(0);
+      const before = wake.mainChunks().length;
+      wake.feed(0.1, 1);
+      expect(wake.mainChunks().length).toBe(before + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not wake when listening pauses while it decodes', async () => {
+    const wake = listen();
+    wake.candidate();
+    wake.feed(0.2, 3);
+    wake.listener.pause();
+    await wake.answer('hey ava');
+    expect(wake.wakes).toHaveLength(0);
   });
 });

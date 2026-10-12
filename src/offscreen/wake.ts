@@ -1,9 +1,18 @@
 /**
  * Listens for "Hey Ava" on the device, with the Vosk recogniser in a worker and a grammar of that one
  * phrase: nothing leaves the machine until it is heard. The worker and model come from
- * scripts/wake-word-setup.mjs. When the phrase is heard, the moment of the phrase and what is said after
- * it are kept for the conversation, so a request said in the same breath ("Hey Ava, what's on my
- * calendar") is not lost while it connects. Nothing said before the phrase is kept.
+ * scripts/wake-word-setup.mjs. A one-phrase grammar forces the decoder to fit almost anything that
+ * starts like "hey..." into "hey ava" ("hey", "hey there", "hey everyone" all used to wake it), so a
+ * candidate from that grammar is not trusted on its own: it is checked by decoding the phrase window
+ * once more, as a single final result, on a second recogniser in the same worker whose grammar also
+ * offers plain "hey" and "ava" (`VERIFY_GRAMMAR`) — so the decoder has somewhere accurate to land when
+ * only "hey" was said, instead of forcing the full phrase. Verification never leaves the device either,
+ * and only adds the short wait for `VERIFY_TAIL_SECONDS` of trailing audio plus the second decode
+ * (measured: ~260ms average, ~425ms worst case over 91 synthesized clips across 7 voices/accents — see
+ * docs/task.md). When the phrase is confirmed, the moment of the phrase and what is said after it are
+ * kept for the conversation, so a request said in the same breath ("Hey Ava, what's on my calendar") is
+ * not lost while it connects. Nothing said before the phrase is kept, and a rejected candidate resumes
+ * listening at once.
  */
 
 const RATE = 16000;
@@ -17,9 +26,37 @@ const CAPTURE_EXPIRES_MS = 15_000;
 // One wake at a time, however long the phrase echoes in the partial results
 const COOLDOWN_MS = 4000;
 
+// Verification: a candidate still needs the device-only decode below to agree before it wakes.
+// "ava" is a plain grammar option here (not free-form dictation): the small model often fails to
+// say the name "Ava" at all when it has to recognise it freely, even on clean audio, but reliably
+// manages it when the grammar can simply offer the word. There is no "eva"/"ever" entry to weigh:
+// those words are not in this grammar's vocabulary, so the verifier cannot land on them by mistake.
+const VERIFY_GRAMMAR = ['hey ava', 'hey', 'ava', '[unk]'];
+// Extra audio collected after a candidate before verifying, so a trailing "ava" is complete; a
+// verification window can run a little past it into the next word, which the verifier's grammar
+// then tags as trailing "[unk]" — heyAvaPrefix only looks at the first two words for that reason.
+const VERIFY_TAIL_SECONDS = 0.25;
+// After a rejected candidate, how long to wait before trying again: an ordinary sentence that
+// starts with "hey" (or just sounds like it) can otherwise re-trigger the one-phrase grammar on
+// almost every following chunk while it keeps talking.
+const VERIFY_RETRY_MS = 500;
+// The longest a verification may take: a worker that never answers rejects the candidate, so the
+// listener cannot get stuck waiting
+const VERIFY_TIMEOUT_MS = 3000;
+
 /** Whether a recogniser result contains the phrase. Grammar mode gives "hey ava" or "[unk]". */
 export function heardWake(text: string | undefined): boolean {
   return !!text && text.toLowerCase().includes(WAKE_PHRASE);
+}
+
+/**
+ * Whether a VERIFY_GRAMMAR transcript starts with "hey" then "ava". Only the first two words are
+ * checked: the verified window can carry a little audio past "ava" into whatever comes next, which
+ * the grammar's own loop then renders as more words after it (see VERIFY_TAIL_SECONDS).
+ */
+export function heyAvaPrefix(text: string | undefined): boolean {
+  const words = (text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  return words[0] === 'hey' && words[1] === 'ava';
 }
 
 /** The last seconds of audio, in arrival order. */
@@ -58,6 +95,24 @@ export class WakeListener {
   // After the phrase: what the user goes on to say, kept for the conversation it starts
   private capture: Float32Array[] | null = null;
   private captured = 0;
+  // Verification: a candidate from the main recogniser, pending a second decode (see module doc).
+  // `verifying` covers the whole candidate, from the moment it is seen to the decode's reply;
+  // `deciding` is the back half of that (the decode is already running), so feed() knows to stop
+  // collecting a tail rather than start a second, overlapping verification.
+  private verifying = false;
+  private deciding = false;
+  private verifyRing: Float32Array[] = [];
+  private verifyTail: Float32Array[] = [];
+  private verifyTailSize = 0;
+  // What is said while the decode runs: kept for the conversation if the phrase is confirmed (so the
+  // first words of "Hey Ava, what's on my calendar" are not lost), dropped if it is not
+  private decidingAudio: Float32Array[] = [];
+  private decidingSize = 0;
+  private verifyRecognizerId: string | null = null;
+  // Replies for the verify recogniser, in the order the worker sends them (it answers every
+  // message, in order), so each one resolves the next pending request.
+  private readonly verifyWaiting: ((message: WorkerMessage) => void)[] = [];
+  private retryNotBefore = 0;
 
   constructor(private readonly onWake: () => void) {}
 
@@ -116,6 +171,7 @@ export class WakeListener {
     this.worker?.postMessage({ action: 'terminate' });
     this.worker?.terminate();
     this.worker = null;
+    this.resetVerification();
     this.mic?.getTracks().forEach(track => track.stop());
     this.mic = null;
     void this.input?.close().catch(() => {});
@@ -127,11 +183,27 @@ export class WakeListener {
     this.paused = true;
     this.capture = null;
     this.ring.take();
+    this.resetVerification();
   }
 
   resume(): void {
     this.paused = false;
     this.capture = null;
+    this.resetVerification();
+  }
+
+  /** Drops any candidate that was mid-verification, e.g. a pause landing during its tail window. */
+  private resetVerification(): void {
+    this.verifying = false;
+    this.deciding = false;
+    this.verifyRing = [];
+    this.verifyTail = [];
+    this.verifyTailSize = 0;
+    this.decidingAudio = [];
+    this.decidingSize = 0;
+    // A decode still running answers no one
+    this.verifyRecognizerId = null;
+    this.verifyWaiting.splice(0).forEach(resolve => resolve({ event: 'reset' }));
   }
 
   /** The phrase and what followed it, once, for the conversation starting now; then listening pauses. */
@@ -156,6 +228,31 @@ export class WakeListener {
       }
     }
     if (this.paused) return;
+    if (this.verifying) {
+      // Not fed to the main recogniser while a candidate is being checked (see module doc). Once
+      // the decode itself has started (`deciding`), later audio is simply dropped rather than
+      // collected into a second tail: only one verification runs at a time, so its replies are
+      // never mixed up with another's on the shared verifyWaiting queue.
+      if (this.deciding) {
+        if (this.decidingSize < RATE * CAPTURE_SECONDS) {
+          this.decidingAudio.push(samples.slice());
+          this.decidingSize += samples.length;
+        }
+        return;
+      }
+      this.verifyTail.push(samples.slice());
+      this.verifyTailSize += samples.length;
+      if (this.verifyTailSize >= RATE * VERIFY_TAIL_SECONDS) {
+        const ring = this.verifyRing;
+        const tail = this.verifyTail;
+        this.verifyRing = [];
+        this.verifyTail = [];
+        this.verifyTailSize = 0;
+        this.deciding = true;
+        void this.verifyAndDecide(ring, tail);
+      }
+      return;
+    }
     this.ring.push(samples.slice());
     // Kaldi takes 16-bit sample values as floats
     const data = samples.map(value => value * 0x8000);
@@ -166,13 +263,105 @@ export class WakeListener {
   }
 
   private handle(message: WorkerMessage): void {
-    if (message.recognizerId !== this.recognizerId || this.paused || this.capture) return;
+    // "create" acks with no payload (and so no recognizerId); harmless, but now sent more often
+    // (once per verification), so it is skipped explicitly rather than relying on it being ignored.
+    if (!message) return;
+    if (message.recognizerId === this.verifyRecognizerId) {
+      this.verifyWaiting.shift()?.(message);
+      return;
+    }
+    if (message.recognizerId !== this.recognizerId || this.paused || this.capture || this.verifying) return;
     const result = message.result as { partial?: string; text?: string } | undefined;
     const text = message.event === 'partialresult' ? result?.partial : message.event === 'result' ? result?.text : '';
-    if (!heardWake(text) || Date.now() - this.lastWake < COOLDOWN_MS) return;
+    if (!heardWake(text) || Date.now() - this.lastWake < COOLDOWN_MS || Date.now() < this.retryNotBefore) return;
+    // A candidate: hold off waking until a second, richer-grammar decode of the phrase window agrees.
+    this.verifying = true;
+    this.verifyRing = this.ring.take();
+    this.verifyTail = [];
+    this.verifyTailSize = 0;
+  }
+
+  /** Decodes a candidate's phrase window once more; wakes only if it agrees, and always resumes. */
+  private async verifyAndDecide(ring: Float32Array[], tail: Float32Array[]): Promise<void> {
+    const accepted = await this.verifyPhrase(ring, tail);
+    // A pause or stop while it decoded already reset everything
+    if (!this.deciding) return;
+    const said = this.decidingAudio;
+    this.verifying = false;
+    this.deciding = false;
+    this.decidingAudio = [];
+    this.decidingSize = 0;
+    if (!accepted) {
+      // Rejected: resume listening at once, but not so eagerly that an ordinary sentence starting
+      // with "hey" re-triggers verification on almost every chunk while it keeps going.
+      this.retryNotBefore = Date.now() + VERIFY_RETRY_MS;
+      return;
+    }
+    // A pause (or another wake) could have landed while this was decoding; respect it.
+    if (this.paused || this.capture || Date.now() - this.lastWake < COOLDOWN_MS) return;
     this.lastWake = Date.now();
-    this.capture = this.ring.take();
+    this.capture = [...ring, ...tail, ...said];
     this.captured = this.capture.reduce((sum, chunk) => sum + chunk.length, 0);
     this.onWake();
+  }
+
+  /**
+   * Decodes ring+tail as one final result on a fresh recogniser in the same worker, using
+   * VERIFY_GRAMMAR instead of free dictation (the small model often fails to say "Ava" at all when
+   * decoding freely, even on clean audio, but reliably manages it when the grammar can just offer
+   * the word). Nothing here leaves the device: it is the same worker and model as the main listener.
+   */
+  private async verifyPhrase(ring: Float32Array[], tail: Float32Array[]): Promise<boolean> {
+    const worker = this.worker;
+    if (!worker) return false;
+    const verifyId = crypto.randomUUID();
+    this.verifyRecognizerId = verifyId;
+    const chunks = [...ring, ...tail];
+    const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const data = new Float32Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      for (let i = 0; i < chunk.length; i++) data[offset + i] = chunk[i] * 0x8000; // Kaldi wants 16-bit values as floats
+      offset += chunk.length;
+    }
+    worker.postMessage({
+      action: 'create',
+      recognizerId: verifyId,
+      sampleRate: RATE,
+      grammar: JSON.stringify(VERIFY_GRAMMAR),
+    });
+    const first = this.nextVerifyReply();
+    worker.postMessage(
+      { action: 'audioChunk', recognizerId: verifyId, sampleRate: RATE, data },
+      { transfer: [data.buffer] },
+    );
+    const final = this.nextVerifyReply();
+    worker.postMessage({ action: 'retrieveFinalResult', recognizerId: verifyId });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const replies = await Promise.race([
+      Promise.all([first, final]),
+      new Promise<null>(resolve => {
+        timer = setTimeout(() => resolve(null), VERIFY_TIMEOUT_MS);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (this.worker === worker) worker.postMessage({ action: 'remove', recognizerId: verifyId });
+    if (this.verifyRecognizerId !== verifyId) return false;
+    this.verifyRecognizerId = null;
+    if (!replies) {
+      // No answer in time: the candidate is rejected, and late replies go nowhere
+      this.verifyWaiting.splice(0).forEach(resolve => resolve({ event: 'timeout' }));
+      return false;
+    }
+    const text = replies
+      .map(message =>
+        message.event === 'result' ? ((message.result as { text?: string } | undefined)?.text ?? '') : '',
+      )
+      .join(' ');
+    return heyAvaPrefix(text);
+  }
+
+  private nextVerifyReply(): Promise<WorkerMessage> {
+    return new Promise(resolve => this.verifyWaiting.push(resolve));
   }
 }
