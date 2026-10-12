@@ -814,12 +814,34 @@ const SidePanel = () => {
             }
             onOpenMeeting={thread.meetingId ? () => openMeeting(thread.meetingId!) : undefined}
             onWorkspace={workspaceId => post({ type: 'thread_workspace', threadId: thread.id, workspaceId })}
+            onRetry={async () => post({ type: 'thread_retry', threadId: thread.id, windowId: await currentWindowId() })}
             isDarkMode={isDarkMode}
           />
           <ChatView
             thread={thread}
             messages={threadMessages}
             onBranch={isBusy ? undefined : seq => void handleBranch(seq)}
+            onRetry={isBusy ? undefined : () => post({ type: 'thread_retry', threadId: thread.id })}
+            onRetryFrom={
+              isBusy
+                ? undefined
+                : seq =>
+                    void (async () => {
+                      try {
+                        const reply = await panelApi.request<{ threadId: string }>({
+                          type: 'thread_retry_from',
+                          threadId: thread.id,
+                          seq,
+                          windowId: await currentWindowId(),
+                        });
+                        handleSelect(reply.threadId);
+                      } catch (error) {
+                        setBanner(error instanceof Error ? error.message : String(error));
+                      }
+                    })()
+            }
+            onSpeak={(threadId, messageId, text) => post({ type: 'speak_say', threadId, messageId, text })}
+            onStopSpeaking={() => post({ type: 'speak_stop' })}
             footer={
               (canTeach || savedSkillIn === thread.id) && (
                 <TeachCard

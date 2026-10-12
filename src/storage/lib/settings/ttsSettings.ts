@@ -57,8 +57,23 @@ export interface TtsSpeakingState {
 
 export const EMPTY_SPEAKING: TtsSpeakingState = { threadId: null, messageId: null };
 
-export const ttsSpeakingStore: BaseStorage<TtsSpeakingState> = createStorage<TtsSpeakingState>(
-  'tts-speaking',
-  EMPTY_SPEAKING,
-  { storageEnum: StorageEnum.Session, liveUpdate: true },
-);
+let speaking: BaseStorage<TtsSpeakingState> | null = null;
+
+/**
+ * What is being read aloud right now, in session storage (it must not outlive the browser). Made on
+ * first use, not on import: pages and tests that only read settings never touch session storage.
+ */
+function speakingStore(): BaseStorage<TtsSpeakingState> {
+  speaking ??= createStorage<TtsSpeakingState>('tts-speaking', EMPTY_SPEAKING, {
+    storageEnum: StorageEnum.Session,
+    liveUpdate: true,
+  });
+  return speaking;
+}
+
+export const ttsSpeakingStore: BaseStorage<TtsSpeakingState> = {
+  get: () => speakingStore().get(),
+  set: value => speakingStore().set(value),
+  getSnapshot: () => speakingStore().getSnapshot(),
+  subscribe: listener => speakingStore().subscribe(listener),
+};

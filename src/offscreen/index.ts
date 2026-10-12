@@ -3,6 +3,7 @@ import type { RecorderOptions } from './recorder';
 import { VoiceSession } from './voice';
 import type { VoiceOptions } from './voice';
 import { WakeListener } from './wake';
+import { TtsPlayer } from './tts';
 
 /**
  * The offscreen document holds the meeting's media streams, which a service worker cannot.
@@ -10,6 +11,8 @@ import { WakeListener } from './wake';
  */
 let recorder: Recorder | null = null;
 let voice: VoiceSession | null = null;
+// Plays cloud voices (Gemini TTS) the background fetched; the key never comes here
+let tts: TtsPlayer | null = null;
 const wake = new WakeListener(() => {
   chime();
   notify({ type: 'wake_word' });
@@ -121,6 +124,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'voice_say':
         voice?.say(String(message.text ?? ''));
         return { ok: voice !== null };
+      case 'tts_play': {
+        tts ??= new TtsPlayer({
+          onEnded: () => notify({ type: 'tts_ended' }),
+          onError: error => notify({ type: 'tts_error', error: String(error) }),
+        });
+        tts.play(String(message.audio ?? ''));
+        return { ok: true };
+      }
+      case 'tts_stop':
+        tts?.stop();
+        return { ok: true };
+      case 'tts_running':
+        return { running: tts?.playing() ?? false };
       case 'voice_running':
         return { running: voice !== null };
       case 'recorder_status':
