@@ -491,6 +491,42 @@ in `src/side-panel/threads/ThreadBar.tsx`, `e2e/speak.e2e.mjs`.
   `onStopSpeaking` onto `ThreadBar`/`ChatView` (verified working locally, then reverted so this stream's diff stays
   inside its own files).
 
+### Wave 2 — WS5a Workflows (built 2026-10-12)
+
+Routines the user asks for in chat, drawn as a diagram, confirmed with a click, run on their own.
+- **Spec** (`src/background/workflows/spec.ts`, zod, pure): triggers (schedule, manual, event, tab), steps (http_get,
+  web_search, browse, read_page, memory_search/save, llm, condition, agent, tool, sandbox) and outputs (inbox,
+  brief_section, notify, speak). Checks: one-way graph from a trigger, ≤ 30 nodes, one schedule at most every 5 min,
+  fetched hosts on `allowHosts`, budget. Data moves through `{{steps.<id>.output}}` places (`template.ts`, no eval),
+  allowed only in data fields; instructions, tasks and addresses are always literal.
+- **Engine** (`engine.ts`, pure, storage and step work injected so the companion can reuse it): a persisted run and one
+  step per node, `queued → running → waiting_user → succeeded | failed | cancelled | interrupted | unknown_outcome`
+  (steps can also be `skipped`); retry with back-off only for steps safe to repeat (never model calls, never side
+  effects); a side-effect step always waits for the user's click (Inbox approval, amber Allow in the panel) and, cut off,
+  becomes `unknown_outcome`; budget (steps, model calls, tokens, daily cap); cancellation; lease + heartbeat and
+  `recover()` (recent runs resume, a browser task picks up its chat, older runs are `interrupted`); taint; three failed
+  runs in a row pause the workflow. Kinds still being built (agent, tool, sandbox, speak, tab trigger) stop a run with a
+  plain message until a stream calls `registerStepExecutor`.
+- **Service** (`service.ts`): drafts (`WorkflowRecord.draft`, diffed against what runs now or the draft it replaces),
+  Create/Apply, hand edits (name, cron, instruction), pause/resume, delete; one job per active schedule
+  (`workflow:<id>`, 2 h catch-up), one run per firing, runs per day cap; event triggers (`meeting_ended` wired by a
+  Dexie hook; `fireEvent('inbox_item', …)` for the Inbox stream, never on workflow-made items).
+- **Authoring** (`authoring.ts`, `actions.ts`): `create_workflow`, `update_workflow`, `run_workflow`, `list_workflows`
+  agent actions; the routine is written by a separate `generateStructured` call (flat key/value shape every provider
+  accepts, one correction round), never by the navigator's output; refused in chats started by a routine or an agent.
+  Voice tools `run_workflow`, `list_workflows`.
+- **Panel** (`src/side-panel/workflows`): place "Workflows" (list: review first, next run, last result; template
+  "Morning tech news"), the React Flow + dagre diagram with per-kind cards, the draft diff (new / changed / removed
+  ghosts), live step lighting, node inspector with edits and step output, run history, approvals; full-tab editor
+  `workflows.html` (`entrypoints/workflows`, `src/workflows-page`) over one-off messages to the same commands.
+- **Brief**: `out.brief_section` keeps its section in the step output; the brief includes today's sections, waits while
+  a feeding workflow runs or is due, and a section that lands after the brief is added to its chat once.
+- Tests: 53 unit tests (spec, templates, diff, engine with fake clock — retry, approvals, cancel, park/wake, restart
+  recovery, auto-pause, budget — authoring with a mocked model, http_get, service, brief, diagram layout);
+  `e2e/workflows.e2e.mjs` (chat → draft diagram → Create → feedback → Apply → Run now → nodes succeed → brief has the
+  section). `e2e/manual/flow-shots.mjs` takes the panel screenshots. The test-only `workflow-settings.urlOverrides`
+  points real sources at a local server (local targets only).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

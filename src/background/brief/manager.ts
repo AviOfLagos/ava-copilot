@@ -16,6 +16,8 @@ import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
 import { resolveModels } from '../threads/factory';
 import { isOverCap } from '../usage/budget';
+import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
+import type { WorkflowBriefSection } from '../workflows/brief';
 import { briefDue, briefMarkdown, localDate, PRIORITIES_INSTRUCTIONS, priorityLines, todaysEvents } from './brief';
 import type { BriefData } from './brief';
 
@@ -58,21 +60,39 @@ export class MorningBrief {
     setTimeout(() => void this.check(), 60_000);
   }
 
-  /** Makes today's brief when it is due. */
+  /**
+   * Makes today's brief when it is due. A workflow that feeds the brief and runs or is due right now goes
+   * first: the brief comes when it ends (the workflow asks for it then).
+   */
   async check(): Promise<void> {
     if (briefDue(await briefSettingsStore.getSettings())) {
+      if (await briefSectionsPending(db, Date.now()).catch(() => false)) return;
       await this.make().catch(error => logger.error('The morning brief failed', error));
     }
   }
 
-  /** Today's brief: the one made already, or a new one. Returns its text. */
+  /** Today's brief: the one made already, with the sections added since, or a new one. Returns its text. */
   async today(): Promise<string> {
     const settings = await briefSettingsStore.getSettings();
     if (settings.lastDay === localDate(Date.now()) && settings.lastThreadId) {
-      const [message] = (await threadStore.messages(settings.lastThreadId)).filter(item => item.actor === 'planner');
-      if (message) return message.content;
+      const said = (await threadStore.messages(settings.lastThreadId)).filter(item => item.actor === 'planner');
+      if (said.length) return said.map(message => message.content).join('\n\n');
     }
     return this.make({ notify: false });
+  }
+
+  /**
+   * A section a workflow made after today's brief: added to the brief's chat, once. Returns false when today's
+   * brief is not made yet; it will include the section when it is.
+   */
+  async addSection(section: WorkflowBriefSection): Promise<boolean> {
+    const settings = await briefSettingsStore.getSettings();
+    if (settings.lastDay !== localDate(Date.now()) || !settings.lastThreadId) return false;
+    const text = sectionMarkdown(section);
+    const said = await threadStore.messages(settings.lastThreadId);
+    if (said.some(message => message.content.includes(text))) return true;
+    await threadStore.addMessage(settings.lastThreadId, 'planner', text);
+    return true;
   }
 
   /** Makes a brief now, saves it as a chat, and tells the user. One at a time. */
@@ -97,6 +117,8 @@ export class MorningBrief {
         thread => thread.status === 'error' && !thread.archived && now - thread.updatedAt < 86_400_000,
       ),
       workspaces: await workspaceStore.list(),
+      // What workflows gathered for the brief today
+      sections: await todaysBriefSections(db, now).catch(() => []),
     };
 
     let priorities: string[] = [];

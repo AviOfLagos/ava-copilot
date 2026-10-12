@@ -1,4 +1,6 @@
 import type { GraphNode, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
+import { sectionMarkdown } from '../workflows/brief';
+import type { WorkflowBriefSection } from '../workflows/brief';
 
 /** What a morning brief is made from. */
 export interface BriefData {
@@ -12,6 +14,8 @@ export interface BriefData {
   waiting: ThreadRecord[];
   stopped: ThreadRecord[];
   workspaces: Workspace[];
+  // Sections that workflows made today for the brief (e.g. "Tech news")
+  sections?: WorkflowBriefSection[];
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -83,6 +87,9 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
     ),
   ];
   if (waiting.length) sections.push(`**Waiting on you**\n${waiting.join('\n')}`);
+
+  // What the user's workflows gathered for the brief, e.g. the morning's tech news
+  for (const section of data.sections ?? []) sections.push(sectionMarkdown(section));
 
   const groups = new Map<string, { actions: string[]; decisions: string[] }>();
   const group = (workspaceId: string | null) => {
