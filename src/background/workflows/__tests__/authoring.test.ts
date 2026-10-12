@@ -94,6 +94,21 @@ describe('authorSpec', () => {
     expect(result.spec.allowHosts).toEqual(['hn.algolia.com', 'huggingface.co']);
   });
 
+  it("shows the model the connector tools the routine may call, after the user's words", async () => {
+    const prompts: string[] = [];
+    await authorSpec({
+      request: 'post the news to Slack',
+      generate: async prompt => {
+        prompts.push(prompt.user);
+        return newsAnswer();
+      },
+      timezone: 'UTC',
+      tools: '\n[Connector tools]\n- Slack › post_message (asks the user first)',
+      now,
+    });
+    expect(prompts[0]).toMatch(/post the news to Slack\n\n\[Connector tools\]\n- Slack › post_message/);
+  });
+
   it('gives the model one chance to correct problems, and says what is wrong after that', async () => {
     const broken = { ...newsAnswer(), edges: newsAnswer().edges.filter(edge => edge.to !== 'brief') };
     const prompts: string[] = [];

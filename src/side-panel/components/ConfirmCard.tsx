@@ -22,6 +22,7 @@ const KIND_LABELS = {
   code: 'gate_needsUser_code',
   cap: 'gate_needsUser_cap',
   questions: 'gate_needsUser_questions',
+  tool: 'conn_gate_kind',
 } as const;
 
 function hostOf(url: string): string {

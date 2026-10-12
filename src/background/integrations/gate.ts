@@ -22,13 +22,12 @@ export interface ToolCallReview {
 }
 
 /**
- * The card's kind. The gate's types have no kind for a tool yet: the proposed one is 'tool' (title "Run a
- * connector tool"; see the WS4 section in docs/task.md). Until it exists, the commit kind the tool's name
- * suggests stands in, so today's card shows it: send_message → "Send a message", delete_page → "Delete".
+ * The card's kind: the commit kind the tool's name suggests (send_message → "Send a message", delete_page →
+ * "Delete"), else "Run a connector tool".
  */
 export function confirmKindFor(tool: Pick<ToolFingerprint, 'tool' | 'title' | 'annotations'>): ConfirmRequest['kind'] {
   const words = `${tool.tool.replace(/[_\-.]+/g, ' ')} ${tool.title ?? ''}`;
-  return classifyLabel(words) ?? (tool.annotations?.destructiveHint === true ? 'delete' : 'submit');
+  return classifyLabel(words) ?? (tool.annotations?.destructiveHint === true ? 'delete' : 'tool');
 }
 
 function valueText(value: unknown): string {

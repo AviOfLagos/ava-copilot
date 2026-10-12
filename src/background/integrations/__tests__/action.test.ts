@@ -201,10 +201,10 @@ describe('call_tool', () => {
 });
 
 describe('the confirm request and the action schema', () => {
-  it('picks the card kind from the tool’s name until the gate has one for tools', () => {
+  it('picks the card kind from the tool’s name, else runs it as a connector tool', () => {
     expect(confirmKindFor({ tool: 'send_message', title: null, annotations: null })).toBe('send');
     expect(confirmKindFor({ tool: 'delete_page', title: null, annotations: null })).toBe('delete');
-    expect(confirmKindFor({ tool: 'create_issue', title: null, annotations: null })).toBe('submit');
+    expect(confirmKindFor({ tool: 'create_issue', title: null, annotations: null })).toBe('tool');
     expect(confirmKindFor({ tool: 'archive_thing', title: null, annotations: { destructiveHint: true } })).toBe(
       'delete',
     );

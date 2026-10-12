@@ -66,6 +66,7 @@ const HELD_LABELS = {
   code: 'gate_needsUser_code',
   cap: 'gate_needsUser_cap',
   questions: 'gate_needsUser_questions',
+  tool: 'conn_gate_kind',
 } as const;
 
 // The thinking orb's light program for what the agent is doing

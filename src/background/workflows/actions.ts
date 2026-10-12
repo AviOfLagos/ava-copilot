@@ -8,6 +8,8 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
+import { toolCatalogueSectionFor } from '../integrations/section';
+import { connectorService } from '../integrations/instance';
 import { generateStructured } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { registerAgentAction } from '../registry';
@@ -124,6 +126,7 @@ async function authorFor(context: AgentContext, request: string, current: Workfl
     request,
     current,
     timezone: userTimezone(),
+    tools: await toolCatalogueSectionFor(connectorService, context),
     generate: async ({ system, user }) =>
       (
         await generateStructured<AuthoredSpec>({

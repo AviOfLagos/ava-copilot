@@ -24,7 +24,8 @@ export interface ConfirmRequest {
   id: string;
   taskId: string;
   mode: 'commit' | 'needs_user';
-  kind: CommitKind | NeedsUserKind;
+  // 'tool': a connector tool whose name says nothing more specific
+  kind: CommitKind | NeedsUserKind | 'tool';
   // What the agent is about to do, in its own words
   intent: string;
   // The control the action targets, e.g. the button label
