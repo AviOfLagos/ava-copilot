@@ -4686,5 +4686,143 @@
   },
   "conn_gate_kind": {
     "message": "執行連接器工具"
+  },
+  "inbox_title": {
+    "message": "收件箱"
+  },
+  "inbox_intro_unread": {
+    "message": "$COUNT$ 則未讀。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_intro_clear": {
+    "message": "目前沒有待處理項目。"
+  },
+  "inbox_filter_all": {
+    "message": "全部"
+  },
+  "inbox_filter_unread": {
+    "message": "未讀"
+  },
+  "inbox_filter_approvals": {
+    "message": "待核准"
+  },
+  "inbox_filter_source_all": {
+    "message": "所有來源"
+  },
+  "inbox_filter_workspace_all": {
+    "message": "所有工作區"
+  },
+  "inbox_filter_agent_all": {
+    "message": "所有代理"
+  },
+  "inbox_empty_title": {
+    "message": "目前沒有項目"
+  },
+  "inbox_empty_body": {
+    "message": "代理、常式與連接器會把需要你處理的事留在這裡:訊息、核准、結果與提醒。"
+  },
+  "inbox_back": {
+    "message": "返回"
+  },
+  "inbox_priority_high": {
+    "message": "高優先"
+  },
+  "inbox_action_approve": {
+    "message": "核准"
+  },
+  "inbox_action_decline": {
+    "message": "拒絕"
+  },
+  "inbox_action_markDone": {
+    "message": "標記為已完成"
+  },
+  "inbox_action_markUnread": {
+    "message": "標記為未讀"
+  },
+  "inbox_action_openChat": {
+    "message": "開啟對話"
+  },
+  "inbox_action_openWorkflow": {
+    "message": "開啟工作流程"
+  },
+  "inbox_snooze_1h": {
+    "message": "延後 1 小時"
+  },
+  "inbox_snooze_tomorrow": {
+    "message": "延後到明天"
+  },
+  "inbox_status_snoozed": {
+    "message": "已延後"
+  },
+  "inbox_row_menu_a11y": {
+    "message": "更多操作"
+  },
+  "inbox_link_open_a11y": {
+    "message": "開啟 $LINK$",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "https://example.com"
+      }
+    }
+  },
+  "inbox_settings_title": {
+    "message": "收件箱"
+  },
+  "inbox_settings_speakUp_label": {
+    "message": "有需要時主動說出來"
+  },
+  "inbox_settings_speakUp_hint": {
+    "message": "高優先項目、待核准事項或即將開始的會議,會用一句簡短的話說出來。"
+  },
+  "inbox_settings_quietHours_label": {
+    "message": "安靜時段"
+  },
+  "inbox_settings_quietHours_hint": {
+    "message": "這段時間內不會有語音提示。"
+  },
+  "inbox_settings_quietHours_start": {
+    "message": "從"
+  },
+  "inbox_settings_quietHours_end": {
+    "message": "到"
+  },
+  "inbox_settings_quietHours_off": {
+    "message": "關閉"
+  },
+  "inbox_settings_watchers_label": {
+    "message": "讀取已開啟的分頁"
+  },
+  "inbox_settings_watchers_hint": {
+    "message": "每隔幾分鐘檢查已開啟的分頁是否有未讀對話。絕不讀取隱密分頁。"
+  },
+  "inbox_settings_watchWhatsapp": {
+    "message": "WhatsApp 網頁版"
+  },
+  "inbox_settings_watchSlack": {
+    "message": "Slack"
+  },
+  "inbox_settings_watchGmail": {
+    "message": "Gmail"
+  },
+  "inbox_settings_checkNow": {
+    "message": "立即檢查"
+  },
+  "inbox_settings_checkNow_busy": {
+    "message": "檢查中…"
+  },
+  "inbox_settings_checkNow_result": {
+    "message": "找到 $COUNT$ 筆新項目。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   }
 }

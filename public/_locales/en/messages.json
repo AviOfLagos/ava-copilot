@@ -4686,5 +4686,143 @@
   },
   "conn_gate_kind": {
     "message": "Run a connector tool"
+  },
+  "inbox_title": {
+    "message": "Inbox"
+  },
+  "inbox_intro_unread": {
+    "message": "$COUNT$ unread.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_intro_clear": {
+    "message": "Nothing waiting right now."
+  },
+  "inbox_filter_all": {
+    "message": "All"
+  },
+  "inbox_filter_unread": {
+    "message": "Unread"
+  },
+  "inbox_filter_approvals": {
+    "message": "Approvals"
+  },
+  "inbox_filter_source_all": {
+    "message": "Every source"
+  },
+  "inbox_filter_workspace_all": {
+    "message": "Every workspace"
+  },
+  "inbox_filter_agent_all": {
+    "message": "Every agent"
+  },
+  "inbox_empty_title": {
+    "message": "Nothing here"
+  },
+  "inbox_empty_body": {
+    "message": "Agents, routines and connectors leave what needs you here: messages, approvals, results and alerts."
+  },
+  "inbox_back": {
+    "message": "Back"
+  },
+  "inbox_priority_high": {
+    "message": "High priority"
+  },
+  "inbox_action_approve": {
+    "message": "Approve"
+  },
+  "inbox_action_decline": {
+    "message": "Decline"
+  },
+  "inbox_action_markDone": {
+    "message": "Mark done"
+  },
+  "inbox_action_markUnread": {
+    "message": "Mark unread"
+  },
+  "inbox_action_openChat": {
+    "message": "Open chat"
+  },
+  "inbox_action_openWorkflow": {
+    "message": "Open workflow"
+  },
+  "inbox_snooze_1h": {
+    "message": "Snooze 1 hour"
+  },
+  "inbox_snooze_tomorrow": {
+    "message": "Snooze until tomorrow"
+  },
+  "inbox_status_snoozed": {
+    "message": "Snoozed"
+  },
+  "inbox_row_menu_a11y": {
+    "message": "More actions"
+  },
+  "inbox_link_open_a11y": {
+    "message": "Open $LINK$",
+    "placeholders": {
+      "link": {
+        "content": "$1",
+        "example": "https://example.com"
+      }
+    }
+  },
+  "inbox_settings_title": {
+    "message": "Inbox"
+  },
+  "inbox_settings_speakUp_label": {
+    "message": "Speak up when something needs me"
+  },
+  "inbox_settings_speakUp_hint": {
+    "message": "A short spoken line for a high-priority item, an approval, or a meeting about to start."
+  },
+  "inbox_settings_quietHours_label": {
+    "message": "Quiet hours"
+  },
+  "inbox_settings_quietHours_hint": {
+    "message": "No spoken announcements during this time."
+  },
+  "inbox_settings_quietHours_start": {
+    "message": "From"
+  },
+  "inbox_settings_quietHours_end": {
+    "message": "To"
+  },
+  "inbox_settings_quietHours_off": {
+    "message": "Turn off"
+  },
+  "inbox_settings_watchers_label": {
+    "message": "Read from tabs already open"
+  },
+  "inbox_settings_watchers_hint": {
+    "message": "Checks an open tab every couple of minutes for unread conversations. Never reads an incognito tab."
+  },
+  "inbox_settings_watchWhatsapp": {
+    "message": "WhatsApp Web"
+  },
+  "inbox_settings_watchSlack": {
+    "message": "Slack"
+  },
+  "inbox_settings_watchGmail": {
+    "message": "Gmail"
+  },
+  "inbox_settings_checkNow": {
+    "message": "Check now"
+  },
+  "inbox_settings_checkNow_busy": {
+    "message": "Checking…"
+  },
+  "inbox_settings_checkNow_result": {
+    "message": "Found $COUNT$ new item(s).",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   }
 }
