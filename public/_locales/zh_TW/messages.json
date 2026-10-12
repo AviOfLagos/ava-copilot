@@ -3727,5 +3727,253 @@
   },
   "help_readAloud_where": {
     "message": "設定 › 語音"
+  },
+  "voice_engine_settings_title": {
+    "message": "語音引擎"
+  },
+  "voice_engine_mode_label": {
+    "message": "對話模式"
+  },
+  "voice_engine_mode_live": {
+    "message": "即時（Gemini）"
+  },
+  "voice_engine_mode_economy": {
+    "message": "節省（在這台電腦上）"
+  },
+  "voice_engine_mode_live_hint": {
+    "message": "Gemini 負責聆聽、思考與說話。你的聲音會傳到 Google，按分鐘計費。"
+  },
+  "voice_engine_mode_economy_hint": {
+    "message": "你的語音會在這台電腦上轉成文字，由文字模型用同樣的工具回答，再由本機語音念出。音訊絕不離開電腦；使用本機模型時，什麼都不會離開。"
+  },
+  "voice_engine_economy_uses": {
+    "message": "節省模式的對話用 $STT$ 聆聽，用 $TTS$ 說話。",
+    "placeholders": {
+      "stt": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "tts": {
+        "content": "$2",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_engine_stt_label": {
+    "message": "語音轉文字"
+  },
+  "voice_engine_stt_gemini": {
+    "message": "Gemini（雲端，僅限即時模式）"
+  },
+  "voice_engine_stt_moonshine": {
+    "message": "Moonshine（在這台電腦上）"
+  },
+  "voice_engine_stt_whisper": {
+    "message": "Whisper base（在這台電腦上）"
+  },
+  "voice_engine_stt_vosk": {
+    "message": "Vosk（在這台電腦上，最小）"
+  },
+  "voice_engine_stt_gemini_hint": {
+    "message": "節省模式絕不把音訊傳給 Gemini：會改用第一個已安裝的本機模型。"
+  },
+  "voice_engine_moonshine_label": {
+    "message": "Moonshine 模型"
+  },
+  "voice_engine_moonshine_tiny": {
+    "message": "Tiny（最快）"
+  },
+  "voice_engine_moonshine_base": {
+    "message": "Base（較準確）"
+  },
+  "voice_engine_tts_label": {
+    "message": "文字轉語音"
+  },
+  "voice_engine_tts_system": {
+    "message": "系統語音（免費）"
+  },
+  "voice_engine_tts_kitten": {
+    "message": "KittenTTS（在這台電腦上）"
+  },
+  "voice_engine_tts_kokoro": {
+    "message": "Kokoro（在這台電腦上，音質較好）"
+  },
+  "voice_engine_tts_gemini": {
+    "message": "Gemini（雲端）"
+  },
+  "voice_engine_tts_gemini_hint": {
+    "message": "朗讀回答時使用 Gemini；節省模式的對話仍用本機語音說話。"
+  },
+  "voice_engine_voice_label": {
+    "message": "聲音"
+  },
+  "voice_engine_textModel_label": {
+    "message": "節省模式的文字模型"
+  },
+  "voice_engine_textModel_fast": {
+    "message": "快速模型"
+  },
+  "voice_engine_textModel_local": {
+    "message": "本機模型（Ollama、LM Studio）"
+  },
+  "voice_engine_idle_label": {
+    "message": "對話安靜多久後結束"
+  },
+  "voice_engine_idle_never": {
+    "message": "永不"
+  },
+  "voice_engine_idle_minutes": {
+    "message": "$MINUTES$ 分鐘",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "voice_engine_models_title": {
+    "message": "這台電腦上的模型"
+  },
+  "voice_engine_model_moonshineTiny": {
+    "message": "Moonshine tiny"
+  },
+  "voice_engine_model_moonshineBase": {
+    "message": "Moonshine base"
+  },
+  "voice_engine_model_whisper": {
+    "message": "Whisper base"
+  },
+  "voice_engine_model_vosk": {
+    "message": "Vosk（來自 Hey Ava）"
+  },
+  "voice_engine_model_kitten": {
+    "message": "KittenTTS nano"
+  },
+  "voice_engine_model_kokoro": {
+    "message": "Kokoro 82M"
+  },
+  "voice_engine_models_installed": {
+    "message": "已安裝 · $MB$ MB",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "28"
+      }
+    }
+  },
+  "voice_engine_models_notInstalled": {
+    "message": "未安裝 · 約 $MB$ MB",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "28"
+      }
+    }
+  },
+  "voice_engine_notInstalled_short": {
+    "message": "未安裝"
+  },
+  "voice_engine_models_hint": {
+    "message": "模型只下載一次、經過驗證，並與擴充功能一起打包：說話時不會再下載任何東西。請在擴充功能的資料夾執行這個指令，然後重新建置。"
+  },
+  "voice_engine_models_copy": {
+    "message": "複製指令"
+  },
+  "voice_engine_models_missing": {
+    "message": "這台電腦沒有安裝語音模型。請執行 $COMMAND$，然後重新建置擴充功能。",
+    "placeholders": {
+      "command": {
+        "content": "$1",
+        "example": "node scripts/voice-models-setup.mjs"
+      }
+    }
+  },
+  "voice_engine_test_button": {
+    "message": "說句話"
+  },
+  "voice_engine_test_sentence": {
+    "message": "你好！這就是我朗讀回答時的聲音。"
+  },
+  "voice_engine_test_done": {
+    "message": "說完用了 $SECONDS$ 秒",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "1.2"
+      }
+    }
+  },
+  "voice_engine_test_load": {
+    "message": "模型載入用了 $SECONDS$ 秒",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "0.8"
+      }
+    }
+  },
+  "voice_engine_test_speed": {
+    "message": "比即時快 $FACTOR$ 倍",
+    "placeholders": {
+      "factor": {
+        "content": "$1",
+        "example": "4.2"
+      }
+    }
+  },
+  "voice_engine_listen_button": {
+    "message": "測試語音轉文字"
+  },
+  "voice_engine_listen_running": {
+    "message": "正在聆聽……請說一句話。"
+  },
+  "voice_engine_listen_done": {
+    "message": "聽到「$TEXT$」，用了 $SECONDS$ 秒",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "hey ava"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "0.4"
+      }
+    }
+  },
+  "voice_engine_listen_nothing": {
+    "message": "沒有聽到說話。"
+  },
+  "voice_engine_unload_button": {
+    "message": "釋放記憶體"
+  },
+  "voice_engine_unload_done": {
+    "message": "本機模型已卸載。"
+  },
+  "voice_engine_name_moonshine": {
+    "message": "Moonshine"
+  },
+  "voice_engine_name_whisper": {
+    "message": "Whisper"
+  },
+  "voice_engine_name_vosk": {
+    "message": "Vosk"
+  },
+  "voice_engine_name_kitten": {
+    "message": "KittenTTS"
+  },
+  "voice_engine_name_kokoro": {
+    "message": "Kokoro"
+  },
+  "voice_engine_name_system": {
+    "message": "系統語音"
+  },
+  "voice_engine_gpu_label": {
+    "message": "使用顯示卡"
+  },
+  "voice_engine_gpu_hint": {
+    "message": "用 WebGPU 加快語音辨識；關閉時改用處理器。"
+  },
+  "voice_engine_installed_short": {
+    "message": "已安裝"
   }
 }

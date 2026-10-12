@@ -592,6 +592,51 @@ that refocuses the web page.
   `identity` permission for connector sign-in. Routines pick models through `createRoleModel`; the graph, the brief and
   routines hold on the shared daily budget (`isOverDailyBudget`).
 
+### Wave 2 — WS8 Voice engines, free and local (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS8. Settings › Voice engines picks who hears, who speaks and how a conversation
+runs; nothing but text ever leaves the computer in economy mode.
+
+- **Models** (`scripts/voice-models-setup.mjs`, git-ignored `public/voice/`, `voice/manifest.json`): every file from a
+  pinned Hugging Face revision with a pinned SHA-256; default KittenTTS nano 0.8 int8 (~28 MB, 8 voices; `voices.npz`
+  unpacked into raw float32 files so the extension needs no zip reader) + Moonshine tiny int8 (~32 MB); flags
+  `--moonshine-base` (~67 MB), `--whisper` (Whisper base, ~80 MB), `--kokoro` (Kokoro 82M q8 + 8 voices, ~97 MB),
+  `--webgpu` (Moonshine float weights), `--all`, `--list`. Vosk dictation reuses the wake word's model. Rebuild after.
+- **Runtime** (`src/offscreen/tts-local`, `src/offscreen/stt`): two module workers in the offscreen document, both on
+  transformers.js 4.3 (`StyleTextToSpeech2Model` runs KittenTTS and Kokoro; the ASR pipeline runs Moonshine and
+  Whisper; WebGPU when allowed and its weights exist, else WebAssembly). `configureTransformers` turns off remote models
+  and Cache Storage and unsets onnxruntime-web's CDN `wasmPaths`, so the `.wasm` Vite emits next to the worker is used.
+  Phonemes from eSpeak NG via kitten-tts-js's `phonemize`. No `eval`/`new Function` in any bundle that runs (JSZip's
+  dead `setImmediate` path is never reached); the E2E follows the offscreen document and its workers over CDP and finds
+  zero CSP violations and no request leaving the computer. A model stays loaded while used and is unloaded after
+  5 idle minutes (or "Free memory"); answers are made sentence by sentence (first chunk ≤ 90 chars) with the models'
+  leading/trailing silence trimmed; playback is measured by an AnalyserNode.
+- **Measured** (Brave, M-series Mac, single-threaded WASM — extension pages are not cross-origin isolated): KittenTTS
+  load 1.0–1.3 s, first audio ~0.9 s, 1.5–2.7× real time, ~+290 MB RSS while loaded; Kokoro load 1.0 s, first audio
+  ~2.6 s, 0.4–0.5× real time (gaps between sentences), ~+600 MB; Moonshine tiny load ~1.0 s, 0.2 s for a 3 s utterance
+  on WASM (0.4 s on WebGPU incl. shader compile); Moonshine base 0.33 s; Whisper base 2.5 s; Vosk 0.5–0.9 s, ~+110 MB.
+- **Economy conversations**: the same Talk button, thread, tools and guard as Gemini Live. `createVoiceSession`
+  (`stt/economy.ts`) gives the offscreen router an `EconomySession` when `voice_start` options say `mode: 'economy'`:
+  mic → `SpeechGate` utterances (`stt/utterances.ts`, voiced 20 ms frames, so knocks are dropped) → local recogniser →
+  `voice_engine_turn` to the background (`background/voice/engines/economy.ts`: `createRoleModel('fast' | 'local')`,
+  `generateText` with `VOICE_TOOLS` + `registeredVoiceTools()` run by `services().voice.onTool`, stop at
+  `end_conversation`, answer made speakable) → KittenTTS/Kokoro in the offscreen document, or the system voices from
+  the background. Talking over the answer for 0.4 s stops it; an answer the user has talked past is not spoken; notices
+  go through the model as in Live. Never Gemini audio; a local model skips the daily cap.
+- **end_conversation** voice tool (free in `voice/guard.ts`) ends Live or economy through `services().voice.stop()`.
+  **Idle end** for every conversation: quiet for the minutes set (default 3, 0 = never) with no task running or waiting.
+- **Settings › Voice engines** (`src/side-panel/voice-engines`, order 66): mode, speech-to-text (+ Moonshine size, GPU
+  switch), text-to-speech (the same `tts-settings.engine` Voice output uses) and voice, economy's text model, idle end,
+  installed models with sizes and the exact setup command, "Say something", "Test speech-to-text", "Free memory".
+- Tests: 9 unit files (settings and engine choice, turn loop with fakes in both halves, tools as JSON Schema, idle end,
+  manifest, utterances, text, LocalTts with a fake worker); `e2e/voice-engines.e2e.mjs` (skips with the setup command
+  when `public/voice` is missing).
+- **Needs the lead** (not this stream's files; tested wired, then reverted): `import './voice/engines/register'` in
+  `background/registers.ts`; `import './voice-engines/register'` in `side-panel/registers.ts`; `createVoiceSession` +
+  `import './tts-local/register'` in `offscreen/index.ts`; economy options in `VoiceManager.start`; `kitten`/`kokoro`
+  in `TtsEngineId`, `speak.ts` `engineFor`/`stopSpeaking` and Voice output's engine list; `end_conversation` added to
+  the tool list `e2e/voice.e2e.mjs` asserts.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

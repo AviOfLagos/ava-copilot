@@ -30,6 +30,7 @@
 .wxt/
 .output/
 public/wake/
+public/voice/
 
 # Packed extension and its signing key (from "Pack extension"); never committed
 *.crx

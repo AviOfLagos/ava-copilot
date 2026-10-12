@@ -3727,5 +3727,253 @@
   },
   "help_readAloud_where": {
     "message": "Settings › Voice"
+  },
+  "voice_engine_settings_title": {
+    "message": "Voice engines"
+  },
+  "voice_engine_mode_label": {
+    "message": "Conversation mode"
+  },
+  "voice_engine_mode_live": {
+    "message": "Live (Gemini)"
+  },
+  "voice_engine_mode_economy": {
+    "message": "Economy (on this computer)"
+  },
+  "voice_engine_mode_live_hint": {
+    "message": "Gemini hears, thinks and speaks. Your voice is sent to Google and billed by the minute."
+  },
+  "voice_engine_mode_economy_hint": {
+    "message": "Your speech is turned into text on this computer, a text model answers with the same tools, and a local voice reads it. Audio never leaves the computer; with a local model nothing does."
+  },
+  "voice_engine_economy_uses": {
+    "message": "Economy conversations use $STT$ to hear and $TTS$ to speak.",
+    "placeholders": {
+      "stt": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "tts": {
+        "content": "$2",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_engine_stt_label": {
+    "message": "Speech-to-text"
+  },
+  "voice_engine_stt_gemini": {
+    "message": "Gemini (cloud, Live only)"
+  },
+  "voice_engine_stt_moonshine": {
+    "message": "Moonshine (on this computer)"
+  },
+  "voice_engine_stt_whisper": {
+    "message": "Whisper base (on this computer)"
+  },
+  "voice_engine_stt_vosk": {
+    "message": "Vosk (on this computer, smallest)"
+  },
+  "voice_engine_stt_gemini_hint": {
+    "message": "Economy mode never sends audio to Gemini: it uses the first local model installed instead."
+  },
+  "voice_engine_moonshine_label": {
+    "message": "Moonshine model"
+  },
+  "voice_engine_moonshine_tiny": {
+    "message": "Tiny (fastest)"
+  },
+  "voice_engine_moonshine_base": {
+    "message": "Base (more accurate)"
+  },
+  "voice_engine_tts_label": {
+    "message": "Text-to-speech"
+  },
+  "voice_engine_tts_system": {
+    "message": "System voices (free)"
+  },
+  "voice_engine_tts_kitten": {
+    "message": "KittenTTS (on this computer)"
+  },
+  "voice_engine_tts_kokoro": {
+    "message": "Kokoro (on this computer, better)"
+  },
+  "voice_engine_tts_gemini": {
+    "message": "Gemini (cloud)"
+  },
+  "voice_engine_tts_gemini_hint": {
+    "message": "Answers read aloud use Gemini; economy conversations still speak with a local voice."
+  },
+  "voice_engine_voice_label": {
+    "message": "Voice"
+  },
+  "voice_engine_textModel_label": {
+    "message": "Text model in economy mode"
+  },
+  "voice_engine_textModel_fast": {
+    "message": "Quick model"
+  },
+  "voice_engine_textModel_local": {
+    "message": "Local model (Ollama, LM Studio)"
+  },
+  "voice_engine_idle_label": {
+    "message": "End a quiet conversation after"
+  },
+  "voice_engine_idle_never": {
+    "message": "Never"
+  },
+  "voice_engine_idle_minutes": {
+    "message": "$MINUTES$ minutes",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "voice_engine_models_title": {
+    "message": "Models on this computer"
+  },
+  "voice_engine_model_moonshineTiny": {
+    "message": "Moonshine tiny"
+  },
+  "voice_engine_model_moonshineBase": {
+    "message": "Moonshine base"
+  },
+  "voice_engine_model_whisper": {
+    "message": "Whisper base"
+  },
+  "voice_engine_model_vosk": {
+    "message": "Vosk (from Hey Ava)"
+  },
+  "voice_engine_model_kitten": {
+    "message": "KittenTTS nano"
+  },
+  "voice_engine_model_kokoro": {
+    "message": "Kokoro 82M"
+  },
+  "voice_engine_models_installed": {
+    "message": "Installed · $MB$ MB",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "28"
+      }
+    }
+  },
+  "voice_engine_models_notInstalled": {
+    "message": "Not installed · about $MB$ MB",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "28"
+      }
+    }
+  },
+  "voice_engine_notInstalled_short": {
+    "message": "not installed"
+  },
+  "voice_engine_models_hint": {
+    "message": "Models are downloaded once, checked, and packed with the extension: nothing is fetched while you talk. Run this in the extension’s folder, then rebuild it."
+  },
+  "voice_engine_models_copy": {
+    "message": "Copy the command"
+  },
+  "voice_engine_models_missing": {
+    "message": "No speech model is installed on this computer. Run $COMMAND$, then rebuild the extension.",
+    "placeholders": {
+      "command": {
+        "content": "$1",
+        "example": "node scripts/voice-models-setup.mjs"
+      }
+    }
+  },
+  "voice_engine_test_button": {
+    "message": "Say something"
+  },
+  "voice_engine_test_sentence": {
+    "message": "Hello! This is how I sound when I read your answers."
+  },
+  "voice_engine_test_done": {
+    "message": "Spoke in $SECONDS$ s",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "1.2"
+      }
+    }
+  },
+  "voice_engine_test_load": {
+    "message": "model loaded in $SECONDS$ s",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "0.8"
+      }
+    }
+  },
+  "voice_engine_test_speed": {
+    "message": "$FACTOR$× faster than real time",
+    "placeholders": {
+      "factor": {
+        "content": "$1",
+        "example": "4.2"
+      }
+    }
+  },
+  "voice_engine_listen_button": {
+    "message": "Test speech-to-text"
+  },
+  "voice_engine_listen_running": {
+    "message": "Listening… say a sentence."
+  },
+  "voice_engine_listen_done": {
+    "message": "Heard “$TEXT$” in $SECONDS$ s",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "hey ava"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "0.4"
+      }
+    }
+  },
+  "voice_engine_listen_nothing": {
+    "message": "No speech was heard."
+  },
+  "voice_engine_unload_button": {
+    "message": "Free memory"
+  },
+  "voice_engine_unload_done": {
+    "message": "The local models were unloaded."
+  },
+  "voice_engine_name_moonshine": {
+    "message": "Moonshine"
+  },
+  "voice_engine_name_whisper": {
+    "message": "Whisper"
+  },
+  "voice_engine_name_vosk": {
+    "message": "Vosk"
+  },
+  "voice_engine_name_kitten": {
+    "message": "KittenTTS"
+  },
+  "voice_engine_name_kokoro": {
+    "message": "Kokoro"
+  },
+  "voice_engine_name_system": {
+    "message": "the system voices"
+  },
+  "voice_engine_gpu_label": {
+    "message": "Use the graphics card"
+  },
+  "voice_engine_gpu_hint": {
+    "message": "Faster speech recognition with WebGPU; off runs it on the processor."
+  },
+  "voice_engine_installed_short": {
+    "message": "Installed"
   }
 }
