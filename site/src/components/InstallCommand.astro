@@ -1,0 +1,39 @@
+---
+// The one-line install command with a copy button. Without JavaScript the command is plain, selectable text.
+// Lines break only at spaces, so the address you pipe into bash is always readable in one piece.
+import { Check, Copy } from 'lucide-react';
+import { copy } from '../content/site';
+
+interface Props {
+  id: string;
+  command: string;
+  label?: string;
+  caption?: string;
+}
+const { id, command, label, caption = 'Terminal' } = Astro.props;
+// Lines break only between the parts: "curl -fsSL", the address (never split: it is what you are trusting), "| bash"
+const words = command.split(' ');
+const at = words.findIndex(word => word.includes('://'));
+const head = at > 0 ? `${words.slice(0, at).join(' ')} ` : '';
+const url = at >= 0 ? words[at] : command;
+const rest = at >= 0 ? words.slice(at + 1).join(' ') : '';
+// Where the address may break when its box is too narrow for it: after the scheme and before the path, never inside a word
+const parts = /^([a-z]+:\/\/)([^/]+)(.*)$/.exec(url);
+---
+
+<div class="cmd" role="group" aria-label={label}>
+  <div class="cmd__head">
+    <span class="cmd__caption">{caption}</span>
+    <button
+      type="button"
+      class="copy needs-js"
+      aria-describedby={id}
+      data-copy={command}
+      data-announce={copy.announce}
+      data-failed={copy.failed}>
+      <span class="copy__idle"><Copy aria-hidden="true" strokeWidth={1.75} />{copy.idle}</span>
+      <span class="copy__done"><Check aria-hidden="true" strokeWidth={2} />{copy.done}</span>
+    </button>
+  </div>
+  <pre class="cmd__code"><code id={id}><span class="cmd__prompt" aria-hidden="true">$ </span>{head}<span class="cmd__url">{parts ? <>{parts[1]}<wbr /><span class="cmd__host">{parts[2]}</span><wbr />{parts[3]}</> : url}</span>{rest && <>{' '}<span class="cmd__url">{rest.split(' ').map((word, index) => <>{index > 0 && ' '}<span class="cmd__host">{word}</span></>)}</span></>}</code></pre>
+</div>

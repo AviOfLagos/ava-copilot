@@ -131,9 +131,12 @@ async function main() {
 
     fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
     const zipName = `avi-copilot-${version}.zip`;
+    // The site links a manual install to a name that never changes (written below, beside the versioned one)
+    const latestZipName = 'avi-copilot-latest.zip';
     const zipPath = path.join(DOWNLOAD_DIR, zipName);
     console.log(`Zipping dist/ -> site/public/download/${zipName}`);
     fs.writeFileSync(zipPath, zipDirectory(distDir));
+    fs.copyFileSync(zipPath, path.join(DOWNLOAD_DIR, latestZipName));
 
     const setupScripts = {
       wakeWordSetup: publishSetupScript(SETUP_SCRIPTS[0]),

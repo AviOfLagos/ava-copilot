@@ -1,0 +1,16 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "src/**/*"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    // The app's files are compiled with these settings too; they were written without verbatim imports
+    "verbatimModuleSyntax": false,
+    "types": [],
+    "paths": {
+      "@app/*": ["../src/*"],
+      "@extension/ui": ["./src/lib/cn.ts"]
+    }
+  }
+}

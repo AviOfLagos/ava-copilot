@@ -1,0 +1,27 @@
+---
+// Dark, light or system. Hidden without JavaScript, where the site stays dark (its default).
+import { Monitor, Moon, Sun } from 'lucide-react';
+import { theme } from '../content/site';
+
+const icons = { dark: Moon, light: Sun, system: Monitor } as const;
+---
+
+<div class="theme needs-js" role="radiogroup" aria-label={theme.label} data-theme-toggle>
+  {
+    theme.options.map(option => {
+      const Icon = icons[option.value as keyof typeof icons];
+      return (
+        <button
+          type="button"
+          role="radio"
+          aria-checked={option.value === 'dark' ? 'true' : 'false'}
+          tabindex={option.value === 'dark' ? 0 : -1}
+          data-value={option.value}
+          aria-label={option.label}
+          title={option.label}>
+          <Icon aria-hidden="true" strokeWidth={1.75} />
+        </button>
+      );
+    })
+  }
+</div>

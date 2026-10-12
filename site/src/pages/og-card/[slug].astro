@@ -1,0 +1,58 @@
+---
+/*
+ * Link-preview cards, 1200×630. scripts/og.mjs screenshots each one after the build into /og/<slug>.png and then
+ * deletes these pages from the output: they are templates, never part of the site.
+ */
+import Mark from '../../components/Mark.astro';
+import InstallCommand from '../../components/InstallCommand.astro';
+import PrivacyLabel from '../../components/PrivacyLabel.astro';
+import { INSTALL_COMMAND, PRODUCT, SITE_URL, demo, install, og } from '../../content/site';
+import GateDemo from '../../islands/GateDemo';
+import Base from '../../layouts/Base.astro';
+import '../../styles/og.css';
+
+export function getStaticPaths() {
+  return [{ params: { slug: 'home' } }, { params: { slug: 'install' } }, { params: { slug: 'privacy' } }];
+}
+
+const slug = Astro.params.slug as keyof typeof og;
+const card = og[slug];
+const host = SITE_URL.replace(/^https?:\/\//, '');
+---
+
+<Base title={`${PRODUCT} card`} description="" path={`/og-card/${slug}`} og="home" ogAlt="" noindex bare>
+  <div class="ogc" data-slug={slug}>
+    <div class="ogc__copy">
+      <p class="ogc__brand"><Mark /><span>{PRODUCT}</span></p>
+      <div>
+        <p class="label ogc__kicker">{card.kicker}</p>
+        <p class="ogc__title">{card.title}</p>
+      </div>
+      <p class="ogc__host">{host}</p>
+    </div>
+    <div class="ogc__visual">
+      {slug === 'home' && <GateDemo copy={demo} />}
+      {
+        slug === 'install' && (
+          <div class="ogc__install">
+            <InstallCommand id="og-command" command={INSTALL_COMMAND} />
+            <div class="panel-card ogc__steps">
+              <p class="label">{install.load.title}</p>
+              <ol>
+                {install.load.browsers[0].steps.slice(0, 3).map(step => (
+                  <li>{step.replace('brave://extensions', 'the extensions page')}</li>
+                ))}
+              </ol>
+              <p class="ogc__browsers">
+                {install.load.browsers.map(browser => (
+                  <span class="chip">{browser.name}</span>
+                ))}
+              </p>
+            </div>
+          </div>
+        )
+      }
+      {slug === 'privacy' && <PrivacyLabel level={2} />}
+    </div>
+  </div>
+</Base>

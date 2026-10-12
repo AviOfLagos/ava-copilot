@@ -1,0 +1,458 @@
+/*
+ * The gate demo's frame: a browser window with a mail page and the side panel. The panel's insides are the app's
+ * own components and CSS; this file only lays them out and draws the page they act on.
+ */
+
+.gd {
+  --gd-panel-w: 372px;
+  --gd-h: 684px;
+  margin: 0;
+}
+
+.gd-window {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--gd-panel-w);
+  grid-template-rows: 34px var(--gd-h);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--page-2);
+  box-shadow:
+    var(--float-shadow),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Browser chrome: neutral, so the panel and the page carry the colour */
+.gd-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--page-2);
+}
+
+.gd-bar__dots {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.gd-bar__dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line-2);
+}
+
+.gd-bar__url {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 26px;
+  padding: 0 12px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.gd-bar__url svg {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.gd-bar__path {
+  overflow: hidden;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+}
+
+/* ─── The page ─── */
+
+.gd-page {
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  background: var(--page);
+  color: var(--page-ink);
+  font-size: 13.5px;
+  line-height: 21px;
+}
+
+.gd-app__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 48px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--page-line);
+}
+
+.gd-app__name {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+}
+
+.gd-app__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--page-2);
+  color: var(--page-ink-2);
+  font-size: 12.5px;
+}
+
+.gd-mail {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+.gd-mail__subject {
+  font-size: 17px;
+  line-height: 23px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.gd-mail__from {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gd-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--page-line);
+  background: var(--page-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.gd-avatar--you {
+  font-size: 10px;
+}
+
+.gd-mail__who {
+  display: grid;
+  line-height: 18px;
+}
+
+.gd-mail__who b {
+  font-weight: 600;
+}
+
+.gd-mail__who small {
+  color: var(--page-ink-2);
+  font-size: 12px;
+}
+
+.gd-mail__body {
+  display: grid;
+  gap: 8px;
+  border-radius: 6px;
+}
+
+.gd-mail__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gd-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--page-line);
+  font-size: 12.5px;
+}
+
+.gd-reply {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--page-line);
+  background: var(--page);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.gd-reply__to {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--page-line);
+  color: var(--page-ink-2);
+  font-size: 12px;
+}
+
+.gd-reply__text {
+  min-height: 63px;
+  border-radius: 6px;
+}
+
+.gd-reply__foot {
+  display: flex;
+}
+
+.gd-send {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--page-ink);
+  color: var(--page);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* What the agent is working on now: a mint ring. What waits for your click: amber */
+.gd [data-target] {
+  outline: 2px solid rgb(var(--primary-rgb) / 0.75);
+  outline-offset: 4px;
+  transition: outline-color var(--dur) var(--ease-out);
+}
+
+.gd-send[data-held] {
+  outline: 2px solid rgb(var(--hold-rgb) / 0.9);
+  outline-offset: 3px;
+}
+
+.gd-send[data-held]::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 13px;
+  border: 2px solid rgb(var(--hold-rgb) / 0.5);
+  opacity: 0;
+  animation: gd-breathe 4s ease-in-out infinite;
+}
+
+@keyframes gd-breathe {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.gd-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -2px;
+  background: var(--page-ink);
+  animation: gd-blink 1s steps(1) infinite;
+}
+
+@keyframes gd-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.gd-sent {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--page-line);
+}
+
+.gd-sent__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--mint-ink) !important;
+}
+
+/* ─── The panel ─── */
+
+.gd-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-foreground);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.gd-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.gd-head__orb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+/* Without scripts the dotted orb can't draw: show the panel's idle face instead */
+:root:not([data-js]) .gd-head__orb {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23F4F4F5'/%3E%3Crect x='10' y='10.6' width='2.3' height='7.6' rx='1.15' fill='%2309090B'/%3E%3Crect x='19.7' y='10.6' width='2.3' height='7.6' rx='1.15' fill='%2309090B'/%3E%3C/svg%3E")
+    center / 24px no-repeat;
+}
+
+:root:not([data-js]) .gd-head__orb canvas {
+  display: none;
+}
+
+/* The thinking orb's dots are drawn for a dark panel; on the light theme they are darkened to stay visible */
+:root[data-theme='light'] .gd-panel canvas {
+  filter: brightness(0.45) saturate(1.3);
+}
+
+.gd-head__crumbs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.gd-head__icons {
+  display: flex;
+  flex: none;
+  color: var(--color-muted-foreground);
+}
+
+.gd-head__icons svg {
+  margin: 8px;
+}
+
+.gd-convo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 12px 8px;
+}
+
+.gd-answer {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.gd-foot {
+  flex: none;
+  padding: 4px 10px 10px;
+}
+
+/* The confirm card keeps its room during the run and rises in when the gate holds */
+.gd-card-slot:not([data-shown]) {
+  visibility: hidden;
+}
+
+.gd-card-slot[data-shown] > div {
+  animation: gd-card-in 220ms var(--ease-out) both;
+}
+
+@keyframes gd-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The run trail's wire fills mint as each step finishes */
+.gd-trail [data-status='complete'] > div:first-child > span + span {
+  transform-origin: top;
+  animation: gd-wire 420ms var(--ease-out) both;
+}
+
+@keyframes gd-wire {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.gd-caption {
+  margin-top: 14px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/*
+ * With scripts on, the parts of the paused state that the run will draw stay hidden until the demo takes over,
+ * so the first paint is the moment the request was sent. If the script never arrives they show after 3.5 s.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-js] .gd:not([data-live]) [data-pre] {
+    visibility: hidden;
+    animation: gd-fallback 0s linear 3.5s forwards;
+  }
+}
+
+@keyframes gd-fallback {
+  to {
+    visibility: visible;
+  }
+}
+
+@media (max-width: 1099px) {
+  .gd {
+    max-width: 820px;
+  }
+}
+
+/* Phones: the page goes, the panel stays */
+@media (max-width: 719px) {
+  .gd {
+    --gd-h: 692px;
+  }
+
+  .gd-window {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gd-page {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gd [data-target],
+  .gd-send[data-held] {
+    outline-color: Highlight;
+  }
+}
