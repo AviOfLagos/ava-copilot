@@ -219,7 +219,12 @@ export class VoiceManager {
         if (!task) return 'No task was given.';
         // A follow-up goes to the same chat as the task before it, with its history
         const follow = args.continue_last === true && this.lastTaskThreadId ? this.lastTaskThreadId : null;
-        const threadId = await this.threads.send({ threadId: follow, text: task, windowId: this.windowId });
+        const threadId = await this.threads.send({
+          threadId: follow,
+          text: task,
+          windowId: this.windowId,
+          origin: 'voice',
+        });
         this.lastTaskThreadId = threadId;
         this.announced.set(threadId, 'running');
         return 'Started in the browser. The user will hear when it finishes or needs their click.';

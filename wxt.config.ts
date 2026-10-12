@@ -75,6 +75,8 @@ export default defineConfig({
       // Meeting reminders from the user's calendar
       'alarms',
       'notifications',
+      // Reading answers aloud with the Mac's own voices, free and on the device
+      'tts',
     ],
     // The on-device "Hey Ava" recogniser is WebAssembly; nothing else is allowed to compile code
     content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },

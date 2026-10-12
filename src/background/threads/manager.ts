@@ -99,12 +99,17 @@ export class ThreadManager {
     text: string;
     windowId?: number;
     workspaceId?: string | null;
+    // Who asked: typed in the panel, said by voice, or a routine or agent; set when the chat is new
+    origin?: ThreadRecord['origin'];
+    agentId?: string | null;
   }): Promise<string> {
     const text = request.text.trim();
     if (!text) {
       throw new Error(t('bg_cmd_newTask_noTask'));
     }
-    const thread = (request.threadId && (await this.store.get(request.threadId))) || (await this.store.create());
+    const thread =
+      (request.threadId && (await this.store.get(request.threadId))) ||
+      (await this.store.create({ origin: request.origin ?? 'user', agentId: request.agentId ?? null }));
     if (this.running.has(thread.id)) {
       throw new Error(t('threads_busy'));
     }
