@@ -1,194 +1,240 @@
 ---
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Bot, Play } from 'lucide-react';
 import Faq from '../components/Faq.astro';
+import Flutes from '../components/Flutes.astro';
+import Globe from '../components/Globe.astro';
+import InboxStack from '../components/InboxStack.astro';
 import InstallCommand from '../components/InstallCommand.astro';
+import Integrations from '../components/Integrations.astro';
 import KnowledgeGraph from '../components/KnowledgeGraph.astro';
+import ModelPicker from '../components/ModelPicker.astro';
 import PrivacyLabel from '../components/PrivacyLabel.astro';
-import RoutineDiagram from '../components/RoutineDiagram.astro';
-import SectionHead from '../components/SectionHead.astro';
-import TrailExample from '../components/TrailExample';
-import { INSTALL_COMMAND, demo, home, links } from '../content/site';
+import RoutineFlow from '../components/RoutineFlow.astro';
+import Section from '../components/Section.astro';
+import Stats from '../components/Stats.astro';
+import StepsBento from '../components/StepsBento.astro';
+import TaskList from '../components/TaskList.astro';
+import TourDock from '../components/TourDock.astro';
+import { INSTALL_COMMAND, PRODUCT, demo, home, links, tour, tourLines } from '../content/site';
 import GateDemo from '../islands/GateDemo';
 import VoiceDemo from '../islands/VoiceDemo';
 import Base from '../layouts/Base.astro';
 import { homeGraph } from '../lib/seo';
+import '../styles/home.css';
 
-const { hero, gate, trail, models, voice, memory, routines, privacy, faq, closing } = home;
+const { hero, gate, steps, voice, memory, routines, models, integrations, privacy, faq, closing } = home;
+// The pill number each tour line shows in the dock
+const numbers: Record<string, string> = {
+  hero: '00',
+  closing: '09',
+  ...Object.fromEntries([gate, steps, voice, memory, routines, models, integrations, privacy].map(s => [s.id === 'privacy-label' ? 'privacy' : s.id, s.n])),
+};
 ---
 
 <Base title={home.title} description={home.description} path="/" og="home" ogAlt={home.ogAlt} graph={homeGraph()}>
-  <section class="hero wrap" aria-labelledby="hero-title">
-    <p class="label hero__eyebrow">{hero.eyebrow}</p>
-    <h1 class="display hero__title" id="hero-title">{hero.title}</h1>
-    <div class="hero__grid">
+  <section class="hero" aria-labelledby="hero-title" data-globe="hero" data-state="listening" data-say="hero">
+    <Flutes set="hero" />
+    <div class="wrap hero__grid">
       <div class="hero__copy">
-        <p class="lede">{hero.lede}</p>
+        <p class="label hero__eyebrow">{hero.eyebrow}</p>
+        <h1 class="display" id="hero-title">
+          <span>{hero.title[0]}</span> <span class="display__b">{hero.title[1]}</span>
+        </h1>
+        <p class="lede hero__lede">{hero.lede}</p>
         <div class="hero__install">
-          <InstallCommand id="hero-command" command={INSTALL_COMMAND} label={hero.installLabel} caption="macOS · Linux" />
+          <InstallCommand id="hero-command" command={INSTALL_COMMAND} label={hero.installLabel} caption={hero.installCaption} />
           <p class="hero__note">
-            {hero.installNote}{' '}
-            <a class="link" href={hero.windows.href}>{hero.windows.label}</a>.
+            {hero.installNote}
+            <a class="link" href={hero.windows.href}>{hero.windows.label}</a>
           </p>
         </div>
-        <div class="hero__links">
-          <a class="arrow-link" href={hero.guide.href}>
-            <span>{hero.guide.label}</span>
-            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-          </a>
+      </div>
+      <div class="hero__stage">
+        <div class="globe-slot" data-globe-slot>
+          <Globe />
         </div>
-        <ul class="facts">
-          {
-            hero.facts.map(fact => (
-              <li>
-                <Check aria-hidden="true" strokeWidth={1.75} />
-                {fact}
-              </li>
-            ))
-          }
-        </ul>
-      </div>
-      <div class="hero__demo">
-        <GateDemo client:load copy={demo} />
-        <noscript><p class="gd-caption">{demo.noscript}</p></noscript>
-      </div>
-    </div>
-  </section>
-
-  <section class="section wrap" id={gate.id} aria-labelledby={`${gate.id}-title`}>
-    <div class="split">
-      <SectionHead id={gate.id} kicker={gate.kicker} title={gate.title} body={gate.body} />
-      <div class="stage">
-        <p class="label" style="margin-bottom: 14px">{gate.kindsLabel}</p>
-        <ul class="kinds">
-          {
-            gate.kinds.map(kind => (
-              <li>
-                <span class="diamond" aria-hidden="true" />
-                {kind}
-              </li>
-            ))
-          }
-        </ul>
-      </div>
-    </div>
-    <ul class="points">
-      {
-        gate.points.map(point => (
-          <li>
-            <h3 class="h3">{point.title}</h3>
-            <p>{point.body}</p>
-          </li>
-        ))
-      }
-    </ul>
-  </section>
-
-  <section class="section wrap" id={trail.id} aria-labelledby={`${trail.id}-title`}>
-    <div class="split">
-      <SectionHead id={trail.id} kicker={trail.kicker} title={trail.title} body={trail.body} />
-      <div class="stage trail-stage">
-        <div class="trail-stage__panel">
-          <p class="label" style="margin-bottom: 12px">{trail.example.label}</p>
-          <TrailExample
-            runSteps={demo.runSteps}
-            steps={trail.example.steps}
-            held={trail.example.held}
-            heldDetail={trail.example.heldDetail}
-          />
+        <div class="tour-start needs-js">
+          <button type="button" class="btn btn--cta btn--tour" data-tour-start aria-controls="tour-dock" aria-expanded="false">
+            <span class="btn__label">
+              {tour.start}
+              <span class="btn__meta" aria-hidden="true">{tour.length}</span>
+              <span class="sr-only">, {tour.lengthLabel}</span>
+            </span>
+            <span class="btn__chip" aria-hidden="true"><Play strokeWidth={2.2} /></span>
+          </button>
+          <p class="tour-start__note">{tour.note}</p>
         </div>
       </div>
     </div>
+    <p class="wordmark wordmark--hero" aria-hidden="true">{PRODUCT}</p>
   </section>
 
-  <section class="section wrap" id={privacy.id} aria-labelledby={`${privacy.id}-title`}>
-    <div class="split">
-      <SectionHead id={privacy.id} kicker={privacy.kicker} title={privacy.title} body={privacy.body}>
-        <p style="margin-top: 8px">
-          <a class="arrow-link" href={privacy.more.href}>
-            <span>{privacy.more.label}</span>
-            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-          </a>
-        </p>
-      </SectionHead>
-      <PrivacyLabel level={3} />
+  <Section {...gate} say="gate" globe="peek" state="acting">
+    <div class="gate-stage">
+      <img class="float3d float3d--diamond" src="/3d/diamond.webp" alt="" width="360" height="360" loading="lazy" decoding="async" />
+      <GateDemo client:load copy={demo} />
+      <noscript><p class="gd-caption">{demo.noscript}</p></noscript>
     </div>
-  </section>
-
-  <section class="section wrap" id={models.id} aria-labelledby={`${models.id}-title`}>
-    <div class="split">
-      <SectionHead id={models.id} kicker={models.kicker} title={models.title} body={models.body} />
-      <div class="stage chip-groups">
+    <div class="kinds">
+      <p class="kinds__label">{gate.kindsLabel}</p>
+      <ul class="kinds__list" role="list">
         {
-          models.groups.map(group => (
-            <div class="chip-group">
-              <p class="label">{group.label}</p>
-              <ul class="chips">
-                {group.items.map(item => (
-                  <li class:list={['chip', group.kind === 'local' && 'chip--local']}>{item}</li>
-                ))}
-              </ul>
-            </div>
+          gate.kinds.map(kind => (
+            <li>
+              <span class="diamond" aria-hidden="true" />
+              {kind}
+            </li>
           ))
         }
-        <ul class="notes">
-          {
-            models.notes.map(note => (
-              <li>
-                <h3>{note.title}</h3>
-                <p>{note.body}</p>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
+      </ul>
     </div>
-  </section>
+  </Section>
 
-  <section class="section wrap" id={voice.id} aria-labelledby={`${voice.id}-title`}>
-    <div class="split">
-      <SectionHead id={voice.id} kicker={voice.kicker} title={voice.title} body={voice.body} />
-      <div class="stage">
+  <Section {...steps} say="steps" globe="left" align="end" state="thinking">
+    <Flutes set="edge-right" />
+    <StepsBento />
+  </Section>
+
+  <Section {...voice} say="voice" globe="right" state="listening" tone="peri">
+    <div class="voice-stage">
+      <img class="float3d float3d--ring" src="/3d/ring.webp" alt="" width="360" height="360" loading="lazy" decoding="async" />
+      <div class="card card--voice">
         <VoiceDemo client:visible copy={voice.stage} />
       </div>
+      <div class="engines">
+        <p class="engines__label">{voice.engines.label}</p>
+        <ul role="list">{voice.engines.items.map(item => <li>{item}</li>)}</ul>
+      </div>
     </div>
-  </section>
+  </Section>
 
-  <section class="section wrap" id={memory.id} aria-labelledby={`${memory.id}-title`}>
-    <div class="split">
-      <SectionHead id={memory.id} kicker={memory.kicker} title={memory.title} body={memory.body} />
-      <KnowledgeGraph />
+  <Section {...memory} say="memory" globe="left" align="end" state="thinking">
+    <KnowledgeGraph />
+  </Section>
+
+  <Section {...routines} say="routines" globe="right" state="acting">
+    <div class="bento bento--routines">
+      <article class="card card--routine" aria-labelledby="routine-title">
+        <p class="card__label" id="routine-title">{routines.routine.label}</p>
+        <RoutineFlow />
+      </article>
+      <div class="bento__col">
+        <article class="card card--inbox" aria-label={routines.inbox.title}>
+          <InboxStack />
+        </article>
+        <article class="card card--agent" aria-labelledby="agent-title">
+          <div class="agent">
+            <span class="agent__icon" aria-hidden="true"><Bot strokeWidth={1.75} /></span>
+            <span class="agent__text">
+              <span class="card__label">{routines.agent.label}</span>
+              <span class="card__title" id="agent-title">{routines.agent.name}</span>
+              <span class="card__note">{routines.agent.body}</span>
+            </span>
+            <span class="agent__status"><span class="thread__dot" aria-hidden="true"></span>{routines.agent.status}</span>
+          </div>
+          <div class="agent__budget">
+            <span>{routines.agent.budgetLabel}</span>
+            <span class="route__meter" aria-hidden="true"><i style={`right:${Math.round((1 - routines.agent.used) * 100)}%`}></i></span>
+            <span class="agent__spent">{routines.agent.spent} / {routines.agent.budget}</span>
+          </div>
+        </article>
+      </div>
     </div>
-  </section>
+  </Section>
 
-  <section class="section wrap" id={routines.id} aria-labelledby={`${routines.id}-title`}>
-    <div class="split">
-      <SectionHead id={routines.id} kicker={routines.kicker} title={routines.title} body={routines.body} />
-      <RoutineDiagram />
+  <Section {...models} say="models" globe="left" align="end" state="thinking">
+    <div class="models-stage">
+      <img class="float3d float3d--pill" src="/3d/pill.webp" alt="" width="360" height="360" loading="lazy" decoding="async" />
+      <article class="card card--models">
+        <ModelPicker />
+      </article>
     </div>
-  </section>
+  </Section>
 
-  <section class="section wrap" id={faq.id} aria-labelledby={`${faq.id}-title`}>
-    <div class="split split--top">
-      <SectionHead id={faq.id} kicker={faq.kicker} title={faq.title} />
+  <Section {...integrations} say="integrations" globe="right" state="acting">
+    <Flutes set="edge-left" tone="peri" />
+    <article class="card card--integrations">
+      <Integrations />
+    </article>
+  </Section>
+
+  <Stats />
+
+  <Section {...privacy} say="privacy" globe="left" align="end" state="done">
+    <div class="privacy-stage">
+      <PrivacyLabel level={3} />
+      <a class="btn btn--cta btn--glass-cta" href={privacy.more.href}>
+        <span class="btn__label">{privacy.more.label}</span>
+        <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2} /></span>
+      </a>
+    </div>
+  </Section>
+
+  <TaskList />
+
+  <section class="sec sec--faq" id={faq.id} aria-labelledby={`${faq.id}-title`} data-globe="right" data-state="listening">
+    <div class="wrap sec__wrap">
+      <header class="sec__head">
+        <p class="pill"><span class="pill__dot" aria-hidden="true"></span><span>{faq.kicker}</span></p>
+        <h2 class="headline headline--sm" id={`${faq.id}-title`}>{faq.title}</h2>
+      </header>
       <Faq />
     </div>
   </section>
 
-  <section class="closing wrap" aria-labelledby="closing-title">
-    <div class="stage closing__card">
-      <div>
-        <h2 class="h2" id="closing-title">{closing.title}</h2>
-        <div class="prose"><p>{closing.body}</p></div>
+  <section class="closing" id={closing.id} aria-labelledby="closing-title" data-globe="low" data-state="done" data-say="closing">
+    <Flutes set="foot" />
+    <div class="wrap closing__wrap">
+      <p class="pill"><span class="pill__dot" aria-hidden="true"></span><span>{closing.pill}</span></p>
+      <h2 class="headline" id="closing-title">
+        <span class="headline__a">{closing.title[0]}</span> <span class="headline__b">{closing.title[1]}</span>
+      </h2>
+      <p class="sec__body">{closing.body}</p>
+      <div class="closing__install">
+        <InstallCommand id="closing-command" command={INSTALL_COMMAND} label={hero.installLabel} caption={hero.installCaption} />
+        <a class="btn btn--cta" href={links.install}>
+          <span class="btn__label">{hero.guide.label}</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2} /></span>
+        </a>
       </div>
-      <div class="hero__install">
-        <InstallCommand id="closing-command" command={INSTALL_COMMAND} label={hero.installLabel} caption="macOS · Linux" />
-        <p class="hero__note">
-          <a class="arrow-link" href={links.install}>
-            <span>{hero.guide.label}</span>
-            <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-          </a>
-        </p>
-      </div>
+      <ol class="steps3" role="list">
+        {
+          closing.steps.map(step => (
+            <li class="step3 glass">
+              <span class="step3__n">{step.n}</span>
+              <h3 class="step3__title">{step.title}</h3>
+              <p class="step3__body">{step.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+      <details class="transcript" id="transcript">
+        <summary>{tour.transcript.title}</summary>
+        <p class="transcript__lede">{tour.transcript.lede}</p>
+        <ol class="transcript__lines">
+          {
+            tourLines.map(line => (
+              <li>
+                <span class="transcript__label">{line.label}</span>
+                <span>{line.text}</span>
+              </li>
+            ))
+          }
+        </ol>
+        <p class="transcript__voice">{tour.voice}</p>
+      </details>
     </div>
   </section>
+
+  <TourDock slot="after" numbers={numbers} />
 </Base>
+
+<script>
+  import { startGlobe } from '../scripts/globe';
+  import { startTour } from '../scripts/tour';
+  import { startWidgets } from '../scripts/widgets';
+
+  const globe = startGlobe();
+  startTour(globe);
+  startWidgets();
+</script>

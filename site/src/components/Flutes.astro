@@ -1,0 +1,20 @@
+---
+// Fluted glass light (moodboard 12), in CSS only: a soft coloured light behind vertical ribs, a lit edge, and a
+// frosted backdrop for the ones in front of content. Decoration: hidden from assistive tech, never in the way of a
+// click. `set` picks a composition; tones keep the colour jobs (mint, periwinkle; amber only beside the gate).
+interface Props {
+  set: 'hero' | 'edge-right' | 'edge-left' | 'foot';
+  tone?: 'mint' | 'peri' | 'amber';
+}
+const { set, tone = 'mint' } = Astro.props;
+const panes = {
+  hero: ['a', 'b', 'c', 'd'],
+  'edge-right': ['a', 'b'],
+  'edge-left': ['a', 'b'],
+  foot: ['a', 'b'],
+}[set];
+---
+
+<div class:list={['flutes', `flutes--${set}`]} data-tone={tone} aria-hidden="true">
+  {panes.map(pane => <span class:list={['flute', `flute--${pane}`]}></span>)}
+</div>

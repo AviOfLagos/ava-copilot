@@ -1,6 +1,6 @@
 /*
- * The site's only page script: the theme switch, copy buttons, the install page's tabs and the one-time reveals of
- * secondary graphics. Everything here is an enhancement; every page reads and works without it.
+ * The script every page shares: the theme switch, copy buttons and the install page's tabs. The home page adds its
+ * own (the globe, the tour, the widgets). Everything here is an enhancement; every page reads and works without it.
  */
 
 type ThemeChoice = 'dark' | 'light' | 'system';
@@ -185,27 +185,6 @@ function setupTabs() {
   });
 }
 
-function setupReveal() {
-  const targets = document.querySelectorAll<HTMLElement>('[data-reveal]');
-  if (!targets.length) return;
-  if (!('IntersectionObserver' in window)) {
-    targets.forEach(target => target.setAttribute('data-shown', ''));
-    return;
-  }
-  const observer = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        entry.target.setAttribute('data-shown', '');
-        observer.unobserve(entry.target);
-      });
-    },
-    { rootMargin: '0px 0px -12% 0px', threshold: 0.2 },
-  );
-  targets.forEach(target => observer.observe(target));
-}
-
 setupTheme();
 setupCopy();
 setupTabs();
-setupReveal();

@@ -1,0 +1,60 @@
+{
+  "$comment": "Ava's tour: one line per section, in her own words. `text` is shown (caption and transcript); `say`, when present, is what the voice reads instead (spelled-out letters, a pause). scripts/narrate.mjs renders each line to public/audio/ with the app's local Kokoro voice. Never name the product here, so a rename needs no new audio.",
+  "voice": "af_heart",
+  "speed": 1,
+  "lines": [
+    {
+      "id": "hero",
+      "label": "Hello",
+      "text": "Hi, I'm Ava. I work in your browser's side panel, on the pages you already use. Scroll, and I'll show you around."
+    },
+    {
+      "id": "gate",
+      "label": "The gate",
+      "text": "Here's my one rule. I can read, click and type for you, but before anything is sent, posted, bought or deleted, I stop and wait for your click."
+    },
+    {
+      "id": "steps",
+      "label": "Every step",
+      "text": "Every step I take is drawn as a trail, so you always know where I am. Take over whenever you like, and hand it back when you're done."
+    },
+    {
+      "id": "voice",
+      "label": "Voice",
+      "text": "You can talk to me, too. Just say “Hey Ava”: the wake word is heard on your computer. Or dictate, and edit the words before you send.",
+      "say": "You can talk to me, too. Just say, hey Ava. The wake word is heard on your computer. Or dictate, and edit the words before you send."
+    },
+    {
+      "id": "memory",
+      "label": "Memory",
+      "text": "I take notes in your calls, and I remember the pages you saved. Ask me what was decided, and I'll show you exactly where it came from."
+    },
+    {
+      "id": "routines",
+      "label": "Routines and agents",
+      "text": "Describe a routine in one sentence, and I'll draw it and run it on schedule. Anything that would post waits in your Inbox, for you.",
+      "say": "Describe a routine in one sentence, and I'll draw it and run it on schedule. Anything that would post waits in your inbox, for you."
+    },
+    {
+      "id": "models",
+      "label": "Models",
+      "text": "Choose the model that thinks for me: one on your own computer, or a cloud model with your own key. No subscription, and no account."
+    },
+    {
+      "id": "integrations",
+      "label": "Integrations",
+      "text": "I work with the tools you already use, like Gmail, Drive, Slack, GitHub and Notion, or any MCP server. If a tool would change something, I ask first.",
+      "say": "I work with the tools you already use, like Gmail, Drive, Slack, GitHub and Notion, or any M C P server. If a tool would change something, I ask first."
+    },
+    {
+      "id": "privacy",
+      "label": "Privacy",
+      "text": "And there's no server of ours to find. Your chats, notes and keys stay in your browser, and the rest goes only where you send it."
+    },
+    {
+      "id": "closing",
+      "label": "Install",
+      "text": "That's the tour. One command installs me, and one click turns me on. I'll be in your side panel, waiting for your click."
+    }
+  ]
+}

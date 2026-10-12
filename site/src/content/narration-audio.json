@@ -1,0 +1,66 @@
+{
+  "lines": {
+    "hero": {
+      "file": "/audio/hero-6497db44d1.m4a",
+      "seconds": 8.29,
+      "bytes": 68714,
+      "hash": "6497db44d1"
+    },
+    "gate": {
+      "file": "/audio/gate-f038de6740.m4a",
+      "seconds": 9.68,
+      "bytes": 79840,
+      "hash": "f038de6740"
+    },
+    "steps": {
+      "file": "/audio/steps-5cc61ddf70.m4a",
+      "seconds": 8.21,
+      "bytes": 68921,
+      "hash": "5cc61ddf70"
+    },
+    "voice": {
+      "file": "/audio/voice-92015bd6e1.m4a",
+      "seconds": 8.24,
+      "bytes": 68324,
+      "hash": "92015bd6e1"
+    },
+    "memory": {
+      "file": "/audio/memory-28bbbc856a.m4a",
+      "seconds": 8.7,
+      "bytes": 72758,
+      "hash": "28bbbc856a"
+    },
+    "routines": {
+      "file": "/audio/routines-83ae8f4480.m4a",
+      "seconds": 8.23,
+      "bytes": 68460,
+      "hash": "83ae8f4480"
+    },
+    "models": {
+      "file": "/audio/models-3bce39afbf.m4a",
+      "seconds": 8.04,
+      "bytes": 67191,
+      "hash": "3bce39afbf"
+    },
+    "integrations": {
+      "file": "/audio/integrations-2f72869d60.m4a",
+      "seconds": 10.58,
+      "bytes": 89410,
+      "hash": "2f72869d60"
+    },
+    "privacy": {
+      "file": "/audio/privacy-4ee84f6b39.m4a",
+      "seconds": 7.71,
+      "bytes": 64611,
+      "hash": "4ee84f6b39"
+    },
+    "closing": {
+      "file": "/audio/closing-c402f456c4.m4a",
+      "seconds": 7.61,
+      "bytes": 63218,
+      "hash": "c402f456c4"
+    }
+  },
+  "voice": "af_heart",
+  "engine": "Kokoro 82M v1.0 (int8), via the app’s local voice worker"
+}

@@ -1,0 +1,75 @@
+---
+// The model picker: local and cloud models as chips (native radio buttons, so it works by keyboard and without
+// JavaScript), and where the page text goes for the one you pick: this computer, or your provider's API with your
+// key. The third line never changes: there is no server of ours in the path.
+import { ArrowRight, KeyRound, Laptop, Server } from 'lucide-react';
+import { home } from '../content/site';
+
+const { groups, legend, route } = home.models;
+const first = groups[0].items[0];
+---
+
+<div class="models" data-models>
+  <fieldset class="models__pick">
+    <legend class="card__label">{legend}</legend>
+    {
+      groups.map(group => (
+        <div class="models__group" data-kind={group.kind}>
+          <p class="models__group-label">{group.label}</p>
+          <div class="models__chips">
+            {group.items.map(item => (
+              <label class="mchip" data-kind={group.kind}>
+                <input
+                  type="radio"
+                  name="model"
+                  value={item.id}
+                  checked={item.id === first.id}
+                  data-kind={group.kind}
+                  data-name={item.name}
+                  data-host={item.host}
+                  data-where={group.kind === 'local' ? route.local : route.cloud}
+                  data-key={group.kind === 'local' ? route.noKey : route.key}
+                />
+                <span>{item.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))
+    }
+  </fieldset>
+
+  <div class="route" data-route data-kind="local" aria-live="polite">
+    <p class="card__label">{route.title}</p>
+    <div class="route__path">
+      <span class="route__end">
+        <Laptop aria-hidden="true" strokeWidth={1.75} />
+        <span>{route.from}</span>
+      </span>
+      <span class="route__wire" aria-hidden="true"><ArrowRight strokeWidth={1.75} /></span>
+      <span class="route__end route__end--to">
+        <Server aria-hidden="true" strokeWidth={1.75} />
+        <span class="route__host">
+          <b data-fill="name">{first.name}</b>
+          <code data-fill="host">{first.host}</code>
+        </span>
+      </span>
+    </div>
+    <p class="route__where" data-fill="where">{route.local}</p>
+    <ul class="route__facts">
+      <li>
+        <KeyRound aria-hidden="true" strokeWidth={1.75} />
+        <span data-fill="key">{route.noKey}</span>
+      </li>
+      <li class="route__cap">
+        <span class="route__cap-label">{route.cap}</span>
+        <span class="route__meter" aria-hidden="true"><i></i></span>
+        <span class="route__cap-value">{route.capValue}</span>
+      </li>
+      <li class="route__us">
+        <span>{route.us}</span>
+        <s>{route.none}</s>
+      </li>
+    </ul>
+  </div>
+</div>

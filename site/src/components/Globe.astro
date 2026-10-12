@@ -1,0 +1,18 @@
+---
+// The globe: the build-time first frame as SVG (the static frame: there without JavaScript, and under reduced
+// motion), and the canvas the app's dotted orb draws on once the page script starts (src/scripts/globe.ts).
+// When it follows the page, the outer box becomes a clipped layer the size of the viewport and the body moves
+// inside it, so a globe peeking past the edge never makes the page scroll sideways.
+import { globeSvg } from '../lib/globe-still';
+
+// The canvas side in CSS px at full size; narrower screens scale the whole globe down in CSS
+const SIZE = 600;
+const svg = globeSvg(SIZE, SIZE * 0.38);
+---
+
+<div class="globe" data-globe-root aria-hidden="true">
+  <div class="globe__body" data-globe-body>
+    <Fragment set:html={svg} />
+    <canvas class="globe__canvas"></canvas>
+  </div>
+</div>

@@ -11,7 +11,9 @@
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "og:update": "ASTRO_TELEMETRY_DISABLED=1 astro build && node scripts/og.mjs --update",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "narrate": "node scripts/narrate.mjs",
+    "render:3d": "node scripts/render-3d.mjs"
   },
   "dependencies": {
     "@astrojs/react": "7.0.1",
@@ -24,7 +26,8 @@
     "clsx": "2.1.1",
     "lucide-react": "1.52.0",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "simple-icons": "^16.34.0"
   },
   "devDependencies": {
     "@types/react": "18.3.27",
@@ -32,6 +35,7 @@
     "puppeteer-core": "25.12.0",
     "tailwindcss": "3.4.18",
     "tailwindcss-animate": "1.0.7",
+    "three": "^0.186.1",
     "typescript": "6.0.3"
   },
   "packageManager": "pnpm@10.34.6",

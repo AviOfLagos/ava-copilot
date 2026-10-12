@@ -1,4 +1,6 @@
 ---
+// A floating glass pill, sticky at the top: the mark, three links, the theme switch and Install.
+import { ArrowRight } from 'lucide-react';
 import { PRODUCT, links, nav } from '../content/site';
 import Mark from './Mark.astro';
 import ThemeToggle from './ThemeToggle.astro';
@@ -10,7 +12,7 @@ const { path } = Astro.props;
 ---
 
 <header class="site-header">
-  <div class="wrap site-header__inner">
+  <div class="site-header__bar">
     <a class="brand" href="/" aria-label={nav.home}>
       <Mark />
       <span>{PRODUCT}</span>
@@ -29,8 +31,9 @@ const { path } = Astro.props;
       </ul>
     </nav>
     <ThemeToggle />
-    <a class="btn btn--primary" href={links.install} aria-current={path === links.install ? 'page' : undefined}>
-      {nav.install}
+    <a class="btn btn--cta btn--sm" href={links.install} aria-current={path === links.install ? 'page' : undefined}>
+      <span class="btn__label">{nav.install}</span>
+      <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
     </a>
   </div>
 </header>

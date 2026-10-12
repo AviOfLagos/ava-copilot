@@ -1,0 +1,53 @@
+---
+// Section 02's bento: the run you can stop (it hands the page back for your sign-in), chats running side by side in
+// their own tabs, and a page whose hidden instructions are read as data, never as orders.
+import { ShieldCheck } from 'lucide-react';
+import { home } from '../content/site';
+import TrailRun from './TrailRun';
+
+const { trail, threads, injection } = home.steps;
+---
+
+<div class="bento bento--steps">
+  <article class="card card--tall card--trail" aria-labelledby="trail-card-title">
+    <p class="card__label" id="trail-card-title">{trail.label}</p>
+    <TrailRun copy={trail} />
+  </article>
+
+  <article class="card card--threads" aria-labelledby="threads-title">
+    <h3 class="card__title" id="threads-title">{threads.title}</h3>
+    <p class="card__note">{threads.body}</p>
+    <ul class="threads">
+      {
+        threads.rows.map(row => (
+          <li class="thread" data-tone={row.tone} data-status={row.status}>
+            <span class="thread__group" aria-hidden="true" />
+            <span class="thread__text">
+              <span class="thread__title">{row.title}</span>
+              <span class="thread__tab">{threads.bound.replace('{tab}', row.tab)}</span>
+            </span>
+            <span class="thread__status">
+              <span class="thread__dot" aria-hidden="true" />
+              {row.status === 'waiting' ? threads.waiting : threads.running}
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </article>
+
+  <article class="card card--inject" aria-labelledby="inject-title">
+    <h3 class="card__title" id="inject-title">{injection.title}</h3>
+    <div class="inject">
+      <div class="inject__page">
+        <p class="inject__host">{injection.host}</p>
+        <p class="inject__text">{injection.page}</p>
+        <p class="inject__hidden"><span class="inject__tag">{injection.hiddenLabel}</span>{injection.hidden}</p>
+      </div>
+      <p class="inject__note">
+        <ShieldCheck aria-hidden="true" strokeWidth={1.75} />
+        <span>{injection.note}</span>
+      </p>
+    </div>
+  </article>
+</div>

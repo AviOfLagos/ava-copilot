@@ -1,0 +1,56 @@
+---
+// What it connects to and thinks with, as the code has them: the built-in connectors (catalog.ts), any other MCP
+// server by its address, and the model providers. Marks from simple-icons (CC0), drawn in currentColor; where there
+// is no mark, the name alone. A note says the marks are examples, not endorsements.
+import { home } from '../content/site';
+import { mark } from '../lib/marks';
+
+const { connectors, models, builtIn, byAddress, connectorsLabel, modelsLabel, note } = home.integrations;
+const badge = { builtIn, byAddress } as const;
+---
+
+<div class="integrations">
+  <p class="card__label">{connectorsLabel}</p>
+  <ul class="tiles" role="list">
+    {
+      connectors.map(item => {
+        const icon = mark(item.icon);
+        return (
+          <li class="tile glass" data-how={item.how}>
+            <span class="tile__mark" aria-hidden="true">
+              {icon ? (
+                <svg viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                  <path d={icon.path} />
+                </svg>
+              ) : (
+                <span class="tile__initial">{item.name.slice(0, 1)}</span>
+              )}
+            </span>
+            <span class="tile__name">{item.name}</span>
+            <span class="tile__badge">{badge[item.how as keyof typeof badge]}</span>
+          </li>
+        );
+      })
+    }
+  </ul>
+
+  <p class="card__label">{modelsLabel}</p>
+  <ul class="marks" role="list">
+    {
+      models.map(item => {
+        const icon = mark(item.icon);
+        return (
+          <li class="markchip">
+            {icon && (
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                <path d={icon.path} />
+              </svg>
+            )}
+            <span>{item.name}</span>
+          </li>
+        );
+      })
+    }
+  </ul>
+  <p class="integrations__note">{note}</p>
+</div>

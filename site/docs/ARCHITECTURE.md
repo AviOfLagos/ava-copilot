@@ -17,8 +17,17 @@ No trailing slashes (`/install`), apex domain, self-referencing canonicals, `noi
 ## Content model
 
 `site/src/content/site.ts` holds every string and record: product (name, tagline, description, version), install
-commands per OS, features (id, title, body, widget), models (name, kind: local | cloud), privacy facts (stays /
-leaves / never), permissions (name, why), FAQ (q, a), links. Components only read from it.
+commands per OS, the home sections (id, number, pill, two-tone title, one sentence, the widget's copy), models
+(name, host, kind: local | cloud), connectors (name, mark, built in | by address), true numbers, tasks, privacy facts
+(stays / leaves / never), permissions (name, why), FAQ (q, a), links, the tour's labels. Components only read from it.
+
+Ava's narration is `site/src/content/narration.json` (one line per section; `text` shown, `say` read when they
+differ), read by the content model (captions, transcript) and by `scripts/narrate.mjs` (the recordings). The
+recordings' manifest, `narration-audio.json`, is written by that script; the build warns when a line changed since
+it was recorded.
+
+v2 adds no routes. The home page's sections, in order: hero, 01 gate, 02 every step, 03 voice, 04 memory, 05
+routines and agents, 06 models, 07 integrations, the numbers, 08 privacy, the task list, questions, the close.
 
 ## Stack decision record
 
@@ -27,8 +36,13 @@ Rendering: static (SSG) with islands — Astro, React islands for the demo and o
 Signals: public pages (1), links pasted into chats (2), content will grow — changelog, docs (3),
          LLM discoverability (8), link previews (10) — score 5
 Rejected: Vite SPA (fails every signal); Next.js (works, but ships more JS for a content site)
-Consequence: all copy is in the HTML; islands only for the demo, orbs and copy buttons
+Consequence: all copy is in the HTML; islands only for the gate demo and the voice vignette; the globe (the app's
+             dotted orb), the tour and the small widgets are plain scripts over build-time HTML
 ```
+
+- Build-time only: simple-icons (connector and model marks, inlined as SVG), three.js (the glass objects, rendered
+  to WebP by `scripts/render-3d.mjs`), Kokoro through the app's own TTS worker (the narration, `scripts/narrate.mjs`).
+  None of them ships to the browser.
 
 - Astro (static output) + `@astrojs/react`; the app's React widgets and CSS are imported from `../src` (the orbs
   need only React and `cn`), so the site always looks like the app. `@astrojs/sitemap`.

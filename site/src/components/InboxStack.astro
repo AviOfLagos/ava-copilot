@@ -1,0 +1,70 @@
+---
+// The Inbox, where routines and helper agents leave what would send or post: the panel's Inbox row (a dot that is
+// amber only for an approval, the source, the time, Approve and Decline), stacked. Answer the top one and the next
+// rises. The buttons are the panel's own classes (buttonClasses from its Button).
+import { Bot, Check, Workflow, X } from 'lucide-react';
+import { buttonClasses } from '@app/side-panel/components/ui/button';
+import { home } from '../content/site';
+
+const { inbox } = home.routines;
+const sourceIcon = { Workflow, Agent: Bot } as const;
+---
+
+<div
+  class="inbox"
+  data-inbox
+  data-approved={inbox.approved}
+  data-declined={inbox.declined}
+  data-done={inbox.cleared}>
+  <div class="inbox__head">
+    <p class="card__title">{inbox.title}</p>
+    <span class="inbox__count">{inbox.items.filter(item => item.kind === 'approval').length}</span>
+  </div>
+  <ol class="inbox__stack" role="list">
+    {
+      inbox.items.map((item, index) => {
+        const Icon = sourceIcon[item.source as keyof typeof sourceIcon] ?? Bot;
+        const approval = item.kind === 'approval';
+        return (
+          <li class="inbox-card glass" data-card style={`--depth:${index}`}>
+            <div class="inbox-card__row">
+              <span class:list={['inbox-card__dot', approval && 'inbox-card__dot--hold']} aria-hidden="true" />
+              <Icon className="inbox-card__icon" aria-hidden="true" strokeWidth={1.75} />
+              <span class="inbox-card__text">
+                <span class="inbox-card__title">{item.title}</span>
+                <span class="inbox-card__meta">
+                  {item.source} · {item.time}
+                </span>
+              </span>
+            </div>
+            {approval && (
+              <div class="inbox-card__actions">
+                <button type="button" class={buttonClasses('hold', 'sm')} data-answer="approve">
+                  <Check className="size-3.5" aria-hidden="true" />
+                  {inbox.approve}
+                </button>
+                <button type="button" class={buttonClasses('outline', 'sm')} data-answer="decline">
+                  <X className="size-3.5" aria-hidden="true" />
+                  {inbox.decline}
+                </button>
+              </div>
+            )}
+            {!approval && (
+              <div class="inbox-card__actions">
+                <button type="button" class={buttonClasses('outline', 'sm')} data-answer="done">
+                  <Check className="size-3.5" aria-hidden="true" />
+                  {inbox.markDone}
+                </button>
+              </div>
+            )}
+          </li>
+        );
+      })
+    }
+  </ol>
+  <div class="inbox__empty" data-empty>
+    <p>{inbox.empty}</p>
+    <button type="button" class={buttonClasses('outline', 'sm')} data-reset>{inbox.reset}</button>
+  </div>
+  <p class="inbox__result" role="status" aria-live="polite" data-result></p>
+</div>

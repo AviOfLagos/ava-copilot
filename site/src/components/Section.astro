@@ -1,0 +1,72 @@
+---
+// A numbered section: the pill ("01 • The gate"), a two-tone headline with an optional image pill between its
+// halves, at most one sentence, then the working widget in the slot. `globe` names the globe's spot while the section
+// holds the middle of the screen, `state` its light, `say` the tour line that plays here.
+import Face from './Face.astro';
+
+interface Props {
+  id: string;
+  n?: string;
+  pill: string;
+  title: readonly string[];
+  art?: string;
+  body?: string;
+  say?: string;
+  globe?: string;
+  state?: 'listening' | 'thinking' | 'acting' | 'done';
+  align?: 'start' | 'end';
+  tone?: 'mint' | 'peri';
+  class?: string;
+}
+
+const {
+  id,
+  n,
+  pill,
+  title,
+  art,
+  body,
+  say,
+  globe = 'right',
+  state = 'thinking',
+  align = 'start',
+  tone = 'mint',
+  class: className,
+} = Astro.props;
+const images: Record<string, string> = { diamond: '/3d/diamond-sm.webp', pill: '/3d/pill-sm.webp' };
+---
+
+<section
+  class:list={['sec', className]}
+  id={id}
+  aria-labelledby={`${id}-title`}
+  data-globe={globe}
+  data-state={state}
+  data-say={say}
+  data-align={align}>
+  <div class="wrap sec__wrap">
+    <header class="sec__head">
+      <p class="pill" data-tone={tone}>
+        {n && <span class="pill__n">{n}</span>}
+        <span class="pill__dot" aria-hidden="true"></span>
+        <span>{pill}</span>
+      </p>
+      <h2 class="headline" id={`${id}-title`}>
+        <span class="headline__a">{title[0]}</span>{' '}
+        {
+          art && (
+            <span class:list={['hpill', `hpill--${art}`]} aria-hidden="true">
+              {art === 'orb' ? (
+                <Face />
+              ) : (
+                <img src={images[art]} alt="" width="96" height="96" loading="lazy" decoding="async" />
+              )}
+            </span>
+          )
+        }{art && ' '}<span class="headline__b">{title[1]}</span>
+      </h2>
+      {body && <p class="sec__body">{body}</p>}
+    </header>
+    <slot />
+  </div>
+</section>
