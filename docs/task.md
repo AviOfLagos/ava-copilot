@@ -839,6 +839,50 @@ runs; nothing but text ever leaves the computer in economy mode.
   in `TtsEngineId`, `speak.ts` `engineFor`/`stopSpeaking` and Voice output's engine list; `end_conversation` added to
   the tool list `e2e/voice.e2e.mjs` asserts.
 
+### Wave 2 — WS7 Avi Brain, the Mac companion (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../companion/README.md); spike:
+[companion/SPIKE.md](../companion/SPIKE.md).
+
+- **Spike verdict: eve, for agent sessions only.** A real eve 0.75.1 agent (`companion/spike/eve-probe`, `node
+  probe.mjs`) passed 18/18 runtime checks: a model chosen per session (`defineDynamic` at `step.started`, any
+  OpenAI-compatible endpoint), per-session instructions and an exact tool allowlist (profile id on the session's
+  auth, `defaultTools: false`), fail-closed bearer + Origin auth on `--host 127.0.0.1`, approvals
+  (`inputResponses`), stream resume (`startIndex`, stable ids), no traffic off the Mac and no secret on disk. Not
+  eve's: sandbox limits (its Docker provider has none, per session), runtime schedules (static files only), stdio
+  MCP (HTTP only). Found: every eve CLI command, `eve start` included, sends telemetry unless
+  `EVE_TELEMETRY_DISABLED=1`; its store is 0755 plain JSON; 18 releases in 10 days, and a session only resumes on
+  the eve version that started it (pinned exactly).
+- **Companion** (`companion/`, own package and lockfile, Node 24+, bundled by esbuild into `dist/avi-brain.mjs`):
+  127.0.0.1 only, Host check, pairing (one-time code from `avi-brain pair` → token; the Mac keeps its hash), Bearer +
+  Origin on every `/v1` call, per-route rate limits, request-id dedupe, redacted JSON logs; Docker sandbox per agent
+  profile through the Docker CLI (no network by default, CPU/memory/pids/time limits, no capabilities, read-only
+  root, uid 1000, only its workspace mounted; clear "start Docker Desktop" message); `gh` read allowlist, posts
+  only with the click and a secret scan, nothing that writes code; stdio MCP from `mcp.json` with tool fingerprints;
+  routines on the Mac with the extension's own engine compiled in; artifacts frozen and served with
+  `CSP: sandbox allow-scripts`, no network, through a one-time token in the Studio URL's fragment; eve started on a
+  random loopback port with a per-boot secret, its agent resolving model/instructions/tools from Avi Brain;
+  `scripts/install-launchagent.sh`.
+- **Protocol** `src/shared/lib/protocol/companion.ts` (zod, Node-runnable): used by the extension, the companion and
+  the E2E mock. **Found in Brave: the browser sends no `Origin` on an extension's GET** to a permitted host, so
+  the API is POST/PUT/DELETE only.
+- **Extension** `src/background/companion/`: `CompanionClient` (vault token, retry for reads only, breaker in
+  `storage.session`, session follow with cursor reconnect, routines and artifact calls), `brain-settings` /
+  `brain-status` stores for the shell, commands `brain_status|set_port|pair|unpair|check|artifacts|open_artifact`,
+  job `brain_health` (every 2 min while paired), `registerStepExecutor('step.sandbox')` (health first: "not running"
+  never becomes an unknown outcome; request id = run + step), `companionToolSource()` for Connectors.
+  `src/side-panel/companion/`: Settings › Avi Brain (pair, status, Docker, engine, MCP, artifacts → Avi Studio).
+  `step.sandbox` taken out of `NOT_YET_AVAILABLE` in `spec.ts` (one line). Locale keys `brain_*` (25).
+- **Tests:** companion 60 unit + `pnpm test:eve` (13 checks, real eve, stdio MCP, approval relay, no secret on disk
+  or in logs); extension 33 unit (protocol, client, executor, status); `e2e/companion.e2e.mjs` 3/3 in Brave (pair →
+  connected with Origin + Bearer on every call and the token only in the vault; a routine's `step.sandbox` waits for
+  the click then runs on the Mac and returns its output; an artifact opens in Avi Studio, the fragment token is
+  spent and wiped, a remote image is blocked by CSP and never requested, opaque origin).
+- **Needs Docker** (down while building): a real sandbox run, `pnpm sandbox:build`, an artifact build.
+- **Needs the lead:** `import './companion/register';` in `src/side-panel/registers.ts` (the E2E needs it);
+  `step.sandbox` in the authoring instructions (`authoring.ts`); routines "run on the Mac" sync in WS5a's service;
+  WS4 to list `companionToolSource()`; WS5b to run agent sessions through `CompanionClient.createSession`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

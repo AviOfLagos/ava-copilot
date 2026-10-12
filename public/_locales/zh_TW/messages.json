@@ -5072,5 +5072,102 @@
   },
   "voice_engine_installed_short": {
     "message": "已安裝"
+  },
+  "brain_settings_title": {
+    "message": "Avi Brain（Mac）"
+  },
+  "brain_state_unpaired": {
+    "message": "尚未配對"
+  },
+  "brain_state_online": {
+    "message": "已連線"
+  },
+  "brain_state_offline": {
+    "message": "未執行"
+  },
+  "brain_state_error": {
+    "message": "需要處理"
+  },
+  "brain_check": {
+    "message": "檢查"
+  },
+  "brain_pair_hint": {
+    "message": "在你的 Mac 上執行「avi-brain pair」（或在 companion 資料夾中執行「pnpm pair」），然後輸入顯示的代碼。"
+  },
+  "brain_port_label": {
+    "message": "連接埠"
+  },
+  "brain_code_label": {
+    "message": "配對代碼"
+  },
+  "brain_pair": {
+    "message": "配對"
+  },
+  "brain_pairing": {
+    "message": "配對中…"
+  },
+  "brain_docker_label": {
+    "message": "Docker"
+  },
+  "brain_docker_ready": {
+    "message": "執行中"
+  },
+  "brain_docker_noImage": {
+    "message": "執行中；尚未建立沙箱映像"
+  },
+  "brain_docker_down": {
+    "message": "未執行：請啟動 Docker Desktop"
+  },
+  "brain_engine_label": {
+    "message": "代理引擎"
+  },
+  "brain_engine_ready": {
+    "message": "就緒"
+  },
+  "brain_engine_off": {
+    "message": "關閉"
+  },
+  "brain_mcp_label": {
+    "message": "MCP 伺服器"
+  },
+  "brain_mcp_count": {
+    "message": "$TOTAL$ 個中有 $READY$ 個執行中",
+    "placeholders": {
+      "ready": {
+        "content": "$1",
+        "example": "2"
+      },
+      "total": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "brain_artifacts_label": {
+    "message": "代理的作品"
+  },
+  "brain_artifact_open": {
+    "message": "在 Avi Studio 開啟 $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Landing page"
+      }
+    }
+  },
+  "brain_artifact_openShort": {
+    "message": "開啟"
+  },
+  "brain_paired_on": {
+    "message": "已配對：$ADDRESS$",
+    "placeholders": {
+      "address": {
+        "content": "$1",
+        "example": "127.0.0.1:47615"
+      }
+    }
+  },
+  "brain_unpair": {
+    "message": "取消配對"
   }
 }

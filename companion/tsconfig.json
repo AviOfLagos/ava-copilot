@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Avi Brain is its own package: it type-checks its sources, its eve agent, and the parts of the extension it
+  // shares (the protocol, and the workflow engine with its spec, templates, errors and retry).
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2024"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "paths": {
+      "@protocol": ["../src/shared/lib/protocol/companion.ts"],
+      "@engine/*": ["../src/background/workflows/*"],
+      "@extension/shared": ["./src/engine/shared.ts"],
+      "@extension/storage": ["./src/engine/storage-types.ts"]
+    }
+  },
+  "include": ["src", "agent", "scripts/*.d.ts"]
+}
