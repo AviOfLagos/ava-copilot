@@ -73,17 +73,17 @@ The narration and the widgets carry the detail; the FAQ keeps the long answers (
 | # | Section | Headline | Widget (from the app) | Globe |
 | --- | --- | --- | --- | --- |
 | — | Hero | The AI copilot that waits for your click. | install command, tour button, giant wordmark | right, large, listening |
-| 01 | The gate | Try to skip ◆ the click. | the live gate demo (run trail, thinking orb, hold button) | top right, acting |
-| 02 | Every step | Watch it work. Take over. | the run trail filling, with Take over / Hand back; chats in their own tabs; sign-ins handed back | left, thinking |
-| 03 | Voice | Just say ● "Hey Ava". | the voice orb, and the real composer with the dictation strip on a simulated level | left, listening |
-| 04 | Memory | Ask what was decided. | a knowledge-graph corner you can hover, and a cited answer | right, thinking |
-| 05 | Routines and agents | Runs alone. Still asks. | a routine diagram whose nodes light up in order; the Inbox card stack | left, acting |
-| 06 | Models | Your model. Or fully local. | a model picker with local/cloud chips and where the words go | right, thinking |
-| 07 | Integrations | Plugs into your tools. | connector and model marks (simple-icons, CC0), built-in vs by address | left, acting |
+| 01 | The gate | Try to skip ◆ the click. | the live gate demo (run trail, thinking orb, hold button) | peeking at the right edge, acting |
+| 02 | Every step | Watch every step. Stop it anytime. | the run trail filling; the panel's "Your turn" card handing back the sign-in (Continue); Stop at any step; chats in their own tabs; a page's hidden instructions ignored | left, thinking |
+| 03 | Voice | Just say ● "Hey Ava". | the voice orb, and the real composer with the dictation strip on a simulated level | right, listening |
+| 04 | Memory | Ask what was decided. | a knowledge-graph corner you can point at, and a cited answer | left, thinking |
+| 05 | Routines and agents | Runs alone. Still asks. | a routine diagram whose nodes light up in order and wait at the post; the Inbox card stack; a helper agent's budget | right, acting |
+| 06 | Models | Your model. Or fully local. | a model picker with local/cloud chips and where the words go | left, thinking |
+| 07 | Integrations | Plugs into your tools. | connector and model marks (simple-icons, CC0), built in vs by address | right, acting |
 | — | Stats | — | true numbers only | — |
-| 08 | Privacy | Try to find our server. | the privacy label | right, done |
-| — | Hand it the work | What will you hand it? | dark list of tasks with a hover preview of each task's trail | sets behind the foot |
-| — | Questions, close | Hand it the work. Keep the last click. | FAQ, install command, giant wordmark | low, done |
+| 08 | Privacy | Try to find our server. | the privacy label | left, done |
+| — | Hand it the work | What will you hand it? | dark list of tasks with a pointer preview of each task's trail | away (the list is dark) |
+| — | Questions, close | Hand it the work. Keep the last click. | FAQ, install command, three steps, the transcript, giant wordmark | right, then low behind the foot, done |
 
 Integrations are stated as the code has them (`src/storage/lib/integrations/catalog.ts`): **built in** — GitHub,
 Linear, Notion, Slack, Gmail, Google Calendar, Google Drive; **by address** — any MCP server, such as Buffer (API key)
