@@ -3727,5 +3727,610 @@
   },
   "help_readAloud_where": {
     "message": "Configurações › Voz"
+  },
+  "agents_place": {
+    "message": "Agentes"
+  },
+  "agents_title": {
+    "message": "Agentes"
+  },
+  "agents_intro": {
+    "message": "Os agentes trabalham para você sozinhos, numa janela só deles, nunca nas suas abas. Eles acordam num horário, quando você abre uma página que vigiam ou quando uma mensagem ou outro agente os aciona. Uma vaga de tarefa sempre fica livre para você."
+  },
+  "agents_section_review": {
+    "message": "Aguardando sua revisão"
+  },
+  "agents_section_yours": {
+    "message": "Seus agentes"
+  },
+  "agents_section_templates": {
+    "message": "Comece por um modelo"
+  },
+  "agents_empty_title": {
+    "message": "Nenhum agente ainda"
+  },
+  "agents_empty_body": {
+    "message": "Peça no chat algo que você quer feito de novo e de novo, ou comece por um modelo abaixo. Você confere o agente e clica em Criar antes que ele rode."
+  },
+  "agents_empty_example": {
+    "message": "Crie um agente que leia minhas novas menções no X quando eu abrir o X e liste as que pedem resposta"
+  },
+  "agents_template_social": {
+    "message": "Vigia de redes sociais"
+  },
+  "agents_template_social_hint": {
+    "message": "Lê novos posts e menções quando você abre o X ou o LinkedIn"
+  },
+  "agents_template_research": {
+    "message": "Batedor de pesquisa"
+  },
+  "agents_template_research_hint": {
+    "message": "Manhãs de dias úteis: o mais recente sobre agentes de IA, com links"
+  },
+  "agents_template_use": {
+    "message": "Usar"
+  },
+  "agents_template_use_a11y": {
+    "message": "Criar um agente a partir do modelo $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research scout"
+      }
+    }
+  },
+  "agents_state_draft": {
+    "message": "Rascunho"
+  },
+  "agents_state_paused": {
+    "message": "Pausado"
+  },
+  "agents_state_running": {
+    "message": "Rodando"
+  },
+  "agents_state_waiting": {
+    "message": "Espera por você"
+  },
+  "agents_state_idle": {
+    "message": "Ocioso"
+  },
+  "agents_state_change": {
+    "message": "Mudança para revisar"
+  },
+  "agents_next": {
+    "message": "próxima $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 08:00"
+      }
+    }
+  },
+  "agents_spentToday": {
+    "message": "$AMOUNT$ hoje",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "0.12 USD"
+      }
+    }
+  },
+  "agents_trigger_tab": {
+    "message": "Quando abre uma página como $PATTERN$",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "x.com/*"
+      }
+    }
+  },
+  "agents_trigger_inbox": {
+    "message": "Quando chega um item na Caixa de entrada"
+  },
+  "agents_trigger_inboxFrom": {
+    "message": "Quando chega um item de $SOURCE$ na Caixa de entrada",
+    "placeholders": {
+      "source": {
+        "content": "$1",
+        "example": "slack"
+      }
+    }
+  },
+  "agents_trigger_topic": {
+    "message": "Quando um agente publica em $TOPIC$",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_trigger_manual": {
+    "message": "Quando você pede"
+  },
+  "agents_triggerType_schedule": {
+    "message": "Horário"
+  },
+  "agents_triggerType_tab": {
+    "message": "Página vigiada"
+  },
+  "agents_triggerType_inbox": {
+    "message": "Item da Caixa de entrada"
+  },
+  "agents_triggerType_topic": {
+    "message": "Tópico do barramento"
+  },
+  "agents_triggerType_manual": {
+    "message": "À mão"
+  },
+  "agents_by_hand": {
+    "message": "à mão"
+  },
+  "agents_by_schedule": {
+    "message": "no horário"
+  },
+  "agents_by_tab": {
+    "message": "por uma página vigiada"
+  },
+  "agents_by_inbox": {
+    "message": "por um item da Caixa de entrada"
+  },
+  "agents_by_topic": {
+    "message": "por outro agente"
+  },
+  "agents_by_workflow": {
+    "message": "por um fluxo"
+  },
+  "agents_by_chat": {
+    "message": "pelo chat"
+  },
+  "agents_by_voice": {
+    "message": "por voz"
+  },
+  "agents_back": {
+    "message": "Voltar aos agentes"
+  },
+  "agents_gone": {
+    "message": "Este agente não existe mais."
+  },
+  "agents_runNow": {
+    "message": "Rodar agora"
+  },
+  "agents_stop": {
+    "message": "Parar"
+  },
+  "agents_pause": {
+    "message": "Pausar"
+  },
+  "agents_resume": {
+    "message": "Retomar"
+  },
+  "agents_edit": {
+    "message": "Editar agente"
+  },
+  "agents_delete": {
+    "message": "Excluir agente"
+  },
+  "agents_delete_confirm": {
+    "message": "Excluir este agente, seu horário e seu registro de execuções? As abas dele fecham. O que ele salvou na sua base de conhecimento fica."
+  },
+  "agents_cancel": {
+    "message": "Cancelar"
+  },
+  "agents_draft_new": {
+    "message": "Novo agente — confira"
+  },
+  "agents_draft_change": {
+    "message": "Uma mudança para conferir"
+  },
+  "agents_draft_never": {
+    "message": "Rascunhos nunca rodam. Nada acontece até você clicar."
+  },
+  "agents_draft_noChange": {
+    "message": "Nada muda."
+  },
+  "agents_create": {
+    "message": "Criar"
+  },
+  "agents_apply": {
+    "message": "Aplicar"
+  },
+  "agents_discard": {
+    "message": "Descartar"
+  },
+  "agents_none": {
+    "message": "Nenhum"
+  },
+  "agents_anySite": {
+    "message": "Qualquer site que a tarefa pedir"
+  },
+  "agents_yes": {
+    "message": "Sim"
+  },
+  "agents_no": {
+    "message": "Não"
+  },
+  "agents_autoPaused": {
+    "message": "Pausado após falhar várias vezes"
+  },
+  "agents_waiting_title": {
+    "message": "Espera seu clique"
+  },
+  "agents_waiting_body": {
+    "message": "A tarefa dele quer fazer algo que precisa da sua aprovação. Abra o chat dele para responder."
+  },
+  "agents_waiting_tainted": {
+    "message": "Esta execução leu conteúdo de fora; confira o que ela vai fazer."
+  },
+  "agents_waiting_open": {
+    "message": "Abrir o chat dele"
+  },
+  "agents_section_profile": {
+    "message": "O que ele faz"
+  },
+  "agents_section_tabs": {
+    "message": "Abas dele"
+  },
+  "agents_section_runs": {
+    "message": "Execuções"
+  },
+  "agents_section_knowledge": {
+    "message": "Conhecimento dele"
+  },
+  "agents_section_usage": {
+    "message": "Uso"
+  },
+  "agents_field_name": {
+    "message": "Nome"
+  },
+  "agents_field_avatar": {
+    "message": "Avatar"
+  },
+  "agents_field_instructions": {
+    "message": "Instruções"
+  },
+  "agents_field_startUrl": {
+    "message": "Página inicial"
+  },
+  "agents_field_domains": {
+    "message": "Sites"
+  },
+  "agents_field_triggers": {
+    "message": "Acorda"
+  },
+  "agents_field_publishes": {
+    "message": "Publica em"
+  },
+  "agents_field_subscribes": {
+    "message": "Escuta"
+  },
+  "agents_field_modelRole": {
+    "message": "Modelo"
+  },
+  "agents_field_budget": {
+    "message": "Orçamento"
+  },
+  "agents_field_skills": {
+    "message": "Habilidades"
+  },
+  "agents_field_connectors": {
+    "message": "Conectores"
+  },
+  "agents_field_workspace": {
+    "message": "Espaço de trabalho"
+  },
+  "agents_field_inboxResults": {
+    "message": "Resultados na Caixa de entrada"
+  },
+  "agents_field_executor": {
+    "message": "Trabalha em"
+  },
+  "agents_budget_daily": {
+    "message": "$AMOUNT$ por dia",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_budget_steps": {
+    "message": "$COUNT$ passos por execução",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "agents_budget_runs": {
+    "message": "$COUNT$ execuções por dia",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "24"
+      }
+    }
+  },
+  "agents_triggers": {
+    "message": "Quando acorda"
+  },
+  "agents_triggers_none": {
+    "message": "Só quando você pede"
+  },
+  "agents_tab_focus": {
+    "message": "Mostrar $TITLE$ na janela dos agentes",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Home / X"
+      }
+    }
+  },
+  "agents_tabs_none": {
+    "message": "Nenhuma aba aberta. Uma execução abre uma na janela dos agentes."
+  },
+  "agents_runs_none": {
+    "message": "Nenhuma execução ainda."
+  },
+  "agents_knowledge_open": {
+    "message": "Base de conhecimento"
+  },
+  "agents_knowledge_graph": {
+    "message": "Abrir o grafo dele numa aba"
+  },
+  "agents_knowledge_count": {
+    "message": "$COUNT$ itens do trabalho dele",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "agents_knowledge_none": {
+    "message": "Nada do trabalho dele na sua base de conhecimento ainda."
+  },
+  "agents_usage_today": {
+    "message": "Hoje"
+  },
+  "agents_usage_week": {
+    "message": "7 dias"
+  },
+  "agents_usage_all": {
+    "message": "Tudo"
+  },
+  "agents_usage_cap": {
+    "message": "Hoje $SPENT$ de $CAP$",
+    "placeholders": {
+      "spent": {
+        "content": "$1",
+        "example": "0.20 USD"
+      },
+      "cap": {
+        "content": "$2",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_tokens": {
+    "message": "$COUNT$ tokens",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12k"
+      }
+    }
+  },
+  "agents_unpriced": {
+    "message": "sem preço"
+  },
+  "agents_log_title": {
+    "message": "Registro da execução"
+  },
+  "agents_log_trigger": {
+    "message": "Acionado"
+  },
+  "agents_log_start": {
+    "message": "Aberto"
+  },
+  "agents_log_task": {
+    "message": "Tarefa"
+  },
+  "agents_log_plan": {
+    "message": "Plano"
+  },
+  "agents_log_action": {
+    "message": "Ação"
+  },
+  "agents_log_notice": {
+    "message": "Nota"
+  },
+  "agents_log_retry": {
+    "message": "Nova tentativa"
+  },
+  "agents_log_error": {
+    "message": "Erro"
+  },
+  "agents_log_model": {
+    "message": "Chamada ao modelo"
+  },
+  "agents_log_approval": {
+    "message": "Espera por você"
+  },
+  "agents_log_publish": {
+    "message": "Barramento"
+  },
+  "agents_log_end": {
+    "message": "Terminou"
+  },
+  "agents_log_startText": {
+    "message": "Abriu $URL$ na janela dos agentes",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://x.com/home"
+      }
+    }
+  },
+  "agents_log_asked": {
+    "message": "Perguntou a você na Caixa de entrada"
+  },
+  "agents_log_posted": {
+    "message": "Publicou em $TOPIC$ para $COUNT$ agentes",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      },
+      "count": {
+        "content": "$2",
+        "example": "2"
+      }
+    }
+  },
+  "agents_log_dropped": {
+    "message": "Não publicou em $TOPIC$: passou por agentes demais",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_log_tainted": {
+    "message": "conteúdo de fora"
+  },
+  "agents_log_calls": {
+    "message": "$COUNT$ chamadas ao modelo",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "agents_log_retries": {
+    "message": "$COUNT$ novas tentativas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_errors": {
+    "message": "$COUNT$ erros",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_openChat": {
+    "message": "Abrir chat"
+  },
+  "agents_edit_title": {
+    "message": "Editar agente"
+  },
+  "agents_edit_name": {
+    "message": "Nome"
+  },
+  "agents_edit_avatar": {
+    "message": "Emoji"
+  },
+  "agents_edit_instructions": {
+    "message": "Instruções"
+  },
+  "agents_edit_startUrl": {
+    "message": "Página inicial"
+  },
+  "agents_edit_startUrlHint": {
+    "message": "Onde cada execução começa, a não ser que uma página vigiada a tenha acionado."
+  },
+  "agents_edit_domains": {
+    "message": "Sites que pode usar"
+  },
+  "agents_edit_domainsHint": {
+    "message": "Um por linha, por exemplo x.com. Vazio: qualquer site que a tarefa pedir."
+  },
+  "agents_edit_role": {
+    "message": "Modelo"
+  },
+  "agents_edit_workspace": {
+    "message": "Espaço de trabalho"
+  },
+  "agents_edit_noWorkspace": {
+    "message": "Nenhum espaço"
+  },
+  "agents_edit_dailyUsd": {
+    "message": "USD por dia"
+  },
+  "agents_edit_noCap": {
+    "message": "Sem limite"
+  },
+  "agents_edit_maxSteps": {
+    "message": "Passos por execução"
+  },
+  "agents_edit_runsPerDay": {
+    "message": "Execuções por dia"
+  },
+  "agents_edit_publishes": {
+    "message": "Publica o resultado em"
+  },
+  "agents_edit_publishesHint": {
+    "message": "Tópicos que outros agentes escutam, por exemplo research.brief. Vazio: nenhum."
+  },
+  "agents_edit_inboxResults": {
+    "message": "Deixar cada resultado na Caixa de entrada"
+  },
+  "agents_edit_triggerType": {
+    "message": "Tipo de gatilho"
+  },
+  "agents_edit_triggerValue": {
+    "message": "Ajuste do gatilho"
+  },
+  "agents_edit_addTrigger": {
+    "message": "Adicionar gatilho"
+  },
+  "agents_edit_removeTrigger": {
+    "message": "Remover: $TRIGGER$",
+    "placeholders": {
+      "trigger": {
+        "content": "$1",
+        "example": "When you ask"
+      }
+    }
+  },
+  "agents_edit_triggerNeedsValue": {
+    "message": "Este gatilho precisa de um ajuste."
+  },
+  "agents_edit_cronHint": {
+    "message": "0 8 * * 1-5 (dias úteis 08:00)"
+  },
+  "agents_edit_patternHint": {
+    "message": "x.com/* ou *.linkedin.com/feed*"
+  },
+  "agents_edit_sourceHint": {
+    "message": "slack, gmail… (vazio: qualquer)"
+  },
+  "agents_edit_topicHint": {
+    "message": "social.mentions"
+  },
+  "agents_edit_save": {
+    "message": "Salvar"
+  },
+  "agents_role_smart": {
+    "message": "Inteligente (lê e avalia)"
+  },
+  "agents_role_fast": {
+    "message": "Rápido (checagens leves)"
+  },
+  "agents_role_vision": {
+    "message": "Visão (vê a página)"
+  },
+  "agents_role_local": {
+    "message": "Local (neste Mac)"
   }
 }

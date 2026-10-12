@@ -592,6 +592,58 @@ that refocuses the web page.
   `identity` permission for connector sign-in. Routines pick models through `createRoleModel`; the graph, the brief and
   routines hold on the shared daily budget (`isOverDailyBudget`).
 
+### Wave 2 — WS5b Agents & run log (built 2026-10-12)
+
+Agents that work for Avi on their own, in a window of their own. `src/background/agents`, `src/storage/lib/agents`,
+`src/side-panel/agents`, `e2e/agents.e2e.mjs`, locale keys `agents_`.
+
+- **Profile** (`profile.ts`, pure, zod): name, avatar, instructions, sites (host names), start page, model role
+  (smart/fast/vision/local), workspace, triggers, topics it posts to and listens to, skills (loaded as `/name` in its
+  task), budget (USD a day, model calls a run, runs a day), "results in the Inbox". Checks: schedules via
+  `checkSchedule` (≥ 5 min apart), watched patterns must name a site (`*`, `*.com` refused), the start page on its
+  sites, no topic it both posts to and listens to, the companion executor refused until WS7. Drafts never run:
+  `create_agent` / `update_agent` (refused in chats an agent or routine started) write the profile with a separate
+  structured call (`authoring.ts`, one correction round) and save `AgentProfile.draft`; the panel shows each changed
+  field (old struck through) with Create/Apply/Discard. Hand edits in the panel apply directly (the user's click),
+  checked the same way. Templates "Social media watcher" and "Research scout".
+- **Runs** (`service.ts`): a `RunRecord` kind `agent` with steps `trigger` → `task` (its chat; state: thread, tab,
+  window, start page) → `publish`; queued → running → waiting_user → succeeded | failed | cancelled | interrupted. The
+  task is a chat (`origin: 'agent'`, archived so it stays out of Avi's list, model from `resolveRole(agent.modelRole)`)
+  created already bound to a tab of the agent's group in the **agents' window** (`window.ts`: one window made
+  minimized and unfocused, a named, coloured tab group per agent, `autoDiscardable: false`, idle tabs reused, three
+  kept), then started with `threads.send({ threadId })` — no ThreadManager change was needed. A run starts only when
+  `runningCount < maxConcurrentThreads - 1` (one slot always Avi's; it waits with a job, gives up after 30 min) and
+  one run per agent at a time (deliveries queue behind it). While it runs: its model calls (usage events of its
+  chat) are counted against max steps, its dollars against the daily cap, its tabs against its sites (it is stopped
+  when it leaves them); a click it waits for becomes an Inbox approval (`thread:<id>` / `open_thread`). After: answer
+  on the task step, an Inbox result for unattended runs, alerts for failures, auto-pause after 3 failures in a row,
+  old runs pruned (50 kept). Recovery: never-started runs wait again, recent runs are followed again (the thread
+  manager resumes their chat), old ones are interrupted. Agents only run while every confirm kind asks for a click
+  (`gateAsksForAll`), because they act alone.
+- **Triggers**: schedules (one job per schedule trigger, `agent:<id>:<n>`), watched pages (`chrome.tabs.onUpdated`,
+  2.5 s quiet, once per page per 10 min and at most once a minute per agent; never private windows, the agents'
+  window, a tab a chat is working in, or a page the firewall blocks; the agent opens its own copy of the page),
+  Inbox items (a Dexie `creating` hook; items agents or routines left never wake one; workspaces kept apart), bus
+  topics. Runs set off by a page, an Inbox item or the bus are **tainted**: what set them off is passed wrapped as
+  untrusted data. Routines' `trigger.tab` fires from the same watcher and `step.agent` runs the named agent
+  (`workflow-step.ts`, parked until the agent's run ends); both left `NOT_YET_AVAILABLE`.
+- **Bus** (`bus.ts`): a successful run posts its answer to its topics (`id = <runId>:<topic>`, so never twice); every
+  created, switched-on listener in the same workspace gets a run (firing key per message and agent: at-least-once,
+  redelivered after a restart, budget refusals settle it); hops counted, past 3 dropped (kept for the log); taint
+  carried. Messages kept 7 days.
+- **Panel** (place `agents`, top, order 50): list (review first, state idle/running/waits for you/paused/draft, next
+  schedule, spend today, templates); agent page: draft diff, profile and editor (triggers editor included), its tabs
+  (click shows the tab in the agents' window), runs with the **run log** (`runlog.ts`, pure: trigger, start page,
+  task, plans, actions, notes, retries, errors, every model call with tokens and cost, Inbox asks, posts, end; summary
+  of duration, calls, tokens, cost, retries, errors; "Open chat"), its knowledge (items, Knowledge base, graph tab
+  `graph.html?agent=`), usage today / 7 days / all.
+- Voice tools `list_agents`, `run_agent` (guarded); chat actions `create_agent`, `update_agent`, `run_agent`,
+  `list_agents`.
+- Tests: 76 unit tests (profile, patterns, debounce/cooldown, Inbox matching, bus hop limit/taint/dedupe/redelivery,
+  budgets, auto-pause, slot for the user, recovery, gate guard, run log, authoring, step.agent, actions refusal);
+  `e2e/agents.e2e.mjs`: chat → draft → Create → Run now runs in the agents' window (focus and Avi's tab untouched) →
+  run log → a matching page Avi opens wakes it again, tainted.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

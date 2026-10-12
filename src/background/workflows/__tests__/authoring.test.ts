@@ -161,7 +161,7 @@ describe('authorSpec', () => {
 
   it('never offers the model the kinds of steps that are not built yet', () => {
     const answer = newsAnswer();
-    answer.nodes[3] = { id: 'pick', type: 'step.agent', label: 'Agent', params: [{ key: 'task', value: 'x' }] };
+    answer.nodes[3] = { id: 'pick', type: 'step.sandbox', label: 'Sandbox', params: [{ key: 'command', value: 'x' }] };
     expect(authoredSpecSchema.safeParse(answer).success).toBe(false);
   });
 });

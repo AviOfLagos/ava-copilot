@@ -48,13 +48,7 @@ export function groupOf(type: NodeType): NodeGroup {
 
 // Kinds that exist in the spec but are run by streams still being built (agents, connectors, the Mac
 // companion, voice out). A run that reaches one stops with a plain message; the trigger kinds never fire yet.
-export const NOT_YET_AVAILABLE: ReadonlySet<NodeType> = new Set<NodeType>([
-  'trigger.tab',
-  'step.agent',
-  'step.tool',
-  'step.sandbox',
-  'out.speak',
-]);
+export const NOT_YET_AVAILABLE: ReadonlySet<NodeType> = new Set<NodeType>(['step.tool', 'step.sandbox', 'out.speak']);
 
 export const CONDITION_OPS = [
   'contains',
