@@ -57,7 +57,7 @@ type PanelMessage =
   | ({ type: 'kb_answer'; clientId: string } & KbAnswer)
   | { type: 'kb_saved'; clientId: string; title: string }
   | { type: 'skill_draft'; clientId: string; markdown: string }
-  | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string }
+  | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
   | { type: 'speech_to_text_error'; error: string }
@@ -76,6 +76,8 @@ const SidePanel = () => {
   const [meetingId, setMeetingId] = useState<string | null>(null);
   // The voice screen was put away while the conversation goes on
   const [voiceHidden, setVoiceHidden] = useState(false);
+  // When the user last ended the voice conversation
+  const endedAtRef = useRef(0);
   const [savedSkillIn, setSavedSkillIn] = useState<string | null>(null);
   // Where a citation points in the meeting's transcript, in seconds
   const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
@@ -185,6 +187,9 @@ const SidePanel = () => {
               width: 500,
               height: 600,
             });
+          } else if (message.cancelled) {
+            // The user ended it while it was starting: nothing to say
+            setVoiceStatus('off');
           } else if (!message.ok) {
             setVoiceStatus('off');
             setBanner(message.error || t('errors_unknown'));
@@ -345,6 +350,8 @@ const SidePanel = () => {
   useEffect(() => {
     const onStatus = (message: { type?: string; status?: typeof voiceStatus; error?: string }) => {
       if (message?.type !== 'voice_status' || !message.status) return;
+      // Right after the user ended the conversation, a late "listening" must not bring the screen back
+      if (message.status !== 'off' && Date.now() - endedAtRef.current < 4000) return;
       setVoiceStatus(message.status);
       if (message.error) setBanner(message.error);
     };
@@ -355,10 +362,12 @@ const SidePanel = () => {
   const toggleVoice = async () => {
     setBanner(null);
     if (voiceStatus !== 'off') {
+      endedAtRef.current = Date.now();
       setVoiceStatus('off');
       post({ type: 'voice_stop' });
       return;
     }
+    endedAtRef.current = 0;
     setVoiceHidden(false);
     setVoiceStatus('connecting');
     post({ type: 'voice_start', windowId: await currentWindowId() });

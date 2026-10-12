@@ -91,6 +91,9 @@ export class VoiceManager {
     return this.threadId !== null;
   }
 
+  // Bumped by every stop: a start still under way when the user ended it knows to undo itself
+  private generation = 0;
+
   /**
    * Starts listening.
    *
@@ -99,8 +102,9 @@ export class VoiceManager {
   async start(
     windowId?: number,
     { wake = false, guarded = false }: { wake?: boolean; guarded?: boolean } = {},
-  ): Promise<{ ok: boolean; micDenied?: boolean; error?: string }> {
+  ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean }> {
     if (this.running) return { ok: true };
+    const generation = ++this.generation;
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
     if (!gemini) throw new Error(t('voice_needsGemini'));
@@ -133,6 +137,13 @@ export class VoiceManager {
       await closeOffscreenIfIdle();
       return { ok: false, micDenied: response?.micDenied, error: response?.error };
     }
+    // Ended while it was starting: the session that just opened closes again, and nothing reopens
+    if (generation !== this.generation) {
+      await toOffscreen({ type: 'voice_stop' }).catch(() => {});
+      if (!previous) await threadStore.remove(thread.id);
+      await closeOffscreenIfIdle();
+      return { ok: false, cancelled: true };
+    }
 
     this.threadId = thread.id;
     this.windowId = windowId;
@@ -148,6 +159,7 @@ export class VoiceManager {
   }
 
   async stop(): Promise<void> {
+    this.generation++;
     if (this.watchTimer) clearInterval(this.watchTimer);
     if (this.keepAlive) clearInterval(this.keepAlive);
     this.watchTimer = null;

@@ -347,6 +347,10 @@ export async function startMockLlm(scenarios) {
     };
     let pending = Buffer.alloc(0);
     socket.on('error', () => {});
+    // A conversation the extension ended, or that dropped
+    socket.on('close', () => {
+      session.closed = true;
+    });
     socket.on('data', chunk => {
       pending = Buffer.concat([pending, chunk]);
       while (pending.length >= 2) {

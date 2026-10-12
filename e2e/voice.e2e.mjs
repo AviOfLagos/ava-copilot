@@ -1,5 +1,6 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { startMockLlm } from './mock-llm.mjs';
 import { launchExtension, openSession, readThreads, sleep } from './harness.mjs';
 
@@ -9,6 +10,8 @@ import { launchExtension, openSession, readThreads, sleep } from './harness.mjs'
  */
 
 process.env.E2E_FAKE_MIC = '1';
+// Speech as the microphone: silence never reaches the model, so the fake device's quiet beep would send nothing
+process.env.E2E_FAKE_AUDIO_FILE = path.resolve(import.meta.dirname, 'hey-ava.wav');
 
 const done = () => [{ done: { text: 'Scripted steps complete.', success: true } }];
 const scenarios = {
@@ -222,4 +225,24 @@ test('"end the call" ends it for everyone, but only on the user\'s own words', a
     'End call',
   ]);
   await meet.close();
+});
+
+test('ending the conversation while it connects closes it for good', async () => {
+  const before = mock.live.sessions.filter(s => s.voice).length;
+  const session = await openSession(extension, mock);
+  await session.web.bringToFront();
+  await session.click('Talk to the copilot');
+  await session.panel.waitForSelector('[aria-label="End the conversation"]', { timeout: 10000 });
+  await session.click('End the conversation');
+
+  // Whatever was still on its way, the screen stays closed and the session ends
+  await sleep(5000);
+  assert.equal(await session.panel.$('[aria-label="End the conversation"]'), null, 'the voice screen stayed closed');
+  assert.ok(await session.panel.$('[aria-label="Talk to the copilot"]'), 'the talk button is back');
+  const opened = mock.live.sessions.filter(s => s.voice).slice(before);
+  assert.ok(
+    opened.every(s => s.closed),
+    'no conversation is left open',
+  );
+  await session.close();
 });

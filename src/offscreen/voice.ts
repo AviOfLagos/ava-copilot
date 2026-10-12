@@ -1,4 +1,5 @@
 import { pcm16Base64 } from './live';
+import { SpeechGate } from './vad';
 import type { LiveOptions } from './live';
 
 /**
@@ -7,6 +8,8 @@ import type { LiveOptions } from './live';
  * It can be told things to say (a task finished, a send waits for Confirm), and it never approves
  * anything: approval stays a click.
  */
+
+export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
 
 export const OUTPUT_RATE = 24_000;
 const INPUT_RATE = 16_000;
@@ -35,7 +38,7 @@ export interface VoiceEvents {
   // Runs a tool in the background and returns its result
   // `heard` is what the user has said so far in this turn, so a tool can tell where its arguments came from
   onTool: (name: string, args: Record<string, unknown>, heard: string) => Promise<unknown>;
-  onStatus: (status: 'connecting' | 'listening' | 'speaking' | 'off', error?: string) => void;
+  onStatus: (status: VoiceStatus, error?: string) => void;
   // Seconds of audio sent and played, for usage
   onUsage: (inputSeconds: number, outputSeconds: number) => void;
 }
@@ -72,6 +75,7 @@ export class VoiceSession {
   private socket: WebSocket | null = null;
   private ready = false;
   private stopped = false;
+  private readonly gate = new SpeechGate({ sampleRate: INPUT_RATE });
   private handle: string | null = null;
   private mic: MediaStream | null = null;
   private input: AudioContext | null = null;
@@ -100,7 +104,7 @@ export class VoiceSession {
     this.input = new AudioContext({ sampleRate: INPUT_RATE });
     await this.input.audioWorklet.addModule(chrome.runtime.getURL('pcm-worklet.js'));
     const node = new AudioWorkletNode(this.input, 'pcm-capture', { channelCount: 1, channelCountMode: 'explicit' });
-    node.port.onmessage = event => this.send(event.data as Float32Array);
+    node.port.onmessage = event => this.fromMic(event.data as Float32Array);
     this.input.createMediaStreamSource(this.mic).connect(node);
     const mute = this.input.createGain();
     mute.gain.value = 0;
@@ -124,6 +128,25 @@ export class VoiceSession {
   say(notice: string): void {
     this.notices.push(notice);
     this.flushNotices();
+  }
+
+  /**
+   * Microphone audio goes up only while someone speaks: the model bills every second it is sent, so
+   * silence stays here. When speech stops, the model is told the stream paused, so it answers at once.
+   */
+  private fromMic(samples: Float32Array): void {
+    if (!this.ready || this.stopped) return;
+    const { send, ended } = this.gate.push(samples);
+    for (const chunk of send) this.send(chunk);
+    if (ended && this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+    }
+  }
+
+  /** Reports how the conversation is going, but never after it ended: a late message must not reopen it. */
+  private status(status: VoiceStatus, error?: string): void {
+    if (this.stopped && status !== 'off') return;
+    this.events.onStatus(status, error);
   }
 
   private send(samples: Float32Array): void {
@@ -186,11 +209,13 @@ export class VoiceSession {
   private connect(): void {
     if (this.stopped) return;
     this.ready = false;
-    this.events.onStatus('connecting');
+    this.status('connecting');
     const socket = new WebSocket(`${this.options.endpoint}?key=${encodeURIComponent(this.options.apiKey)}`);
     this.socket = socket;
     socket.onopen = () => socket.send(JSON.stringify(voiceSetup(this.options, this.handle)));
     socket.onmessage = async event => {
+      // Nothing from a socket that was replaced or a session that ended
+      if (this.socket !== socket || this.stopped) return;
       const raw = typeof event.data === 'string' ? event.data : await (event.data as Blob).text();
       let message: {
         setupComplete?: unknown;
@@ -212,8 +237,11 @@ export class VoiceSession {
       }
       if (message.setupComplete) {
         this.ready = true;
-        this.events.onStatus('listening');
-        for (const chunk of this.options.preroll?.splice(0) ?? []) this.send(chunk);
+        this.status('listening');
+        // What followed "Hey Ava" is speech already: it goes up, and the gate stays open for the rest
+        const preroll = this.options.preroll?.splice(0) ?? [];
+        for (const chunk of preroll) this.send(chunk);
+        if (preroll.length) this.gate.force();
         this.flushNotices();
       }
       const content = message.serverContent;
@@ -223,7 +251,7 @@ export class VoiceSession {
         if (part.inlineData?.data) {
           if (!this.speaking) {
             this.speaking = true;
-            this.events.onStatus('speaking');
+            this.status('speaking');
           }
           this.play(part.inlineData.data);
         }
@@ -234,7 +262,7 @@ export class VoiceSession {
         this.heard = '';
         this.said = '';
         this.speaking = false;
-        this.events.onStatus('listening');
+        this.status('listening');
         this.flushNotices();
       }
       for (const call of message.toolCall?.functionCalls ?? []) {
@@ -258,7 +286,7 @@ export class VoiceSession {
       this.ready = false;
       // A refused key or model ends the session; anything else reconnects
       if (event.code === 1008 || event.code === 1007) {
-        this.events.onStatus('off', event.reason || 'The voice service refused the session');
+        this.status('off', event.reason || 'The voice service refused the session');
         return;
       }
       setTimeout(() => this.connect(), 1000);
