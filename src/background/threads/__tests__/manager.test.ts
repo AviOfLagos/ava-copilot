@@ -135,6 +135,10 @@ beforeEach(() => {
   db = new AviCopilotDb(`test-${crypto.randomUUID()}`);
   store = createThreadStore(db);
   manager = new ThreadManager(store);
+  // This suite names the seeded default workspace ("Nexprove") below; everyone else's build seeds a
+  // single neutral workspace instead (src/storage/lib/workspaces/workspaces.ts), so pin the profile
+  // this suite was written against rather than coupling the assertion to whichever is the default.
+  vi.stubEnv('VITE_SEED_PROFILE', 'avi');
 });
 
 afterEach(async () => {
@@ -142,6 +146,7 @@ afterEach(async () => {
   await settle();
   await db.delete();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe('ThreadManager', () => {

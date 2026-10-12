@@ -40,20 +40,47 @@ interface WorkspacesState {
   defaultWorkspaceMigrated: boolean;
 }
 
-const DEFAULTS: Omit<Workspace, 'createdAt'>[] = [
-  { id: 'nexprove', name: 'Nexprove', about: 'My company.', keywords: ['nexprove', 'next prove'], accounts: {} },
-  {
-    id: 'tech-ember-fest',
-    name: 'Tech Ember Fest',
-    about: 'The Tech Ember Fest event.',
-    keywords: ['tech ember', 'techember', 'tech ember fest'],
-    accounts: {},
-  },
-  { id: 'ellum-ai', name: 'Ellum AI', about: '', keywords: ['ellum', 'ellum ai'], accounts: {} },
-];
+export type SeedProfile = 'avi' | 'neutral';
 
-// The workspace a fresh install, or one upgrading from before a default existed, starts with
-export const DEFAULT_WORKSPACE_ID = 'nexprove';
+/**
+ * Which workspaces a fresh install seeds. 'avi' is the owner's own personal setup, built only when a
+ * local `.env.local` sets `VITE_SEED_PROFILE=avi` (see `CLAUDE.md`'s `.env.local` convention and
+ * `docs/distribution.md`). Every other build — including the public release zip, always built from a
+ * clean checkout that carries no `.env.local` (`scripts/release.mjs`) — gets 'neutral' instead, so
+ * nothing of the owner's ships to anyone else.
+ */
+export function activeSeedProfile(): SeedProfile {
+  return import.meta.env.VITE_SEED_PROFILE === 'avi' ? 'avi' : 'neutral';
+}
+
+interface Seed {
+  defaults: Omit<Workspace, 'createdAt'>[];
+  // Where a fresh install of this profile starts, before the user picks otherwise
+  defaultWorkspaceId: string;
+}
+
+const SEEDS: Record<SeedProfile, Seed> = {
+  avi: {
+    defaults: [
+      { id: 'nexprove', name: 'Nexprove', about: 'My company.', keywords: ['nexprove', 'next prove'], accounts: {} },
+      {
+        id: 'tech-ember-fest',
+        name: 'Tech Ember Fest',
+        about: 'The Tech Ember Fest event.',
+        keywords: ['tech ember', 'techember', 'tech ember fest'],
+        accounts: {},
+      },
+      { id: 'ellum-ai', name: 'Ellum AI', about: '', keywords: ['ellum', 'ellum ai'], accounts: {} },
+    ],
+    defaultWorkspaceId: 'nexprove',
+  },
+  // One empty workspace, so a chat, a background run or routing still has somewhere to fall back to;
+  // the user can rename it, add more, or leave it alone.
+  neutral: {
+    defaults: [{ id: 'default', name: 'My Workspace', about: '', keywords: [], accounts: {} }],
+    defaultWorkspaceId: 'default',
+  },
+};
 
 const storage = createStorage<WorkspacesState>(
   'workspaces',
@@ -74,12 +101,17 @@ async function ensureSeeded(): Promise<WorkspacesState> {
     defaultWorkspaceMigrated: false,
   };
   if (state.seeded && state.defaultWorkspaceMigrated) return state;
+  const seed = SEEDS[activeSeedProfile()];
   const next: WorkspacesState = state.seeded
-    ? { ...state, defaultWorkspaceId: state.defaultWorkspaceId ?? DEFAULT_WORKSPACE_ID, defaultWorkspaceMigrated: true }
+    ? {
+        ...state,
+        defaultWorkspaceId: state.defaultWorkspaceId ?? seed.defaultWorkspaceId,
+        defaultWorkspaceMigrated: true,
+      }
     : {
-        items: [...state.items, ...DEFAULTS.map(item => ({ ...item, createdAt: Date.now() }))],
+        items: [...state.items, ...seed.defaults.map(item => ({ ...item, createdAt: Date.now() }))],
         seeded: true,
-        defaultWorkspaceId: state.defaultWorkspaceId ?? DEFAULT_WORKSPACE_ID,
+        defaultWorkspaceId: state.defaultWorkspaceId ?? seed.defaultWorkspaceId,
         defaultWorkspaceMigrated: true,
       };
   await storage.set(next);
