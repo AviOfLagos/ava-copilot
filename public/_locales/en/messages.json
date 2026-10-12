@@ -2692,5 +2692,8 @@
   },
   "errors_timeout": {
     "message": "No answer came in time. Try again."
+  },
+  "threads_retried": {
+    "message": "Trying the task again from the start."
   }
 }

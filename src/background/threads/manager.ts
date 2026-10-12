@@ -185,6 +185,27 @@ export class ThreadManager {
     await this.start(threadId, thread.activeTask ?? CONTINUE_TASK, binding, true);
   }
 
+  /**
+   * Runs the thread's last task again from the start, with a fresh agent: for a run that failed, stopped
+   * or gave a poor answer. What happened before stays in the history, and anything that sends still
+   * asks for the click again, so nothing goes out twice without the user.
+   */
+  async retry(threadId: string, windowId?: number): Promise<void> {
+    const thread = await this.store.get(threadId);
+    if (!thread || this.running.has(threadId)) return;
+    const lastTask = (await this.store.messages(threadId)).filter(message => message.actor === 'user').at(-1)?.content;
+    const task = lastTask ?? thread.activeTask;
+    if (!task) return;
+    await this.checkCapacity();
+    const tabIds = await existingTabs(thread.boundTabIds);
+    const binding = tabIds.length ? new TabBinding(tabIds, null) : await this.bindingFor(thread, windowId);
+    this.assertFree(threadId, binding.tabIds);
+    // A parked agent would carry on from where it stopped; a retry starts over
+    this.parked.delete(threadId);
+    await this.store.addMessage(threadId, 'system', t('threads_retried'));
+    await this.start(threadId, task, binding, false);
+  }
+
   /** Stops a thread's run. */
   async cancel(threadId: string, reason: StopReason | null = null): Promise<void> {
     const runner = this.running.get(threadId);

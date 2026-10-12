@@ -2692,5 +2692,8 @@
   },
   "errors_timeout": {
     "message": "未及時收到回應，請再試一次。"
+  },
+  "threads_retried": {
+    "message": "從頭再試一次這項任務。"
   }
 }

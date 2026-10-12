@@ -31,6 +31,9 @@ binding version of the rules; the plan has the reasons.
     handler)` (reply with `context.reply({type, requestId, ...})`), `registerRecovery`, `registerAgentAction({create,
     prompt})`, `registerVoiceTool({declaration, handler, guardLabel})`, `registerOffscreenBusy`;
     `src/background/jobs/runner.ts`: `registerJobHandler(kind, handler)` + `jobs.schedule({...})`.
+    Core services (threads, meetings, kb, voice, calendar, brief) come from `services()` in
+    `src/background/registry/services.ts` — call it inside handlers only, never at import time.
+    `services().threads.retry(threadId, windowId)` re-runs a thread's last task with a fresh agent.
   - panel `src/side-panel/<stream>/register.tsx` → `src/side-panel/registry.ts`: `registerPlace({id, label, icon,
     group: 'top' | 'profile', order, Component})`, `registerSettingsSection`. Components get `api: PanelApi`
     (`request` with timeout, `post`, `go`, `openThread`).

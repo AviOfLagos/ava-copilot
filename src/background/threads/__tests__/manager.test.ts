@@ -261,6 +261,19 @@ describe('ThreadManager', () => {
     expect(lastExecutor().tasks).toEqual(['Find the standup time', 'Now post it']);
   });
 
+  it('retries the last task from the start with a fresh agent', async () => {
+    browser.open('https://chat.example');
+    const threadId = await manager.send({ text: 'Find the standup time' });
+    await lastExecutor().complete('Not found.');
+    await settle();
+
+    await manager.retry(threadId);
+    expect(FakeExecutor.created).toHaveLength(2);
+    expect(lastExecutor().tasks).toEqual(['Find the standup time']);
+    const notes = (await store.messages(threadId)).filter(message => message.actor === 'system');
+    expect(notes.at(-1)?.content).toContain('threads_retried');
+  });
+
   it('starts an old thread with its conversation as context when nothing is in memory', async () => {
     browser.open('https://chat.example');
     const thread = await store.create({ title: 'Standup' });

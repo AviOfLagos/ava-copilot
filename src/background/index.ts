@@ -7,6 +7,7 @@ import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
 import { dispatchCommand, registerRecovery, runRecoveries } from './registry';
+import { setServices } from './registry/services';
 import './registers';
 import { jobs } from './jobs/runner';
 import { MorningBrief } from './brief/manager';
@@ -43,6 +44,7 @@ calendar.start();
 const brief = new MorningBrief(calendar);
 brief.start();
 voice.brief = brief;
+setServices({ threads, meetings, kb, voice, calendar, brief });
 // A meeting about to start is said aloud when a conversation is on
 calendar.onReminder(({ minutes }) => {
   // The notice never carries the title: it comes from an invite anyone could send. Voice reads it
