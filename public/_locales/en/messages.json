@@ -3727,5 +3727,610 @@
   },
   "help_readAloud_where": {
     "message": "Settings › Voice"
+  },
+  "agents_place": {
+    "message": "Agents"
+  },
+  "agents_title": {
+    "message": "Agents"
+  },
+  "agents_intro": {
+    "message": "Agents work for you on their own, in a window of their own, never in your tabs. They wake on a schedule, when you open a page they watch, or when a message or another agent sets them off. One task slot always stays free for you."
+  },
+  "agents_section_review": {
+    "message": "Waiting for your review"
+  },
+  "agents_section_yours": {
+    "message": "Your agents"
+  },
+  "agents_section_templates": {
+    "message": "Start from a template"
+  },
+  "agents_empty_title": {
+    "message": "No agents yet"
+  },
+  "agents_empty_body": {
+    "message": "Ask in chat for something you want done again and again, or start from a template below. You check the agent and click Create before it ever runs."
+  },
+  "agents_empty_example": {
+    "message": "Make an agent that reads my new X mentions when I open X and lists the ones that need a reply"
+  },
+  "agents_template_social": {
+    "message": "Social media watcher"
+  },
+  "agents_template_social_hint": {
+    "message": "Reads new posts and mentions when you open X or LinkedIn"
+  },
+  "agents_template_research": {
+    "message": "Research scout"
+  },
+  "agents_template_research_hint": {
+    "message": "Weekday mornings: the latest on AI agents, with links"
+  },
+  "agents_template_use": {
+    "message": "Use"
+  },
+  "agents_template_use_a11y": {
+    "message": "Start an agent from the template $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research scout"
+      }
+    }
+  },
+  "agents_state_draft": {
+    "message": "Draft"
+  },
+  "agents_state_paused": {
+    "message": "Paused"
+  },
+  "agents_state_running": {
+    "message": "Running"
+  },
+  "agents_state_waiting": {
+    "message": "Waits for you"
+  },
+  "agents_state_idle": {
+    "message": "Idle"
+  },
+  "agents_state_change": {
+    "message": "Change to review"
+  },
+  "agents_next": {
+    "message": "next $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 08:00"
+      }
+    }
+  },
+  "agents_spentToday": {
+    "message": "$AMOUNT$ today",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "0.12 USD"
+      }
+    }
+  },
+  "agents_trigger_tab": {
+    "message": "When a page matching $PATTERN$ opens",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "x.com/*"
+      }
+    }
+  },
+  "agents_trigger_inbox": {
+    "message": "When an Inbox item arrives"
+  },
+  "agents_trigger_inboxFrom": {
+    "message": "When an Inbox item from $SOURCE$ arrives",
+    "placeholders": {
+      "source": {
+        "content": "$1",
+        "example": "slack"
+      }
+    }
+  },
+  "agents_trigger_topic": {
+    "message": "When an agent posts to $TOPIC$",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_trigger_manual": {
+    "message": "When you ask"
+  },
+  "agents_triggerType_schedule": {
+    "message": "Schedule"
+  },
+  "agents_triggerType_tab": {
+    "message": "Watched page"
+  },
+  "agents_triggerType_inbox": {
+    "message": "Inbox item"
+  },
+  "agents_triggerType_topic": {
+    "message": "Bus topic"
+  },
+  "agents_triggerType_manual": {
+    "message": "By hand"
+  },
+  "agents_by_hand": {
+    "message": "by hand"
+  },
+  "agents_by_schedule": {
+    "message": "on schedule"
+  },
+  "agents_by_tab": {
+    "message": "by a watched page"
+  },
+  "agents_by_inbox": {
+    "message": "by an Inbox item"
+  },
+  "agents_by_topic": {
+    "message": "by another agent"
+  },
+  "agents_by_workflow": {
+    "message": "by a workflow"
+  },
+  "agents_by_chat": {
+    "message": "from chat"
+  },
+  "agents_by_voice": {
+    "message": "by voice"
+  },
+  "agents_back": {
+    "message": "Back to agents"
+  },
+  "agents_gone": {
+    "message": "This agent does not exist any more."
+  },
+  "agents_runNow": {
+    "message": "Run now"
+  },
+  "agents_stop": {
+    "message": "Stop"
+  },
+  "agents_pause": {
+    "message": "Pause"
+  },
+  "agents_resume": {
+    "message": "Resume"
+  },
+  "agents_edit": {
+    "message": "Edit agent"
+  },
+  "agents_delete": {
+    "message": "Delete agent"
+  },
+  "agents_delete_confirm": {
+    "message": "Delete this agent, its schedule and its run log? Its tabs close. What it saved to your knowledge base stays."
+  },
+  "agents_cancel": {
+    "message": "Cancel"
+  },
+  "agents_draft_new": {
+    "message": "New agent — check it"
+  },
+  "agents_draft_change": {
+    "message": "A change to check"
+  },
+  "agents_draft_never": {
+    "message": "Drafts never run. Nothing happens until you click."
+  },
+  "agents_draft_noChange": {
+    "message": "Nothing changes."
+  },
+  "agents_create": {
+    "message": "Create"
+  },
+  "agents_apply": {
+    "message": "Apply"
+  },
+  "agents_discard": {
+    "message": "Discard"
+  },
+  "agents_none": {
+    "message": "None"
+  },
+  "agents_anySite": {
+    "message": "Any site its task needs"
+  },
+  "agents_yes": {
+    "message": "Yes"
+  },
+  "agents_no": {
+    "message": "No"
+  },
+  "agents_autoPaused": {
+    "message": "Paused after failing again and again"
+  },
+  "agents_waiting_title": {
+    "message": "Waits for your click"
+  },
+  "agents_waiting_body": {
+    "message": "Its task wants to do something that needs your approval. Open its chat to answer."
+  },
+  "agents_waiting_tainted": {
+    "message": "This run read content from outside; check what it is about to do."
+  },
+  "agents_waiting_open": {
+    "message": "Open its chat"
+  },
+  "agents_section_profile": {
+    "message": "What it does"
+  },
+  "agents_section_tabs": {
+    "message": "Its tabs"
+  },
+  "agents_section_runs": {
+    "message": "Runs"
+  },
+  "agents_section_knowledge": {
+    "message": "Its knowledge"
+  },
+  "agents_section_usage": {
+    "message": "Usage"
+  },
+  "agents_field_name": {
+    "message": "Name"
+  },
+  "agents_field_avatar": {
+    "message": "Avatar"
+  },
+  "agents_field_instructions": {
+    "message": "Instructions"
+  },
+  "agents_field_startUrl": {
+    "message": "Start page"
+  },
+  "agents_field_domains": {
+    "message": "Sites"
+  },
+  "agents_field_triggers": {
+    "message": "Wakes"
+  },
+  "agents_field_publishes": {
+    "message": "Posts to"
+  },
+  "agents_field_subscribes": {
+    "message": "Listens to"
+  },
+  "agents_field_modelRole": {
+    "message": "Model"
+  },
+  "agents_field_budget": {
+    "message": "Budget"
+  },
+  "agents_field_skills": {
+    "message": "Skills"
+  },
+  "agents_field_connectors": {
+    "message": "Connectors"
+  },
+  "agents_field_workspace": {
+    "message": "Workspace"
+  },
+  "agents_field_inboxResults": {
+    "message": "Results in Inbox"
+  },
+  "agents_field_executor": {
+    "message": "Works in"
+  },
+  "agents_budget_daily": {
+    "message": "$AMOUNT$ a day",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_budget_steps": {
+    "message": "$COUNT$ steps a run",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "agents_budget_runs": {
+    "message": "$COUNT$ runs a day",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "24"
+      }
+    }
+  },
+  "agents_triggers": {
+    "message": "When it wakes"
+  },
+  "agents_triggers_none": {
+    "message": "Only when you ask"
+  },
+  "agents_tab_focus": {
+    "message": "Show $TITLE$ in the agents window",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Home / X"
+      }
+    }
+  },
+  "agents_tabs_none": {
+    "message": "No tabs open. A run opens one in the agents window."
+  },
+  "agents_runs_none": {
+    "message": "No runs yet."
+  },
+  "agents_knowledge_open": {
+    "message": "Knowledge base"
+  },
+  "agents_knowledge_graph": {
+    "message": "Open its graph in a tab"
+  },
+  "agents_knowledge_count": {
+    "message": "$COUNT$ items from its work",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "agents_knowledge_none": {
+    "message": "Nothing from its work in your knowledge base yet."
+  },
+  "agents_usage_today": {
+    "message": "Today"
+  },
+  "agents_usage_week": {
+    "message": "7 days"
+  },
+  "agents_usage_all": {
+    "message": "All"
+  },
+  "agents_usage_cap": {
+    "message": "Today $SPENT$ of its $CAP$",
+    "placeholders": {
+      "spent": {
+        "content": "$1",
+        "example": "0.20 USD"
+      },
+      "cap": {
+        "content": "$2",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_tokens": {
+    "message": "$COUNT$ tokens",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12k"
+      }
+    }
+  },
+  "agents_unpriced": {
+    "message": "no price"
+  },
+  "agents_log_title": {
+    "message": "Run log"
+  },
+  "agents_log_trigger": {
+    "message": "Set off"
+  },
+  "agents_log_start": {
+    "message": "Opened"
+  },
+  "agents_log_task": {
+    "message": "Task"
+  },
+  "agents_log_plan": {
+    "message": "Plan"
+  },
+  "agents_log_action": {
+    "message": "Action"
+  },
+  "agents_log_notice": {
+    "message": "Note"
+  },
+  "agents_log_retry": {
+    "message": "Retry"
+  },
+  "agents_log_error": {
+    "message": "Error"
+  },
+  "agents_log_model": {
+    "message": "Model call"
+  },
+  "agents_log_approval": {
+    "message": "Waits for you"
+  },
+  "agents_log_publish": {
+    "message": "Bus"
+  },
+  "agents_log_end": {
+    "message": "Ended"
+  },
+  "agents_log_startText": {
+    "message": "Opened $URL$ in the agents window",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://x.com/home"
+      }
+    }
+  },
+  "agents_log_asked": {
+    "message": "Asked you in the Inbox"
+  },
+  "agents_log_posted": {
+    "message": "Posted to $TOPIC$ for $COUNT$ agents",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      },
+      "count": {
+        "content": "$2",
+        "example": "2"
+      }
+    }
+  },
+  "agents_log_dropped": {
+    "message": "Not posted to $TOPIC$: it passed through too many agents",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_log_tainted": {
+    "message": "outside content"
+  },
+  "agents_log_calls": {
+    "message": "$COUNT$ model calls",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "agents_log_retries": {
+    "message": "$COUNT$ retries",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_errors": {
+    "message": "$COUNT$ errors",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_openChat": {
+    "message": "Open chat"
+  },
+  "agents_edit_title": {
+    "message": "Edit agent"
+  },
+  "agents_edit_name": {
+    "message": "Name"
+  },
+  "agents_edit_avatar": {
+    "message": "Emoji"
+  },
+  "agents_edit_instructions": {
+    "message": "Instructions"
+  },
+  "agents_edit_startUrl": {
+    "message": "Start page"
+  },
+  "agents_edit_startUrlHint": {
+    "message": "Where each run starts, unless a watched page set it off."
+  },
+  "agents_edit_domains": {
+    "message": "Sites it may use"
+  },
+  "agents_edit_domainsHint": {
+    "message": "One per line, e.g. x.com. Empty: any site its task needs."
+  },
+  "agents_edit_role": {
+    "message": "Model"
+  },
+  "agents_edit_workspace": {
+    "message": "Workspace"
+  },
+  "agents_edit_noWorkspace": {
+    "message": "No workspace"
+  },
+  "agents_edit_dailyUsd": {
+    "message": "USD a day"
+  },
+  "agents_edit_noCap": {
+    "message": "No cap"
+  },
+  "agents_edit_maxSteps": {
+    "message": "Steps a run"
+  },
+  "agents_edit_runsPerDay": {
+    "message": "Runs a day"
+  },
+  "agents_edit_publishes": {
+    "message": "Posts its result to"
+  },
+  "agents_edit_publishesHint": {
+    "message": "Topics other agents listen to, e.g. research.brief. Empty: none."
+  },
+  "agents_edit_inboxResults": {
+    "message": "Leave each result in the Inbox"
+  },
+  "agents_edit_triggerType": {
+    "message": "Kind of trigger"
+  },
+  "agents_edit_triggerValue": {
+    "message": "Trigger setting"
+  },
+  "agents_edit_addTrigger": {
+    "message": "Add trigger"
+  },
+  "agents_edit_removeTrigger": {
+    "message": "Remove: $TRIGGER$",
+    "placeholders": {
+      "trigger": {
+        "content": "$1",
+        "example": "When you ask"
+      }
+    }
+  },
+  "agents_edit_triggerNeedsValue": {
+    "message": "This trigger needs a setting."
+  },
+  "agents_edit_cronHint": {
+    "message": "0 8 * * 1-5 (weekdays 08:00)"
+  },
+  "agents_edit_patternHint": {
+    "message": "x.com/* or *.linkedin.com/feed*"
+  },
+  "agents_edit_sourceHint": {
+    "message": "slack, gmail… (empty: any)"
+  },
+  "agents_edit_topicHint": {
+    "message": "social.mentions"
+  },
+  "agents_edit_save": {
+    "message": "Save"
+  },
+  "agents_role_smart": {
+    "message": "Smart (reads and judges)"
+  },
+  "agents_role_fast": {
+    "message": "Fast (light checks)"
+  },
+  "agents_role_vision": {
+    "message": "Vision (sees the page)"
+  },
+  "agents_role_local": {
+    "message": "Local (on this Mac)"
   }
 }

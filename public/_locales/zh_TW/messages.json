@@ -3727,5 +3727,610 @@
   },
   "help_readAloud_where": {
     "message": "設定 › 語音"
+  },
+  "agents_place": {
+    "message": "代理人"
+  },
+  "agents_title": {
+    "message": "代理人"
+  },
+  "agents_intro": {
+    "message": "代理人會自行替你工作，在它們自己的視窗裡，絕不碰你的分頁。它們會依排程、在你開啟它們監看的頁面時，或在訊息或其他代理人觸發時醒來。永遠為你保留一個任務名額。"
+  },
+  "agents_section_review": {
+    "message": "等你檢查"
+  },
+  "agents_section_yours": {
+    "message": "你的代理人"
+  },
+  "agents_section_templates": {
+    "message": "從範本開始"
+  },
+  "agents_empty_title": {
+    "message": "還沒有代理人"
+  },
+  "agents_empty_body": {
+    "message": "在聊天中說出你想反覆完成的事，或從下方範本開始。代理人執行前，你會先檢查並按下「建立」。"
+  },
+  "agents_empty_example": {
+    "message": "建立一個代理人：我打開 X 時讀取新的提及，並列出需要回覆的"
+  },
+  "agents_template_social": {
+    "message": "社群媒體監看"
+  },
+  "agents_template_social_hint": {
+    "message": "你打開 X 或 LinkedIn 時讀取新貼文與提及"
+  },
+  "agents_template_research": {
+    "message": "研究偵察員"
+  },
+  "agents_template_research_hint": {
+    "message": "平日早上：AI 代理人的最新消息，附連結"
+  },
+  "agents_template_use": {
+    "message": "使用"
+  },
+  "agents_template_use_a11y": {
+    "message": "從範本 $NAME$ 建立代理人",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research scout"
+      }
+    }
+  },
+  "agents_state_draft": {
+    "message": "草稿"
+  },
+  "agents_state_paused": {
+    "message": "已暫停"
+  },
+  "agents_state_running": {
+    "message": "執行中"
+  },
+  "agents_state_waiting": {
+    "message": "等你處理"
+  },
+  "agents_state_idle": {
+    "message": "閒置"
+  },
+  "agents_state_change": {
+    "message": "有變更待檢查"
+  },
+  "agents_next": {
+    "message": "下次 $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 08:00"
+      }
+    }
+  },
+  "agents_spentToday": {
+    "message": "今天 $AMOUNT$",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "0.12 USD"
+      }
+    }
+  },
+  "agents_trigger_tab": {
+    "message": "開啟符合 $PATTERN$ 的頁面時",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "x.com/*"
+      }
+    }
+  },
+  "agents_trigger_inbox": {
+    "message": "收件匣有新項目時"
+  },
+  "agents_trigger_inboxFrom": {
+    "message": "收件匣有來自 $SOURCE$ 的新項目時",
+    "placeholders": {
+      "source": {
+        "content": "$1",
+        "example": "slack"
+      }
+    }
+  },
+  "agents_trigger_topic": {
+    "message": "有代理人發布到 $TOPIC$ 時",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_trigger_manual": {
+    "message": "你要求時"
+  },
+  "agents_triggerType_schedule": {
+    "message": "排程"
+  },
+  "agents_triggerType_tab": {
+    "message": "監看頁面"
+  },
+  "agents_triggerType_inbox": {
+    "message": "收件匣項目"
+  },
+  "agents_triggerType_topic": {
+    "message": "訊息匯流排主題"
+  },
+  "agents_triggerType_manual": {
+    "message": "手動"
+  },
+  "agents_by_hand": {
+    "message": "手動"
+  },
+  "agents_by_schedule": {
+    "message": "依排程"
+  },
+  "agents_by_tab": {
+    "message": "由監看頁面觸發"
+  },
+  "agents_by_inbox": {
+    "message": "由收件匣項目觸發"
+  },
+  "agents_by_topic": {
+    "message": "由其他代理人觸發"
+  },
+  "agents_by_workflow": {
+    "message": "由工作流程觸發"
+  },
+  "agents_by_chat": {
+    "message": "從聊天"
+  },
+  "agents_by_voice": {
+    "message": "用語音"
+  },
+  "agents_back": {
+    "message": "回到代理人"
+  },
+  "agents_gone": {
+    "message": "這個代理人已不存在。"
+  },
+  "agents_runNow": {
+    "message": "立即執行"
+  },
+  "agents_stop": {
+    "message": "停止"
+  },
+  "agents_pause": {
+    "message": "暫停"
+  },
+  "agents_resume": {
+    "message": "繼續"
+  },
+  "agents_edit": {
+    "message": "編輯代理人"
+  },
+  "agents_delete": {
+    "message": "刪除代理人"
+  },
+  "agents_delete_confirm": {
+    "message": "要刪除這個代理人、它的排程和執行紀錄嗎？它的分頁會關閉，存到你知識庫的內容會保留。"
+  },
+  "agents_cancel": {
+    "message": "取消"
+  },
+  "agents_draft_new": {
+    "message": "新代理人：請檢查"
+  },
+  "agents_draft_change": {
+    "message": "一項待檢查的變更"
+  },
+  "agents_draft_never": {
+    "message": "草稿永遠不會執行。你按下之前什麼都不會發生。"
+  },
+  "agents_draft_noChange": {
+    "message": "沒有變更。"
+  },
+  "agents_create": {
+    "message": "建立"
+  },
+  "agents_apply": {
+    "message": "套用"
+  },
+  "agents_discard": {
+    "message": "捨棄"
+  },
+  "agents_none": {
+    "message": "無"
+  },
+  "agents_anySite": {
+    "message": "任務需要的任何網站"
+  },
+  "agents_yes": {
+    "message": "是"
+  },
+  "agents_no": {
+    "message": "否"
+  },
+  "agents_autoPaused": {
+    "message": "連續失敗後已暫停"
+  },
+  "agents_waiting_title": {
+    "message": "等你按下"
+  },
+  "agents_waiting_body": {
+    "message": "它的任務想做一件需要你同意的事。打開它的聊天來回覆。"
+  },
+  "agents_waiting_tainted": {
+    "message": "這次執行讀取了外部內容，請檢查它即將做什麼。"
+  },
+  "agents_waiting_open": {
+    "message": "打開它的聊天"
+  },
+  "agents_section_profile": {
+    "message": "它做什麼"
+  },
+  "agents_section_tabs": {
+    "message": "它的分頁"
+  },
+  "agents_section_runs": {
+    "message": "執行紀錄"
+  },
+  "agents_section_knowledge": {
+    "message": "它的知識"
+  },
+  "agents_section_usage": {
+    "message": "用量"
+  },
+  "agents_field_name": {
+    "message": "名稱"
+  },
+  "agents_field_avatar": {
+    "message": "頭像"
+  },
+  "agents_field_instructions": {
+    "message": "指示"
+  },
+  "agents_field_startUrl": {
+    "message": "起始頁面"
+  },
+  "agents_field_domains": {
+    "message": "網站"
+  },
+  "agents_field_triggers": {
+    "message": "喚醒時機"
+  },
+  "agents_field_publishes": {
+    "message": "發布到"
+  },
+  "agents_field_subscribes": {
+    "message": "收聽"
+  },
+  "agents_field_modelRole": {
+    "message": "模型"
+  },
+  "agents_field_budget": {
+    "message": "預算"
+  },
+  "agents_field_skills": {
+    "message": "技能"
+  },
+  "agents_field_connectors": {
+    "message": "連接器"
+  },
+  "agents_field_workspace": {
+    "message": "工作區"
+  },
+  "agents_field_inboxResults": {
+    "message": "結果放進收件匣"
+  },
+  "agents_field_executor": {
+    "message": "工作位置"
+  },
+  "agents_budget_daily": {
+    "message": "每天 $AMOUNT$",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_budget_steps": {
+    "message": "每次執行 $COUNT$ 步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "agents_budget_runs": {
+    "message": "每天 $COUNT$ 次執行",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "24"
+      }
+    }
+  },
+  "agents_triggers": {
+    "message": "何時喚醒"
+  },
+  "agents_triggers_none": {
+    "message": "只在你要求時"
+  },
+  "agents_tab_focus": {
+    "message": "在代理人視窗中顯示 $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Home / X"
+      }
+    }
+  },
+  "agents_tabs_none": {
+    "message": "沒有開啟的分頁。執行時會在代理人視窗開一個。"
+  },
+  "agents_runs_none": {
+    "message": "還沒有執行紀錄。"
+  },
+  "agents_knowledge_open": {
+    "message": "知識庫"
+  },
+  "agents_knowledge_graph": {
+    "message": "在分頁中開啟它的圖譜"
+  },
+  "agents_knowledge_count": {
+    "message": "來自它工作的 $COUNT$ 個項目",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "agents_knowledge_none": {
+    "message": "你的知識庫還沒有它工作的內容。"
+  },
+  "agents_usage_today": {
+    "message": "今天"
+  },
+  "agents_usage_week": {
+    "message": "7 天"
+  },
+  "agents_usage_all": {
+    "message": "全部"
+  },
+  "agents_usage_cap": {
+    "message": "今天 $SPENT$／上限 $CAP$",
+    "placeholders": {
+      "spent": {
+        "content": "$1",
+        "example": "0.20 USD"
+      },
+      "cap": {
+        "content": "$2",
+        "example": "1.00 USD"
+      }
+    }
+  },
+  "agents_tokens": {
+    "message": "$COUNT$ 個 token",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12k"
+      }
+    }
+  },
+  "agents_unpriced": {
+    "message": "無價格"
+  },
+  "agents_log_title": {
+    "message": "執行紀錄"
+  },
+  "agents_log_trigger": {
+    "message": "觸發"
+  },
+  "agents_log_start": {
+    "message": "開啟"
+  },
+  "agents_log_task": {
+    "message": "任務"
+  },
+  "agents_log_plan": {
+    "message": "計畫"
+  },
+  "agents_log_action": {
+    "message": "動作"
+  },
+  "agents_log_notice": {
+    "message": "備註"
+  },
+  "agents_log_retry": {
+    "message": "重試"
+  },
+  "agents_log_error": {
+    "message": "錯誤"
+  },
+  "agents_log_model": {
+    "message": "模型呼叫"
+  },
+  "agents_log_approval": {
+    "message": "等你處理"
+  },
+  "agents_log_publish": {
+    "message": "匯流排"
+  },
+  "agents_log_end": {
+    "message": "結束"
+  },
+  "agents_log_startText": {
+    "message": "在代理人視窗開啟 $URL$",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://x.com/home"
+      }
+    }
+  },
+  "agents_log_asked": {
+    "message": "已在收件匣詢問你"
+  },
+  "agents_log_posted": {
+    "message": "已發布到 $TOPIC$，給 $COUNT$ 個代理人",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      },
+      "count": {
+        "content": "$2",
+        "example": "2"
+      }
+    }
+  },
+  "agents_log_dropped": {
+    "message": "未發布到 $TOPIC$：已經過太多代理人",
+    "placeholders": {
+      "topic": {
+        "content": "$1",
+        "example": "research.brief"
+      }
+    }
+  },
+  "agents_log_tainted": {
+    "message": "外部內容"
+  },
+  "agents_log_calls": {
+    "message": "$COUNT$ 次模型呼叫",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "agents_log_retries": {
+    "message": "$COUNT$ 次重試",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_errors": {
+    "message": "$COUNT$ 個錯誤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "agents_log_openChat": {
+    "message": "開啟聊天"
+  },
+  "agents_edit_title": {
+    "message": "編輯代理人"
+  },
+  "agents_edit_name": {
+    "message": "名稱"
+  },
+  "agents_edit_avatar": {
+    "message": "表情符號"
+  },
+  "agents_edit_instructions": {
+    "message": "指示"
+  },
+  "agents_edit_startUrl": {
+    "message": "起始頁面"
+  },
+  "agents_edit_startUrlHint": {
+    "message": "每次執行的起點，除非是由監看頁面觸發。"
+  },
+  "agents_edit_domains": {
+    "message": "可使用的網站"
+  },
+  "agents_edit_domainsHint": {
+    "message": "每行一個，例如 x.com。留空：任務需要的任何網站。"
+  },
+  "agents_edit_role": {
+    "message": "模型"
+  },
+  "agents_edit_workspace": {
+    "message": "工作區"
+  },
+  "agents_edit_noWorkspace": {
+    "message": "無工作區"
+  },
+  "agents_edit_dailyUsd": {
+    "message": "每天美元"
+  },
+  "agents_edit_noCap": {
+    "message": "無上限"
+  },
+  "agents_edit_maxSteps": {
+    "message": "每次步數"
+  },
+  "agents_edit_runsPerDay": {
+    "message": "每天次數"
+  },
+  "agents_edit_publishes": {
+    "message": "把結果發布到"
+  },
+  "agents_edit_publishesHint": {
+    "message": "其他代理人收聽的主題，例如 research.brief。留空：不發布。"
+  },
+  "agents_edit_inboxResults": {
+    "message": "把每次結果放進收件匣"
+  },
+  "agents_edit_triggerType": {
+    "message": "觸發類型"
+  },
+  "agents_edit_triggerValue": {
+    "message": "觸發設定"
+  },
+  "agents_edit_addTrigger": {
+    "message": "新增觸發"
+  },
+  "agents_edit_removeTrigger": {
+    "message": "移除：$TRIGGER$",
+    "placeholders": {
+      "trigger": {
+        "content": "$1",
+        "example": "When you ask"
+      }
+    }
+  },
+  "agents_edit_triggerNeedsValue": {
+    "message": "這個觸發需要設定。"
+  },
+  "agents_edit_cronHint": {
+    "message": "0 8 * * 1-5（平日 08:00）"
+  },
+  "agents_edit_patternHint": {
+    "message": "x.com/* 或 *.linkedin.com/feed*"
+  },
+  "agents_edit_sourceHint": {
+    "message": "slack、gmail…（留空：任何）"
+  },
+  "agents_edit_topicHint": {
+    "message": "social.mentions"
+  },
+  "agents_edit_save": {
+    "message": "儲存"
+  },
+  "agents_role_smart": {
+    "message": "聰明（閱讀與判斷）"
+  },
+  "agents_role_fast": {
+    "message": "快速（輕量檢查）"
+  },
+  "agents_role_vision": {
+    "message": "視覺（看得到頁面）"
+  },
+  "agents_role_local": {
+    "message": "本機（在這台 Mac）"
   }
 }
