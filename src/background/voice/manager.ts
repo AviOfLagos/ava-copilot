@@ -33,6 +33,7 @@ import { THINK_INSTRUCTIONS } from './prompt';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { resolveModels } from '../threads/factory';
+import { economyVoiceOptions } from './engines/options';
 
 const logger = createLogger('Voice');
 
@@ -107,9 +108,11 @@ export class VoiceManager {
   ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean }> {
     if (this.running) return { ok: true };
     const generation = ++this.generation;
+    // Economy mode (Settings › Voice engines): speech is recognised and spoken on the device, no Gemini key needed
+    const economy = await economyVoiceOptions();
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
-    if (!gemini) throw new Error(t('voice_needsGemini'));
+    if (!gemini && !economy) throw new Error(t('voice_needsGemini'));
     if (await this.overCap()) throw new Error(t('usage_capReached_short'));
 
     const settings = await meetingSettingsStore.getSettings();
@@ -125,10 +128,14 @@ export class VoiceManager {
     const response = await toOffscreen<{ ok?: boolean; error?: string; micDenied?: boolean }>({
       type: 'voice_start',
       options: {
-        endpoint: settings.liveEndpoint,
-        // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
-        ...(usesLiveTokens(settings.liveEndpoint) ? { apiKey: '', tokenAuth: true } : { apiKey: gemini[1].apiKey }),
-        model: settings.liveModel,
+        ...(economy ?? {
+          endpoint: settings.liveEndpoint,
+          // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
+          ...(usesLiveTokens(settings.liveEndpoint)
+            ? { apiKey: '', tokenAuth: true }
+            : { apiKey: gemini?.[1].apiKey ?? '' }),
+          model: settings.liveModel,
+        }),
         instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`, history]
           .filter(Boolean)
           .join('\n\n'),

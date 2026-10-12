@@ -1,16 +1,18 @@
 import { Recorder } from './recorder';
 import type { RecorderOptions } from './recorder';
-import { VoiceSession } from './voice';
 import type { VoiceOptions } from './voice';
 import { WakeListener } from './wake';
 import { TtsPlayer } from './tts';
+import { createVoiceSession } from './stt/economy';
+import type { AnyVoiceSession, EconomyOptions } from './stt/economy';
+import './tts-local/register';
 
 /**
  * The offscreen document holds the meeting's media streams, which a service worker cannot.
  * It takes commands from the background and reports back to it.
  */
 let recorder: Recorder | null = null;
-let voice: VoiceSession | null = null;
+let voice: AnyVoiceSession | null = null;
 // Plays cloud voices (Gemini TTS) the background fetched; the key never comes here
 let tts: TtsPlayer | null = null;
 const wake = new WakeListener(() => {
@@ -76,8 +78,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (voice) return { ok: true };
         // The phrase and what followed it, when "Hey Ava" started this; listening pauses either way
         const fresh = wake.takeCapture();
-        const next = new VoiceSession(
-          { ...(message.options as VoiceOptions), preroll: fresh },
+        const next = createVoiceSession(
+          { ...(message.options as VoiceOptions | EconomyOptions), preroll: fresh },
           {
             onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
             onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),

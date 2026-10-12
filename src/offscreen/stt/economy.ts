@@ -1,0 +1,282 @@
+import type { EconomyHistoryItem, EconomyTurnReply, EconomyTurnRequest } from '../../background/voice/engines/protocol';
+import type { EconomyEngines } from '../../background/voice/engines/wire';
+import { localTts } from '../tts-local/shared';
+import { VoiceSession } from '../voice';
+import type { VoiceEvents, VoiceOptions, VoiceStatus, VoiceTool } from '../voice';
+import type { SttEngine } from './engines';
+import { recordHeard } from './listen';
+import { acquireStt, releaseStt } from './pool';
+import { hasWords, UtteranceCollector } from './utterances';
+
+/**
+ * The economy voice conversation: the same Talk button, tools and thread as the Gemini Live one, but no audio
+ * leaves the device. The microphone is cut into utterances by the speech gate, a local recogniser writes them
+ * down, the background answers with a text model and the voice tools, and a local voice speaks the answer.
+ * Talking over the answer stops it at once; the gate closing is the end of the user's turn.
+ */
+
+const INPUT_RATE = 16_000;
+// Speech over the copilot's answer this long stops the answer (shorter is a cough or an echo)
+const BARGE_IN_MS = 400;
+// Exchanges sent with each turn, newest last
+const HISTORY_TURNS = 8;
+const SORRY = 'Sorry, I could not answer that.';
+
+export interface EconomyOptions {
+  mode: 'economy';
+  instructions: string;
+  tools: VoiceTool[];
+  // What followed "Hey Ava", when the wake word started this: the start of the first utterance
+  preroll?: Float32Array[];
+  economy: EconomyEngines;
+}
+
+export interface EconomyDeps {
+  // Starts the microphone at 16 kHz; returns how to stop it
+  openMic: (onChunk: (samples: Float32Array) => void) => Promise<() => void>;
+  loadStt: (config: EconomyEngines['stt']) => Promise<SttEngine>;
+  releaseStt: () => void;
+  // Speaks and resolves once heard, or stopped
+  speak: (text: string, tts: EconomyEngines['tts']) => Promise<void>;
+  stopSpeaking: (tts: EconomyEngines['tts']) => void;
+  warmVoice: (tts: EconomyEngines['tts']) => Promise<void>;
+  // The background's answer to one turn
+  ask: (request: EconomyTurnRequest) => Promise<EconomyTurnReply>;
+}
+
+export class EconomySession {
+  private stopped = false;
+  private ready = false;
+  private closeMic: (() => void) | null = null;
+  private stt: SttEngine | null = null;
+  private readonly collector = new UtteranceCollector({ sampleRate: INPUT_RATE });
+  private readonly history: EconomyHistoryItem[] = [];
+  // Utterances waiting to be written down, then words waiting for an answer
+  private utterances: Float32Array[] = [];
+  private heardQueue: string[] = [];
+  private notices: string[] = [];
+  private transcribing = false;
+  private thinking = false;
+  private speaking = false;
+  private bargeSamples = 0;
+  // Bumped when the user talks over an answer: an answer still on its way is not spoken
+  private interruptions = 0;
+
+  constructor(
+    private readonly options: EconomyOptions,
+    private readonly events: VoiceEvents,
+    private readonly deps: EconomyDeps = browserDeps(),
+  ) {}
+
+  async start(): Promise<void> {
+    this.status('connecting');
+    // The voice loads while the recogniser does; an answer waits for it either way
+    void this.deps.warmVoice(this.options.economy.tts).catch(() => {});
+    const stt = await this.deps.loadStt(this.options.economy.stt);
+    // Ended while the recogniser loaded: it goes back at once
+    if (this.stopped) {
+      this.deps.releaseStt();
+      return;
+    }
+    this.stt = stt;
+    this.closeMic = await this.deps.openMic(samples => this.fromMic(samples));
+    if (this.stopped) this.closeMic();
+    this.ready = true;
+    this.collector.seed(this.options.preroll?.splice(0) ?? []);
+    this.status('listening');
+  }
+
+  stop(): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.ready = false;
+    this.closeMic?.();
+    this.closeMic = null;
+    if (this.speaking) this.deps.stopSpeaking(this.options.economy.tts);
+    if (this.stt) this.deps.releaseStt();
+    this.stt = null;
+    this.events.onStatus('off');
+  }
+
+  /** Something for the copilot to tell the user, said once it is free. */
+  say(notice: string): void {
+    if (!notice.trim()) return;
+    this.notices.push(notice);
+    this.pump();
+  }
+
+  private fromMic(samples: Float32Array): void {
+    if (!this.ready || this.stopped) return;
+    const { utterance } = this.collector.push(samples);
+    if (this.speaking && this.collector.speaking) {
+      this.bargeSamples += samples.length;
+      if (this.bargeSamples >= (BARGE_IN_MS / 1000) * INPUT_RATE) this.interrupt();
+    } else {
+      this.bargeSamples = 0;
+    }
+    if (utterance) {
+      this.utterances.push(utterance);
+      void this.transcribeNext();
+    }
+  }
+
+  /** The user talked over the answer: it stops now, and what they say next is the next turn. */
+  private interrupt(): void {
+    this.bargeSamples = 0;
+    this.interruptions++;
+    this.speaking = false;
+    this.deps.stopSpeaking(this.options.economy.tts);
+    this.status('listening');
+  }
+
+  private async transcribeNext(): Promise<void> {
+    if (this.transcribing || !this.stt) return;
+    const audio = this.utterances.shift();
+    if (!audio) return;
+    this.transcribing = true;
+    try {
+      const started = performance.now();
+      const text = (await this.stt.transcribe(audio)).trim();
+      if (!this.stopped && hasWords(text)) {
+        recordHeard(text, Math.round(performance.now() - started));
+        this.heardQueue.push(text);
+      }
+    } catch (error) {
+      if (!this.stopped) this.status('listening', `Speech recognition failed: ${String(error)}`);
+    } finally {
+      this.transcribing = false;
+    }
+    this.pump();
+    if (this.utterances.length) void this.transcribeNext();
+  }
+
+  /** Starts the next turn when nothing else is going on: the user's words first, then notices. */
+  private pump(): void {
+    if (this.stopped || !this.ready || this.thinking || this.speaking) return;
+    if (this.heardQueue.length) {
+      // Words that came while the copilot was busy are one turn together
+      const heard = this.heardQueue.splice(0).join(' ');
+      void this.turn({ heard });
+      return;
+    }
+    if (this.notices.length && !this.transcribing && !this.collector.speaking && !this.utterances.length) {
+      void this.turn({ notice: this.notices.splice(0).join('\n') });
+    }
+  }
+
+  private async turn(input: { heard?: string; notice?: string }): Promise<void> {
+    this.thinking = true;
+    const interruptions = this.interruptions;
+    let reply: EconomyTurnReply;
+    try {
+      reply = await this.deps.ask({
+        type: 'voice_engine_turn',
+        ...input,
+        history: this.history.slice(-HISTORY_TURNS),
+        instructions: this.options.instructions,
+        tools: this.options.tools,
+      });
+    } catch (error) {
+      reply = { said: '', error: error instanceof Error ? error.message : String(error) };
+    }
+    this.thinking = false;
+    if (this.stopped) return;
+    const heard = input.heard ?? '';
+    // A failed turn still answers, so the user is not left waiting; the reason shows on screen
+    const said = reply.said.trim() || (reply.error && heard ? SORRY : '');
+    if (reply.error) this.status('listening', reply.error);
+    this.history.push(
+      input.notice
+        ? { heard: input.notice.slice(0, 4000), said: said.slice(0, 4000), notice: true }
+        : { heard: heard.slice(0, 4000), said: said.slice(0, 4000) },
+    );
+    if (heard || said) this.events.onTurn(heard, said);
+    // The user went on talking while this was being answered: their newer words come first
+    const overtaken = this.heardQueue.length > 0 || this.interruptions !== interruptions || this.collector.speaking;
+    if (said && !reply.ended && !overtaken) {
+      this.speaking = true;
+      this.status('speaking');
+      try {
+        await this.deps.speak(said, this.options.economy.tts);
+      } catch (error) {
+        if (!this.stopped) this.status('listening', `The voice failed: ${String(error)}`);
+      }
+      this.speaking = false;
+      this.bargeSamples = 0;
+      if (this.stopped) return;
+      this.status('listening');
+    }
+    this.pump();
+  }
+
+  /** Reports how the conversation is going, but never after it ended. */
+  private status(status: VoiceStatus, error?: string): void {
+    if (this.stopped && status !== 'off') return;
+    this.events.onStatus(status, error);
+  }
+}
+
+/** The real microphone, recogniser, voices and background. */
+function browserDeps(): EconomyDeps {
+  return {
+    openMic: async onChunk => {
+      const mic = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      const input = new AudioContext({ sampleRate: INPUT_RATE });
+      try {
+        await input.audioWorklet.addModule(chrome.runtime.getURL('pcm-worklet.js'));
+      } catch (error) {
+        mic.getTracks().forEach(track => track.stop());
+        void input.close();
+        throw error;
+      }
+      const node = new AudioWorkletNode(input, 'pcm-capture', { channelCount: 1, channelCountMode: 'explicit' });
+      node.port.onmessage = event => onChunk(event.data as Float32Array);
+      input.createMediaStreamSource(mic).connect(node);
+      const mute = input.createGain();
+      mute.gain.value = 0;
+      node.connect(mute).connect(input.destination);
+      return () => {
+        mic.getTracks().forEach(track => track.stop());
+        void input.close().catch(() => {});
+      };
+    },
+    loadStt: config => acquireStt(config),
+    releaseStt,
+    speak: async (text, tts) => {
+      if (tts.engine === 'system') {
+        const reply = (await chrome.runtime.sendMessage({
+          type: 'voice_engine_system_say',
+          text,
+          rate: tts.rate,
+          ...(tts.voice ? { voice: tts.voice } : {}),
+        })) as { ok?: boolean; error?: string } | undefined;
+        if (reply?.error) throw new Error(reply.error);
+        return;
+      }
+      await localTts().speak({ engine: tts.engine, text, voice: tts.voice, rate: tts.rate });
+    },
+    stopSpeaking: tts => {
+      if (tts.engine === 'system')
+        void chrome.runtime.sendMessage({ type: 'voice_engine_system_stop' }).catch(() => {});
+      else localTts().stop();
+    },
+    warmVoice: tts => (tts.engine === 'system' ? Promise.resolve() : localTts().warm(tts.engine)),
+    ask: async request => {
+      const reply = (await chrome.runtime.sendMessage(request)) as EconomyTurnReply | undefined;
+      return reply ?? { said: '', error: 'The background did not answer.' };
+    },
+  };
+}
+
+/** The conversation for these options: economy when asked for, else Gemini Live. */
+export function createVoiceSession(
+  options: VoiceOptions | EconomyOptions,
+  events: VoiceEvents,
+): VoiceSession | EconomySession {
+  if ((options as { mode?: string }).mode === 'economy') return new EconomySession(options as EconomyOptions, events);
+  return new VoiceSession(options as VoiceOptions, events);
+}
+
+export type AnyVoiceSession = VoiceSession | EconomySession;

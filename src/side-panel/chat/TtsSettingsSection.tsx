@@ -63,6 +63,8 @@ export default function TtsSettingsSection() {
           value={settings.engine}
           onChange={event => update({ engine: event.target.value as TtsEngineId })}>
           <option value="system">{t('speak_settings_engine_system')}</option>
+          <option value="kitten">{t('voice_engine_tts_kitten')}</option>
+          <option value="kokoro">{t('voice_engine_tts_kokoro')}</option>
           <option value="gemini">{t('speak_settings_engine_gemini')}</option>
         </select>
         {settings.engine === 'gemini' && !hasGeminiKey && (

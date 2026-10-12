@@ -1,0 +1,365 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Copy, Loader2 } from 'lucide-react';
+import { t } from '@extension/i18n';
+import {
+  KITTEN_VOICES,
+  KOKORO_VOICES,
+  ttsSettingsStore,
+  voiceEngineSettingsStore,
+  voiceTtsEngine,
+} from '@extension/storage';
+import type {
+  InstalledVoiceModels,
+  SttEngineId,
+  VoiceEngineSettings as Settings,
+  VoiceModelId,
+  VoiceTtsEngineId,
+} from '@extension/storage';
+import { Switch } from '../components/ui/switch';
+import type { PanelApi } from '../registry';
+import { setupCommand } from './command';
+
+const SELECT_CLASS = 'glass w-full rounded-lg px-2 py-1.5 text-[13px] text-foreground outline-none';
+const ROW = 'flex flex-col gap-1.5 px-3 py-2.5';
+const HINT = 'text-muted-foreground text-[11.5px]';
+const BUTTON =
+  'glass inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] text-foreground transition-colors hover:bg-accent disabled:opacity-50';
+
+interface Status {
+  installed: InstalledVoiceModels;
+  sizesMb: Record<VoiceModelId, number>;
+  economy: { stt: { engine: string; model?: string }; tts: { engine: string; voice: string } } | null;
+  economyError: string | null;
+}
+
+const MODEL_ROWS: { id: VoiceModelId; label: Parameters<typeof t>[0] }[] = [
+  { id: 'moonshine-tiny', label: 'voice_engine_model_moonshineTiny' },
+  { id: 'moonshine-base', label: 'voice_engine_model_moonshineBase' },
+  { id: 'whisper-base', label: 'voice_engine_model_whisper' },
+  { id: 'vosk', label: 'voice_engine_model_vosk' },
+  { id: 'kitten', label: 'voice_engine_model_kitten' },
+  { id: 'kokoro', label: 'voice_engine_model_kokoro' },
+];
+
+const ENGINE_NAMES: Record<string, Parameters<typeof t>[0]> = {
+  moonshine: 'voice_engine_name_moonshine',
+  whisper: 'voice_engine_name_whisper',
+  vosk: 'voice_engine_name_vosk',
+  kitten: 'voice_engine_name_kitten',
+  kokoro: 'voice_engine_name_kokoro',
+  system: 'voice_engine_name_system',
+};
+
+const seconds = (ms: number) => (ms / 1000).toFixed(1);
+
+/**
+ * Settings › Voice engines: how a conversation runs (Gemini Live, or economy with nothing but text leaving the
+ * computer), who hears and who speaks, the local models installed, and a test of each.
+ */
+export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [ttsEngine, setTtsEngine] = useState<VoiceTtsEngineId>('system');
+  const [status, setStatus] = useState<Status | null>(null);
+  const [busy, setBusy] = useState<'speak' | 'listen' | 'unload' | null>(null);
+  const [result, setResult] = useState<{ text: string; error?: boolean } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const load = () => void voiceEngineSettingsStore.getSettings().then(setSettings);
+    load();
+    return voiceEngineSettingsStore.subscribe(load);
+  }, []);
+
+  useEffect(() => {
+    const load = () => void ttsSettingsStore.getSettings().then(tts => setTtsEngine(voiceTtsEngine(tts.engine)));
+    load();
+    return ttsSettingsStore.subscribe(load);
+  }, []);
+
+  // The panel makes a new api object on every render; asking must not follow that
+  const apiRef = useRef(api);
+  apiRef.current = api;
+  const refresh = useCallback(() => {
+    apiRef.current
+      .request<Status>({ type: 'voice_engine_status' })
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+
+  // Which engines an economy conversation would use depends on the settings: ask again when they change
+  useEffect(refresh, [refresh, settings, ttsEngine]);
+
+  if (!settings) return null;
+  const update = (changes: Partial<Settings>) => void voiceEngineSettingsStore.updateSettings(changes);
+  const installed = status?.installed ?? {};
+  const has = (id: VoiceModelId) => Boolean(installed[id]);
+  const missing = (id: VoiceModelId) => (status && !has(id) ? ` · ${t('voice_engine_notInstalled_short')}` : '');
+  const command = setupCommand(settings, ttsEngine, installed);
+
+  const run = async (kind: 'speak' | 'listen' | 'unload') => {
+    setBusy(kind);
+    setResult(kind === 'listen' ? { text: t('voice_engine_listen_running') } : null);
+    try {
+      if (kind === 'speak') {
+        const reply = await api.request<{
+          ms: number;
+          stats?: { loadMs?: number | null; speedFactor?: number | null };
+        }>({ type: 'voice_engine_test' }, 180_000);
+        const parts = [t('voice_engine_test_done', [seconds(reply.ms)])];
+        if (reply.stats?.loadMs) parts.push(t('voice_engine_test_load', [seconds(reply.stats.loadMs)]));
+        if (reply.stats?.speedFactor) parts.push(t('voice_engine_test_speed', [String(reply.stats.speedFactor)]));
+        setResult({ text: parts.join(' · ') });
+      } else if (kind === 'listen') {
+        const reply = await api.request<{ text: string; ms: number; loadMs: number }>(
+          { type: 'voice_engine_listen_test' },
+          180_000,
+        );
+        setResult({
+          text: reply.text
+            ? t('voice_engine_listen_done', [reply.text, seconds(reply.ms)])
+            : t('voice_engine_listen_nothing'),
+        });
+      } else {
+        await api.request({ type: 'voice_engine_unload' });
+        setResult({ text: t('voice_engine_unload_done') });
+      }
+    } catch (error) {
+      setResult({ text: error instanceof Error ? error.message : String(error), error: true });
+    } finally {
+      setBusy(null);
+      refresh();
+    }
+  };
+
+  const copy = () => {
+    void navigator.clipboard.writeText(command).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const economyLine = status?.economy
+    ? t('voice_engine_economy_uses', [
+        t(ENGINE_NAMES[status.economy.stt.engine] ?? 'voice_engine_name_moonshine'),
+        t(ENGINE_NAMES[status.economy.tts.engine] ?? 'voice_engine_name_system'),
+      ])
+    : status?.economyError;
+
+  return (
+    <>
+      <div className={ROW}>
+        <label htmlFor="voice-engine-mode" className="text-[13px]">
+          {t('voice_engine_mode_label')}
+        </label>
+        <select
+          id="voice-engine-mode"
+          className={SELECT_CLASS}
+          value={settings.mode}
+          onChange={event => update({ mode: event.target.value as Settings['mode'] })}>
+          <option value="live">{t('voice_engine_mode_live')}</option>
+          <option value="economy">{t('voice_engine_mode_economy')}</option>
+        </select>
+        <p className={HINT}>
+          {t(settings.mode === 'economy' ? 'voice_engine_mode_economy_hint' : 'voice_engine_mode_live_hint')}
+        </p>
+        {settings.mode === 'economy' && economyLine && (
+          <p className={HINT} data-testid="voice-engine-economy">
+            {economyLine}
+          </p>
+        )}
+      </div>
+
+      <div className={ROW}>
+        <label htmlFor="voice-engine-stt" className="text-[13px]">
+          {t('voice_engine_stt_label')}
+        </label>
+        <select
+          id="voice-engine-stt"
+          className={SELECT_CLASS}
+          value={settings.stt}
+          onChange={event => update({ stt: event.target.value as SttEngineId })}>
+          <option value="gemini">{t('voice_engine_stt_gemini')}</option>
+          <option value="moonshine">
+            {t('voice_engine_stt_moonshine')}
+            {status && !has('moonshine-tiny') && !has('moonshine-base') ? missing('moonshine-tiny') : ''}
+          </option>
+          <option value="whisper">
+            {t('voice_engine_stt_whisper')}
+            {missing('whisper-base')}
+          </option>
+          <option value="vosk">
+            {t('voice_engine_stt_vosk')}
+            {missing('vosk')}
+          </option>
+        </select>
+        {settings.stt === 'gemini' && settings.mode === 'economy' && (
+          <p className={HINT}>{t('voice_engine_stt_gemini_hint')}</p>
+        )}
+      </div>
+
+      {settings.stt === 'moonshine' && (
+        <div className={ROW}>
+          <label htmlFor="voice-engine-moonshine" className="text-[13px]">
+            {t('voice_engine_moonshine_label')}
+          </label>
+          <select
+            id="voice-engine-moonshine"
+            className={SELECT_CLASS}
+            value={settings.moonshineSize}
+            onChange={event => update({ moonshineSize: event.target.value as Settings['moonshineSize'] })}>
+            <option value="tiny">
+              {t('voice_engine_moonshine_tiny')}
+              {missing('moonshine-tiny')}
+            </option>
+            <option value="base">
+              {t('voice_engine_moonshine_base')}
+              {missing('moonshine-base')}
+            </option>
+          </select>
+        </div>
+      )}
+
+      {settings.stt === 'moonshine' &&
+        installed[settings.moonshineSize === 'base' ? 'moonshine-base' : 'moonshine-tiny']?.webgpu && (
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px]">{t('voice_engine_gpu_label')}</div>
+              <div className={`mt-0.5 ${HINT}`}>{t('voice_engine_gpu_hint')}</div>
+            </div>
+            <Switch
+              label={t('voice_engine_gpu_label')}
+              checked={settings.sttGpu}
+              onChange={value => update({ sttGpu: value })}
+            />
+          </div>
+        )}
+
+      <div className={ROW}>
+        <label htmlFor="voice-engine-tts" className="text-[13px]">
+          {t('voice_engine_tts_label')}
+        </label>
+        <select
+          id="voice-engine-tts"
+          className={SELECT_CLASS}
+          value={ttsEngine}
+          onChange={event => void voiceEngineSettingsStore.setTtsEngine(event.target.value as VoiceTtsEngineId)}>
+          <option value="system">{t('voice_engine_tts_system')}</option>
+          <option value="kitten">
+            {t('voice_engine_tts_kitten')}
+            {missing('kitten')}
+          </option>
+          <option value="kokoro">
+            {t('voice_engine_tts_kokoro')}
+            {missing('kokoro')}
+          </option>
+          <option value="gemini">{t('voice_engine_tts_gemini')}</option>
+        </select>
+        {ttsEngine === 'gemini' && <p className={HINT}>{t('voice_engine_tts_gemini_hint')}</p>}
+      </div>
+
+      {(ttsEngine === 'kitten' || ttsEngine === 'kokoro') && (
+        <div className={ROW}>
+          <label htmlFor="voice-engine-voice" className="text-[13px]">
+            {t('voice_engine_voice_label')}
+          </label>
+          <select
+            id="voice-engine-voice"
+            className={SELECT_CLASS}
+            value={ttsEngine === 'kitten' ? settings.kittenVoice : settings.kokoroVoice}
+            onChange={event =>
+              update(ttsEngine === 'kitten' ? { kittenVoice: event.target.value } : { kokoroVoice: event.target.value })
+            }>
+            {(ttsEngine === 'kitten' ? KITTEN_VOICES : KOKORO_VOICES).map(voice => (
+              <option key={voice} value={voice}>
+                {voice}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className={ROW}>
+        <label htmlFor="voice-engine-model" className="text-[13px]">
+          {t('voice_engine_textModel_label')}
+        </label>
+        <select
+          id="voice-engine-model"
+          className={SELECT_CLASS}
+          value={settings.economyModel}
+          onChange={event => update({ economyModel: event.target.value as Settings['economyModel'] })}>
+          <option value="fast">{t('voice_engine_textModel_fast')}</option>
+          <option value="local">{t('voice_engine_textModel_local')}</option>
+        </select>
+      </div>
+
+      <div className={ROW}>
+        <label htmlFor="voice-engine-idle" className="text-[13px]">
+          {t('voice_engine_idle_label')}
+        </label>
+        <select
+          id="voice-engine-idle"
+          className={SELECT_CLASS}
+          value={settings.idleEndMinutes}
+          onChange={event => update({ idleEndMinutes: Number(event.target.value) })}>
+          <option value={0}>{t('voice_engine_idle_never')}</option>
+          {[2, 3, 5, 10].map(minutes => (
+            <option key={minutes} value={minutes}>
+              {t('voice_engine_idle_minutes', [String(minutes)])}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className={ROW}>
+        <div className="text-[13px]">{t('voice_engine_models_title')}</div>
+        <ul className="flex flex-col gap-1" aria-label={t('voice_engine_models_title')}>
+          {MODEL_ROWS.map(({ id, label }) => (
+            <li key={id} className="flex items-center justify-between gap-2 text-[12px]">
+              <span className="min-w-0 truncate">{t(label)}</span>
+              <span className={has(id) ? 'text-foreground' : 'text-muted-foreground'}>
+                {!has(id)
+                  ? t('voice_engine_models_notInstalled', [String(status?.sizesMb[id] ?? '?')])
+                  : installed[id]?.bytes
+                    ? t('voice_engine_models_installed', [String(Math.round((installed[id]?.bytes ?? 0) / 1e6))])
+                    : t('voice_engine_installed_short')}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className={HINT}>{t('voice_engine_models_hint')}</p>
+        <div className="flex items-center gap-1.5">
+          <code className="glass min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 font-mono text-[11.5px]">
+            {command}
+          </code>
+          <button type="button" className={BUTTON} onClick={copy} aria-label={t('voice_engine_models_copy')}>
+            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      <div className={ROW}>
+        <div className="flex flex-wrap gap-1.5">
+          <button type="button" className={BUTTON} disabled={busy !== null} onClick={() => void run('speak')}>
+            {busy === 'speak' && <Loader2 className="size-3.5 animate-spin" />}
+            {t('voice_engine_test_button')}
+          </button>
+          <button type="button" className={BUTTON} disabled={busy !== null} onClick={() => void run('listen')}>
+            {busy === 'listen' && <Loader2 className="size-3.5 animate-spin" />}
+            {t('voice_engine_listen_button')}
+          </button>
+          <button type="button" className={BUTTON} disabled={busy !== null} onClick={() => void run('unload')}>
+            {t('voice_engine_unload_button')}
+          </button>
+        </div>
+        {result && (
+          <p
+            role="status"
+            data-testid="voice-engine-result"
+            className={result.error ? 'text-destructive text-[11.5px]' : HINT}>
+            {result.text}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}

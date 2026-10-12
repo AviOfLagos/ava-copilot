@@ -4,14 +4,16 @@ import * as chromeEngine from './chromeEngine';
 import * as geminiEngine from './geminiEngine';
 import { toSpeakableText } from './markdown';
 import type { SpeakOptions, TtsEngine } from './types';
+import { localTtsEngine, stopLocalSpeech } from '../voice/engines/localTts';
 
 function engineFor(id: string): TtsEngine {
+  if (id === 'kitten' || id === 'kokoro') return localTtsEngine(id);
   return id === 'gemini' ? geminiEngine : chromeEngine;
 }
 
 /** Stops whichever engine might be speaking. Safe to call when neither is. */
 export async function stopSpeaking(): Promise<void> {
-  await Promise.allSettled([chromeEngine.stop(), geminiEngine.stop()]);
+  await Promise.allSettled([chromeEngine.stop(), geminiEngine.stop(), stopLocalSpeech()]);
   await ttsSpeakingStore.set({ threadId: null, messageId: null });
 }
 

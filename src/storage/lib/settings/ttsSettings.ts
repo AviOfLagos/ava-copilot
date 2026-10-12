@@ -6,7 +6,7 @@ import type { BaseStorage } from '../base/types';
 export type ReadAloudMode = 'off' | 'voice' | 'always';
 
 // Which engine speaks: the operating system's voices (free, offline, the default) or Gemini's cloud voices
-export type TtsEngineId = 'system' | 'gemini';
+export type TtsEngineId = 'system' | 'gemini' | 'kitten' | 'kokoro';
 
 export interface TtsSettingsConfig {
   readAloud: ReadAloudMode;
