@@ -1,5 +1,5 @@
 import { t } from '@extension/i18n';
-import { generalSettingsStore, routeWorkspace, threadStore, workspaceStore } from '@extension/storage';
+import { db, generalSettingsStore, routeWorkspace, threadStore, workspaceStore } from '@extension/storage';
 import type { ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
 import type BrowserContext from '../browser/context';
 import type { Executor } from '../agent/executor';
@@ -416,7 +416,9 @@ export class ThreadManager {
     } else {
       const models = await resolveModels(thread.model, scope);
       const messageContext = await this.contextFor(thread, models.planner, resumed, task);
-      browserContext = await createBrowserContext(binding);
+      // An agent's chat stays on the agent's sites
+      const agent = thread.agentId ? await db.agents.get(thread.agentId).catch(() => undefined) : undefined;
+      browserContext = await createBrowserContext(binding, { onlyDomains: agent?.domains });
       executor = await createExecutor({ threadId, task, browserContext, models, messageContext });
       scope.notify = message => executor.notify(message);
     }

@@ -8,6 +8,7 @@ import {
 } from '@extension/storage';
 import type { ModelConfig } from '@extension/storage';
 import BrowserContext from '../browser/context';
+import { isUrlAllowed } from '../browser/util';
 import { Executor } from '../agent/executor';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
@@ -49,14 +50,37 @@ export async function resolveModels(override: ModelConfig | null, scope: UsageSc
   return { navigator, planner: plannerConfig === navigatorConfig ? navigator : build(plannerConfig) };
 }
 
+// Matches no site: an allow list of it lets nothing through
+const NO_SITE = 'no-site.invalid';
+
 /**
- * A browser context limited to the thread's tabs, with the firewall and page-load settings applied.
+ * The sites a browser context may open: the firewall's allow list, or, for an agent kept to its own sites, those
+ * of them the firewall allows (never "everything" when none is left).
  */
-export async function createBrowserContext(binding: TabBinding): Promise<BrowserContext> {
+export function allowListFor(
+  firewall: { enabled: boolean; allowList: string[]; denyList: string[] },
+  onlyDomains: readonly string[] = [],
+): string[] {
+  const only = onlyDomains.map(entry => entry.trim().toLowerCase().replace(/^\*\./, '')).filter(Boolean);
+  if (!only.length) return firewall.enabled ? firewall.allowList : [];
+  const allowed = only.filter(
+    domain => !firewall.enabled || isUrlAllowed(`https://${domain}/`, firewall.allowList, firewall.denyList),
+  );
+  return allowed.length ? allowed : [NO_SITE];
+}
+
+/**
+ * A browser context limited to the thread's tabs, with the firewall and page-load settings applied. An agent's
+ * chat passes the agent's sites: its pages stay on them from the first step, not only after a check.
+ */
+export async function createBrowserContext(
+  binding: TabBinding,
+  { onlyDomains }: { onlyDomains?: readonly string[] } = {},
+): Promise<BrowserContext> {
   const firewall = await firewallStore.getFirewall();
   const settings = await generalSettingsStore.getSettings();
   const browserContext = new BrowserContext({
-    allowedUrls: firewall.enabled ? firewall.allowList : [],
+    allowedUrls: allowListFor(firewall, onlyDomains),
     deniedUrls: firewall.enabled ? firewall.denyList : [],
     minimumWaitPageLoadTime: settings.minWaitPageLoad / 1000.0,
     displayHighlights: settings.displayHighlights,
