@@ -142,7 +142,6 @@ export interface AgentServiceDeps {
   onWorkflowTab?: (event: TabEvent) => Promise<void>;
   // Whether every kind of action (send, post, submit, delete, buy, permissions) asks for the user's click.
   // Agents work alone, so they only run while it does; missing means it does
-  gateAsksForAll?: () => Promise<boolean>;
   now?: () => number;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   // How long a page must be still before it wakes agents (tests shorten it)
@@ -610,16 +609,7 @@ export class AgentService {
     }
     const over = spendBlock(agent, (await agentSpend(this.db, agent.id)).costUsd);
     if (over) return { error: { kind: 'budget', message: over } };
-    // A run alone in its window must never act without the user's click, whatever the chat settings say
-    if (this.deps.gateAsksForAll && !(await this.deps.gateAsksForAll())) {
-      return {
-        error: {
-          kind: 'forbidden',
-          message:
-            'Agents work alone, so every action that sends, posts, submits, deletes, buys or changes permissions must ask for your click. Turn those confirmations back on in Settings › Agent behaviour.',
-        },
-      };
-    }
+    // A run alone in its window never acts without the user's click: the gate always asks for agent runs
 
     const spec = run.spec as AgentRunSpec;
     const startUrl = spec.startUrl || agent.startUrl || 'https://www.google.com/';

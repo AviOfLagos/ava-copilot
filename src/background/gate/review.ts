@@ -1,5 +1,5 @@
 import { t } from '@extension/i18n';
-import { gateSettingsStore } from '@extension/storage';
+import { gateSettingsStore, threadStore } from '@extension/storage';
 import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -151,6 +151,14 @@ async function buildRequest(
   };
 }
 
+/** Whether a task runs without the user watching: started by one of their agents or a routine. */
+async function isUnattended(context: AgentContext): Promise<boolean> {
+  const thread = await threadStore.get(context.taskId).catch(() => undefined);
+  // When the chat cannot be read, assume no one is watching
+  if (!thread) return true;
+  return thread.origin === 'agent' || thread.origin === 'workflow';
+}
+
 /**
  * Asks the user every question the agent has about a form, at once, and waits for the answers.
  *
@@ -250,8 +258,10 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
 
   const content = await readContent(page, gated);
   const settings = await gateSettingsStore.getSettings();
+  // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
+  const unattended = await isUnattended(context);
 
-  if (settings.confirm[kind]) {
+  if (settings.confirm[kind] || unattended) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     const answer = await ask(context, request);
     if (answer !== 'approved') {

@@ -1,5 +1,3 @@
-import { globToRegExp } from '../skills/match';
-
 /**
  * Addresses, sites and topics an agent is tied to, matched without any code from outside. Pure, shared by
  * the background and the panel.
@@ -14,32 +12,62 @@ function parseWebUrl(url: string): URL | null {
   }
 }
 
+/** A host pattern as a regular expression: `*` never crosses a dot, and a leading `*.` also means the bare domain. */
+function hostRegExp(hostPattern: string): RegExp {
+  let source = hostPattern.toLowerCase();
+  let prefix = '';
+  if (source.startsWith('*.')) {
+    prefix = '(?:[a-z0-9-]+\\.)*';
+    source = source.slice(2);
+  }
+  const body = source
+    .split('*')
+    .map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[a-z0-9-]*');
+  return new RegExp(`^${prefix}${body}$`);
+}
+
 /**
- * Whether a page's address matches a watched pattern. `*` matches anything. A pattern with a scheme is
- * matched against the whole address; one without against host and path; a bare domain matches it and its
- * subdomains; `*.example.com` matches example.com too. The query is only looked at when the pattern has one.
+ * Whether a page's address matches a watched pattern. The site and the path are matched apart, so a
+ * pattern can never be stretched across them: `x.com*` does not match `x.com.evil.com`. In the site, `*`
+ * stays within one label; a bare domain also matches its subdomains; `*.example.com` matches
+ * example.com too. In the path, `*` matches anything. The query is only looked at when the pattern has one.
  *
  * Examples: `x.com`, `*.linkedin.com/feed*`, `https://news.ycombinator.com/item*`, `127.0.0.1:8080/page.html?watch=*`.
  */
 export function matchesUrlPattern(pattern: string, url: string): boolean {
   const parsed = parseWebUrl(url);
-  const trimmed = pattern.trim();
-  if (!parsed || !trimmed) return false;
-  const query = trimmed.includes('?') ? parsed.search : '';
-  if (trimmed.includes('://')) {
-    return globToRegExp(trimmed).test(`${parsed.protocol}//${parsed.host}${parsed.pathname}${query}`);
+  let rest = pattern.trim();
+  if (!parsed || !rest) return false;
+
+  const scheme = /^([a-z*]+):\/\//i.exec(rest);
+  if (scheme) {
+    const wanted = scheme[1].toLowerCase();
+    if (wanted !== '*' && `${wanted}:` !== parsed.protocol) return false;
+    rest = rest.slice(scheme[0].length);
   }
-  if (!trimmed.includes('/') && !trimmed.includes('?')) {
-    const domain = trimmed.toLowerCase();
-    const hostname = parsed.hostname.toLowerCase();
-    return (
-      hostname === domain ||
-      hostname.endsWith(`.${domain}`) ||
-      parsed.host.toLowerCase() === domain ||
-      globToRegExp(domain).test(parsed.host)
-    );
-  }
-  return globToRegExp(trimmed).test(`${parsed.host}${parsed.pathname}${query}`);
+  const cut = rest.search(/[/?]/);
+  const sitePattern = (cut < 0 ? rest : rest.slice(0, cut)).toLowerCase();
+  const pathPattern = cut < 0 ? '' : rest.slice(cut);
+
+  // The site: host, with a port when the pattern names one
+  const portMatch = /:(\d+|\*)$/.exec(sitePattern);
+  const hostPattern = portMatch ? sitePattern.slice(0, -portMatch[0].length) : sitePattern;
+  if (portMatch && portMatch[1] !== '*' && portMatch[1] !== parsed.port) return false;
+  const hostname = parsed.hostname.toLowerCase();
+  const hostOk = hostPattern.includes('*')
+    ? hostRegExp(hostPattern).test(hostname)
+    : hostname === hostPattern || hostname.endsWith(`.${hostPattern}`);
+  if (!hostOk) return false;
+
+  // The path (and query), only when the pattern has one
+  if (!pathPattern) return true;
+  const target = `${parsed.pathname}${pathPattern.includes('?') ? parsed.search : ''}`;
+  const pathSource = pathPattern
+    .split('*')
+    .map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  return new RegExp(`^${pathSource}/?$`, 'i').test(target);
 }
 
 /**

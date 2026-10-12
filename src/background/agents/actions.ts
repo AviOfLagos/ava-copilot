@@ -218,7 +218,9 @@ export function registerAgentActions(service: AgentService): void {
           const run = await service.requestRun(agent.id, {
             trigger: { type: 'chat', detail: context.taskId },
             attended: true,
-            tainted: false,
+            // A task written in the chat comes through the model, which may have read pages: outside
+            // content. Without one, the run follows only the agent's own instructions, which the user approved.
+            tainted: Boolean(input.task?.trim()),
             task: input.task,
           });
           return new ActionResult({

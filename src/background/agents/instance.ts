@@ -1,4 +1,4 @@
-import { db, firewallStore, gateSettingsStore, generalSettingsStore } from '@extension/storage';
+import { db, firewallStore, generalSettingsStore } from '@extension/storage';
 import { isUrlAllowed } from '../browser/util';
 import { jobs } from '../jobs/runner';
 import { resolveRole } from '../models/roles';
@@ -50,7 +50,6 @@ export const agentService = new AgentService({
   },
   inbox: draft => postToInbox(draft),
   settleInbox: (source, externalId) => settleInboxItem(source, externalId),
-  gateAsksForAll: async () => Object.values((await gateSettingsStore.getSettings()).confirm).every(Boolean),
   onWorkflowTab: async event => {
     await workflowTabs.fire(event);
   },

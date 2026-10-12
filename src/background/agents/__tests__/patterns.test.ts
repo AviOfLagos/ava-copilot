@@ -94,3 +94,27 @@ describe('topics', () => {
     expect(LISTEN_PATTERN.test('news.*')).toBe(true);
   });
 });
+
+describe('matchesUrlPattern never lets a pattern stretch across site and path', () => {
+  it('keeps look-alike sites out', () => {
+    expect(matchesUrlPattern('x.com*', 'https://x.com.evil.com/')).toBe(false);
+    expect(matchesUrlPattern('https://x.com*', 'https://x.com.evil.com/home')).toBe(false);
+    expect(matchesUrlPattern('x.com/*', 'https://x.com.evil.com/x.com/')).toBe(false);
+    expect(matchesUrlPattern('x.com', 'https://evil.com/x.com')).toBe(false);
+    expect(matchesUrlPattern('*.linkedin.com/feed*', 'https://linkedin.com.evil.io/feed')).toBe(false);
+  });
+
+  it('still matches what the patterns mean', () => {
+    expect(matchesUrlPattern('x.com', 'https://x.com/home')).toBe(true);
+    expect(matchesUrlPattern('x.com', 'https://mobile.x.com/')).toBe(true);
+    expect(matchesUrlPattern('x.com/*', 'https://x.com/i/notifications')).toBe(true);
+    expect(matchesUrlPattern('*.linkedin.com/feed*', 'https://www.linkedin.com/feed/')).toBe(true);
+    expect(matchesUrlPattern('*.linkedin.com/feed*', 'https://linkedin.com/feed')).toBe(true);
+    expect(matchesUrlPattern('https://news.ycombinator.com/item*', 'https://news.ycombinator.com/item?id=1')).toBe(
+      true,
+    );
+    expect(matchesUrlPattern('http://news.ycombinator.com/item*', 'https://news.ycombinator.com/item')).toBe(false);
+    expect(matchesUrlPattern('127.0.0.1:8080/page.html?watch=*', 'http://127.0.0.1:8080/page.html?watch=1')).toBe(true);
+    expect(matchesUrlPattern('127.0.0.1:8080/page.html', 'http://127.0.0.1:9090/page.html')).toBe(false);
+  });
+});

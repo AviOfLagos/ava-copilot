@@ -92,7 +92,16 @@ export default function KnowledgeView({
   // One workspace's knowledge, with what belongs to none; all of it when none is picked
   const [workspace, setWorkspace] = useState<string | null>(null);
   // Same idea for the agent whose work it is; the picker itself hides when there are no agents yet
-  const [agent, setAgent] = useState<string | null>(null);
+  // An agent's page links here already filtered to that agent (a one-time hand-over in session storage)
+  const [agent, setAgent] = useState<string | null>(() => {
+    try {
+      const id = sessionStorage.getItem('avi.kb.agentFilter');
+      sessionStorage.removeItem('avi.kb.agentFilter');
+      return id;
+    } catch {
+      return null;
+    }
+  });
   const items = allItems.filter(
     item => (!workspace || !item.workspaceId || item.workspaceId === workspace) && (!agent || item.agentId === agent),
   );

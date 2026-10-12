@@ -198,3 +198,39 @@ describe('resolveRole', () => {
     await expect(resolveRole('tts')).rejects.toMatchObject({ kind: 'not_found' });
   });
 });
+
+describe('a saved key stays with its server', () => {
+  it('is never sent to a new address, in a check or a save', async () => {
+    const { fetch, requests } = fakeFetch({
+      'https://good.example/v1/models': { json: { data: [{ id: 'm1' }] } },
+      'https://evil.example/v1/models': { json: { data: [{ id: 'x' }] } },
+    });
+    vi.stubGlobal('fetch', fetch);
+    await send({
+      type: 'models_provider_save',
+      providerId: 'custom_good',
+      config: { type: 'custom_openai', name: 'Good', baseUrl: 'https://good.example/v1', modelNames: ['m1'] },
+      apiKey: 'sk-good-1234',
+    });
+
+    // A draft pointing elsewhere is tried without the saved key
+    await send({
+      type: 'models_provider_check',
+      providerId: 'custom_good',
+      config: { type: 'custom_openai', name: 'Good', baseUrl: 'https://evil.example/v1', modelNames: ['m1'] },
+    });
+    const toEvil = requests.filter(request => request.url.startsWith('https://evil.example'));
+    expect(toEvil.length).toBeGreaterThan(0);
+    for (const request of toEvil) expect(request.headers.get('authorization') ?? '').not.toContain('sk-good-1234');
+
+    // Saving the new address without typing the key again is refused
+    const reply = await send({
+      type: 'models_provider_save',
+      providerId: 'custom_good',
+      config: { type: 'custom_openai', name: 'Good', baseUrl: 'https://evil.example/v1', modelNames: ['m1'] },
+    });
+    expect(reply).toMatchObject({ type: 'error' });
+    expect(String(reply.error)).toMatch(/address changed/);
+    expect((await llmProviderStore.getProvider('custom_good'))?.baseUrl).toBe('https://good.example/v1');
+  });
+});

@@ -324,8 +324,15 @@ export default class BrowserContext {
       throw new URLNotAllowedError(`Open tab failed. URL: ${url} is not allowed`);
     }
 
-    // Create the new tab, next to the tab this context works in
-    const tab = await chrome.tabs.create({ url, active: true, openerTabId: this._currentTabId ?? undefined });
+    // Create the new tab next to the tab this context works in, in its window (an agent's own window)
+    const current =
+      this._currentTabId !== null ? await chrome.tabs.get(this._currentTabId).catch(() => undefined) : undefined;
+    const tab = await chrome.tabs.create({
+      url,
+      active: true,
+      openerTabId: this._currentTabId ?? undefined,
+      windowId: current?.windowId,
+    });
     if (!tab.id) {
       throw new Error('No tab ID available');
     }

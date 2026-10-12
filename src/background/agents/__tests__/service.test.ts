@@ -119,7 +119,6 @@ beforeEach(() => {
     roleModel: async () => ({ provider: 'mock', modelName: 'scripted' }),
     inbox: async draft => void asked.push(draft),
     settleInbox: async (source, externalId) => void done.push(`${source}|${externalId}`),
-    gateAsksForAll: async () => true,
     sleep: () => new Promise(resolve => setTimeout(resolve, 2)),
     now: () => Date.now() + limits.offset,
     tabDebounceMs: 5,
@@ -410,17 +409,6 @@ describe('budgets', () => {
 });
 
 describe('the user in the loop', () => {
-  it('never starts while some actions would go without the user click', async () => {
-    const strict = new AgentService({ ...deps, gateAsksForAll: async () => false });
-    const agent = await addAgent();
-    const run = await strict.requestRun(agent.id, { ...manual, attended: false, tainted: true });
-    const ended = await runEnded(run.id);
-    expect(ended).toMatchObject({ status: 'failed', error: { kind: 'forbidden' } });
-    expect(ended.error?.message).toMatch(/must ask for your click/);
-    expect(threads.sent).toEqual([]);
-    expect(window.opened).toEqual([]);
-  });
-
   it('asks in the Inbox when its chat waits for a click, and settles it after', async () => {
     const agent = await addAgent();
     const run = await service.requestRun(agent.id, { ...manual, attended: false, tainted: true });

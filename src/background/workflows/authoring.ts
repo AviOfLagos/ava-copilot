@@ -61,15 +61,17 @@ Triggers (one, unless the user asks for more ways to start it):
 - trigger.schedule: cron (five fields, in the user's time, e.g. "30 7 * * *" every day at 07:30, "0 9 * * 1-5" weekdays at 09:00), timezone (an IANA name; leave it empty for the user's own).
 - trigger.manual: no params; for a routine the user only runs by hand.
 - trigger.event: event = meeting_ended | inbox_item.
+- trigger.tab: urlPattern (a site and optional path, e.g. "x.com/*"); runs when the user opens such a page.
 
 Steps:
 - step.http_get: url (a public JSON API or page, written out in full), format = json | text. Fast and cheap: use it whenever a source has an API or a plain page.
-- step.read_page: url. Opens the page in a background tab and reads its text; for pages that need a browser.
+- step.read_page: url. Fetches the page and reads its text (no page code runs, no redirects); for pages that only show their content with script, use step.browse.
 - step.web_search: query (fixed words). Searches the web in a background tab.
 - step.browse: task (what to do on the web, in plain words), startUrl (optional), context (optional data from earlier steps). Runs the browser agent in a background tab; slow, so only when an API, a page read or a search will not do.
 - step.memory_search: query, limit (optional, 1 to 10). Searches the user's knowledge base: their chats, meeting notes and saved pages.
 - step.memory_save: title, text. Saves a note in the user's knowledge base.
 - step.llm: instructions (what to do with the input: pick, summarise, compare, translate), input (data from earlier steps). The only step that thinks.
+- step.agent: agent (one of the user's agents, by name), task (what it does this time). Hands the work to that agent; it runs in its own window.
 - step.condition: left (usually data from an earlier step), op = contains | not_contains | equals | not_equals | greater_than | less_than | is_empty | is_not_empty, right. The edges leaving it say when = "true" or "false".
 
 Outputs:

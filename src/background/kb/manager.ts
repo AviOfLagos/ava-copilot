@@ -184,6 +184,8 @@ export class KnowledgeBase {
           sourceDate: thread.createdAt,
           sourceUpdatedAt: thread.updatedAt,
           workspaceId: thread.workspaceId ?? null,
+          // Chats from an agent's runs are filed under that agent
+          agentId: thread.agentId ?? null,
         },
         chunkThread(threadId, messages),
       );

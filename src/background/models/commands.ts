@@ -97,8 +97,33 @@ function checkReply(health: ProviderHealth, models: string[]) {
   return { health, models: models.length, sample: models.slice(0, 8) };
 }
 
+/** The server a provider address points at; empty for none (the provider's own default). */
+function hostOf(url: string | undefined): string {
+  if (!url?.trim()) return '';
+  try {
+    return new URL(url.trim()).host.toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
+/**
+ * Whether a saved key may be used with a config: only when it still points at the server the key was saved
+ * for. A key is never sent to a new address unless the user types it again for that address.
+ */
+export function keyMayFollow(
+  saved: Pick<ProviderConfig, 'baseUrl'> | undefined,
+  next: Pick<ProviderConfig, 'baseUrl'>,
+): boolean {
+  return hostOf(saved?.baseUrl) === hostOf(next.baseUrl ?? saved?.baseUrl);
+}
+
 export async function saveProvider(input: z.infer<typeof saveSchema>): Promise<Record<string, unknown>> {
   const { providerId: id, config } = input;
+  const before = await llmProviderStore.getProvider(id);
+  if (before?.apiKey && !input.removeKey && !input.apiKey?.trim() && !keyMayFollow(before, config)) {
+    throw new Error('The address changed: enter the API key again for the new address.');
+  }
   await llmProviderStore.setProvider(id, {
     ...config,
     apiKey: input.removeKey ? '' : (input.apiKey ?? ''),
@@ -137,8 +162,10 @@ export async function saveProvider(input: z.infer<typeof saveSchema>): Promise<R
 export async function checkSavedOrDraft(input: z.infer<typeof checkSchema>): Promise<Record<string, unknown>> {
   const saved = await llmProviderStore.getProvider(input.providerId);
   const draft = Boolean(input.config || input.apiKey?.trim());
+  // A saved key only goes to the server it was saved for: a draft at another address needs the key typed again
+  const savedKeyFits = input.config ? keyMayFollow(saved, input.config) : true;
   const config: ProviderConfig | undefined = input.config
-    ? { ...saved, ...input.config, apiKey: input.apiKey?.trim() || saved?.apiKey || '' }
+    ? { ...saved, ...input.config, apiKey: input.apiKey?.trim() || (savedKeyFits ? saved?.apiKey : '') || '' }
     : saved && { ...saved, apiKey: input.apiKey?.trim() || saved.apiKey };
   if (!config) throw new Error('This provider is not set up.');
   const check = await checkProvider(input.providerId, config, { retryPolicy: INTERACTIVE_RETRY });
