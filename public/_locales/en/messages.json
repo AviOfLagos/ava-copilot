@@ -4078,5 +4078,8 @@
   },
   "conn_signOut_done": {
     "message": "Signed out: its sign-in was deleted from this computer."
+  },
+  "conn_gate_kind": {
+    "message": "Run a connector tool"
   }
 }

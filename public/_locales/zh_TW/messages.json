@@ -4078,5 +4078,8 @@
   },
   "conn_signOut_done": {
     "message": "已登出：登入資料已從這台電腦刪除。"
+  },
+  "conn_gate_kind": {
+    "message": "執行連接器工具"
   }
 }
