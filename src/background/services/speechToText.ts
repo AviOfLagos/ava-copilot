@@ -30,7 +30,7 @@ export class SpeechToTextService {
         throw new Error(t('chat_stt_model_notFound'));
       }
 
-      const llm = createSpeechToTextModel(config.provider, provider.apiKey, config.modelName);
+      const llm = createSpeechToTextModel(config.provider, provider.apiKey, config.modelName, provider.baseUrl);
       logger.info(`Speech-to-text service created with model: ${config.modelName}`);
       return new SpeechToTextService(llm);
     } catch (error) {

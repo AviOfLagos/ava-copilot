@@ -136,6 +136,29 @@ export async function startMockLlm(scenarios) {
       return res.end(fs.readFileSync(path.join(here, page[1])));
     }
 
+    // Gemini writing down a dictation: a request with a recording gets the scripted words
+    if (req.method === 'POST' && req.url.includes(':generateContent')) {
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      const parts = (JSON.parse(body).contents ?? []).flatMap(content => content.parts ?? []);
+      const audio = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+      if (audio) {
+        dictation.recordings.push({ mimeType: audio.inlineData.mimeType, bytes: audio.inlineData.data.length });
+        if (dictation.delayMs) await new Promise(resolve => setTimeout(resolve, dictation.delayMs));
+        if (dictation.failStatus) {
+          res.writeHead(dictation.failStatus, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: { code: dictation.failStatus, message: 'Scripted failure' } }));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(
+          JSON.stringify({
+            candidates: [{ content: { role: 'model', parts: [{ text: dictation.text }] }, finishReason: 'STOP' }],
+            usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 6, totalTokenCount: 16 },
+          }),
+        );
+      }
+    }
+
     // Gemini embeddings (the knowledge base): words hashed into buckets, so texts sharing words match
     if (req.method === 'POST' && req.url.includes(':batchEmbedContents')) {
       let body = '';
@@ -251,6 +274,9 @@ export async function startMockLlm(scenarios) {
 
   // The calendar feed served at /calendar.ics
   const calendar = { ics: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR' };
+
+  // Dictation in the chat box: every recording sent to be written down, and the words that come back
+  const dictation = { recordings: [], text: 'remind me to call Ada at five', delayMs: 0, failStatus: 0 };
 
   // What the knowledge base tests see: every text embedded and every question with its sources
   const kb = {
@@ -447,6 +473,7 @@ export async function startMockLlm(scenarios) {
     live,
     kb,
     calendar,
+    dictation,
     start(name) {
       runs.set(name, newRun(name));
       lastStarted = name;

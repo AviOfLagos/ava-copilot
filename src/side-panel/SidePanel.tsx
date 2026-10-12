@@ -110,6 +110,8 @@ const SidePanel = () => {
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const heartbeatRef = useRef<number | null>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
+  // Where a dictation's words go: the composer adds them after what is typed, or sends them
+  const transcriptSinkRef = useRef<((words: string) => void) | null>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
   // Questions about a meeting waiting for their answer
@@ -182,7 +184,10 @@ const SidePanel = () => {
     useCallback(audio => postRef.current({ type: 'speech_to_text', audio }), []),
     useCallback((message: string) => setBanner(message), []),
   );
-  const { setIsProcessingSpeech } = speech;
+  const { done: speechDone } = speech;
+  const setTranscriptSink = useCallback((sink: (words: string) => void) => {
+    transcriptSinkRef.current = sink;
+  }, []);
 
   const onPortMessage = useCallback(
     (message: PanelMessage) => {
@@ -261,16 +266,16 @@ const SidePanel = () => {
           setBanner(message.error || t('errors_unknown'));
           break;
         case 'speech_to_text_result':
-          if (message.text) setInputTextRef.current?.(message.text);
-          setIsProcessingSpeech(false);
+          transcriptSinkRef.current?.(message.text ?? '');
+          speechDone();
           break;
         case 'speech_to_text_error':
           setBanner(message.error || t('chat_stt_recognitionFailed'));
-          setIsProcessingSpeech(false);
+          speechDone();
           break;
       }
     },
-    [setIsProcessingSpeech],
+    [speechDone],
   );
 
   // One connection for the life of the panel; it reconnects if the background restarts
@@ -641,16 +646,17 @@ const SidePanel = () => {
       <Composer
         onSendMessage={text => void handleSend(text)}
         onStopTask={handleStop}
-        onMicClick={() => void speech.toggle()}
-        isRecording={speech.isRecording}
-        isProcessingSpeech={speech.isProcessingSpeech}
+        speech={speech}
+        setTranscriptSink={setTranscriptSink}
         disabled={isBusy || sending}
         showStopButton={isBusy}
         setContent={setter => {
           setInputTextRef.current = setter;
         }}
       />
-      <p className="text-muted-foreground mt-1.5 text-center text-[10.5px]">{t('chat_footer_gate')}</p>
+      <p className="text-muted-foreground mt-1.5 text-center text-[10.5px]">
+        {speech.status === 'starting' || speech.status === 'listening' ? t('chat_stt_hint') : t('chat_footer_gate')}
+      </p>
     </div>
   );
 

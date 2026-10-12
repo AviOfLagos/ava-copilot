@@ -1,0 +1,135 @@
+/*
+ * Dictation in the chat composer: the pill's edge turns to the recording colour while the microphone is on,
+ * a strip with a red dot, the level and the time takes the text box's place, and the mic becomes a stop button.
+ */
+
+.mo-pill[data-listening] .mo-underglow {
+  opacity: 0.85;
+}
+
+.mo-pill[data-listening] .mo-ring {
+  opacity: 1;
+  animation-duration: 1.8s;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0deg,
+    rgb(var(--destructive-rgb) / 0.85) 70deg,
+    transparent 150deg,
+    rgb(var(--primary-rgb) / 0.55) 230deg,
+    transparent 310deg
+  );
+}
+
+.stt-strip {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 0 8px;
+}
+
+.stt-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: rgb(var(--destructive-rgb));
+  animation: stt-pulse 1.4s ease-out infinite;
+}
+
+.stt-strip[data-status='starting'] .stt-dot {
+  opacity: 0.45;
+  animation: none;
+}
+
+@keyframes stt-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--destructive-rgb) / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgb(var(--destructive-rgb) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--destructive-rgb) / 0);
+  }
+}
+
+.stt-bars {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.stt-bars span {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: rgb(var(--primary-rgb) / 0.9);
+  transform: scaleY(0.1);
+  transition: transform 80ms linear;
+}
+
+.stt-time {
+  flex: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-foreground);
+}
+
+.stt-cancel {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-muted-foreground);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.stt-cancel:hover {
+  background: var(--color-accent);
+  color: var(--color-foreground);
+}
+
+/* The mic while it listens: a stop button in the recording colour */
+.stt-stop {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--destructive-rgb) / 0.65);
+  background: rgb(var(--destructive-rgb) / 0.18);
+  color: rgb(var(--destructive-rgb));
+  box-shadow: 0 0 14px rgb(var(--destructive-rgb) / 0.25);
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.stt-stop:hover {
+  background: rgb(var(--destructive-rgb) / 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stt-dot {
+    animation: none;
+  }
+
+  .stt-bars span {
+    transition: none;
+  }
+}

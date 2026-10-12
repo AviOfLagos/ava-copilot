@@ -5169,5 +5169,35 @@
   },
   "brain_unpair": {
     "message": "Unpair"
+  },
+  "chat_stt_starting": {
+    "message": "Starting the microphone…"
+  },
+  "chat_stt_listening": {
+    "message": "Listening"
+  },
+  "chat_stt_transcribing": {
+    "message": "Transcribing…"
+  },
+  "chat_stt_transcribing_send": {
+    "message": "Transcribing, then sending…"
+  },
+  "chat_stt_cancel": {
+    "message": "Discard the recording"
+  },
+  "chat_stt_stop_insert": {
+    "message": "Stop: the words go in the box to edit"
+  },
+  "chat_stt_send_when_ready": {
+    "message": "Send when transcribed"
+  },
+  "chat_stt_sending_when_ready": {
+    "message": "Sends when transcribed"
+  },
+  "chat_stt_timeout": {
+    "message": "Transcribing took too long. Try again."
+  },
+  "chat_stt_hint": {
+    "message": "Stop to edit first · Send sends when ready · Esc discards"
   }
 }

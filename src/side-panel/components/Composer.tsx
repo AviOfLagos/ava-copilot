@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Loader2, Mic, Paperclip, Square, X } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { cn } from '@extension/ui';
+import type { SpeechInput } from '../hooks/useSpeechInput';
+import { ListeningStrip } from './Dictation';
 import './ui/morph-orb.css';
 
 interface ComposerProps {
   onSendMessage: (text: string) => void;
   onStopTask: () => void;
-  onMicClick?: () => void;
-  isRecording?: boolean;
-  isProcessingSpeech?: boolean;
+  // Dictation: the mic button, and what is shown while it listens and writes the words down
+  speech?: Pick<SpeechInput, 'status' | 'startedAt' | 'level' | 'toggle' | 'cancel'>;
+  // Lets the panel hand over the words of a dictation when they are written down
+  setTranscriptSink?: (sink: (words: string) => void) => void;
   disabled: boolean;
   showStopButton: boolean;
   setContent?: (setter: (text: string) => void) => void;
@@ -26,6 +28,14 @@ const ALLOWED = ['.txt', '.md', '.markdown', '.json', '.csv', '.log', '.xml', '.
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_HEIGHT = 132;
 
+/** What was typed, then the dictated words after it. */
+export function joinWords(typed: string, words: string): string {
+  const spoken = words.trim();
+  if (!spoken) return typed;
+  const before = typed.trimEnd();
+  return before ? `${before} ${spoken}` : spoken;
+}
+
 /**
  * The chat composer, in MorphOrb's typing style: a glass pill with a slow aurora, a lit ring that
  * quickens while you type, a spark, and a send button that lights up once there is something to send.
@@ -33,9 +43,8 @@ const MAX_HEIGHT = 132;
 export default function Composer({
   onSendMessage,
   onStopTask,
-  onMicClick,
-  isRecording = false,
-  isProcessingSpeech = false,
+  speech,
+  setTranscriptSink,
   disabled,
   showStopButton,
   setContent,
@@ -43,6 +52,11 @@ export default function Composer({
 }: ComposerProps) {
   const [text, setText] = useState('');
   const [files, setFiles] = useState<AttachedFile[]>([]);
+  // Send pressed while dictating: the words go out as soon as they are written down
+  const [sendWhenReady, setSendWhenReady] = useState(false);
+  const sendWhenReadyRef = useRef(false);
+  const textRef = useRef(text);
+  textRef.current = text;
   const pillRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,7 +78,33 @@ export default function Composer({
 
   useEffect(() => () => window.clearTimeout(typingTimer.current), []);
 
-  const ready = !disabled && (text.trim().length > 0 || files.length > 0);
+  const speechStatus = speech?.status ?? 'idle';
+  const micOn = speechStatus === 'starting' || speechStatus === 'listening';
+  const dictating = speechStatus !== 'idle';
+  const ready = !disabled && (text.trim().length > 0 || files.length > 0 || micOn);
+
+  const waitToSend = (on: boolean) => {
+    sendWhenReadyRef.current = on;
+    setSendWhenReady(on);
+  };
+
+  // A dictation that ended without words (an error, a discard) sends nothing
+  useEffect(() => {
+    if (speechStatus === 'idle') waitToSend(false);
+  }, [speechStatus]);
+
+  // Esc drops a recording under way, wherever the focus is
+  const cancelSpeech = speech?.cancel;
+  useEffect(() => {
+    if (!micOn || !cancelSpeech) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      cancelSpeech();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [micOn, cancelSpeech]);
 
   const nudge = () => {
     const pill = pillRef.current;
@@ -77,22 +117,64 @@ export default function Composer({
     window.setTimeout(() => pill.removeAttribute('data-flash'), 200);
   };
 
+  /** Sends `value` with the attached files; false when there is nothing to send or sending is not possible now. */
+  const sendText = useCallback(
+    (value: string): boolean => {
+      if (disabled) return false;
+      const trimmed = value.trim();
+      if (!trimmed && files.length === 0) {
+        nudge();
+        return false;
+      }
+      // File contents are tagged so the background can treat them as data
+      const attached = files
+        .map(file => `\n\n<nano_file_content type="file" name="${file.name}">\n${file.content}\n</nano_file_content>`)
+        .join('\n');
+      onSendMessage(attached ? `${trimmed}\n\n<nano_attached_files>${attached}</nano_attached_files>` : trimmed);
+      setText('');
+      setFiles([]);
+      requestAnimationFrame(resize);
+      return true;
+    },
+    [disabled, files, onSendMessage],
+  );
+  const sendTextRef = useRef(sendText);
+  sendTextRef.current = sendText;
+
   const submit = useCallback(() => {
-    if (disabled) return;
-    const trimmed = text.trim();
-    if (!trimmed && files.length === 0) {
-      nudge();
+    if (speechStatus === 'listening') {
+      // Finish listening; the words are sent once written down
+      waitToSend(true);
+      void speech?.toggle();
       return;
     }
-    // File contents are tagged so the background can treat them as data
-    const attached = files
-      .map(file => `\n\n<nano_file_content type="file" name="${file.name}">\n${file.content}\n</nano_file_content>`)
-      .join('\n');
-    onSendMessage(attached ? `${trimmed}\n\n<nano_attached_files>${attached}</nano_attached_files>` : trimmed);
-    setText('');
-    setFiles([]);
-    requestAnimationFrame(resize);
-  }, [disabled, text, files, onSendMessage]);
+    if (speechStatus === 'transcribing') {
+      waitToSend(true);
+      return;
+    }
+    // The microphone was still starting: nothing was said yet, so what is typed goes now
+    if (speechStatus === 'starting') speech?.cancel();
+    sendText(text);
+  }, [speechStatus, speech, sendText, text]);
+
+  // The words of a dictation: after what is typed, and sent at once when Send was pressed while dictating
+  useEffect(() => {
+    setTranscriptSink?.(words => {
+      const joined = joinWords(textRef.current, words);
+      if (sendWhenReadyRef.current) {
+        waitToSend(false);
+        if (sendTextRef.current(joined)) return;
+      }
+      setText(joined);
+      requestAnimationFrame(() => {
+        resize();
+        const area = textareaRef.current;
+        if (!area) return;
+        area.focus();
+        area.setSelectionRange(area.value.length, area.value.length);
+      });
+    });
+  }, [setTranscriptSink]);
 
   const onChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(event.target.value);
@@ -137,7 +219,7 @@ export default function Composer({
         event.preventDefault();
         submit();
       }}>
-      <div ref={pillRef} className="mo-pill">
+      <div ref={pillRef} className="mo-pill" data-listening={micOn ? '' : undefined}>
         <div className="mo-underglow" aria-hidden="true" />
         <div className="mo-surface" aria-hidden="true">
           <div className="mo-aurora">
@@ -182,27 +264,39 @@ export default function Composer({
               <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" />
               <path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
             </svg>
-            <textarea
-              ref={textareaRef}
-              value={text}
-              rows={1}
-              disabled={disabled}
-              placeholder={placeholder ?? t('chat_input_placeholder')}
-              aria-label={t('chat_input_editor')}
-              onChange={onChange}
-              onKeyDown={onKeyDown}
-              className="text-foreground placeholder:text-muted-foreground max-h-[132px] min-h-9 flex-1 resize-none border-0 bg-transparent p-2 text-[14px] leading-5 outline-none disabled:cursor-not-allowed"
-            />
-            <div className="flex shrink-0 items-center gap-0.5 pb-0.5">
-              <button
-                type="button"
-                className={iconButton}
-                onClick={() => fileRef.current?.click()}
+            {speech && speechStatus !== 'idle' ? (
+              <ListeningStrip
+                status={speechStatus}
+                startedAt={speech.startedAt}
+                level={speech.level}
+                sendWhenReady={sendWhenReady}
+                onCancel={speech.cancel}
+              />
+            ) : (
+              <textarea
+                ref={textareaRef}
+                value={text}
+                rows={1}
                 disabled={disabled}
-                aria-label={t('chat_input_attach')}
-                title={t('chat_input_attach')}>
-                <Paperclip className="size-4" />
-              </button>
+                placeholder={placeholder ?? t('chat_input_placeholder')}
+                aria-label={t('chat_input_editor')}
+                onChange={onChange}
+                onKeyDown={onKeyDown}
+                className="text-foreground placeholder:text-muted-foreground max-h-[132px] min-h-9 flex-1 resize-none border-0 bg-transparent p-2 text-[14px] leading-5 outline-none disabled:cursor-not-allowed"
+              />
+            )}
+            <div className="flex shrink-0 items-center gap-0.5 pb-0.5">
+              {!dictating && (
+                <button
+                  type="button"
+                  className={iconButton}
+                  onClick={() => fileRef.current?.click()}
+                  disabled={disabled}
+                  aria-label={t('chat_input_attach')}
+                  title={t('chat_input_attach')}>
+                  <Paperclip className="size-4" />
+                </button>
+              )}
               <input
                 ref={fileRef}
                 type="file"
@@ -211,17 +305,30 @@ export default function Composer({
                 className="hidden"
                 onChange={event => void onFiles(event)}
               />
-              {onMicClick && (
-                <button
-                  type="button"
-                  className={cn(iconButton, isRecording && 'bg-destructive/20 text-foreground')}
-                  onClick={onMicClick}
-                  disabled={disabled || isProcessingSpeech}
-                  aria-label={isRecording ? t('chat_stt_recording_stop') : t('chat_stt_input_start')}
-                  title={isRecording ? t('chat_stt_recording_stop') : t('chat_stt_input_start')}>
-                  {isProcessingSpeech ? <Loader2 className="size-4 animate-spin" /> : <Mic className="size-4" />}
-                </button>
-              )}
+              {speech &&
+                (micOn ? (
+                  // While it listens, the mic is a stop button: the words then go in the box to edit
+                  <button
+                    type="button"
+                    className="stt-stop"
+                    onClick={() => void speech.toggle()}
+                    aria-label={t('chat_stt_stop_insert')}
+                    title={t('chat_stt_stop_insert')}>
+                    <Square className="size-3 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={iconButton}
+                    onClick={() => void speech.toggle()}
+                    disabled={disabled || speechStatus === 'transcribing'}
+                    aria-label={
+                      speechStatus === 'transcribing' ? t('chat_stt_transcribing') : t('chat_stt_input_start')
+                    }
+                    title={speechStatus === 'transcribing' ? t('chat_stt_transcribing') : t('chat_stt_input_start')}>
+                    <Mic className="size-4" />
+                  </button>
+                ))}
               {showStopButton ? (
                 <button
                   type="button"
@@ -234,11 +341,28 @@ export default function Composer({
               ) : (
                 <button
                   type="submit"
-                  aria-label={t('chat_buttons_send')}
-                  title={t('chat_buttons_send')}
-                  data-ready={ready ? '' : undefined}
+                  aria-label={
+                    sendWhenReady
+                      ? t('chat_stt_sending_when_ready')
+                      : dictating
+                        ? t('chat_stt_send_when_ready')
+                        : t('chat_buttons_send')
+                  }
+                  title={
+                    sendWhenReady
+                      ? t('chat_stt_sending_when_ready')
+                      : dictating
+                        ? t('chat_stt_send_when_ready')
+                        : t('chat_buttons_send')
+                  }
+                  disabled={sendWhenReady}
+                  data-ready={ready || dictating ? '' : undefined}
                   className="mo-send">
-                  <ArrowUp className="size-[18px]" strokeWidth={1.75} />
+                  {sendWhenReady ? (
+                    <Loader2 className="size-[18px] animate-spin" strokeWidth={1.75} />
+                  ) : (
+                    <ArrowUp className="size-[18px]" strokeWidth={1.75} />
+                  )}
                 </button>
               )}
             </div>

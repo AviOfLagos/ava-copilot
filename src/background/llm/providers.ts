@@ -340,8 +340,14 @@ export function createChatModel(
 /**
  * Gemini model used for speech-to-text transcription
  */
-export function createSpeechToTextModel(provider: string, apiKey: string, modelName: string): ChatModel {
-  const google = createGoogle({ apiKey });
+export function createSpeechToTextModel(
+  provider: string,
+  apiKey: string,
+  modelName: string,
+  // The provider's own address, when the user set one (a proxy, or a test server)
+  baseUrl?: string,
+): ChatModel {
+  const google = createGoogle({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
   return {
     provider,
     modelName,

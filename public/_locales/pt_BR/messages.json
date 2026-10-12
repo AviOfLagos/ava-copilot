@@ -5169,5 +5169,35 @@
   },
   "brain_unpair": {
     "message": "Desparear"
+  },
+  "chat_stt_starting": {
+    "message": "Ligando o microfone…"
+  },
+  "chat_stt_listening": {
+    "message": "Ouvindo"
+  },
+  "chat_stt_transcribing": {
+    "message": "Transcrevendo…"
+  },
+  "chat_stt_transcribing_send": {
+    "message": "Transcrevendo e depois enviando…"
+  },
+  "chat_stt_cancel": {
+    "message": "Descartar a gravação"
+  },
+  "chat_stt_stop_insert": {
+    "message": "Parar: as palavras vão para a caixa para editar"
+  },
+  "chat_stt_send_when_ready": {
+    "message": "Enviar quando transcrito"
+  },
+  "chat_stt_sending_when_ready": {
+    "message": "Envia quando transcrito"
+  },
+  "chat_stt_timeout": {
+    "message": "A transcrição demorou demais. Tente de novo."
+  },
+  "chat_stt_hint": {
+    "message": "Parar para editar · Enviar envia quando pronto · Esc descarta"
   }
 }

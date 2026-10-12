@@ -904,6 +904,19 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   (`companionToolSource()`), agent sessions in Avi Brain's sandbox (`CompanionClient.createSession`), local
   speech-to-text for the chat box's dictation, deep links from an Inbox item to one workflow run.
 
+### Dictation you can see (2026-10-12)
+
+- The chat box's mic is a small state machine (`src/side-panel/hooks/useSpeechInput.ts`: idle → starting →
+  listening → transcribing). While the mic is on, a strip takes the text box's place (`components/Dictation.tsx`):
+  a red dot, a live level meter (an `AnalyserNode`, read on animation frames, no re-render per frame), the time, and
+  an × that discards; the pill's edge turns to the recording colour, and the mic becomes a red stop button.
+- **Stop** writes the words down and puts them after what was typed (it used to replace it). **Send while
+  listening** (or while transcribing) sends the words as soon as they are written down. **Esc** discards. A failed
+  or timed-out transcription (60 s) sends nothing and keeps what was typed.
+- Transcription honours the Gemini provider's base URL (`createSpeechToTextModel`), as embeddings already did.
+- Tests: `e2e/dictation.e2e.mjs` (fake microphone; the strip, meter and timer; Stop; Send while listening; a
+  failure; Esc), unit tests for `meterLevel` and `joinWords`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

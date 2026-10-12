@@ -5169,5 +5169,35 @@
   },
   "brain_unpair": {
     "message": "取消配對"
+  },
+  "chat_stt_starting": {
+    "message": "正在開啟麥克風…"
+  },
+  "chat_stt_listening": {
+    "message": "正在聆聽"
+  },
+  "chat_stt_transcribing": {
+    "message": "正在轉成文字…"
+  },
+  "chat_stt_transcribing_send": {
+    "message": "轉成文字後就會傳送…"
+  },
+  "chat_stt_cancel": {
+    "message": "捨棄這段錄音"
+  },
+  "chat_stt_stop_insert": {
+    "message": "停止：文字會放進輸入框供你編輯"
+  },
+  "chat_stt_send_when_ready": {
+    "message": "轉成文字後傳送"
+  },
+  "chat_stt_sending_when_ready": {
+    "message": "轉成文字後會自動傳送"
+  },
+  "chat_stt_timeout": {
+    "message": "轉成文字花了太久，請再試一次。"
+  },
+  "chat_stt_hint": {
+    "message": "停止可先編輯 · 傳送會在轉好後送出 · Esc 捨棄"
   }
 }
