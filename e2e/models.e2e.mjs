@@ -148,6 +148,62 @@ function command(page, message) {
   );
 }
 
+test('the open "Add New Provider" list is not clipped by the Model Selection card below it', async () => {
+  // Regression test for the global stacking-context fix (src/ui/lib/theme.css): every card gets its
+  // own stacking context from backdrop-filter, so without the fix a later sibling card always paints
+  // over an earlier card's open dropdown, no matter the dropdown's own z-index.
+  await options.bringToFront();
+  await options.waitForSelector('[data-provider-menu-trigger]', { timeout: 10000 });
+  await options.click('[data-provider-menu-trigger]');
+  await options.waitForSelector('[data-provider-menu]', { timeout: 5000 });
+
+  const geometry = await options.evaluate(() => {
+    const trigger = document.querySelector('[data-provider-menu-trigger]');
+    const menu = document.querySelector('[data-provider-menu]');
+    const providersCard = trigger.closest('.rounded-lg.border');
+    const nextCard = providersCard?.nextElementSibling ?? null;
+    const menuRect = menu.getBoundingClientRect();
+    const nextRect = nextCard?.getBoundingClientRect();
+    if (!nextRect) return { overlaps: false, nextCardHeading: null };
+
+    // The point in the middle of wherever the two boxes actually overlap: only reachable when the
+    // dropdown really does extend past its own card and over the next one (the bug this proves fixed).
+    const top = Math.max(menuRect.top, nextRect.top);
+    const bottom = Math.min(menuRect.bottom, nextRect.bottom);
+    const left = Math.max(menuRect.left, nextRect.left);
+    const right = Math.min(menuRect.right, nextRect.right);
+    const overlaps = bottom > top && right > left;
+    if (!overlaps) return { overlaps, nextCardHeading: nextCard.querySelector('h2')?.textContent ?? null };
+
+    const x = Math.round((left + right) / 2);
+    const y = Math.round((top + bottom) / 2);
+    const topElement = document.elementFromPoint(x, y);
+    return {
+      overlaps,
+      x,
+      y,
+      nextCardHeading: nextCard.querySelector('h2')?.textContent ?? null,
+      topIsMenu: Boolean(topElement && menu.contains(topElement)),
+      topElementHtml: topElement?.outerHTML?.slice(0, 160) ?? null,
+    };
+  });
+
+  assert.equal(geometry.nextCardHeading, 'Model Selection');
+  assert.ok(
+    geometry.overlaps,
+    `the open dropdown must extend past the Providers card and over "Model Selection" for this test to ` +
+      `prove anything; it does not currently (geometry: ${JSON.stringify(geometry)})`,
+  );
+  assert.ok(
+    geometry.topIsMenu,
+    `document.elementFromPoint at (${geometry.x}, ${geometry.y}), where the dropdown overlaps the next ` +
+      `card, hit the card instead of the dropdown: ${geometry.topElementHtml}`,
+  );
+
+  // Leave the page as the next test expects it
+  await options.click('[data-provider-menu-trigger]');
+});
+
 test('plaintext keys move into the encrypted vault, and storage keeps only their last characters', async () => {
   const current = await extension.getStorage('llm-api-keys');
   await extension.setStorage({

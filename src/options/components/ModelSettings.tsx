@@ -339,6 +339,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
             <Button
               variant="secondary"
               aria-expanded={isProviderSelectorOpen}
+              data-provider-menu-trigger
               onClick={() => setIsProviderSelectorOpen(prev => !prev)}
               className={`flex w-full items-center justify-center font-medium ${
                 isDarkMode
@@ -351,6 +352,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
 
             {isProviderSelectorOpen && (
               <div
+                data-provider-menu
                 className={`absolute z-10 mt-2 w-full overflow-hidden rounded-md border ${
                   isDarkMode
                     ? 'border-blue-600 bg-slate-700 shadow-lg shadow-slate-900/50'
@@ -361,6 +363,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
                     <button
                       key={type}
                       type="button"
+                      data-provider-type={type}
                       className={`flex w-full items-center px-4 py-3 text-left text-sm ${
                         isDarkMode
                           ? 'text-blue-200 hover:bg-blue-600/30 hover:text-white'

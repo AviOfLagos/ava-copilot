@@ -68,7 +68,14 @@ function ConnectorList({
 
   return (
     <>
-      <Section label={t('conn_list_title')}>
+      <Section
+        label={t('conn_list_title')}
+        action={
+          <Button size="sm" onClick={() => onAdd(null)} data-add-connector>
+            <Plus className="size-3.5" aria-hidden />
+            {t('conn_list_add')}
+          </Button>
+        }>
         {sorted.length === 0 ? (
           <p className="text-muted-foreground p-3 text-[12.5px]">{t('conn_list_empty')}</p>
         ) : (

@@ -91,6 +91,14 @@ function WorkflowList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => 
         <p className="text-muted-foreground mt-1 text-[12.5px] leading-relaxed">{t('flow_intro')}</p>
       </header>
 
+      <Button
+        onClick={() => api.startThread(`${t('flow_new_starter')} `)}
+        className="w-full justify-center"
+        data-new-workflow>
+        <Plus className="size-4" aria-hidden />
+        {t('flow_new')}
+      </Button>
+
       {error && (
         <div role="alert" className="border-destructive/40 bg-destructive/10 rounded-xl border px-3 py-2 text-[12.5px]">
           {error}

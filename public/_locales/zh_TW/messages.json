@@ -3161,6 +3161,12 @@
   "flow_intro": {
     "message": "自動執行的例行程序：依排程、會議結束時，或在你要求時執行。每個都會顯示各步驟如何串接。"
   },
+  "flow_new": {
+    "message": "新增工作流程"
+  },
+  "flow_new_starter": {
+    "message": "建立一個例行程序，用來"
+  },
   "flow_section_review": {
     "message": "等待你審閱"
   },
@@ -3736,6 +3742,12 @@
   },
   "agents_intro": {
     "message": "代理人會自行替你工作，在它們自己的視窗裡，絕不碰你的分頁。它們會依排程、在你開啟它們監看的頁面時，或在訊息或其他代理人觸發時醒來。永遠為你保留一個任務名額。"
+  },
+  "agents_new": {
+    "message": "新增代理人"
+  },
+  "agents_new_starter": {
+    "message": "建立一個代理人，用來"
   },
   "agents_section_review": {
     "message": "等你檢查"
@@ -4362,6 +4374,9 @@
   },
   "conn_list_empty": {
     "message": "尚無連接器。在下方新增一個，代理和你的例行程序就能使用它的工具。"
+  },
+  "conn_list_add": {
+    "message": "新增連接器"
   },
   "conn_row_tools": {
     "message": "$1 個工具"

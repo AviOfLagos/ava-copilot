@@ -81,6 +81,26 @@
   backdrop-filter: blur(18px);
 }
 
+/*
+ * backdrop-filter (here, or a page's own card rule such as the settings page's `main .rounded-lg.border`,
+ * or a `backdrop-blur-*` utility used directly) gives an element its own stacking context, so a card's
+ * child can never out-rank a *later* sibling card no matter its z-index: the sibling simply paints on top
+ * and clips whatever the first card had open. When a card contains something open — a plain dropdown's
+ * `aria-expanded="true"` trigger, or a Radix-style `data-state="open"` — lift the CARD itself above its
+ * siblings so the open popup is never drawn under the next one. Applies globally (side panel, options,
+ * full-tab pages) so no page has to remember this per card. Content rendered through a portal (the
+ * RowMenu dropdown) already escapes the problem and does not need this.
+ */
+.glass:has([aria-expanded='true']),
+.glass:has([data-state='open']),
+.rounded-lg.border:has([aria-expanded='true']),
+.rounded-lg.border:has([data-state='open']),
+[class*='backdrop-blur']:has([aria-expanded='true']),
+[class*='backdrop-blur']:has([data-state='open']) {
+  position: relative;
+  z-index: 30;
+}
+
 .aura {
   background:
     radial-gradient(420px 300px at 15% -5%, var(--aura-1), transparent 70%),

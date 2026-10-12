@@ -15,6 +15,7 @@ function messageApi(): PanelApi {
     // Chats and other places live in the side panel
     go: () => {},
     openThread: () => {},
+    startThread: () => {},
     post: message => void chrome.runtime.sendMessage(message).catch(() => {}),
     request: <T,>(message: Record<string, unknown>, timeoutMs = 30_000) =>
       new Promise<T>((resolve, reject) => {
