@@ -24,6 +24,7 @@ export interface ModelCatalogEntry {
   // US dollars per million tokens, when the provider says
   inputUsdPerM: number | null;
   outputUsdPerM: number | null;
+  // What goes in and what kind of model it is: tags from ./capabilities.ts (chat, image, embedding, live…)
   modalities: string[];
   tools: boolean | null;
   health: 'ok' | 'error' | 'unknown';

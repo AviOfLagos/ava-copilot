@@ -2695,5 +2695,371 @@
   },
   "threads_retried": {
     "message": "Tentando a tarefa de novo do início."
+  },
+  "models_title": {
+    "message": "Modelos e uso"
+  },
+  "models_spend": {
+    "message": "Gastos de hoje"
+  },
+  "models_spend_cost": {
+    "message": "Limite de custo"
+  },
+  "models_spend_costHint": {
+    "message": "Conta todo modelo com preço conhecido, de qualquer provedor. Modelos locais são grátis."
+  },
+  "models_spend_tokens": {
+    "message": "Tokens sem preço"
+  },
+  "models_spend_tokensHint": {
+    "message": "Modelos sem preço conhecido param neste número de tokens por dia. 0 significa sem limite."
+  },
+  "models_tokenCap_reached": {
+    "message": "Limite diário de tokens atingido"
+  },
+  "models_tokenCap_detail": {
+    "message": "Tokens hoje em modelos sem preço conhecido: $1. Limite: $2."
+  },
+  "models_providers": {
+    "message": "Provedores"
+  },
+  "models_provider_local": {
+    "message": "Local"
+  },
+  "models_provider_cloud": {
+    "message": "Nuvem"
+  },
+  "models_provider_models": {
+    "message": "$1 modelos"
+  },
+  "models_health_ok": {
+    "message": "Respondendo"
+  },
+  "models_health_error": {
+    "message": "Sem resposta"
+  },
+  "models_health_unknown": {
+    "message": "Não verificado"
+  },
+  "models_key_label": {
+    "message": "Chave de API"
+  },
+  "models_key_none": {
+    "message": "Sem chave"
+  },
+  "models_key_notNeeded": {
+    "message": "Não precisa de chave"
+  },
+  "models_key_replace": {
+    "message": "Trocar chave"
+  },
+  "models_key_remove": {
+    "message": "Remover chave"
+  },
+  "models_key_placeholder": {
+    "message": "Cole a chave"
+  },
+  "models_key_keepPlaceholder": {
+    "message": "Cole uma chave nova ou deixe vazio para manter a salva"
+  },
+  "models_key_show": {
+    "message": "Mostrar chave"
+  },
+  "models_key_hide": {
+    "message": "Ocultar chave"
+  },
+  "models_key_vault": {
+    "message": "As chaves ficam criptografadas neste computador e só são enviadas ao próprio provedor."
+  },
+  "models_chip_remove": {
+    "message": "Remover $1"
+  },
+  "models_name": {
+    "message": "Nome"
+  },
+  "models_baseUrl": {
+    "message": "Endereço"
+  },
+  "models_deployments": {
+    "message": "Implantações, separadas por vírgulas"
+  },
+  "models_apiVersion": {
+    "message": "Versão da API"
+  },
+  "models_edit": {
+    "message": "Editar"
+  },
+  "models_save": {
+    "message": "Salvar"
+  },
+  "models_cancel": {
+    "message": "Cancelar"
+  },
+  "models_test": {
+    "message": "Testar"
+  },
+  "models_remove": {
+    "message": "Remover"
+  },
+  "models_removeConfirm": {
+    "message": "Clique de novo para remover"
+  },
+  "models_saving": {
+    "message": "Salvando…"
+  },
+  "models_checking": {
+    "message": "Consultando o provedor…"
+  },
+  "models_removing": {
+    "message": "Removendo…"
+  },
+  "models_disconnected": {
+    "message": "A extensão reiniciou. Tente de novo."
+  },
+  "models_result_ok": {
+    "message": "Respondeu com $1 modelos."
+  },
+  "models_result_unknown": {
+    "message": "A lista de modelos não pôde ser lida; as conversas ainda podem funcionar."
+  },
+  "models_error_generic": {
+    "message": "Não foi possível ler a lista de modelos. Tente mais tarde."
+  },
+  "models_hint_ollama_origins": {
+    "message": "O Ollama recusou a extensão. Feche o Ollama e inicie-o com OLLAMA_ORIGINS=chrome-extension://* para que a extensão possa chamá-lo."
+  },
+  "models_hint_needs_key": {
+    "message": "Este provedor precisa de uma chave de API."
+  },
+  "models_hint_key_rejected": {
+    "message": "O provedor recusou esta chave. Confira e salve de novo."
+  },
+  "models_hint_unreachable": {
+    "message": "Nada respondeu neste endereço. Ele está em execução?"
+  },
+  "models_problem_name": {
+    "message": "Dê um nome."
+  },
+  "models_problem_baseUrl": {
+    "message": "Informe o endereço."
+  },
+  "models_problem_deployment": {
+    "message": "Adicione pelo menos uma implantação."
+  },
+  "models_problem_apiVersion": {
+    "message": "Informe a versão da API."
+  },
+  "models_problem_key": {
+    "message": "Informe a chave de API."
+  },
+  "models_add": {
+    "message": "Adicionar"
+  },
+  "models_add_choose": {
+    "message": "Adicionar um provedor…"
+  },
+  "models_local_found": {
+    "message": "O $1 está rodando neste computador com $2 modelos."
+  },
+  "models_local_refused": {
+    "message": "O $1 está rodando neste computador, mas recusa a extensão."
+  },
+  "models_local_add": {
+    "message": "Adicionar $1"
+  },
+  "models_options_listed": {
+    "message": "O provedor lista $1 modelos; escolha entre eles ao digitar."
+  },
+  "models_catalog": {
+    "message": "Modelos disponíveis"
+  },
+  "models_catalog_search": {
+    "message": "Buscar modelos"
+  },
+  "models_catalog_all": {
+    "message": "Todos"
+  },
+  "models_catalog_refresh": {
+    "message": "Atualizar"
+  },
+  "models_catalog_refreshing": {
+    "message": "Atualizando…"
+  },
+  "models_catalog_checked": {
+    "message": "Verificado $1"
+  },
+  "models_catalog_never": {
+    "message": "Ainda não verificado"
+  },
+  "models_catalog_empty": {
+    "message": "Nenhum modelo listado ainda. Adicione um provedor e atualize."
+  },
+  "models_catalog_more": {
+    "message": "Mostrar todos os $1"
+  },
+  "models_price_title": {
+    "message": "Dólares por milhão de tokens, entrada / saída"
+  },
+  "models_price_free": {
+    "message": "grátis"
+  },
+  "models_price_unknown": {
+    "message": "preço desconhecido"
+  },
+  "models_context": {
+    "message": "contexto $1"
+  },
+  "models_cap_vision": {
+    "message": "imagens"
+  },
+  "models_cap_audio": {
+    "message": "áudio"
+  },
+  "models_cap_tools": {
+    "message": "ferramentas"
+  },
+  "models_cap_embed": {
+    "message": "embeddings"
+  },
+  "models_cap_live": {
+    "message": "ao vivo"
+  },
+  "models_cap_speech": {
+    "message": "fala"
+  },
+  "models_cap_search": {
+    "message": "busca na web"
+  },
+  "models_cap_reasoning": {
+    "message": "raciocínio"
+  },
+  "models_roles": {
+    "message": "Qual modelo faz o quê"
+  },
+  "models_roles_hint": {
+    "message": "Os recursos pedem um tipo de modelo, nunca um nome. Automático escolhe o melhor disponível, e um local quando a nuvem cai."
+  },
+  "models_role_fast": {
+    "message": "Rápido"
+  },
+  "models_role_fast_hint": {
+    "message": "Passos rápidos e baratos: navegar, respostas curtas."
+  },
+  "models_role_smart": {
+    "message": "Inteligente"
+  },
+  "models_role_smart_hint": {
+    "message": "Planejamento e perguntas difíceis."
+  },
+  "models_role_vision": {
+    "message": "Visão"
+  },
+  "models_role_vision_hint": {
+    "message": "Lê capturas de tela e imagens."
+  },
+  "models_role_local": {
+    "message": "Local"
+  },
+  "models_role_local_hint": {
+    "message": "Trabalho privado que nunca sai deste computador."
+  },
+  "models_role_embed": {
+    "message": "Embeddings"
+  },
+  "models_role_embed_hint": {
+    "message": "Busca por significado na memória."
+  },
+  "models_role_transcribe": {
+    "message": "Transcrição"
+  },
+  "models_role_transcribe_hint": {
+    "message": "Transforma gravações em texto."
+  },
+  "models_role_realtime": {
+    "message": "Voz ao vivo"
+  },
+  "models_role_realtime_hint": {
+    "message": "Conversas faladas e legendas ao vivo."
+  },
+  "models_role_tts": {
+    "message": "Fala"
+  },
+  "models_role_tts_hint": {
+    "message": "Lê as respostas em voz alta."
+  },
+  "models_role_search": {
+    "message": "Busca na web"
+  },
+  "models_role_search_hint": {
+    "message": "Respostas que pesquisam na web."
+  },
+  "models_role_auto": {
+    "message": "Automático ($1)"
+  },
+  "models_role_autoNone": {
+    "message": "Automático (nenhum disponível ainda)"
+  },
+  "models_role_pinned": {
+    "message": "Fica fixo depois de escolhido: outro modelo exige indexar a memória de novo."
+  },
+  "models_role_standIn": {
+    "message": "O provedor está fora do ar; outro modelo assume."
+  },
+  "models_usage": {
+    "message": "Uso"
+  },
+  "models_usage_range": {
+    "message": "Período"
+  },
+  "models_usage_days": {
+    "message": "$1 d"
+  },
+  "models_usage_by": {
+    "message": "Agrupar por"
+  },
+  "models_usage_byDay": {
+    "message": "Dia"
+  },
+  "models_usage_byModel": {
+    "message": "Modelo"
+  },
+  "models_usage_byAgent": {
+    "message": "Agente"
+  },
+  "models_usage_byWorkflow": {
+    "message": "Rotina"
+  },
+  "models_usage_byWorkspace": {
+    "message": "Espaço"
+  },
+  "models_usage_cost": {
+    "message": "custo"
+  },
+  "models_usage_tokens": {
+    "message": "tokens"
+  },
+  "models_usage_calls": {
+    "message": "chamadas"
+  },
+  "models_usage_unpriced": {
+    "message": "$1 tokens foram para modelos sem preço conhecido."
+  },
+  "models_usage_none": {
+    "message": "Nenhuma chamada de modelo neste período."
+  },
+  "models_usage_noAgent": {
+    "message": "Você (sem agente)"
+  },
+  "models_usage_noWorkflow": {
+    "message": "Fora de rotinas"
+  },
+  "models_usage_noWorkspace": {
+    "message": "Sem espaço"
+  },
+  "models_usage_other": {
+    "message": "Outros"
+  },
+  "models_usage_chart": {
+    "message": "Uso por $1, últimos $2 dias"
   }
 }

@@ -18,6 +18,7 @@ export * from './workflows';
 export * from './inbox';
 export * from './integrations';
 export * from './models';
+export * from './secrets';
 export * from './artifacts';
 export * from './jobs';
 export * from './observability';

@@ -10,6 +10,8 @@ export interface UsageTotals {
   calls: number;
   // Calls to a model with no known price; their cost is not in costUsd
   unpricedCalls: number;
+  // Tokens (in and out) of those calls, held to their own daily cap
+  unpricedTokens?: number;
 }
 
 export interface UsageRecord {
@@ -26,7 +28,14 @@ export type UsageStorage = BaseStorage<UsageRecord> & {
   clear: () => Promise<void>;
 };
 
-export const EMPTY_USAGE: UsageTotals = { inputTokens: 0, outputTokens: 0, costUsd: 0, calls: 0, unpricedCalls: 0 };
+export const EMPTY_USAGE: UsageTotals = {
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+  calls: 0,
+  unpricedCalls: 0,
+  unpricedTokens: 0,
+};
 
 const MAX_DAYS = 60;
 const MAX_SESSIONS = 200;
@@ -44,6 +53,7 @@ export function addTotals(a: UsageTotals, b: UsageTotals): UsageTotals {
     costUsd: a.costUsd + b.costUsd,
     calls: a.calls + b.calls,
     unpricedCalls: a.unpricedCalls + b.unpricedCalls,
+    unpricedTokens: (a.unpricedTokens ?? 0) + (b.unpricedTokens ?? 0),
   };
 }
 
@@ -89,3 +99,5 @@ export const usageStore: UsageStorage = {
     await storage.set({ days: {}, sessions: {} });
   },
 };
+
+export * from './events';
