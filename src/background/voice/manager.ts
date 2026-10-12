@@ -23,6 +23,7 @@ import { allowedByClick } from './confirm';
 import { soundRecently } from './sound';
 import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { registeredVoiceTool, registeredVoiceTools } from '../registry';
+import { usesLiveTokens } from '../models/liveToken';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
@@ -125,7 +126,8 @@ export class VoiceManager {
       type: 'voice_start',
       options: {
         endpoint: settings.liveEndpoint,
-        apiKey: gemini[1].apiKey,
+        // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
+        ...(usesLiveTokens(settings.liveEndpoint) ? { apiKey: '', tokenAuth: true } : { apiKey: gemini[1].apiKey }),
         model: settings.liveModel,
         instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`, history]
           .filter(Boolean)

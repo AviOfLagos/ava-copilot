@@ -86,3 +86,12 @@ export async function liveTokenFromSettings(options: Omit<MintOptions, 'now'> = 
   if (!gemini) throw new AppError('auth', 'Voice needs a Gemini API key.');
   return mintLiveToken(gemini[1].apiKey, options);
 }
+
+/** Whether a Live endpoint is Google's own, where one-use tokens replace the key (test endpoints keep the key). */
+export function usesLiveTokens(endpoint: string): boolean {
+  try {
+    return new URL(endpoint).hostname === 'generativelanguage.googleapis.com';
+  } catch {
+    return false;
+  }
+}

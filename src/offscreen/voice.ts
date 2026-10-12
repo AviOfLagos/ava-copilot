@@ -1,5 +1,6 @@
 import { pcm16Base64 } from './live';
 import { SpeechGate } from './vad';
+import { liveSocketUrl } from './liveAuth';
 import type { LiveOptions } from './live';
 
 /**
@@ -210,7 +211,16 @@ export class VoiceSession {
     if (this.stopped) return;
     this.ready = false;
     this.status('connecting');
-    const socket = new WebSocket(`${this.options.endpoint}?key=${encodeURIComponent(this.options.apiKey)}`);
+    liveSocketUrl(this.options).then(
+      url => {
+        if (!this.stopped) this.open(url);
+      },
+      error => this.status('off', error instanceof Error ? error.message : String(error)),
+    );
+  }
+
+  private open(url: string): void {
+    const socket = new WebSocket(url);
     this.socket = socket;
     socket.onopen = () => socket.send(JSON.stringify(voiceSetup(this.options, this.handle)));
     socket.onmessage = async event => {

@@ -1,3 +1,4 @@
+import { liveSocketUrl } from './liveAuth';
 /**
  * Live captions from the Gemini Live API. The recorder streams the same 16 kHz audio it records;
  * the API sends back a transcript of each remark about a second after the speaker pauses.
@@ -12,6 +13,8 @@ export interface LiveOptions {
   endpoint: string;
   apiKey: string;
   model: string;
+  // A one-use token per connection from the background, so the key stays there
+  tokenAuth?: boolean;
 }
 
 export type LiveStatus = 'connecting' | 'on' | 'reconnecting' | 'off';
@@ -101,7 +104,25 @@ export class LiveCaptions {
     if (this.stopped) return;
     this.ready = false;
     this.onStatus(this.failures === 0 && !this.handle ? 'connecting' : 'reconnecting');
-    const socket = new WebSocket(`${this.options.endpoint}?key=${encodeURIComponent(this.options.apiKey)}`);
+    liveSocketUrl(this.options).then(
+      url => {
+        if (!this.stopped) this.open(url);
+      },
+      () => {
+        // No token this time (offline, a hiccup): try again with the same back-off as a dropped socket
+        if (this.stopped) return;
+        this.failures += 1;
+        this.onStatus('reconnecting');
+        this.reconnectTimer = setTimeout(
+          () => this.connect(),
+          Math.min(1000 * 2 ** (this.failures - 1), MAX_BACKOFF_MS),
+        );
+      },
+    );
+  }
+
+  private open(url: string): void {
+    const socket = new WebSocket(url);
     this.socket = socket;
 
     socket.onopen = () => socket.send(JSON.stringify(liveSetup(this.options.model, this.handle)));

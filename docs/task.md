@@ -592,6 +592,11 @@ that refocuses the web page.
   `identity` permission for connector sign-in. Routines pick models through `createRoleModel`; the graph, the brief and
   routines hold on the shared daily budget (`isOverDailyBudget`).
 
+- **Gemini Live tokens (lead, 2026-10-12):** with Google's endpoint the API key never reaches the offscreen document:
+  each Live connection (voice and live captions) asks the background (`models_live_token`) for a one-use token locked
+  to the Live model in settings and connects to the constrained endpoint with `access_token`
+  (`src/offscreen/liveAuth.ts`, `usesLiveTokens`). Test endpoints keep the key path.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

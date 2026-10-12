@@ -8,7 +8,8 @@ vi.hoisted(() => {
   });
 });
 
-const { AUTH_TOKENS_URL, LIVE_CONSTRAINED_ENDPOINT, liveSocketUrl, mintLiveToken } = await import('../liveToken');
+const { AUTH_TOKENS_URL, LIVE_CONSTRAINED_ENDPOINT, liveSocketUrl, mintLiveToken, usesLiveTokens } =
+  await import('../liveToken');
 const { resetBreakers } = await import('../breakers');
 import { fakeFetch, quickRetry } from './fakeFetch';
 
@@ -53,5 +54,17 @@ describe('Gemini Live tokens', () => {
     const odd = fakeFetch({ [AUTH_TOKENS_URL]: { json: { name: 'something-else' } } });
     await expect(mintLiveToken('AIza', { fetch: odd.fetch })).rejects.toThrow(/token/);
     await expect(mintLiveToken('  ')).rejects.toMatchObject({ kind: 'auth' });
+  });
+});
+
+describe('usesLiveTokens', () => {
+  it('is on for Google’s endpoint only', () => {
+    expect(
+      usesLiveTokens(
+        'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
+      ),
+    ).toBe(true);
+    expect(usesLiveTokens('ws://127.0.0.1:9/ws')).toBe(false);
+    expect(usesLiveTokens('not a url')).toBe(false);
   });
 });

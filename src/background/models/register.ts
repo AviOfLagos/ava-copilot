@@ -1,3 +1,4 @@
+import { meetingSettingsStore } from '@extension/storage';
 // The models stream registers its commands, jobs, agent actions, voice tools and recovery here
 // (see ../registry and ../jobs/runner).
 import {
@@ -224,7 +225,10 @@ chrome.runtime?.onConnect?.addListener(port => {
 chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
   if (message?.type !== 'models_live_token') return;
   if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('offscreen.html')) return;
-  liveTokenFromSettings()
+  // One use, locked to the Live model in settings: a leaked token opens nothing else
+  meetingSettingsStore
+    .getSettings()
+    .then(settings => liveTokenFromSettings({ uses: 1, model: settings.liveModel }))
     .then(token => sendResponse({ ok: true, ...token }))
     .catch(error => sendResponse({ ok: false, error: toAppError(error).message }));
   return true;

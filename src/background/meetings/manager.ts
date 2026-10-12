@@ -27,6 +27,7 @@ import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
 import { meterModel } from '../usage/meter';
 import type { UsageScope } from '../usage/meter';
+import { usesLiveTokens } from '../models/liveToken';
 import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE } from '../usage/pricing';
 import { resolveModels } from '../threads/factory';
@@ -435,7 +436,12 @@ export class MeetingManager {
       ([id, provider]) => (provider.type ?? id) === 'gemini' && provider.apiKey,
     );
     return gemini
-      ? { endpoint: settings.liveEndpoint, apiKey: gemini[1].apiKey, model: settings.liveModel }
+      ? {
+          endpoint: settings.liveEndpoint,
+          model: settings.liveModel,
+          // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
+          ...(usesLiveTokens(settings.liveEndpoint) ? { apiKey: '', tokenAuth: true } : { apiKey: gemini[1].apiKey }),
+        }
       : undefined;
   }
 
