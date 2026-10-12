@@ -705,9 +705,11 @@ const SidePanel = () => {
 
       {view === 'kb' && (
         <KnowledgeView
-          onAsk={(question, workspaceId) => kbRequest<KbAnswer>({ type: 'kb_ask', question, workspaceId })}
-          onSavePage={async workspaceId =>
-            kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId(), workspaceId })
+          onAsk={(question, workspaceId, agentId) =>
+            kbRequest<KbAnswer>({ type: 'kb_ask', question, workspaceId, agentId })
+          }
+          onSavePage={async (workspaceId, agentId) =>
+            kbRequest<string>({ type: 'kb_save_page', windowId: await currentWindowId(), workspaceId, agentId })
           }
           onDelete={itemId => post({ type: 'kb_delete', itemId })}
           onOpenCitation={openCitation}

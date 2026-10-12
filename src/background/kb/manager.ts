@@ -120,7 +120,7 @@ export class KnowledgeBase {
   private async write(
     fields: Pick<
       KnowledgeItem,
-      'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt' | 'workspaceId'
+      'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt' | 'workspaceId' | 'agentId'
     >,
     drafts: DraftChunk[],
   ): Promise<KnowledgeItem | null> {
@@ -215,7 +215,11 @@ export class KnowledgeBase {
   }
 
   /** Saves the page a tab shows. */
-  async savePage(tabId: number, workspaceId: string | null = null): Promise<KnowledgeItem> {
+  async savePage(
+    tabId: number,
+    workspaceId: string | null = null,
+    agentId: string | null = null,
+  ): Promise<KnowledgeItem> {
     const page = await this.deps.readTab(tabId);
     if (!page.text.trim()) {
       throw new Error(t('kb_pageEmpty'));
@@ -231,6 +235,7 @@ export class KnowledgeBase {
           sourceDate: now,
           sourceUpdatedAt: now,
           workspaceId,
+          agentId,
         },
         chunkPage(page.url, page.text),
       );
@@ -435,7 +440,12 @@ export class KnowledgeBase {
   }
 
   /** The passages that best match a query, by meaning when embeddings are available and by keyword. */
-  async search(query: string, limit = 8, workspaceId: string | null = null): Promise<SearchHit[]> {
+  async search(
+    query: string,
+    limit = 8,
+    workspaceId: string | null = null,
+    agentId: string | null = null,
+  ): Promise<SearchHit[]> {
     const index = await this.loadIndex();
     if (index.size === 0) return [];
     const settings = await kbSettingsStore.getSettings();
@@ -449,15 +459,15 @@ export class KnowledgeBase {
         logger.error('Could not embed the query', error);
       }
     }
-    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null, workspaceId });
+    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null, workspaceId, agentId });
   }
 
   /** Answers a question from the knowledge base, citing the sources it used. */
-  async ask(question: string, workspaceId: string | null = null): Promise<KbAnswer> {
+  async ask(question: string, workspaceId: string | null = null, agentId: string | null = null): Promise<KbAnswer> {
     if (await this.deps.overCap()) {
       throw new Error(t('usage_capReached_short'));
     }
-    const hits = await this.search(question, 8, workspaceId);
+    const hits = await this.search(question, 8, workspaceId, agentId);
     if (hits.length === 0) {
       return { answer: t('kb_answer_nothing'), citations: [] };
     }

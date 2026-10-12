@@ -140,4 +140,22 @@ describe('KbIndex', () => {
     expect(ids('nexprove')).toEqual(['nex', 'none']);
     expect(ids(null)).toEqual(['nex', 'none', 'tef']);
   });
+
+  it("keeps a search for one agent to that agent's knowledge", () => {
+    const index = new KbIndex(
+      [item('mine', { agentId: 'scout' }), item('theirs', { agentId: 'writer' }), item('nobody')],
+      [
+        chunk('mine', 0, 'launch checklist done', [1, 0]),
+        chunk('theirs', 0, 'launch checklist draft', [1, 0]),
+        chunk('nobody', 0, 'launch checklist notes', [1, 0]),
+      ],
+    );
+    const ids = (agentId: string | null) =>
+      index
+        .search('launch checklist', [1, 0], { agentId })
+        .map(hit => hit.item.id)
+        .sort();
+    expect(ids('scout')).toEqual(['mine']);
+    expect(ids(null)).toEqual(['mine', 'nobody', 'theirs']);
+  });
 });

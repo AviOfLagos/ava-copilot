@@ -397,14 +397,19 @@ chrome.runtime.onConnect.addListener(port => {
 
         case 'kb_ask': {
           const scope = typeof message.workspaceId === 'string' ? message.workspaceId : null;
-          const result = await kb.ask(String(message.question ?? ''), scope);
+          const agent = typeof message.agentId === 'string' ? message.agentId : null;
+          const result = await kb.ask(String(message.question ?? ''), scope, agent);
           return port.postMessage({ type: 'kb_answer', clientId: message.clientId, ...result });
         }
 
         case 'kb_save_page': {
           const [tab] = await chrome.tabs.query({ active: true, windowId: message.windowId });
           if (tab?.id === undefined) throw new Error(t('kb_pageUnreadable'));
-          const item = await kb.savePage(tab.id, typeof message.workspaceId === 'string' ? message.workspaceId : null);
+          const item = await kb.savePage(
+            tab.id,
+            typeof message.workspaceId === 'string' ? message.workspaceId : null,
+            typeof message.agentId === 'string' ? message.agentId : null,
+          );
           return port.postMessage({ type: 'kb_saved', clientId: message.clientId, title: item.title });
         }
 

@@ -127,12 +127,21 @@ export class KbIndex {
   search(
     query: string,
     queryVector: number[] | null,
-    options: { limit?: number; now?: number; embedModel?: string | null; workspaceId?: string | null } = {},
+    options: {
+      limit?: number;
+      now?: number;
+      embedModel?: string | null;
+      workspaceId?: string | null;
+      // One agent's knowledge only
+      agentId?: string | null;
+    } = {},
   ): SearchHit[] {
-    const { limit = 8, now = Date.now(), embedModel = null, workspaceId = null } = options;
-    // In a workspace: its own items and those in none, never another workspace's
+    const { limit = 8, now = Date.now(), embedModel = null, workspaceId = null, agentId = null } = options;
+    // In a workspace: its own items and those in none, never another workspace's; for an agent: its own only
     const allowed = (chunkId: string) => {
-      const owner = this.items.get(this.chunks.get(chunkId)?.itemId ?? '')?.workspaceId;
+      const item = this.items.get(this.chunks.get(chunkId)?.itemId ?? '');
+      const owner = item?.workspaceId;
+      if (agentId && item?.agentId !== agentId) return false;
       return !workspaceId || !owner || owner === workspaceId;
     };
     const scores = new Map<string, number>();
