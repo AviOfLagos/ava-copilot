@@ -10,3 +10,4 @@ export * from './speechToText';
 export * from './kbSettings';
 export * from './calendarSettings';
 export * from './briefSettings';
+export * from './ttsSettings';

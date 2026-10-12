@@ -457,6 +457,40 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS6. Replaces the canvas in the "Knowled
   `securitypolicyviolation` events. `node e2e/manual/graph.mjs <dir>` now also seeds a ~2 000-node/~4 000-edge graph
   and prints interaction timings (single-digit to low-hundreds of ms in a local run).
 
+### Wave 2 — WS2 Voice out & retry (built 2026-10-12)
+
+`src/background/tts` (`speak`/`stop`/`speaking` behind one interface, `markdown.ts` strips headings, lists, code,
+links and emoji to speakable text, `chunk.ts` breaks it at sentence ends for an engine that must queue utterances up
+front), `src/offscreen/tts.ts` (a one-clip `<audio>` player), `src/storage/lib/settings/ttsSettings.ts`
+(`readAloud: off | voice | always`, engine, voice, rate, plus the session-storage "who's speaking" flag every panel
+reads live), `src/side-panel/chat/*` (Speak/Stop and Retry in `ChatView.tsx`, the settings section), the error strip
+in `src/side-panel/threads/ThreadBar.tsx`, `e2e/speak.e2e.mjs`.
+
+- **Engine A, system voices (default)**: `chrome.tts` straight from the background; every chunk is queued with
+  `enqueue: true` up front (bar the first, which clears anything already speaking) because Chrome's own queue lives
+  outside the worker, not in it.
+- **Engine B, Gemini TTS (optional)**: the background fetches audio with the Gemini key (`background/tts/gemini.ts`,
+  REST `generateContent` with `responseModalities: ['AUDIO']`), wraps the raw PCM in a WAV header
+  (`background/tts/wav.ts`) and hands only the resulting `data:` URL to the offscreen player — the key never crosses
+  that boundary. `registerOffscreenBusy('tts', …)` keeps the offscreen document open while it plays.
+- **Auto read-aloud**: a `db.threads.hook('updating', …)` in `background/tts/register.ts` (a second, independent
+  hook from the knowledge base's own) fires when a run settles to idle; `shouldAutoSpeak()` (`decision.ts`, unit
+  tested) decides from the setting, the thread's `origin`, whether the Gemini Live conversation is running (it
+  announces itself) and the last spoken message id, so nothing is ever read twice.
+- **Retry**: command `thread_retry` re-runs `ThreadManager.retry`. **Retry from here**: command `thread_retry_from`
+  forks the thread just before a user message (`threadStore.fork(threadId, seq - 1)`) and sends that message's text
+  again in the fork (`retryFromMessage()`, `retry.ts`, unit tested with a fake store) — `fork()` itself does not
+  carry over `workspaceId`/`agentId`/`origin`, so the command copies them from the source thread straight after.
+  Shown: under the latest answer and in a failed turn's run trail (`ChatView.tsx`), in `ThreadBar`'s error strip for
+  every error kind (it hid Continue, not Retry, for `failed`), and "Retry from here" next to Branch on user messages.
+- **Not done**: KittenTTS/local engines (WS8), speaking up on its own (WS5c), a Gemini TTS voice picker (system
+  voices only in Settings › Voice output; Gemini uses its default voice).
+- **Needs the lead** (not this stream's files): one line in `src/side-panel/registers.ts`
+  (`import './chat/register';`), the offscreen router in `src/offscreen/index.ts` (`tts_play` / `tts_stop` /
+  `tts_running`, see the WS2 handback), and `SidePanel.tsx` wiring `onRetry`, `onRetryFrom`, `onSpeak`,
+  `onStopSpeaking` onto `ThreadBar`/`ChatView` (verified working locally, then reverted so this stream's diff stays
+  inside its own files).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

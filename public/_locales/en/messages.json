@@ -3094,5 +3094,62 @@
   },
   "graph_time_all": {
     "message": "All time"
+  },
+  "retry_action": {
+    "message": "Retry"
+  },
+  "retry_fromHere": {
+    "message": "Retry from here"
+  },
+  "retry_messageNotFound": {
+    "message": "That message could not be found to retry from."
+  },
+  "speak_action": {
+    "message": "Read aloud"
+  },
+  "speak_stop": {
+    "message": "Stop reading"
+  },
+  "speak_settings_title": {
+    "message": "Voice output"
+  },
+  "speak_settings_readAloud_label": {
+    "message": "Read answers aloud"
+  },
+  "speak_settings_readAloud_off": {
+    "message": "Off"
+  },
+  "speak_settings_readAloud_voice": {
+    "message": "When I used voice"
+  },
+  "speak_settings_readAloud_always": {
+    "message": "Always"
+  },
+  "speak_settings_engine_label": {
+    "message": "Voice engine"
+  },
+  "speak_settings_engine_system": {
+    "message": "System voices"
+  },
+  "speak_settings_engine_gemini": {
+    "message": "Gemini (cloud)"
+  },
+  "speak_settings_voice_label": {
+    "message": "Voice"
+  },
+  "speak_settings_voice_default": {
+    "message": "Default voice"
+  },
+  "speak_settings_rate_label": {
+    "message": "Speaking rate"
+  },
+  "speak_settings_gemini_needsKey": {
+    "message": "Add a Gemini API key in Models & usage to use this engine."
+  },
+  "speak_errors_noKey": {
+    "message": "No Gemini API key is configured."
+  },
+  "speak_errors_failed": {
+    "message": "Could not read the answer aloud."
   }
 }

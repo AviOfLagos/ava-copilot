@@ -3094,5 +3094,62 @@
   },
   "graph_time_all": {
     "message": "不限時間"
+  },
+  "retry_action": {
+    "message": "重試"
+  },
+  "retry_fromHere": {
+    "message": "從這裡重試"
+  },
+  "retry_messageNotFound": {
+    "message": "找不到要從此重試的訊息。"
+  },
+  "speak_action": {
+    "message": "朗讀"
+  },
+  "speak_stop": {
+    "message": "停止朗讀"
+  },
+  "speak_settings_title": {
+    "message": "語音輸出"
+  },
+  "speak_settings_readAloud_label": {
+    "message": "朗讀回答"
+  },
+  "speak_settings_readAloud_off": {
+    "message": "關閉"
+  },
+  "speak_settings_readAloud_voice": {
+    "message": "我用語音時"
+  },
+  "speak_settings_readAloud_always": {
+    "message": "總是"
+  },
+  "speak_settings_engine_label": {
+    "message": "語音引擎"
+  },
+  "speak_settings_engine_system": {
+    "message": "系統語音"
+  },
+  "speak_settings_engine_gemini": {
+    "message": "Gemini(雲端)"
+  },
+  "speak_settings_voice_label": {
+    "message": "語音"
+  },
+  "speak_settings_voice_default": {
+    "message": "預設語音"
+  },
+  "speak_settings_rate_label": {
+    "message": "語速"
+  },
+  "speak_settings_gemini_needsKey": {
+    "message": "請在「模型與用量」中新增 Gemini API 金鑰以使用此引擎。"
+  },
+  "speak_errors_noKey": {
+    "message": "尚未設定 Gemini API 金鑰。"
+  },
+  "speak_errors_failed": {
+    "message": "無法朗讀這則回答。"
   }
 }
