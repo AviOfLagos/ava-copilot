@@ -2695,5 +2695,494 @@
   },
   "threads_retried": {
     "message": "Trying the task again from the start."
+  },
+  "flow_place": {
+    "message": "Workflows"
+  },
+  "flow_title": {
+    "message": "Workflows"
+  },
+  "flow_intro": {
+    "message": "Routines that run on their own: on a schedule, when a meeting ends, or when you ask. Each shows how it is wired."
+  },
+  "flow_section_review": {
+    "message": "Waiting for your review"
+  },
+  "flow_section_yours": {
+    "message": "Your workflows"
+  },
+  "flow_section_templates": {
+    "message": "Start from a template"
+  },
+  "flow_empty_title": {
+    "message": "No workflows yet"
+  },
+  "flow_empty_body": {
+    "message": "Ask in chat and the copilot drafts one for you to check, as a diagram. Nothing runs until you click Create."
+  },
+  "flow_empty_example": {
+    "message": "“Every morning at 7:30 check Hacker News and Hugging Face for the latest and put the best in my morning brief.”"
+  },
+  "flow_template_news": {
+    "message": "Morning tech news"
+  },
+  "flow_template_news_hint": {
+    "message": "07:30 · Hacker News + Hugging Face → your brief"
+  },
+  "flow_template_use": {
+    "message": "Use"
+  },
+  "flow_template_use_a11y": {
+    "message": "Draft Morning tech news from the template"
+  },
+  "flow_state_draft": {
+    "message": "Draft"
+  },
+  "flow_state_active": {
+    "message": "Active"
+  },
+  "flow_state_paused": {
+    "message": "Paused"
+  },
+  "flow_state_change": {
+    "message": "Change to review"
+  },
+  "flow_next": {
+    "message": "next $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 07:30"
+      }
+    }
+  },
+  "flow_last": {
+    "message": "last: $STATUS$ $AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 hr. ago"
+      }
+    }
+  },
+  "flow_when_today": {
+    "message": "today $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_when_tomorrow": {
+    "message": "tomorrow $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_trigger_byHand": {
+    "message": "By hand"
+  },
+  "flow_cron_daily": {
+    "message": "Every day at $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_cron_weekdays": {
+    "message": "Weekdays at $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "09:00"
+      }
+    }
+  },
+  "flow_cron_weekly": {
+    "message": "$DAYS$ at $TIME$",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "Mon, Fri"
+      },
+      "time": {
+        "content": "$2",
+        "example": "18:00"
+      }
+    }
+  },
+  "flow_cron_hourly": {
+    "message": "Every hour at :$MINUTE$",
+    "placeholders": {
+      "minute": {
+        "content": "$1",
+        "example": "15"
+      }
+    }
+  },
+  "flow_cron_every": {
+    "message": "Every $MINUTES$ minutes",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "flow_cron_custom": {
+    "message": "Schedule $CRON$",
+    "placeholders": {
+      "cron": {
+        "content": "$1",
+        "example": "0 0 1 * *"
+      }
+    }
+  },
+  "flow_event_meetingEnded": {
+    "message": "When a meeting ends"
+  },
+  "flow_event_inboxItem": {
+    "message": "When something reaches the inbox"
+  },
+  "flow_group_trigger": {
+    "message": "Trigger"
+  },
+  "flow_group_step": {
+    "message": "Step"
+  },
+  "flow_group_output": {
+    "message": "Output"
+  },
+  "flow_type_schedule": {
+    "message": "Schedule"
+  },
+  "flow_type_manual": {
+    "message": "By hand"
+  },
+  "flow_type_event": {
+    "message": "Event"
+  },
+  "flow_type_tab": {
+    "message": "Watched tab"
+  },
+  "flow_type_httpGet": {
+    "message": "Fetch"
+  },
+  "flow_type_webSearch": {
+    "message": "Web search"
+  },
+  "flow_type_browse": {
+    "message": "Browser task"
+  },
+  "flow_type_readPage": {
+    "message": "Read a page"
+  },
+  "flow_type_memorySearch": {
+    "message": "Search knowledge"
+  },
+  "flow_type_memorySave": {
+    "message": "Save to knowledge"
+  },
+  "flow_type_llm": {
+    "message": "AI step"
+  },
+  "flow_type_condition": {
+    "message": "Condition"
+  },
+  "flow_type_agent": {
+    "message": "Agent"
+  },
+  "flow_type_tool": {
+    "message": "Tool"
+  },
+  "flow_type_sandbox": {
+    "message": "Sandbox"
+  },
+  "flow_type_inbox": {
+    "message": "To the inbox"
+  },
+  "flow_type_brief": {
+    "message": "Morning brief"
+  },
+  "flow_type_notify": {
+    "message": "Notification"
+  },
+  "flow_type_speak": {
+    "message": "Speak"
+  },
+  "flow_node_notYet": {
+    "message": "Not available yet"
+  },
+  "flow_status_queued": {
+    "message": "Queued"
+  },
+  "flow_status_running": {
+    "message": "Running"
+  },
+  "flow_status_waiting": {
+    "message": "Waits for your click"
+  },
+  "flow_status_succeeded": {
+    "message": "Succeeded"
+  },
+  "flow_status_failed": {
+    "message": "Failed"
+  },
+  "flow_status_cancelled": {
+    "message": "Stopped"
+  },
+  "flow_status_interrupted": {
+    "message": "Interrupted"
+  },
+  "flow_status_unknown": {
+    "message": "Outcome unknown"
+  },
+  "flow_status_skipped": {
+    "message": "Skipped"
+  },
+  "flow_back": {
+    "message": "Back to workflows"
+  },
+  "flow_gone": {
+    "message": "This workflow was deleted."
+  },
+  "flow_runNow": {
+    "message": "Run now"
+  },
+  "flow_stop": {
+    "message": "Stop"
+  },
+  "flow_pause": {
+    "message": "Pause"
+  },
+  "flow_resume": {
+    "message": "Resume"
+  },
+  "flow_openFull": {
+    "message": "Open in a full tab"
+  },
+  "flow_rename": {
+    "message": "Rename"
+  },
+  "flow_save": {
+    "message": "Save"
+  },
+  "flow_delete": {
+    "message": "Delete"
+  },
+  "flow_delete_confirm": {
+    "message": "Delete this workflow and its run history?"
+  },
+  "flow_cancel": {
+    "message": "Cancel"
+  },
+  "flow_draft_new": {
+    "message": "Draft: check it, then create it"
+  },
+  "flow_draft_change": {
+    "message": "A change waits for you"
+  },
+  "flow_diff_countAdded": {
+    "message": "+$COUNT$ new",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_diff_countChanged": {
+    "message": "~$COUNT$ changed",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_countRemoved": {
+    "message": "−$COUNT$ removed",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_none": {
+    "message": "No step changes"
+  },
+  "flow_diff_added": {
+    "message": "new"
+  },
+  "flow_diff_changed": {
+    "message": "changed"
+  },
+  "flow_diff_removed": {
+    "message": "removed"
+  },
+  "flow_reaches": {
+    "message": "Reaches: $HOSTS$",
+    "placeholders": {
+      "hosts": {
+        "content": "$1",
+        "example": "hn.algolia.com, huggingface.co"
+      }
+    }
+  },
+  "flow_create": {
+    "message": "Create"
+  },
+  "flow_apply": {
+    "message": "Apply"
+  },
+  "flow_discard": {
+    "message": "Discard"
+  },
+  "flow_showLive": {
+    "message": "Show what runs now"
+  },
+  "flow_showDraft": {
+    "message": "Show the change"
+  },
+  "flow_approval_title": {
+    "message": "“$STEP$” waits for your click",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Post the summary"
+      }
+    }
+  },
+  "flow_approval_body": {
+    "message": "This step acts for you, so it never runs without your OK."
+  },
+  "flow_approval_tainted": {
+    "message": "This run read content from outside: check what it is about to do."
+  },
+  "flow_approval_allow": {
+    "message": "Hold to allow"
+  },
+  "flow_approval_again": {
+    "message": "Click again to allow"
+  },
+  "flow_approval_decline": {
+    "message": "Decline"
+  },
+  "flow_diagram_a11y": {
+    "message": "Diagram of $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Morning tech news"
+      }
+    }
+  },
+  "flow_invalid": {
+    "message": "This workflow can no longer be read."
+  },
+  "flow_showingRun": {
+    "message": "Run: $STATUS$, $AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 min. ago"
+      }
+    }
+  },
+  "flow_runs": {
+    "message": "Runs"
+  },
+  "flow_tokens": {
+    "message": "$COUNT$ tokens",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1200"
+      }
+    }
+  },
+  "flow_by_schedule": {
+    "message": "scheduled"
+  },
+  "flow_by_hand": {
+    "message": "by hand"
+  },
+  "flow_by_chat": {
+    "message": "from chat"
+  },
+  "flow_by_voice": {
+    "message": "by voice"
+  },
+  "flow_by_event": {
+    "message": "by an event"
+  },
+  "flow_inspector_a11y": {
+    "message": "Step $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Hacker News front page"
+      }
+    }
+  },
+  "flow_inspector_close": {
+    "message": "Close the step"
+  },
+  "flow_inspector_name": {
+    "message": "Name"
+  },
+  "flow_inspector_cron": {
+    "message": "Schedule (cron)"
+  },
+  "flow_inspector_timezone": {
+    "message": "Time zone"
+  },
+  "flow_inspector_badCron": {
+    "message": "Not a schedule that can run (at most every 5 minutes)."
+  },
+  "flow_inspector_instructions": {
+    "message": "Instructions"
+  },
+  "flow_inspector_saved": {
+    "message": "Saved"
+  },
+  "flow_inspector_attempts": {
+    "message": "$COUNT$ tries",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_inspector_outside": {
+    "message": "read outside content"
+  },
+  "flow_inspector_output": {
+    "message": "Output"
+  },
+  "flow_branch_yes": {
+    "message": "yes"
+  },
+  "flow_branch_no": {
+    "message": "no"
+  },
+  "flow_page_title": {
+    "message": "Workflows · Avi Copilot"
   }
 }

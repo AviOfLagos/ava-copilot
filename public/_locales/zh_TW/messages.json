@@ -2695,5 +2695,494 @@
   },
   "threads_retried": {
     "message": "從頭再試一次這項任務。"
+  },
+  "flow_place": {
+    "message": "工作流程"
+  },
+  "flow_title": {
+    "message": "工作流程"
+  },
+  "flow_intro": {
+    "message": "自動執行的例行程序：依排程、會議結束時，或在你要求時執行。每個都會顯示各步驟如何串接。"
+  },
+  "flow_section_review": {
+    "message": "等待你審閱"
+  },
+  "flow_section_yours": {
+    "message": "你的工作流程"
+  },
+  "flow_section_templates": {
+    "message": "從範本開始"
+  },
+  "flow_empty_title": {
+    "message": "尚無工作流程"
+  },
+  "flow_empty_body": {
+    "message": "在聊天中提出需求，助理會畫出流程圖草稿供你確認。在你按下「建立」之前，什麼都不會執行。"
+  },
+  "flow_empty_example": {
+    "message": "「每天早上 7:30 查看 Hacker News 和 Hugging Face 的最新消息，把最好的放進我的晨間簡報。」"
+  },
+  "flow_template_news": {
+    "message": "晨間科技新聞"
+  },
+  "flow_template_news_hint": {
+    "message": "07:30 · Hacker News + Hugging Face → 你的簡報"
+  },
+  "flow_template_use": {
+    "message": "使用"
+  },
+  "flow_template_use_a11y": {
+    "message": "用範本建立「晨間科技新聞」草稿"
+  },
+  "flow_state_draft": {
+    "message": "草稿"
+  },
+  "flow_state_active": {
+    "message": "啟用中"
+  },
+  "flow_state_paused": {
+    "message": "已暫停"
+  },
+  "flow_state_change": {
+    "message": "待審閱的變更"
+  },
+  "flow_next": {
+    "message": "下次 $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 07:30"
+      }
+    }
+  },
+  "flow_last": {
+    "message": "上次：$STATUS$ $AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 hr. ago"
+      }
+    }
+  },
+  "flow_when_today": {
+    "message": "今天 $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_when_tomorrow": {
+    "message": "明天 $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_trigger_byHand": {
+    "message": "手動"
+  },
+  "flow_cron_daily": {
+    "message": "每天 $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_cron_weekdays": {
+    "message": "平日 $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "09:00"
+      }
+    }
+  },
+  "flow_cron_weekly": {
+    "message": "$DAYS$ $TIME$",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "Mon, Fri"
+      },
+      "time": {
+        "content": "$2",
+        "example": "18:00"
+      }
+    }
+  },
+  "flow_cron_hourly": {
+    "message": "每小時的 :$MINUTE$",
+    "placeholders": {
+      "minute": {
+        "content": "$1",
+        "example": "15"
+      }
+    }
+  },
+  "flow_cron_every": {
+    "message": "每 $MINUTES$ 分鐘",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "flow_cron_custom": {
+    "message": "排程 $CRON$",
+    "placeholders": {
+      "cron": {
+        "content": "$1",
+        "example": "0 0 1 * *"
+      }
+    }
+  },
+  "flow_event_meetingEnded": {
+    "message": "會議結束時"
+  },
+  "flow_event_inboxItem": {
+    "message": "收件匣有新項目時"
+  },
+  "flow_group_trigger": {
+    "message": "觸發"
+  },
+  "flow_group_step": {
+    "message": "步驟"
+  },
+  "flow_group_output": {
+    "message": "輸出"
+  },
+  "flow_type_schedule": {
+    "message": "排程"
+  },
+  "flow_type_manual": {
+    "message": "手動"
+  },
+  "flow_type_event": {
+    "message": "事件"
+  },
+  "flow_type_tab": {
+    "message": "監看分頁"
+  },
+  "flow_type_httpGet": {
+    "message": "擷取資料"
+  },
+  "flow_type_webSearch": {
+    "message": "網頁搜尋"
+  },
+  "flow_type_browse": {
+    "message": "瀏覽器任務"
+  },
+  "flow_type_readPage": {
+    "message": "讀取網頁"
+  },
+  "flow_type_memorySearch": {
+    "message": "搜尋知識庫"
+  },
+  "flow_type_memorySave": {
+    "message": "存入知識庫"
+  },
+  "flow_type_llm": {
+    "message": "AI 步驟"
+  },
+  "flow_type_condition": {
+    "message": "條件"
+  },
+  "flow_type_agent": {
+    "message": "代理"
+  },
+  "flow_type_tool": {
+    "message": "工具"
+  },
+  "flow_type_sandbox": {
+    "message": "沙箱"
+  },
+  "flow_type_inbox": {
+    "message": "送到收件匣"
+  },
+  "flow_type_brief": {
+    "message": "晨間簡報"
+  },
+  "flow_type_notify": {
+    "message": "通知"
+  },
+  "flow_type_speak": {
+    "message": "朗讀"
+  },
+  "flow_node_notYet": {
+    "message": "尚未提供"
+  },
+  "flow_status_queued": {
+    "message": "排隊中"
+  },
+  "flow_status_running": {
+    "message": "執行中"
+  },
+  "flow_status_waiting": {
+    "message": "等你點擊"
+  },
+  "flow_status_succeeded": {
+    "message": "成功"
+  },
+  "flow_status_failed": {
+    "message": "失敗"
+  },
+  "flow_status_cancelled": {
+    "message": "已停止"
+  },
+  "flow_status_interrupted": {
+    "message": "已中斷"
+  },
+  "flow_status_unknown": {
+    "message": "結果不明"
+  },
+  "flow_status_skipped": {
+    "message": "已略過"
+  },
+  "flow_back": {
+    "message": "返回工作流程"
+  },
+  "flow_gone": {
+    "message": "此工作流程已刪除。"
+  },
+  "flow_runNow": {
+    "message": "立即執行"
+  },
+  "flow_stop": {
+    "message": "停止"
+  },
+  "flow_pause": {
+    "message": "暫停"
+  },
+  "flow_resume": {
+    "message": "繼續"
+  },
+  "flow_openFull": {
+    "message": "在完整分頁中開啟"
+  },
+  "flow_rename": {
+    "message": "重新命名"
+  },
+  "flow_save": {
+    "message": "儲存"
+  },
+  "flow_delete": {
+    "message": "刪除"
+  },
+  "flow_delete_confirm": {
+    "message": "要刪除此工作流程及其執行紀錄嗎？"
+  },
+  "flow_cancel": {
+    "message": "取消"
+  },
+  "flow_draft_new": {
+    "message": "草稿：確認後再建立"
+  },
+  "flow_draft_change": {
+    "message": "有一項變更等你確認"
+  },
+  "flow_diff_countAdded": {
+    "message": "新增 $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_diff_countChanged": {
+    "message": "修改 $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_countRemoved": {
+    "message": "移除 $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_none": {
+    "message": "步驟沒有變更"
+  },
+  "flow_diff_added": {
+    "message": "新增"
+  },
+  "flow_diff_changed": {
+    "message": "已修改"
+  },
+  "flow_diff_removed": {
+    "message": "已移除"
+  },
+  "flow_reaches": {
+    "message": "會連到：$HOSTS$",
+    "placeholders": {
+      "hosts": {
+        "content": "$1",
+        "example": "hn.algolia.com, huggingface.co"
+      }
+    }
+  },
+  "flow_create": {
+    "message": "建立"
+  },
+  "flow_apply": {
+    "message": "套用"
+  },
+  "flow_discard": {
+    "message": "捨棄"
+  },
+  "flow_showLive": {
+    "message": "顯示目前執行的版本"
+  },
+  "flow_showDraft": {
+    "message": "顯示變更"
+  },
+  "flow_approval_title": {
+    "message": "「$STEP$」等你點擊",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Post the summary"
+      }
+    }
+  },
+  "flow_approval_body": {
+    "message": "此步驟會代你執行動作，未經你同意絕不執行。"
+  },
+  "flow_approval_tainted": {
+    "message": "此次執行讀取了外部內容：請先確認它要做什麼。"
+  },
+  "flow_approval_allow": {
+    "message": "按住以允許"
+  },
+  "flow_approval_again": {
+    "message": "再按一次以允許"
+  },
+  "flow_approval_decline": {
+    "message": "拒絕"
+  },
+  "flow_diagram_a11y": {
+    "message": "$NAME$ 的流程圖",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Morning tech news"
+      }
+    }
+  },
+  "flow_invalid": {
+    "message": "無法再讀取此工作流程。"
+  },
+  "flow_showingRun": {
+    "message": "執行：$STATUS$，$AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 min. ago"
+      }
+    }
+  },
+  "flow_runs": {
+    "message": "執行紀錄"
+  },
+  "flow_tokens": {
+    "message": "$COUNT$ 個 token",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1200"
+      }
+    }
+  },
+  "flow_by_schedule": {
+    "message": "排程"
+  },
+  "flow_by_hand": {
+    "message": "手動"
+  },
+  "flow_by_chat": {
+    "message": "來自聊天"
+  },
+  "flow_by_voice": {
+    "message": "語音"
+  },
+  "flow_by_event": {
+    "message": "事件觸發"
+  },
+  "flow_inspector_a11y": {
+    "message": "步驟 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Hacker News front page"
+      }
+    }
+  },
+  "flow_inspector_close": {
+    "message": "關閉步驟"
+  },
+  "flow_inspector_name": {
+    "message": "名稱"
+  },
+  "flow_inspector_cron": {
+    "message": "排程（cron）"
+  },
+  "flow_inspector_timezone": {
+    "message": "時區"
+  },
+  "flow_inspector_badCron": {
+    "message": "不是可執行的排程（最多每 5 分鐘一次）。"
+  },
+  "flow_inspector_instructions": {
+    "message": "指示"
+  },
+  "flow_inspector_saved": {
+    "message": "已儲存"
+  },
+  "flow_inspector_attempts": {
+    "message": "嘗試 $COUNT$ 次",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_inspector_outside": {
+    "message": "讀取了外部內容"
+  },
+  "flow_inspector_output": {
+    "message": "輸出"
+  },
+  "flow_branch_yes": {
+    "message": "是"
+  },
+  "flow_branch_no": {
+    "message": "否"
+  },
+  "flow_page_title": {
+    "message": "工作流程 · Avi Copilot"
   }
 }

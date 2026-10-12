@@ -2695,5 +2695,494 @@
   },
   "threads_retried": {
     "message": "Tentando a tarefa de novo do início."
+  },
+  "flow_place": {
+    "message": "Fluxos"
+  },
+  "flow_title": {
+    "message": "Fluxos de trabalho"
+  },
+  "flow_intro": {
+    "message": "Rotinas que rodam sozinhas: num horário, quando uma reunião termina ou quando você pede. Cada uma mostra como está ligada."
+  },
+  "flow_section_review": {
+    "message": "Aguardando sua revisão"
+  },
+  "flow_section_yours": {
+    "message": "Seus fluxos"
+  },
+  "flow_section_templates": {
+    "message": "Começar de um modelo"
+  },
+  "flow_empty_title": {
+    "message": "Nenhum fluxo ainda"
+  },
+  "flow_empty_body": {
+    "message": "Peça no chat e o copiloto faz um rascunho para você conferir, como um diagrama. Nada roda até você clicar em Criar."
+  },
+  "flow_empty_example": {
+    "message": "“Toda manhã às 7:30 veja as novidades do Hacker News e do Hugging Face e coloque o melhor no meu resumo da manhã.”"
+  },
+  "flow_template_news": {
+    "message": "Notícias de tecnologia da manhã"
+  },
+  "flow_template_news_hint": {
+    "message": "07:30 · Hacker News + Hugging Face → seu resumo"
+  },
+  "flow_template_use": {
+    "message": "Usar"
+  },
+  "flow_template_use_a11y": {
+    "message": "Criar um rascunho de Notícias de tecnologia da manhã a partir do modelo"
+  },
+  "flow_state_draft": {
+    "message": "Rascunho"
+  },
+  "flow_state_active": {
+    "message": "Ativo"
+  },
+  "flow_state_paused": {
+    "message": "Pausado"
+  },
+  "flow_state_change": {
+    "message": "Mudança a revisar"
+  },
+  "flow_next": {
+    "message": "próxima $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "tomorrow 07:30"
+      }
+    }
+  },
+  "flow_last": {
+    "message": "última: $STATUS$ $AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 hr. ago"
+      }
+    }
+  },
+  "flow_when_today": {
+    "message": "hoje $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_when_tomorrow": {
+    "message": "amanhã $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_trigger_byHand": {
+    "message": "Manual"
+  },
+  "flow_cron_daily": {
+    "message": "Todo dia às $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "07:30"
+      }
+    }
+  },
+  "flow_cron_weekdays": {
+    "message": "Dias úteis às $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "09:00"
+      }
+    }
+  },
+  "flow_cron_weekly": {
+    "message": "$DAYS$ às $TIME$",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "Mon, Fri"
+      },
+      "time": {
+        "content": "$2",
+        "example": "18:00"
+      }
+    }
+  },
+  "flow_cron_hourly": {
+    "message": "Toda hora aos :$MINUTE$",
+    "placeholders": {
+      "minute": {
+        "content": "$1",
+        "example": "15"
+      }
+    }
+  },
+  "flow_cron_every": {
+    "message": "A cada $MINUTES$ minutos",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "flow_cron_custom": {
+    "message": "Horário $CRON$",
+    "placeholders": {
+      "cron": {
+        "content": "$1",
+        "example": "0 0 1 * *"
+      }
+    }
+  },
+  "flow_event_meetingEnded": {
+    "message": "Quando uma reunião termina"
+  },
+  "flow_event_inboxItem": {
+    "message": "Quando algo chega à caixa de entrada"
+  },
+  "flow_group_trigger": {
+    "message": "Gatilho"
+  },
+  "flow_group_step": {
+    "message": "Etapa"
+  },
+  "flow_group_output": {
+    "message": "Saída"
+  },
+  "flow_type_schedule": {
+    "message": "Agendamento"
+  },
+  "flow_type_manual": {
+    "message": "Manual"
+  },
+  "flow_type_event": {
+    "message": "Evento"
+  },
+  "flow_type_tab": {
+    "message": "Aba observada"
+  },
+  "flow_type_httpGet": {
+    "message": "Buscar dados"
+  },
+  "flow_type_webSearch": {
+    "message": "Pesquisa na web"
+  },
+  "flow_type_browse": {
+    "message": "Tarefa no navegador"
+  },
+  "flow_type_readPage": {
+    "message": "Ler uma página"
+  },
+  "flow_type_memorySearch": {
+    "message": "Buscar no conhecimento"
+  },
+  "flow_type_memorySave": {
+    "message": "Salvar no conhecimento"
+  },
+  "flow_type_llm": {
+    "message": "Etapa de IA"
+  },
+  "flow_type_condition": {
+    "message": "Condição"
+  },
+  "flow_type_agent": {
+    "message": "Agente"
+  },
+  "flow_type_tool": {
+    "message": "Ferramenta"
+  },
+  "flow_type_sandbox": {
+    "message": "Sandbox"
+  },
+  "flow_type_inbox": {
+    "message": "Para a caixa de entrada"
+  },
+  "flow_type_brief": {
+    "message": "Resumo da manhã"
+  },
+  "flow_type_notify": {
+    "message": "Notificação"
+  },
+  "flow_type_speak": {
+    "message": "Falar"
+  },
+  "flow_node_notYet": {
+    "message": "Ainda não disponível"
+  },
+  "flow_status_queued": {
+    "message": "Na fila"
+  },
+  "flow_status_running": {
+    "message": "Rodando"
+  },
+  "flow_status_waiting": {
+    "message": "Aguarda seu clique"
+  },
+  "flow_status_succeeded": {
+    "message": "Concluído"
+  },
+  "flow_status_failed": {
+    "message": "Falhou"
+  },
+  "flow_status_cancelled": {
+    "message": "Parado"
+  },
+  "flow_status_interrupted": {
+    "message": "Interrompido"
+  },
+  "flow_status_unknown": {
+    "message": "Resultado incerto"
+  },
+  "flow_status_skipped": {
+    "message": "Pulado"
+  },
+  "flow_back": {
+    "message": "Voltar aos fluxos"
+  },
+  "flow_gone": {
+    "message": "Este fluxo foi excluído."
+  },
+  "flow_runNow": {
+    "message": "Rodar agora"
+  },
+  "flow_stop": {
+    "message": "Parar"
+  },
+  "flow_pause": {
+    "message": "Pausar"
+  },
+  "flow_resume": {
+    "message": "Retomar"
+  },
+  "flow_openFull": {
+    "message": "Abrir em uma aba inteira"
+  },
+  "flow_rename": {
+    "message": "Renomear"
+  },
+  "flow_save": {
+    "message": "Salvar"
+  },
+  "flow_delete": {
+    "message": "Excluir"
+  },
+  "flow_delete_confirm": {
+    "message": "Excluir este fluxo e o histórico de execuções?"
+  },
+  "flow_cancel": {
+    "message": "Cancelar"
+  },
+  "flow_draft_new": {
+    "message": "Rascunho: confira e crie"
+  },
+  "flow_draft_change": {
+    "message": "Uma mudança aguarda você"
+  },
+  "flow_diff_countAdded": {
+    "message": "+$COUNT$ novas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_diff_countChanged": {
+    "message": "~$COUNT$ alteradas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_countRemoved": {
+    "message": "−$COUNT$ removidas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "flow_diff_none": {
+    "message": "Nenhuma etapa mudou"
+  },
+  "flow_diff_added": {
+    "message": "nova"
+  },
+  "flow_diff_changed": {
+    "message": "alterada"
+  },
+  "flow_diff_removed": {
+    "message": "removida"
+  },
+  "flow_reaches": {
+    "message": "Acessa: $HOSTS$",
+    "placeholders": {
+      "hosts": {
+        "content": "$1",
+        "example": "hn.algolia.com, huggingface.co"
+      }
+    }
+  },
+  "flow_create": {
+    "message": "Criar"
+  },
+  "flow_apply": {
+    "message": "Aplicar"
+  },
+  "flow_discard": {
+    "message": "Descartar"
+  },
+  "flow_showLive": {
+    "message": "Mostrar o que roda agora"
+  },
+  "flow_showDraft": {
+    "message": "Mostrar a mudança"
+  },
+  "flow_approval_title": {
+    "message": "“$STEP$” aguarda seu clique",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Post the summary"
+      }
+    }
+  },
+  "flow_approval_body": {
+    "message": "Esta etapa age por você, então nunca roda sem o seu OK."
+  },
+  "flow_approval_tainted": {
+    "message": "Esta execução leu conteúdo de fora: confira o que ela vai fazer."
+  },
+  "flow_approval_allow": {
+    "message": "Segure para permitir"
+  },
+  "flow_approval_again": {
+    "message": "Clique de novo para permitir"
+  },
+  "flow_approval_decline": {
+    "message": "Recusar"
+  },
+  "flow_diagram_a11y": {
+    "message": "Diagrama de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Morning tech news"
+      }
+    }
+  },
+  "flow_invalid": {
+    "message": "Não é mais possível ler este fluxo."
+  },
+  "flow_showingRun": {
+    "message": "Execução: $STATUS$, $AGO$",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "2 min. ago"
+      }
+    }
+  },
+  "flow_runs": {
+    "message": "Execuções"
+  },
+  "flow_tokens": {
+    "message": "$COUNT$ tokens",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1200"
+      }
+    }
+  },
+  "flow_by_schedule": {
+    "message": "agendada"
+  },
+  "flow_by_hand": {
+    "message": "manual"
+  },
+  "flow_by_chat": {
+    "message": "pelo chat"
+  },
+  "flow_by_voice": {
+    "message": "por voz"
+  },
+  "flow_by_event": {
+    "message": "por um evento"
+  },
+  "flow_inspector_a11y": {
+    "message": "Etapa $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Hacker News front page"
+      }
+    }
+  },
+  "flow_inspector_close": {
+    "message": "Fechar a etapa"
+  },
+  "flow_inspector_name": {
+    "message": "Nome"
+  },
+  "flow_inspector_cron": {
+    "message": "Horário (cron)"
+  },
+  "flow_inspector_timezone": {
+    "message": "Fuso horário"
+  },
+  "flow_inspector_badCron": {
+    "message": "Não é um horário válido (no máximo a cada 5 minutos)."
+  },
+  "flow_inspector_instructions": {
+    "message": "Instruções"
+  },
+  "flow_inspector_saved": {
+    "message": "Salvo"
+  },
+  "flow_inspector_attempts": {
+    "message": "$COUNT$ tentativas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "flow_inspector_outside": {
+    "message": "leu conteúdo de fora"
+  },
+  "flow_inspector_output": {
+    "message": "Saída"
+  },
+  "flow_branch_yes": {
+    "message": "sim"
+  },
+  "flow_branch_no": {
+    "message": "não"
+  },
+  "flow_page_title": {
+    "message": "Fluxos · Avi Copilot"
   }
 }
