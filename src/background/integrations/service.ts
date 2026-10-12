@@ -115,6 +115,15 @@ function clampTimeout(ms: number | undefined): number {
 
 const lower = (text: string) => text.trim().toLowerCase();
 
+/** The scheme, host and port of an address, or '' when there is none. */
+function originOf(url: string | null | undefined): string {
+  try {
+    return url ? new URL(url).origin : '';
+  } catch {
+    return '';
+  }
+}
+
 export class ConnectorService {
   constructor(private readonly deps: ConnectorServiceDeps) {}
 
@@ -199,6 +208,15 @@ export class ConnectorService {
     if (checkedUrl && 'error' in checkedUrl) throw new AppError('invalid', urlProblem(checkedUrl.error));
     if (checkedUrl && 'url' in checkedUrl && checkedUrl.url.href !== connector.url) {
       if (connector.catalogId) throw new AppError('invalid', `${connector.name}'s address is fixed.`);
+      // A saved secret never follows the connector to another server: the user enters it again with the address
+      if (checkedUrl.url.origin !== originOf(connector.url)) {
+        if (connector.authKind === 'token' && !changes.token?.trim() && (await this.signedIn(connector))) {
+          throw new AppError('invalid', 'The address changed: enter the token again for the new address.');
+        }
+        if (connector.authKind === 'oauth' && connector.oauth?.hasClientSecret && !changes.clientSecret?.trim()) {
+          throw new AppError('invalid', 'The address changed: enter the client secret again for the new address.');
+        }
+      }
       next.url = checkedUrl.url.href;
       next.transport = 'auto';
       next.serverInfo = null;

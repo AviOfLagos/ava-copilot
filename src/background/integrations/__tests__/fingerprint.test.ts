@@ -32,6 +32,15 @@ describe('canonicalJson and toolHash', () => {
       await toolHash({ ...weather(), inputSchema: { type: 'object', properties: { city: { type: 'number' } } } }),
     ).not.toBe(base);
   });
+
+  it('changes with the title or the hints, which decide how the tool is shown and gated', async () => {
+    const base = await toolHash(weather());
+    expect(await toolHash({ ...weather(), title: 'Read the weather' })).not.toBe(base);
+    expect(await toolHash({ ...weather(), annotations: { readOnlyHint: true } })).not.toBe(base);
+    expect(await toolHash({ ...weather(), annotations: { readOnlyHint: true, destructiveHint: false } })).not.toBe(
+      await toolHash({ ...weather(), annotations: { readOnlyHint: true } }),
+    );
+  });
 });
 
 describe('cleanListing', () => {
@@ -83,6 +92,14 @@ describe('reconcileTools', () => {
       previous: { description: 'Get the weather for a city.' },
     });
     expect(result.records[0].hash).not.toBe(first.hash);
+  });
+
+  it('turns an approved tool off when the server starts calling it read-only', async () => {
+    const [first] = (await reconcileTools('c1', [weather()], [], 100)).records;
+    const approved = { ...first, approved: true, everApproved: true };
+    const result = await reconcileTools('c1', [{ ...weather(), annotations: { readOnlyHint: true } }], [approved], 300);
+    expect(result.changed).toEqual(['get_weather']);
+    expect(result.records[0].approved).toBe(false);
   });
 
   it('keeps a tool the server stopped listing as missing, and lets it back unchanged with its approval', async () => {

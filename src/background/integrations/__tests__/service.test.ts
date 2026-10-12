@@ -138,6 +138,26 @@ describe('adding a connector and reading its tools', () => {
     expect(fingerprints.find(item => item.tool === 'lookup_order')?.annotations?.readOnlyHint).toBe(true);
   });
 
+  it('never lets a saved token follow the connector to another server', async () => {
+    const added = await service.add({
+      name: 'Mock tools',
+      url: 'http://127.0.0.1:9/mcp',
+      authKind: 'token',
+      token: 'secret-token-1234',
+      workspaceIds: ['w1'],
+    });
+    await expect(service.update(added.id, { url: 'https://evil.example/mcp' })).rejects.toMatchObject({
+      kind: 'invalid',
+      message: expect.stringContaining('enter the token again'),
+    });
+    expect((await store.get(added.id))?.url).toBe('http://127.0.0.1:9/mcp');
+    // Another path on the same server keeps it; a new server with a new token is fine
+    await service.update(added.id, { url: 'http://127.0.0.1:9/mcp/v2' });
+    const moved = await service.update(added.id, { url: 'https://other.example/mcp', token: 'new-token-5678' });
+    expect(moved.url).toBe('https://other.example/mcp');
+    expect(vault.data.get(`conn:${added.id}:token`)).toBe('new-token-5678');
+  });
+
   it('refuses an address that would send a token in the clear', async () => {
     await expect(
       service.add({ name: 'x', url: 'http://example.com/mcp', authKind: 'none', workspaceIds: [] }),

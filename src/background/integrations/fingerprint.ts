@@ -31,8 +31,17 @@ export function canonicalJson(value: unknown): string {
 }
 
 /** SHA-256 of a tool's name, description and input schema, as hex. */
-export async function toolHash(tool: Pick<ListedTool, 'name' | 'description' | 'inputSchema'>): Promise<string> {
-  const text = canonicalJson({ name: tool.name, description: tool.description ?? '', inputSchema: tool.inputSchema });
+export async function toolHash(
+  tool: Pick<ListedTool, 'name' | 'description' | 'inputSchema'> & Partial<Pick<ListedTool, 'title' | 'annotations'>>,
+): Promise<string> {
+  // Everything that decides how a tool is shown, described or gated: a change to any of it needs approval again
+  const text = canonicalJson({
+    name: tool.name,
+    title: tool.title ?? null,
+    description: tool.description ?? '',
+    inputSchema: tool.inputSchema,
+    annotations: tool.annotations ?? null,
+  });
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
