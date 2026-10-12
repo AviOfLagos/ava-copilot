@@ -123,7 +123,7 @@ function RunTrail({
       <ChainOfThoughtHeader
         icon={<ListTree className="size-4" />}
         meta={turn.active ? undefined : duration(turn.endedAt - turn.startedAt)}>
-        <span className="label-mono">{t('chat_run_steps', [String(count)])}</span>
+        <span className="label-mono">{t(count === 1 ? 'chat_run_steps_one' : 'chat_run_steps', [String(count)])}</span>
       </ChainOfThoughtHeader>
       <ChainOfThoughtContent>
         {steps.map((step, index) => {

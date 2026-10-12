@@ -1,0 +1,21 @@
+---
+// The voice orb's face (LiveOrb, white with two capsule eyes), flat: the inline image in "Just say “Hey Ava”".
+interface Props {
+  // Unique per page, for the gradient's id
+  id?: string;
+}
+const { id = 'face' } = Astro.props;
+---
+
+<svg class="face" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id={`${id}-shade`} cx="0.38" cy="0.32" r="0.8">
+      <stop offset="0" stop-color="#ffffff"></stop>
+      <stop offset="0.7" stop-color="#eef0f4"></stop>
+      <stop offset="1" stop-color="#c9cdd8"></stop>
+    </radialGradient>
+  </defs>
+  <circle cx="16" cy="16" r="15" fill={`url(#${id}-shade)`}></circle>
+  <rect x="10.6" y="10.6" width="2.4" height="8" rx="1.2" fill="#09090B"></rect>
+  <rect x="19" y="10.6" width="2.4" height="8" rx="1.2" fill="#09090B"></rect>
+</svg>

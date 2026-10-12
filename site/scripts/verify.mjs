@@ -6,20 +6,40 @@
  *   SHOTS=/tmp/shots node scripts/verify.mjs      # where the screenshots go (default .verify/)
  *   BASE=http://localhost:4321 node scripts/verify.mjs   # check a running server instead
  *
- * Screenshots every route at 390, 768, 1280 and 1440 px in dark and light, plus reduced-motion and no-JavaScript
- * renders of the home page. Checks the stop-ship conditions a script can see: HTTP status, console and page errors,
- * horizontal overflow, one <h1>, a visible focus ring, metadata, running animations under reduced motion. Then it
- * drives the gate demo with a mouse, the keyboard and touch. Everything else needs eyes: read the screenshots.
+ * Screenshots every route at 390, 768, 1280 and 1440 px in dark and light, every home section at 1440 and 390 in
+ * both themes with the globe in its spot, the tour playing, and reduced-motion, no-JavaScript and forced-colours
+ * renders. Checks the stop-ship conditions a script can see: HTTP status, console and page errors, requests to other
+ * origins, horizontal overflow, one <h1>, a visible focus ring, metadata, running animations under reduced motion.
+ * Then it drives the globe (it follows the sections and never covers a headline), Ava's tour (nothing loads before
+ * the click; one line at a time; captions follow the sections; pause, a hidden tab, Esc and Stop), the widgets and
+ * the gate demo (mouse, keyboard, touch), and measures the initial JavaScript and lab vitals. Everything else needs
+ * eyes: read the screenshots.
  */
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 import puppeteer, { PredefinedNetworkConditions } from 'puppeteer-core';
 import { serve } from './serve.mjs';
 
 const ROUTES = ['/', '/install', '/privacy', '/no-such-page'];
 const WIDTHS = [390, 768, 1280, 1440];
 const THEMES = ['dark', 'light'];
+// The home page's parts, in order: [id, globe spot expected on wide screens]
+const SECTIONS = [
+  ['gate', 'peek'],
+  ['steps', 'left'],
+  ['voice', 'right'],
+  ['memory', 'left'],
+  ['routines', 'right'],
+  ['models', 'left'],
+  ['integrations', 'right'],
+  ['privacy-label', 'left'],
+  ['tasks', 'away'],
+  ['faq', 'right'],
+  ['install-now', 'low'],
+];
+const JS_BUDGET_GZ = 92 * 1024;
 const site = fileURLToPath(new URL('..', import.meta.url));
 const OUT = process.env.SHOTS ?? join(site, '.verify');
 const BROWSERS = [
@@ -47,7 +67,14 @@ const wait = ms => new Promise(done => setTimeout(done, ms));
 const browser = await puppeteer.launch({
   executablePath,
   headless: true,
-  args: ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--force-color-profile=srgb'],
+  args: [
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--hide-scrollbars',
+    '--force-color-profile=srgb',
+    // As a visitor's browser: sound only after a click
+    '--autoplay-policy=user-gesture-required',
+  ],
 });
 
 async function openPage(context, { width, height = 900, theme = 'dark', reduced = false, js = true, touch = false }) {
@@ -58,7 +85,11 @@ async function openPage(context, { width, height = 900, theme = 'dark', reduced 
     if (message.type() !== 'error' || page.url().endsWith('/no-such-page')) return;
     note(page.url().replace(base, '') || '/', context, `console: ${message.text()}`);
   });
-  page.on('requestfailed', request => note('(page)', context, `request failed: ${request.url()}`));
+  page.on('requestfailed', request => {
+    // A recording cut short by the next section is aborted on purpose
+    if (request.url().includes('/audio/') && /ABORTED/.test(request.failure()?.errorText ?? '')) return;
+    note('(page)', context, `request failed: ${request.url()}`);
+  });
   page.on('request', request => {
     if (!request.url().startsWith(base) && !request.url().startsWith('data:')) {
       note('(page)', context, `third-party request: ${request.url()}`);
@@ -108,6 +139,54 @@ async function checkPage(page, route, context) {
   return report;
 }
 
+/** Scrolls so a section's head sits a little below the middle, as a reader arrives at it, and lets the globe glide. */
+async function arrive(page, id, settle = 1700) {
+  await page.evaluate(target => {
+    const section = document.getElementById(target);
+    if (!section) return;
+    const head = section.querySelector('.sec__head, h2') ?? section;
+    const top = head.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: Math.max(0, top - window.innerHeight * 0.32), behavior: 'instant' });
+  }, id);
+  await wait(settle);
+}
+
+/** Where the globe's sphere is and whether it covers the active section's headline or sentence. */
+function globeReport(page, id) {
+  return page.evaluate(target => {
+    const root = document.querySelector('[data-globe-root]');
+    const body = document.querySelector('[data-globe-body]');
+    if (!root || !body) return null;
+    const box = body.getBoundingClientRect();
+    const opacity = Number(getComputedStyle(body).opacity);
+    // The sphere fills about 86% of the canvas
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    const r = (box.width / 2) * 0.86;
+    const section = document.getElementById(target);
+    const parts = section ? [...section.querySelectorAll('.headline, .sec__body')] : [];
+    const covered = parts.some(part => {
+      for (const rect of part.getClientRects()) {
+        // Distance from the sphere's centre to the nearest point of the line box
+        const nx = Math.max(rect.left, Math.min(cx, rect.right));
+        const ny = Math.max(rect.top, Math.min(cy, rect.bottom));
+        if (Math.hypot(nx - cx, ny - cy) < r * 0.92 && opacity > 0.1) return true;
+      }
+      return false;
+    });
+    return {
+      follow: root.hasAttribute('data-follow'),
+      live: root.hasAttribute('data-live'),
+      x: Math.round(cx),
+      y: Math.round(cy),
+      r: Math.round(r),
+      opacity,
+      covered,
+      state: section?.dataset.state ?? null,
+    };
+  }, id);
+}
+
 // 1. Routes × widths × themes
 for (const theme of THEMES) {
   for (const width of WIDTHS) {
@@ -118,10 +197,10 @@ for (const theme of THEMES) {
       const expected = route === '/no-such-page' ? 404 : 200;
       if (!response || response.status() !== expected) note(route, context, `HTTP ${response?.status()}`);
       await page.evaluate(() => document.fonts.ready);
-      await wait(route === '/' ? 5600 : 700);
+      await wait(route === '/' ? 1600 : 700);
       await checkPage(page, route, context);
       await page.screenshot({ path: join(OUT, `${slug(route)}-${context}.png`) });
-      if (route !== '/no-such-page') {
+      if (route !== '/no-such-page' && route !== '/') {
         await page.screenshot({ path: join(OUT, `${slug(route)}-${context}-full.png`), fullPage: true });
       }
     }
@@ -129,12 +208,253 @@ for (const theme of THEMES) {
   }
 }
 
-// 2. Keyboard focus is visible: tab a few times on each page and read the outline
+// 2. The home page, part by part, at 1440 and 390 in both themes: the globe in its spot beside each headline
+const spots = {};
+for (const theme of THEMES) {
+  for (const width of [1440, 390]) {
+    const context = `sections-${width}-${theme}`;
+    const page = await openPage(context, { width, height: width < 600 ? 844 : 900, theme, touch: width < 600 });
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready);
+    await wait(900);
+    const hero = await globeReport(page, 'gate');
+    if (width >= 900 && !hero?.follow) note('/', context, 'the globe does not follow the page on a wide screen');
+    if (width < 900 && hero?.follow) note('/', context, 'the globe follows the page on a phone');
+    if (!hero?.live) note('/', context, 'the globe never started drawing');
+    for (const [id, spot] of SECTIONS) {
+      await arrive(page, id);
+      const report = await globeReport(page, id);
+      if (width >= 900 && theme === 'dark') spots[id] = { ...report, spot };
+      if (width >= 900 && report?.covered) note('/', context, `the globe covers the headline of #${id}`);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (overflow > 1) note('/', context, `horizontal overflow at #${id}: ${overflow}px`);
+      await page.screenshot({ path: join(OUT, `home-${id}-${width}-${theme}.png`) });
+    }
+    await page.close();
+  }
+}
+// The globe really moves: left and right spots sit on different sides, and the dark list sends it away
+{
+  const xs = SECTIONS.filter(([, spot]) => spot === 'left' || spot === 'right').map(([id, spot]) => [
+    spot,
+    spots[id]?.x,
+  ]);
+  const lefts = xs.filter(([spot]) => spot === 'left').map(([, x]) => x);
+  const rights = xs.filter(([spot]) => spot === 'right').map(([, x]) => x);
+  if (lefts.length && rights.length && Math.max(...lefts) >= Math.min(...rights))
+    note('/', 'globe', `left and right spots overlap (left ≤ ${Math.max(...lefts)}, right ≥ ${Math.min(...rights)})`);
+  if ((spots.tasks?.opacity ?? 0) > 0.1) note('/', 'globe', 'the globe stays visible over the dark task list');
+}
+
+// 3. Ava's tour: nothing before the click; one line at a time; captions follow; pause, hidden tab, Esc, Stop
+async function tourState(page) {
+  return page.evaluate(() => {
+    const dock = document.querySelector('[data-tour-dock]');
+    return {
+      phase: dock?.dataset.phase,
+      hidden: dock?.hidden,
+      caption: document.querySelector('[data-tour-caption]')?.textContent ?? '',
+      label: document.querySelector('[data-tour-label]')?.textContent ?? '',
+      playing: (window.__media ?? []).filter(media => !media.paused).map(media => media.src.split('/').pop()),
+      level: Number(getComputedStyle(dock).getPropertyValue('--level') || 0),
+      speaking: [...document.querySelectorAll('[data-speaking]')].map(section => section.dataset.say),
+    };
+  });
+}
+for (const width of [1440, 390]) {
+  const context = `tour-${width}`;
+  const page = await openPage(context, { width, height: width < 600 ? 844 : 900, touch: width < 600 });
+  const audio = [];
+  page.on('request', request => request.url().includes('/audio/') && audio.push(request.url().split('/').pop()));
+  await page.evaluateOnNewDocument(() => {
+    window.__media = [];
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (!window.__media.includes(this)) window.__media.push(this);
+      return play.call(this);
+    };
+  });
+  try {
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await wait(1800);
+    await arrive(page, 'gate', 800);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await wait(600);
+    if (audio.length) note('/', context, `audio requested before the click: ${audio.join(', ')}`);
+    if ((await tourState(page)).playing.length) note('/', context, 'something plays before the click');
+    const lines = await page.evaluate(() => JSON.parse(document.getElementById('tour-data').textContent).lines);
+    const byId = Object.fromEntries(lines.map(line => [line.id, line]));
+    // The transcript holds every line, with JavaScript or without
+    const transcript = await page.$eval('#transcript', el => el.textContent ?? '');
+    for (const line of lines)
+      if (!transcript.includes(line.text.slice(0, 40))) note('/', context, `the transcript lacks the ${line.id} line`);
+
+    await page.click('[data-tour-start]');
+    await wait(1400);
+    let state = await tourState(page);
+    if (state.hidden || state.phase !== 'playing') note('/', context, `after the click the tour is "${state.phase}"`);
+    if (state.playing.length !== 1 || !state.playing[0]?.startsWith('hero-'))
+      note('/', context, `after the click it plays ${JSON.stringify(state.playing)}, expected the hero line`);
+    if (!state.caption.startsWith(byId.hero.text.slice(0, 30))) note('/', context, 'the caption is not the hero line');
+    if (width >= 900 && state.level <= 0) note('/', context, 'the level meter stays at 0 while it speaks');
+    await page.screenshot({ path: join(OUT, `tour-hero-${width}.png`) });
+
+    for (const [id, say] of [
+      ['gate', 'gate'],
+      ['steps', 'steps'],
+      ['voice', 'voice'],
+    ]) {
+      await arrive(page, id, 1500);
+      state = await tourState(page);
+      if (state.playing.length !== 1 || !state.playing[0]?.startsWith(`${say}-`))
+        note('/', context, `at #${id} it plays ${JSON.stringify(state.playing)}, expected only the ${say} line`);
+      if (!state.caption.startsWith(byId[say].text.slice(0, 30)))
+        note('/', context, `the caption at #${id} is not its line`);
+      if (!state.speaking.includes(say)) note('/', context, `#${id} is not marked as speaking`);
+    }
+    await page.screenshot({ path: join(OUT, `tour-voice-${width}.png`) });
+
+    await page.click('[data-tour-pause]');
+    await wait(400);
+    state = await tourState(page);
+    if (state.phase !== 'paused' || state.playing.length)
+      note('/', context, `Pause left it "${state.phase}", playing ${state.playing}`);
+    await page.click('[data-tour-pause]');
+    await wait(700);
+    state = await tourState(page);
+    if (state.phase !== 'playing' || state.playing.length !== 1) note('/', context, `Resume left it "${state.phase}"`);
+
+    // A hidden tab pauses it; coming back resumes it
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await wait(300);
+    state = await tourState(page);
+    if (state.playing.length || state.phase !== 'paused') note('/', context, 'a hidden tab did not pause the tour');
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await wait(600);
+    state = await tourState(page);
+    if (state.phase !== 'playing') note('/', context, 'returning to the tab did not resume the tour');
+
+    // Esc stops it
+    await page.keyboard.press('Escape');
+    await wait(400);
+    state = await tourState(page);
+    if (!state.hidden || state.playing.length) note('/', context, 'Esc did not stop the tour');
+
+    // Start again, and Stop with the button, by keyboard
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await wait(500);
+    await page.focus('[data-tour-start]');
+    await page.keyboard.press('Enter');
+    await wait(1000);
+    state = await tourState(page);
+    if (state.phase !== 'playing') note('/', context, 'Enter on "Listen to the tour" did not start it');
+    await page.focus('[data-tour-stop]');
+    await page.keyboard.press('Enter');
+    await wait(400);
+    state = await tourState(page);
+    if (!state.hidden || state.playing.length) note('/', context, 'Stop did not stop the tour');
+  } catch (error) {
+    note('/', context, `failed: ${error.message.split('\n')[0]}`);
+    await page.screenshot({ path: join(OUT, `tour-failure-${width}.png`) });
+  }
+  await page.close();
+}
+
+// 4. The widgets: the run hands the page back and waits at Submit; the graph lights; the routine waits; the Inbox
+//    takes an answer; the model picker tells where the words go
+{
+  const context = 'widgets';
+  const page = await openPage(context, { width: 1440 });
+  try {
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await page.evaluate(() => document.querySelector('[data-trail-run]').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.waitForFunction(() => document.querySelector('[data-trail-run]')?.dataset.state === 'handback', {
+      timeout: 6000,
+      polling: 100,
+    });
+    await page.screenshot({ path: join(OUT, 'widget-trail-handback.png') });
+    await page.click('[data-trail-run] [data-continue]');
+    await page.waitForFunction(() => document.querySelector('[data-trail-run]')?.dataset.state === 'held', {
+      timeout: 8000,
+      polling: 100,
+    });
+    await wait(300);
+    await page.screenshot({ path: join(OUT, 'widget-trail-held.png') });
+    await page.click('[data-trail-run] [data-replay]');
+    await wait(1600);
+    await page.click('[data-trail-run] .tr-stop');
+    const stopped = await page.$eval('[data-trail-run]', el => el.dataset.state);
+    if (stopped !== 'stopped') note('/', context, `Stop left the run "${stopped}"`);
+
+    await page.evaluate(() => document.querySelector('[data-graph]').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await wait(400);
+    const node = await page.$('[data-graph] [data-node="meeting"]');
+    const box = await node.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 10 });
+    await wait(300);
+    const focus = await page.$eval('[data-graph] svg', el => el.getAttribute('data-focus'));
+    if (focus !== 'meeting') note('/', context, `pointing at a node lit "${focus}"`);
+    const detail = await page.$eval('[data-graph-detail]', el => el.textContent ?? '');
+    if (!/Mon call/.test(detail)) note('/', context, `the graph caption says "${detail}"`);
+    await page.screenshot({ path: join(OUT, 'widget-graph-hover.png') });
+
+    await page.evaluate(() => document.querySelector('[data-routine]').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    // The post step's own status, not only the diagram's: the two are set a moment apart
+    await page
+      .waitForFunction(() => document.querySelector('[data-routine] [data-held]')?.dataset.status === 'waiting', {
+        timeout: 20000,
+        polling: 100,
+      })
+      .catch(() => {});
+    const held = await page.$eval('[data-routine] [data-held]', el => el.dataset.status);
+    if (held !== 'waiting') note('/', context, `the routine's post step is "${held}"`);
+    await page.click('[data-inbox] [data-card] [data-answer="approve"]');
+    await wait(500);
+    const inbox = await page.evaluate(() => ({
+      gone: document.querySelectorAll('[data-inbox] [data-gone]').length,
+      result: document.querySelector('[data-inbox] [data-result]')?.textContent ?? '',
+    }));
+    if (inbox.gone !== 1 || !inbox.result) note('/', context, `the Inbox after Approve: ${JSON.stringify(inbox)}`);
+    await page.screenshot({ path: join(OUT, 'widget-routine-inbox.png') });
+
+    await page.evaluate(() => document.querySelector('[data-models]').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.click('[data-models] input[value="anthropic"]');
+    await wait(200);
+    const route = await page.evaluate(() => ({
+      kind: document.querySelector('[data-route]')?.dataset.kind,
+      host: document.querySelector('[data-route] [data-fill="host"]')?.textContent,
+    }));
+    if (route.kind !== 'cloud' || route.host !== 'api.anthropic.com')
+      note('/', context, `the route says ${JSON.stringify(route)}`);
+    await page.screenshot({ path: join(OUT, 'widget-models-cloud.png') });
+
+    await page.evaluate(() => document.querySelector('[data-tasks]').scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await wait(300);
+    const row = await (await page.$('[data-task="1"]')).boundingBox();
+    await page.mouse.move(row.x + row.width * 0.4, row.y + row.height / 2, { steps: 12 });
+    await wait(500);
+    const previewing = await page.$eval('[data-tasks]', el => el.hasAttribute('data-previewing'));
+    if (!previewing) note('/', context, 'pointing at a task shows no preview');
+    await page.screenshot({ path: join(OUT, 'widget-task-preview.png') });
+  } catch (error) {
+    note('/', context, `failed: ${error.message.split('\n')[0]}`);
+    await page.screenshot({ path: join(OUT, 'widgets-failure.png') });
+  }
+  await page.close();
+}
+
+// 5. Keyboard focus is visible: tab a few times on each page and read the outline
 {
   const page = await openPage('focus', { width: 1280 });
   for (const route of ['/', '/install', '/privacy']) {
     await page.goto(base + route, { waitUntil: 'load' });
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       await page.keyboard.press('Tab');
       const ring = await page.evaluate(() => {
         const el = document.activeElement;
@@ -150,15 +470,12 @@ for (const theme of THEMES) {
       if (ring && (ring.outline === 'none' || ring.width === '0px'))
         note(route, 'focus', `no focus ring on ${ring.tag} "${ring.text}"`);
     }
-    if (route === '/') {
-      await page.keyboard.press('Tab');
-      await page.screenshot({ path: join(OUT, `focus-home.png`) });
-    }
+    if (route === '/') await page.screenshot({ path: join(OUT, `focus-home.png`) });
   }
   await page.close();
 }
 
-// 3. Reduced motion: states shown at once, nothing left running
+// 6. Reduced motion: states shown at once, nothing left running, the globe still in the hero, the tour still speaks
 {
   const page = await openPage('reduced-motion', { width: 1440, reduced: true });
   for (const route of ['/', '/install', '/privacy']) {
@@ -171,13 +488,26 @@ for (const theme of THEMES) {
     if (route === '/') {
       const phase = await page.$eval('.gd', el => el.getAttribute('data-phase'));
       if (phase !== 'paused') note(route, 'reduced-motion', `demo is "${phase}", expected the paused state at once`);
+      const globe = await page.$eval('[data-globe-root]', el => ({
+        follow: el.hasAttribute('data-follow'),
+        live: el.hasAttribute('data-live'),
+      }));
+      if (globe.follow || globe.live)
+        note(route, 'reduced-motion', `the globe moves or draws: ${JSON.stringify(globe)}`);
+      const trail = await page.$eval('[data-trail-run]', el => el.dataset.state);
+      if (trail !== 'held') note(route, 'reduced-motion', `the run is "${trail}", expected the whole run at once`);
+      await page.click('[data-tour-start]');
+      await wait(900);
+      const playing = await page.$eval('[data-tour-dock]', el => el.dataset.phase);
+      if (playing !== 'playing') note(route, 'reduced-motion', `the tour is "${playing}" after the click`);
+      await page.keyboard.press('Escape');
     }
     await page.screenshot({ path: join(OUT, `reduced-motion-${slug(route)}.png`) });
   }
   await page.close();
 }
 
-// 4. No JavaScript: the home page reads, and the demo shows its paused state
+// 7. No JavaScript: the home page reads; the demo, the run and the globe show their still states; the tour's words
 {
   const page = await openPage('no-js', { width: 1440, js: false });
   await page.goto(base + '/', { waitUntil: 'load' });
@@ -187,15 +517,21 @@ for (const theme of THEMES) {
     card: !!document.querySelector('.gd [aria-labelledby="gd-card-title"]'),
     held: !!document.querySelector('.gd [data-status="held"]'),
     h1: document.querySelector('h1')?.textContent,
+    globe: getComputedStyle(document.querySelector('.globe__still')).visibility,
+    trail: document.querySelectorAll('[data-trail-run] [data-on]').length,
+    transcript: document.querySelectorAll('#transcript li').length,
   }));
   if (state.phase !== 'paused' || !state.card || !state.held)
     note('/', 'no-js', `demo not paused: ${JSON.stringify(state)}`);
+  if (state.globe !== 'visible') note('/', 'no-js', 'the globe’s still frame is hidden');
+  if (state.trail < 5) note('/', 'no-js', `the run shows ${state.trail} steps`);
+  if (state.transcript < 10) note('/', 'no-js', `the transcript has ${state.transcript} lines`);
   await page.screenshot({ path: join(OUT, 'no-js-home.png') });
   await page.screenshot({ path: join(OUT, 'no-js-home-full.png'), fullPage: true });
   await page.close();
 }
 
-// 4b. The install tabs: /install#windows opens Windows, and the arrow keys move between tabs
+// 7b. The install tabs: /install#windows opens Windows, and the arrow keys move between tabs
 {
   const page = await openPage('tabs', { width: 1280 });
   await page.goto(base + '/install#windows', { waitUntil: 'load' });
@@ -214,7 +550,7 @@ for (const theme of THEMES) {
   await page.close();
 }
 
-// 4c. The theme switch: Light applies and is remembered; System follows the OS
+// 7c. The theme switch: Light applies and is remembered; System follows the OS
 {
   const page = await openPage('theme', { width: 1280, theme: null });
   await page.goto(base + '/', { waitUntil: 'load' });
@@ -229,22 +565,24 @@ for (const theme of THEMES) {
   await page.close();
 }
 
-// 4d. Forced colours (Windows High Contrast): borders and focus survive; look at the picture
+// 7d. Forced colours (Windows High Contrast): borders and focus survive; look at the picture
 {
   const page = await openPage('forced-colors', { width: 1440 });
   // Puppeteer's own helper refuses forced-colors; the protocol takes it
   const session = await page.createCDPSession();
   await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value: 'active' }] });
   await page.goto(base + '/', { waitUntil: 'load' });
-  await wait(6000);
+  await wait(1500);
   await page.screenshot({ path: join(OUT, 'forced-colors-home.png') });
+  await arrive(page, 'routines', 800);
+  await page.screenshot({ path: join(OUT, 'forced-colors-routines.png') });
   await page.close();
 }
 
-// 5. The gate demo, one fresh page per way of answering it: mouse hold, short press, two clicks, Space, Enter,
+// 8. The gate demo, one fresh page per way of answering it: mouse hold, short press, two clicks, Space, Enter,
 //    Stop, the composer's Stop during the run, and touch on a phone
 const phaseOf = page => page.$eval('.gd', el => el.getAttribute('data-phase'));
-async function waitPhase(page, phase, timeout = 9000) {
+async function waitPhase(page, phase, timeout = 20000) {
   await page.waitForFunction(
     value => {
       const el = document.querySelector('.gd');
@@ -267,8 +605,19 @@ async function holdButton(page) {
 }
 async function demoPage(context, options = {}) {
   const page = await openPage(context, { width: 1440, ...options });
+  // A page in the background gets throttled timers and no animation frames: the demo would run late
+  await page.bringToFront();
   await page.goto(base + '/', { waitUntil: 'load' });
-  await page.evaluate(() => document.querySelector('.gd')?.scrollIntoView({ block: 'center' }));
+  await page.evaluate(() => document.querySelector('.gd')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  // On a busy machine the first intersection report can come late: a small scroll asks for a fresh one
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const started = await page
+      .waitForFunction(() => document.querySelector('.gd')?.hasAttribute('data-live'), { timeout: 4000, polling: 100 })
+      .then(() => true)
+      .catch(() => false);
+    if (started) break;
+    await page.evaluate(step => window.scrollBy(0, step), attempt % 2 ? -3 : 3);
+  }
   return page;
 }
 async function demoCase(name, options, steps) {
@@ -371,8 +720,10 @@ await demoCase('touch', { width: 390, height: 844, touch: true }, async page => 
   await page.screenshot({ path: join(OUT, 'demo-touch-sent.png') });
 });
 
-// 6. Web vitals in the lab: layout shift through the whole demo run, and LCP on a throttled phone profile
+// 9. Web vitals in the lab (layout shift and LCP, desktop and a throttled phone) and the JavaScript a first visit
+//    loads before it scrolls
 const vitals = [];
+let initialJs = 0;
 for (const profile of [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'phone, 4x CPU, Slow 4G', width: 390, height: 844, slow: true },
@@ -381,6 +732,11 @@ for (const profile of [
     width: profile.width,
     height: profile.height,
     touch: profile.slow,
+  });
+  const scripts = new Set();
+  page.on('request', request => {
+    if (request.resourceType() === 'script' && request.url().startsWith(base))
+      scripts.add(new URL(request.url()).pathname);
   });
   await page.evaluateOnNewDocument(() => {
     window.__vitals = { cls: 0, lcp: 0 };
@@ -402,10 +758,17 @@ for (const profile of [
   vitals.push({ profile: profile.name, cls: Number(result.cls.toFixed(3)), lcp: Math.round(result.lcp) });
   if (result.cls > 0.1) note('/', `vitals:${profile.name}`, `CLS ${result.cls.toFixed(3)}`);
   if (result.lcp > 2500) note('/', `vitals:${profile.name}`, `LCP ${Math.round(result.lcp)} ms`);
+  if (!profile.slow && !process.env.BASE) {
+    for (const path of scripts) {
+      const file = join(site, 'dist', path);
+      if (existsSync(file)) initialJs += gzipSync(readFileSync(file)).length;
+    }
+    if (initialJs > JS_BUDGET_GZ) note('/', 'budget', `initial JavaScript ${(initialJs / 1024).toFixed(1)} KB gzipped`);
+  }
   await page.close();
 }
 
-// 7. Discovery files and link previews
+// 10. Discovery files and link previews
 {
   const page = await browser.newPage();
   for (const path of [
@@ -433,6 +796,15 @@ await server?.close();
 
 console.log('Lab vitals (home):');
 for (const row of vitals) console.log(`  ${row.profile.padEnd(24)} CLS ${row.cls}   LCP ${row.lcp} ms`);
+if (initialJs) console.log(`Initial JavaScript (home, before scrolling): ${(initialJs / 1024).toFixed(1)} KB gzipped`);
+console.log('Globe spots (1440, dark):');
+for (const [id, spot] of SECTIONS) {
+  const report = spots[id];
+  if (report)
+    console.log(
+      `  #${id.padEnd(14)} ${spot.padEnd(5)} centre ${String(report.x).padStart(5)},${String(report.y).padStart(4)}  r ${report.r}  ${report.state ?? ''}${report.opacity < 0.1 ? '  (away)' : ''}`,
+    );
+}
 console.log('');
 if (findings.length === 0) console.log('No automated stop-ship conditions triggered.');
 else {

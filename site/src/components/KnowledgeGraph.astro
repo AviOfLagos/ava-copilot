@@ -1,21 +1,22 @@
 ---
-// A corner of the knowledge graph, drawn with the graph view's colour rules: projects mint, people periwinkle,
-// everything else in the text colour; amber is never used. Then a cited answer from the same memory.
+// A corner of the knowledge graph, drawn with the graph view's colour rules (projects mint, people periwinkle,
+// everything else in the text colour; never amber), that you can point at or tab through: a node lights its links
+// and says what it is. Beside it, a cited answer from the same memory.
 import { home } from '../content/site';
 
-const { nodes, graphLabel, question, answer, sources } = home.memory;
+const { nodes, graphLabel, hint, askLabel, question, answer, sources } = home.memory;
 
-type Kind = 'project' | 'meeting' | 'decision' | 'person' | 'chat' | 'page';
-const N: Record<Kind, { x: number; y: number; r: number; label: string; kind: string }> = {
-  project: { x: 260, y: 148, r: 19, label: nodes.project, kind: 'Project' },
-  meeting: { x: 104, y: 70, r: 13, label: nodes.meeting, kind: 'Meeting' },
-  decision: { x: 414, y: 66, r: 13, label: nodes.decision, kind: 'Decision' },
-  person: { x: 86, y: 226, r: 13, label: nodes.person, kind: 'Person' },
-  chat: { x: 430, y: 220, r: 13, label: nodes.chat, kind: 'Chat' },
-  page: { x: 262, y: 262, r: 11, label: nodes.page, kind: 'Page' },
+type Kind = keyof typeof nodes;
+const N: Record<Kind, { x: number; y: number; r: number }> = {
+  project: { x: 270, y: 160, r: 21 },
+  meeting: { x: 108, y: 74, r: 14 },
+  decision: { x: 440, y: 70, r: 14 },
+  person: { x: 92, y: 248, r: 14 },
+  chat: { x: 452, y: 236, r: 14 },
+  page: { x: 282, y: 292, r: 12 },
 };
 
-// [from, to, lit]: the lit wires are the ones the answer below comes from
+// [from, to, lit]: the lit links are the ones the answer comes from
 const edges: [Kind, Kind, boolean][] = [
   ['project', 'meeting', true],
   ['meeting', 'decision', true],
@@ -29,17 +30,17 @@ const edges: [Kind, Kind, boolean][] = [
 
 // Quieter nodes at the edge, so it reads as part of something larger
 const faint = [
-  { x: 30, y: 128, to: 'person' as Kind },
-  { x: 190, y: 24, to: 'meeting' as Kind },
-  { x: 500, y: 140, to: 'chat' as Kind },
-  { x: 350, y: 286, to: 'page' as Kind },
-  { x: 498, y: 28, to: 'decision' as Kind },
+  { x: 28, y: 140, to: 'person' as Kind },
+  { x: 196, y: 22, to: 'meeting' as Kind },
+  { x: 532, y: 150, to: 'chat' as Kind },
+  { x: 372, y: 318, to: 'page' as Kind },
+  { x: 528, y: 26, to: 'decision' as Kind },
+  { x: 20, y: 318, to: 'person' as Kind },
 ];
 
 const curve = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   const mx = (a.x + b.x) / 2;
   const my = (a.y + b.y) / 2;
-  // Bend each wire a little off the straight line, as a force layout's curved links do
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   return `M${a.x} ${a.y} Q${(mx - dy * 0.12).toFixed(1)} ${(my + dx * 0.12).toFixed(1)} ${b.x} ${b.y}`;
@@ -47,62 +48,88 @@ const curve = (a: { x: number; y: number }, b: { x: number; y: number }) => {
 const order: Kind[] = ['project', 'meeting', 'decision', 'chat', 'person', 'page'];
 ---
 
-<div class="stage" data-reveal>
-  <svg class="graph" viewBox="0 0 520 300" role="img" aria-label={graphLabel} style="max-width: 540px; margin-inline: auto">
-    <g>
-      {faint.map((dot, i) => <path class="edge" pathLength="1" d={curve(dot, N[dot.to])} style={`--i:${i}; opacity:.5`} />)}
-      {
-        edges.map(([from, to, lit], i) => (
-          <path class:list={['edge', lit && 'edge--lit']} pathLength="1" d={curve(N[from], N[to])} style={`--i:${i}`} />
-        ))
-      }
-    </g>
-    {
-      faint.map((dot, i) => (
-        <g class="node" style={`--i:${i + 6}`}>
-          <circle class="node-back" cx={dot.x} cy={dot.y} r="5" />
-          <circle class="node-dot" cx={dot.x} cy={dot.y} r="5" style="opacity:.6" />
-        </g>
-      ))
-    }
-    {
-      order.map((key, i) => {
-        const node = N[key];
-        return (
-          <g class="node" style={`--i:${i}`}>
-            <circle class="node-back" cx={node.x} cy={node.y} r={node.r} />
-            <circle
-              class:list={['node-dot', key === 'project' && 'node-dot--project', key === 'person' && 'node-dot--person']}
-              cx={node.x}
-              cy={node.y}
-              r={node.r}
+<div class="bento bento--memory">
+  <figure class="card card--graph" data-graph aria-label={graphLabel}>
+    <svg class="graph" viewBox="0 0 560 340" role="group">
+      <g aria-hidden="true">
+        {faint.map((dot, i) => <path class="edge edge--faint" pathLength="1" d={curve(dot, N[dot.to])} style={`--i:${i}`} />)}
+        {
+          edges.map(([from, to, lit], i) => (
+            <path
+              class:list={['edge', lit && 'edge--lit']}
+              data-edge={`${from} ${to}`}
+              pathLength="1"
+              d={curve(N[from], N[to])}
+              style={`--i:${i}`}
             />
-            <text class="node-kind" x={node.x} y={node.y - node.r - 8} text-anchor="middle">
-              {node.kind}
-            </text>
-            <text x={node.x} y={node.y + node.r + 18} text-anchor="middle">
-              {node.label}
-            </text>
-          </g>
-        );
-      })
-    }
-  </svg>
-
-  <div class="answer panel-card">
-    <div class="answer__q"><p>{question}</p></div>
-    <p class="answer__a">
-      {answer}
-      <span class="cite">1</span><span class="cite">2</span>
-    </p>
-    <div class="answer__sources">
+          ))
+        }
+        {
+          faint.map((dot, i) => (
+            <g class="node node--faint" style={`--i:${i + 6}`}>
+              <circle class="node-back" cx={dot.x} cy={dot.y} r="5" />
+              <circle class="node-dot" cx={dot.x} cy={dot.y} r="5" />
+            </g>
+          ))
+        }
+      </g>
       {
-        sources.map((source, i) => (
-          <span class="cite">
-            {i + 1} · {source}
-          </span>
-        ))
+        order.map((key, i) => {
+          const at = N[key];
+          const node = nodes[key];
+          return (
+            <g
+              class="node"
+              tabindex="0"
+              role="img"
+              aria-label={`${node.kind}: ${node.label}. ${node.detail}`}
+              data-node={key}
+              data-kind={node.kind}
+              data-label={node.label}
+              data-detail={node.detail}
+              style={`--i:${i}`}>
+              <circle class="node-hit" cx={at.x} cy={at.y} r={at.r + 16} />
+              <circle class="node-back" cx={at.x} cy={at.y} r={at.r} />
+              <circle
+                class:list={['node-dot', key === 'project' && 'node-dot--project', key === 'person' && 'node-dot--person']}
+                cx={at.x}
+                cy={at.y}
+                r={at.r}
+              />
+              <text class="node-kind" x={at.x} y={at.y - at.r - 9} text-anchor="middle">
+                {node.kind}
+              </text>
+              <text x={at.x} y={at.y + at.r + 19} text-anchor="middle">
+                {node.label}
+              </text>
+            </g>
+          );
+        })
       }
+    </svg>
+    <figcaption class="graph-detail" data-graph-detail aria-live="polite">
+      <b>{nodes.project.kind} · {nodes.project.label}</b>
+      <span>{hint}</span>
+    </figcaption>
+  </figure>
+
+  <article class="card card--answer" aria-label={question}>
+    <p class="card__label">{askLabel}</p>
+    <div class="answer">
+      <div class="answer__q"><p>{question}</p></div>
+      <p class="answer__a">
+        {answer}
+        <span class="cite">1</span><span class="cite">2</span>
+      </p>
+      <div class="answer__sources">
+        {
+          sources.map((source, i) => (
+            <span class="cite">
+              {i + 1} · {source}
+            </span>
+          ))
+        }
+      </div>
     </div>
-  </div>
+  </article>
 </div>

@@ -1,0 +1,20 @@
+---
+// True numbers only, counted from the code: providers in settings/types.ts, voices in voiceEngineSettings.ts,
+// connectors in integrations/catalog.ts, the gate's kinds in the locale, and no analytics anywhere.
+import { home } from '../content/site';
+
+const { label, items } = home.stats;
+---
+
+<section class="stats wrap" aria-label={label}>
+  <dl class="stats__row">
+    {
+      items.map(item => (
+        <div class="stat">
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>

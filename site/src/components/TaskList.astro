@@ -1,0 +1,50 @@
+---
+// "What will you hand it?": a dark list of tasks, each a link to the part of the page that shows it. Pointing at a
+// row (or tabbing to it) shows how that task would go, as a short run trail that follows the pointer.
+import { ArrowUpRight, ListTree } from 'lucide-react';
+import { home } from '../content/site';
+
+const { id, kicker, title, rows, previewLabel } = home.tasks;
+---
+
+<section class="tasks" id={id} aria-labelledby={`${id}-title`} data-globe="away" data-state="listening" data-tasks>
+  <div class="wrap">
+    <p class="pill pill--dark"><span class="pill__dot" aria-hidden="true"></span><span>{kicker}</span></p>
+    <h2 class="headline headline--dark" id={`${id}-title`}>
+      <span class="headline__a">{title[0]}</span> <span class="headline__b">{title[1]}</span>
+    </h2>
+    <ol class="tasks__list" role="list">
+      {
+        rows.map((row, index) => (
+          <li>
+            <a class="task" href={row.href} data-task={index}>
+              <span class="task__n">{String(index + 1).padStart(2, '0')}</span>
+              <span class="task__text">{row.task}</span>
+              <span class="task__kind">{row.kind}</span>
+              <ArrowUpRight className="task__arrow" aria-hidden="true" strokeWidth={1.75} />
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+  <div class="task-preview" data-preview aria-hidden="true"></div>
+  {
+    rows.map((row, index) => (
+      <template data-for={index}>
+        <div class="task-preview__card">
+          <p class="task-preview__head">
+            <ListTree aria-hidden="true" strokeWidth={1.75} />
+            <span>{previewLabel}</span>
+          </p>
+          <ol class="mini-trail">
+            {row.steps.map(step => (
+              <li>{step}</li>
+            ))}
+            {row.held && <li class="mini-trail__held">{row.held}</li>}
+          </ol>
+        </div>
+      </template>
+    ))
+  }
+</section>

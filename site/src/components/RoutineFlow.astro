@@ -1,0 +1,53 @@
+---
+// A routine as the panel draws it (the workflow diagram's node card: glass, an icon tile, the group in mono, the
+// title, a status mark), top to bottom on a wire that turns mint as each step finishes. The step that would post
+// waits in amber. "Run now" plays it again; without JavaScript it shows the finished run, waiting at the post.
+import { CalendarClock, CircleCheck, CircleDashed, CirclePause, LoaderCircle, Newspaper, Play, Search, Sparkles, Wrench } from 'lucide-react';
+import { home } from '../content/site';
+
+const { routine } = home.routines;
+const icons = { clock: CalendarClock, search: Search, sparkles: Sparkles, brief: Newspaper, tool: Wrench } as const;
+const labels = JSON.stringify(routine.status);
+---
+
+<div class="routine" data-routine data-state="waiting" data-labels={labels}>
+  <div class="routine__ask">
+    <p>{routine.prompt}</p>
+  </div>
+  <ol class="flow" role="list" aria-label={routine.diagramLabel}>
+    {
+      routine.nodes.map((node, index) => {
+        const Icon = icons[node.icon as keyof typeof icons];
+        const held = 'held' in node && node.held;
+        const status = held ? 'waiting' : 'succeeded';
+        return (
+          <>
+            {index > 0 && <li class="flow__wire" data-wire data-status={held ? 'held' : 'done'} aria-hidden="true" />}
+            <li class="flow-node glass" data-flow-node data-status={status} data-held={held ? '' : undefined}>
+              <span class:list={['flow-node__icon', index === 0 && 'flow-node__icon--trigger']}>
+                <Icon aria-hidden="true" strokeWidth={1.75} />
+              </span>
+              <span class="flow-node__text">
+                <span class="label-mono flow-node__group">{node.group} · {node.type}</span>
+                <span class="flow-node__title">{node.title}</span>
+              </span>
+              <span class="flow-node__mark" data-mark role="img" aria-label={held ? routine.status.waiting : routine.status.succeeded}>
+                <CircleDashed className="mark mark--queued" aria-hidden="true" />
+                <LoaderCircle className="mark mark--running" aria-hidden="true" />
+                <CircleCheck className="mark mark--succeeded" aria-hidden="true" />
+                <CirclePause className="mark mark--waiting" aria-hidden="true" />
+              </span>
+            </li>
+          </>
+        );
+      })
+    }
+  </ol>
+  <div class="routine__foot">
+    <button type="button" class="btn btn--glass btn--sm needs-js" data-run>
+      <Play aria-hidden="true" strokeWidth={2} />
+      {routine.run}
+    </button>
+    <p class="routine__note"><span class="diamond" aria-hidden="true"></span>{routine.status.waiting}</p>
+  </div>
+</div>

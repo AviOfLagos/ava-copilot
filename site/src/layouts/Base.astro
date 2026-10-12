@@ -79,12 +79,15 @@ const ogImage = `${SITE_URL}/og/${og}.png`;
   </head>
   <body>
     <div class="ground" aria-hidden="true"></div>
+    <div class="dots" aria-hidden="true"></div>
     {!bare && <a class="skip" href="#main">{nav.skip}</a>}
     {!bare && <Header path={path} />}
     <main id="main" tabindex="-1">
       <slot />
     </main>
     {!bare && <Footer />}
+    {/* Fixed things that must stay above the footer, such as the tour's dock */}
+    <slot name="after" />
     <script>
       import '../scripts/site.ts';
     </script>

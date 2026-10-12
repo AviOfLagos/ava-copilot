@@ -1743,6 +1743,15 @@
       }
     }
   },
+  "chat_run_steps_one": {
+    "message": "Run · $COUNT$ step",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
   "chat_run_held": {
     "message": "$KIND$, waiting for your click",
     "placeholders": {

@@ -1,0 +1,48 @@
+---
+// The tour's dock: what Ava is saying (the caption), where (the section), Pause and Stop. Hidden until the tour
+// starts; src/scripts/tour.ts runs it. The lines and their recordings ride along as JSON, for the script only:
+// the same words are in the page as the transcript.
+import { Pause, Play, X } from 'lucide-react';
+import { tour, tourLines } from '../content/site';
+
+interface Props {
+  // The section number shown before each line's label, by line id
+  numbers: Record<string, string>;
+}
+const { numbers } = Astro.props;
+const data = {
+  lines: tourLines.map(line => ({ ...line, n: numbers[line.id] ?? '—' })),
+  copy: {
+    pause: tour.pause,
+    resume: tour.resume,
+    waiting: tour.waiting,
+    ended: tour.ended,
+    failed: tour.failed,
+    announce: tour.announce,
+  },
+};
+// Escaped so no line can close the script tag
+const json = JSON.stringify(data).replace(/</g, '\\u003c');
+---
+
+<div class="tour-dock" id="tour-dock" data-tour-dock data-phase="off" role="region" aria-label={tour.region} hidden>
+  <div class="tour-dock__voice" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i>
+  </div>
+  <div class="tour-dock__text">
+    <p class="tour-dock__label" data-tour-label></p>
+    <p class="tour-dock__caption" data-tour-caption></p>
+  </div>
+  <div class="tour-dock__controls">
+    <button type="button" class="tour-btn" data-tour-pause aria-pressed="false">
+      <Pause className="tour-btn__pause" aria-hidden="true" strokeWidth={2} />
+      <Play className="tour-btn__play" aria-hidden="true" strokeWidth={2} />
+      <span data-label>{tour.pause}</span>
+    </button>
+    <button type="button" class="tour-btn tour-btn--icon" data-tour-stop aria-label={tour.stop} title={tour.stop}>
+      <X aria-hidden="true" strokeWidth={2} />
+    </button>
+  </div>
+</div>
+<p class="sr-only" role="status" aria-live="polite" data-tour-status></p>
+<script type="application/json" id="tour-data" set:html={json} />

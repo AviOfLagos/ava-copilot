@@ -9,7 +9,8 @@
  * Stop), so the hero doesn't carry the real Composer's dictation code. The real one is in the voice section.
  *
  * The page renders this in its paused state, so without JavaScript it reads as a finished run waiting for a click.
- * With JavaScript (and no reduced-motion preference) the run plays once when the demo comes into view.
+ * With JavaScript (and no reduced-motion preference) the run plays once when the demo comes into view; until then
+ * the parts the run draws stay hidden (`data-armed`), so it starts from the moment the request was sent.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -67,8 +68,6 @@ interface TrailRow {
 const STEP_AT = [800, 1700, 2600, 3250];
 const TYPE_MS = 1350;
 const HOLD_AT = 4900;
-// After this long since the page started loading, the visitor has already read the paused state: no replay
-const LATE_MS = 3200;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -163,6 +162,8 @@ export default function GateDemo({ copy }: { copy: DemoCopy }) {
   const draftLength = copy.draft.length;
   const [state, setState] = useState<DemoState>({ phase: 'paused', shown: total, typed: draftLength });
   const [live, setLive] = useState(false);
+  // Hydrated and waiting to be seen: the run's parts stay hidden until it plays
+  const [armed, setArmed] = useState(false);
   // Each run gets a fresh confirm card (and so a fresh hold button)
   const [runCount, setRunCount] = useState(0);
   const [inView, setInView] = useState(true);
@@ -244,17 +245,19 @@ export default function GateDemo({ copy }: { copy: DemoCopy }) {
     replayRef.current?.focus();
   }, [state.phase]);
 
-  // The first run starts when the demo is in view; orbs only spin while it is
+  // The first run starts when the demo comes into view; orbs only spin while it is. With reduced motion it shows
+  // the paused state at once.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     let decided = false;
     const decide = () => {
       decided = true;
-      if (reducedMotion() || performance.now() > LATE_MS) setLive(true);
+      if (reducedMotion()) setLive(true);
       else run();
     };
-    if (reducedMotion() || performance.now() > LATE_MS) decide();
+    if (reducedMotion()) decide();
+    else setArmed(true);
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInView(entry.isIntersecting);
@@ -304,7 +307,13 @@ export default function GateDemo({ copy }: { copy: DemoCopy }) {
   const keepMenu = (event: MouseEvent) => event.preventDefault();
 
   return (
-    <figure ref={rootRef} className="gd" data-phase={phase} data-live={live ? '' : undefined} aria-label={copy.label}>
+    <figure
+      ref={rootRef}
+      className="gd"
+      data-phase={phase}
+      data-live={live ? '' : undefined}
+      data-armed={armed ? '' : undefined}
+      aria-label={copy.label}>
       <div className="gd-window">
         <div className="gd-bar" aria-hidden="true">
           <span className="gd-bar__dots">
@@ -412,7 +421,9 @@ export default function GateDemo({ copy }: { copy: DemoCopy }) {
 
             <ChainOfThought defaultOpen className="gd-trail" data-pre="">
               <ChainOfThoughtHeader icon={<ListTree className="size-4" />}>
-                <span className="label-mono">{copy.runSteps.replace('{count}', String(count))}</span>
+                <span className="label-mono">
+                  {(count === 1 ? copy.runStepsOne : copy.runSteps).replace('{count}', String(count))}
+                </span>
               </ChainOfThoughtHeader>
               <ChainOfThoughtContent>
                 {rows.map((row, index) => (

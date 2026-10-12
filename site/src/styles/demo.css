@@ -421,6 +421,11 @@
     visibility: hidden;
     animation: gd-fallback 0s linear 3.5s forwards;
   }
+
+  /* Hydrated and waiting to be scrolled to: no fallback, the run draws them when it plays */
+  :root[data-js] .gd[data-armed]:not([data-live]) [data-pre] {
+    animation: none;
+  }
 }
 
 @keyframes gd-fallback {
