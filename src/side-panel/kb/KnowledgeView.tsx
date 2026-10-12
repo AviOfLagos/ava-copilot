@@ -4,6 +4,7 @@ import { BookmarkPlus, FileText, Globe, MessageSquare, StickyNote, Trash2 } from
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
+import AgentPicker from './AgentPicker';
 import GraphView from './GraphView';
 import { kbStore } from '@extension/storage';
 import type { GraphNode } from '@extension/storage';
@@ -14,9 +15,11 @@ import type { MorphOrbPhase } from '../components/ui/morph-orb';
 import { Button } from '../components/ui/button';
 
 interface KnowledgeViewProps {
-  // Resolves with the answer, or rejects with a message to show
-  onAsk: (question: string, workspaceId: string | null) => Promise<KbAnswer>;
-  onSavePage: (workspaceId: string | null) => Promise<string>;
+  // Resolves with the answer, or rejects with a message to show. agentId is a later, optional
+  // argument so existing callers that only wire workspaceId keep type-checking; wiring it through to
+  // the kb_ask message is tracked separately (see docs/task.md).
+  onAsk: (question: string, workspaceId: string | null, agentId: string | null) => Promise<KbAnswer>;
+  onSavePage: (workspaceId: string | null, agentId: string | null) => Promise<string>;
   onDelete: (itemId: string) => void;
   onOpenCitation: (citation: KbCitation) => void;
   onOpenSource: (node: GraphNode) => void;
@@ -83,11 +86,16 @@ export default function KnowledgeView({
   onDelete,
   onOpenCitation,
   onOpenSource,
+  isDarkMode,
 }: KnowledgeViewProps) {
   const allItems = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
   // One workspace's knowledge, with what belongs to none; all of it when none is picked
   const [workspace, setWorkspace] = useState<string | null>(null);
-  const items = workspace ? allItems.filter(item => !item.workspaceId || item.workspaceId === workspace) : allItems;
+  // Same idea for the agent whose work it is; the picker itself hides when there are no agents yet
+  const [agent, setAgent] = useState<string | null>(null);
+  const items = allItems.filter(
+    item => (!workspace || !item.workspaceId || item.workspaceId === workspace) && (!agent || item.agentId === agent),
+  );
   const [tab, setTab] = useState<'ask' | 'items' | 'graph'>('ask');
   const [phase, setPhase] = useState<MorphOrbPhase>('idle');
   const [citations, setCitations] = useState<KbCitation[]>([]);
@@ -99,7 +107,7 @@ export default function KnowledgeView({
     const mine = ++askedRef.current;
     setCitations([]);
     try {
-      const result = await onAsk(question, workspace);
+      const result = await onAsk(question, workspace, agent);
       if (mine === askedRef.current) setCitations(result.citations);
       return result.answer;
     } catch (error) {
@@ -111,7 +119,7 @@ export default function KnowledgeView({
     setSaving(true);
     setNotice(null);
     try {
-      setNotice({ text: t('kb_saved', [await onSavePage(workspace)]), error: false });
+      setNotice({ text: t('kb_saved', [await onSavePage(workspace, agent)]), error: false });
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : String(error), error: true });
     } finally {
@@ -147,13 +155,14 @@ export default function KnowledgeView({
         </Button>
       </div>
 
-      <div className="flex px-3 pt-2">
+      <div className="flex flex-wrap gap-1.5 px-3 pt-2">
         <WorkspacePicker
           value={workspace}
           onChange={setWorkspace}
           emptyLabel={t('workspace_all')}
           className="max-w-[70%]"
         />
+        <AgentPicker workspaceId={workspace} value={agent} onChange={setAgent} className="max-w-[45%]" />
       </div>
 
       {notice && (
@@ -168,7 +177,7 @@ export default function KnowledgeView({
       )}
 
       {tab === 'graph' ? (
-        <GraphView workspaceId={workspace} onOpenSource={onOpenSource} />
+        <GraphView workspaceId={workspace} agentId={agent} onOpenSource={onOpenSource} isDarkMode={isDarkMode} />
       ) : tab === 'ask' ? (
         <div className="relative flex min-h-0 flex-1 flex-col">
           <MorphOrb

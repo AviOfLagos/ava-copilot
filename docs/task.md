@@ -415,6 +415,48 @@ Plan: [wave2-plan.md](wave2-plan.md). Built by the lead so the parallel streams 
 - Tests: vault, provider keys and migration (fake-indexeddb), discovery per provider (mock fetch), catalog refresh,
   roles, usage events and caps, Live tokens, commands; `e2e/models.e2e.mjs` (its own model-list server).
 
+### Wave 2 — WS6 Interactive graph (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS6. Replaces the canvas in the "Knowledge graph" entry above.
+
+- `src/side-panel/kb/GraphView.tsx` now renders with `react-force-graph-2d`: live d3-force physics that settles
+  (`d3AlphaDecay` tuned for a ~2 s settle, not the default's five-plus), drag-to-pin (`fx`/`fy` on drop, double-click a
+  pinned node to release and reheat), wheel/pinch zoom and pan, hover dims everything but the hovered node's
+  neighbours, click focuses — the focus card, trail, search and "most connected" are unchanged (the accessible way
+  in), so `e2e/kb.e2e.mjs`'s graph test needed no changes. Curved links carry particles only on the focused node's
+  links, off under `prefers-reduced-motion` or past 800 shown nodes. Colours are read from the theme's CSS variables
+  at actual paint time (`onRenderFramePre` refreshes a ref once a frame; project = `--primary-rgb`, person =
+  `--call-rgb`, the rest a graded `--color-foreground` alpha; amber `hold` is never used), so light/dark and a live
+  theme toggle both work. Node objects are cached and mutated in place across live Dexie updates (`simNodesCache`) so
+  position and pins survive a refresh instead of respawning; "Fit" plus an automatic zoom-to-fit on load.
+- Level of detail (`src/side-panel/kb/graphData.ts`, pure, unit tested): the shown-node cap rose from 160 to ~2 000
+  (`MAX_SHOWN_NODES`), with fewer always-on labels and a higher label-by-zoom threshold as the count grows, particles
+  off past 800. Found the hard way: at ~2 000 nodes the ~4 000 *edges* were the real bottleneck, not the nodes —
+  compositing thousands of overlapping low-alpha strokes saturates to a solid black blob well before the node cap
+  matters. `levelOfDetail().maxLinks` + `capLinks()` thin the rendered (and simulated) edge set to the busiest ones
+  past 800 nodes, always keeping every link the focused node actually has; link alpha also scales down with the
+  rendered link count.
+- Filters: workspace (existing, lifted into `KnowledgeView`), agent (new `AgentPicker.tsx` next to the workspace
+  picker, reads `db.agents` directly since there is no agent store yet, hides itself when empty), type chips
+  (existing), time range (new chip row: 7 / 30 / 90 days / all). A graph node carries no `agentId` of its own;
+  `graphData.ts#nodeAgentIds` derives it from `sourceItemIds` against a `kbItems.agentId` index built from
+  `kbStore.items()`. The agent picker also narrows the Saved tab and is threaded into `onAsk`/`onSavePage` (now
+  3-arg/2-arg callbacks — `SidePanel.tsx`'s 2-arg/1-arg implementations still type-check, TS allows fewer params, but
+  **do not yet forward agentId to the kb_ask/kb_save_page messages**; see "Not done" in the stream's report).
+- Pop-out: `entrypoints/graph/index.html` + `src/graph-page/*`, the same `GraphView` in a full tab
+  (`chrome.tabs.create(chrome.runtime.getURL('graph.html'))`), workspace/agent carried as `?workspace=&agent=`. No
+  manifest or `wxt.config.ts` change: WXT builds an unlisted page from the entrypoint folder exactly like
+  `meeting-ask.html` already does (confirmed in a built `dist/manifest.json`: no `graph.html` reference anywhere, and
+  `sidePanel` permission is already auto-added by the `sidepanel` entrypoint).
+- Locale keys (`graph_` prefix, all three locales): `graph_fit`, `graph_popout`, `graph_filters_label`,
+  `graph_filtered_empty`, `graph_agent_label`, `graph_agent_all`, `graph_time_label`, `graph_time_7d`/`_30d`/`_90d`/`_all`.
+- Tests: `src/side-panel/kb/__tests__/graphData.test.ts` (30 cases — agent derivation, time range, degree,
+  level-of-detail, link capping). `e2e/graph.e2e.mjs`: seeds `graphNodes`/`graphEdges`/`kbItems`/`agents` straight
+  into IndexedDB, asserts the canvas region renders, click-to-focus through the "most connected" list opens the right
+  focus card, the agent picker narrows the graph, Fit doesn't throw, zero console errors and zero
+  `securitypolicyviolation` events. `node e2e/manual/graph.mjs <dir>` now also seeds a ~2 000-node/~4 000-edge graph
+  and prints interaction timings (single-digit to low-hundreds of ms in a local run).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
