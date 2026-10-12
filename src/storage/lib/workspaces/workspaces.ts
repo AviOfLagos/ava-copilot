@@ -33,6 +33,11 @@ interface WorkspacesState {
   items: Workspace[];
   // The defaults are added once, so deleting one keeps it deleted
   seeded: boolean;
+  // Where a new chat, a background run or routing falls back to when nothing else decides; null
+  // means "none" (a deliberate choice, e.g. after its workspace is removed)
+  defaultWorkspaceId: string | null;
+  // Guards the one-time migration that gives an install from before this field existed a default
+  defaultWorkspaceMigrated: boolean;
 }
 
 const DEFAULTS: Omit<Workspace, 'createdAt'>[] = [
@@ -47,11 +52,39 @@ const DEFAULTS: Omit<Workspace, 'createdAt'>[] = [
   { id: 'ellum-ai', name: 'Ellum AI', about: '', keywords: ['ellum', 'ellum ai'], accounts: {} },
 ];
 
+// The workspace a fresh install, or one upgrading from before a default existed, starts with
+export const DEFAULT_WORKSPACE_ID = 'nexprove';
+
 const storage = createStorage<WorkspacesState>(
   'workspaces',
-  { items: [], seeded: false },
+  { items: [], seeded: false, defaultWorkspaceId: null, defaultWorkspaceMigrated: false },
   { storageEnum: StorageEnum.Local, liveUpdate: true },
 );
+
+/**
+ * Seeds a brand-new install's defaults, and once, gives an install from before `defaultWorkspaceId`
+ * existed (one already `seeded`) a default too. Idempotent: an install already migrated is read back
+ * unchanged, so a default the user later picked or cleared is never overwritten.
+ */
+async function ensureSeeded(): Promise<WorkspacesState> {
+  const state = (await storage.get()) ?? {
+    items: [],
+    seeded: false,
+    defaultWorkspaceId: null,
+    defaultWorkspaceMigrated: false,
+  };
+  if (state.seeded && state.defaultWorkspaceMigrated) return state;
+  const next: WorkspacesState = state.seeded
+    ? { ...state, defaultWorkspaceId: state.defaultWorkspaceId ?? DEFAULT_WORKSPACE_ID, defaultWorkspaceMigrated: true }
+    : {
+        items: [...state.items, ...DEFAULTS.map(item => ({ ...item, createdAt: Date.now() }))],
+        seeded: true,
+        defaultWorkspaceId: state.defaultWorkspaceId ?? DEFAULT_WORKSPACE_ID,
+        defaultWorkspaceMigrated: true,
+      };
+  await storage.set(next);
+  return next;
+}
 
 /** A short id from a name, unique among the ids given. */
 export function workspaceId(name: string, taken: string[] = []): string {
@@ -70,11 +103,7 @@ export const workspaceStore = {
   ...storage,
 
   async list(): Promise<Workspace[]> {
-    const state = (await storage.get()) ?? { items: [], seeded: false };
-    if (state.seeded) return state.items;
-    const items = [...state.items, ...DEFAULTS.map(item => ({ ...item, createdAt: Date.now() }))];
-    await storage.set({ items, seeded: true });
-    return items;
+    return (await ensureSeeded()).items;
   },
 
   async get(id: string | null | undefined): Promise<Workspace | undefined> {
@@ -84,8 +113,8 @@ export const workspaceStore = {
 
   /** Adds a workspace, or replaces the one with its id. */
   async save(workspace: Workspace): Promise<void> {
-    const items = await workspaceStore.list();
-    const at = items.findIndex(item => item.id === workspace.id);
+    const state = await ensureSeeded();
+    const at = state.items.findIndex(item => item.id === workspace.id);
     const clean: Workspace = {
       ...workspace,
       name: workspace.name.trim().slice(0, 60),
@@ -93,13 +122,29 @@ export const workspaceStore = {
       keywords: [...new Set(workspace.keywords.map(word => word.trim().toLowerCase()).filter(Boolean))].slice(0, 40),
     };
     await storage.set({
-      items: at >= 0 ? items.map((item, i) => (i === at ? clean : item)) : [...items, clean],
-      seeded: true,
+      ...state,
+      items: at >= 0 ? state.items.map((item, i) => (i === at ? clean : item)) : [...state.items, clean],
     });
   },
 
   async remove(id: string): Promise<void> {
-    await storage.set({ items: (await workspaceStore.list()).filter(item => item.id !== id), seeded: true });
+    const state = await ensureSeeded();
+    await storage.set({
+      ...state,
+      items: state.items.filter(item => item.id !== id),
+      // The default never points at a workspace that no longer exists
+      defaultWorkspaceId: state.defaultWorkspaceId === id ? null : state.defaultWorkspaceId,
+    });
+  },
+
+  /** The workspace new chats, background runs and routing fall back to; null means none chosen. */
+  async getDefaultWorkspaceId(): Promise<string | null> {
+    return (await ensureSeeded()).defaultWorkspaceId;
+  },
+
+  async setDefaultWorkspaceId(id: string | null): Promise<void> {
+    const state = await ensureSeeded();
+    await storage.set({ ...state, defaultWorkspaceId: id });
   },
 };
 

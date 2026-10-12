@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import {
   COMMIT_KINDS,
+  accountProfileStore,
   calendarSettingsStore,
   upcomingEventsStore,
   agentModelStore,
@@ -14,17 +15,17 @@ import {
   llmProviderStore,
   localDay,
   meetingSettingsStore,
-  skillStore,
   usageStore,
 } from '@extension/storage';
-import type { CommitKind, SkillRecord } from '@extension/storage';
+import type { CommitKind } from '@extension/storage';
 import { Button } from '../components/ui/button';
-import WorkspacesSettings from '../workspaces/WorkspacesSettings';
 import VaultSettings from '../vault/VaultSettings';
 import BriefSettings from './BriefSettings';
 import { Switch } from '../components/ui/switch';
 import { saveTheme, useTheme } from '../layout/theme';
 import type { ThemeChoice } from '../layout/theme';
+import { registeredPlace, registeredSettingsSections } from '../registry';
+import type { PanelApi } from '../registry';
 
 const KIND_LABELS: Record<CommitKind, Parameters<typeof t>[0]> = {
   send: 'gate_kind_send',
@@ -61,14 +62,18 @@ function Row({ title, hint, children }: { title: string; hint?: ReactNode; child
 interface SettingsViewProps {
   onBack: () => void;
   onOpenThread: (threadId: string) => void;
+  api: PanelApi;
 }
 
 /**
  * Settings in the panel: the ones people change, without leaving the page. The full settings page
- * stays one tap away for providers, blocked sites and skill editing.
+ * stays one tap away for providers, blocked sites and skill editing. Workspaces and Skills moved to
+ * their own places (the profile menu); Models & usage, once a stream registers it, is one tap from
+ * the Model row below.
  */
-export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps) {
+export default function SettingsView({ onBack, onOpenThread, api }: SettingsViewProps) {
   const { choice } = useTheme();
+  const [name, setName] = useState('');
   const [models, setModels] = useState<{ planner: string; navigator: string; keyed: string[] } | null>(null);
   const [confirm, setConfirm] = useState<Record<CommitKind, boolean> | null>(null);
   const [cap, setCap] = useState(5);
@@ -89,18 +94,18 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
     retentionDays: 0,
     embedSource: 'auto' as 'auto' | 'gemini' | 'local',
   });
-  const [skills, setSkills] = useState<SkillRecord[]>([]);
 
   useEffect(() => {
     void (async () => {
+      setName(await accountProfileStore.getDisplayName());
       const [agents, providers] = await Promise.all([
         agentModelStore.getAllAgentModels(),
         llmProviderStore.getAllProviders(),
       ]);
-      const name = (config?: { modelName: string }) => config?.modelName ?? t('settings_model_none');
+      const modelLabel = (config?: { modelName: string }) => config?.modelName ?? t('settings_model_none');
       setModels({
-        planner: name(agents.planner),
-        navigator: name(agents.navigator),
+        planner: modelLabel(agents.planner),
+        navigator: modelLabel(agents.navigator),
         keyed: Object.entries(providers)
           .filter(([, provider]) => provider.apiKey)
           .map(([id, provider]) => provider.name || id),
@@ -127,9 +132,7 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
         retentionDays: kb.retentionDays,
         embedSource: kb.embedSource,
       });
-      setSkills(await skillStore.all());
     })();
-    return skillStore.subscribe(() => void skillStore.all().then(setSkills));
   }, []);
 
   const toggleKind = async (kind: CommitKind) => {
@@ -199,22 +202,73 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
         </Button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4 pt-2">
-        <Section label={t('settings_model')}>
+        <Section label={t('shell_settings_general')}>
+          <Row title={t('shell_settings_name')}>
+            <input
+              type="text"
+              value={name}
+              placeholder={t('shell_profile_defaultName')}
+              onChange={event => setName(event.target.value)}
+              onBlur={() => void accountProfileStore.setDisplayName(name)}
+              className="bg-card focus:border-primary/50 w-32 rounded-lg border px-2 py-1 text-right text-[12.5px] text-foreground outline-none"
+            />
+          </Row>
+          <div role="radiogroup" aria-label={t('settings_look')} className="grid grid-cols-3 gap-1 p-1">
+            {(['dark', 'light', 'system'] as ThemeChoice[]).map(option => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={choice === option}
+                onClick={() => saveTheme(option)}
+                className={cn(
+                  'h-8 rounded-xl text-[12.5px] transition-colors',
+                  choice === option
+                    ? 'border bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}>
+                {t(`settings_look_${option}`)}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section label={t('settings_voice')}>
+          <Row title={t('settings_wake')} hint={wakeError || t('settings_wake_hint')}>
+            <Switch label={t('settings_wake')} checked={meeting.wakeWord} onChange={value => void setWakeWord(value)} />
+          </Row>
+        </Section>
+
+        <Section label={t('settings_brief')}>
+          <BriefSettings onOpen={onOpenThread} />
+        </Section>
+
+        <Section label={t('settings_obsidian')}>
+          <VaultSettings />
+        </Section>
+
+        <Section label={t('shell_settings_agentBehaviour')}>
           <Row
             title={
               models?.keyed.length ? t('settings_model_keys', [models.keyed.join(', ')]) : t('settings_model_noKeys')
             }
             hint={models && t('settings_model_roles', [models.planner, models.navigator])}>
-            <span
-              className={cn(
-                'size-2 shrink-0 rounded-full',
-                models?.keyed.length ? 'bg-primary shadow-[0_0_8px_rgb(var(--primary-rgb))]' : 'bg-destructive',
-              )}
-            />
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  'size-2 shrink-0 rounded-full',
+                  models?.keyed.length ? 'bg-primary shadow-[0_0_8px_rgb(var(--primary-rgb))]' : 'bg-destructive',
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => (registeredPlace('models') ? api.go('models') : chrome.runtime.openOptionsPage())}
+                aria-label={t('shell_settings_modelOpen')}
+                className="text-muted-foreground hover:text-foreground">
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
           </Row>
-        </Section>
-
-        <Section label={t('options_gate_header')}>
           <div className="flex flex-wrap gap-1.5 p-3">
             {COMMIT_KINDS.map(kind => (
               <button
@@ -233,9 +287,6 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
             ))}
           </div>
           <p className="text-muted-foreground px-3 pb-3 text-[11.5px]">{t('settings_gate_hint')}</p>
-        </Section>
-
-        <Section label={t('settings_spending')}>
           <div className="px-3 py-2.5">
             <div className="flex items-center justify-between">
               <label htmlFor="settings-cap" className="text-[13px]">
@@ -268,9 +319,6 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
               />
             </div>
           </div>
-        </Section>
-
-        <Section label={t('settings_writing')}>
           <div className="p-3">
             <label htmlFor="settings-style" className="sr-only">
               {t('settings_writing')}
@@ -284,9 +332,6 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
               className="text-foreground focus:border-primary/50 w-full resize-none rounded-xl border bg-transparent p-2 text-[12.5px] leading-relaxed outline-none"
             />
           </div>
-        </Section>
-
-        <Section label={t('settings_agent')}>
           <Row title={t('settings_highlights')} hint={t('settings_highlights_hint')}>
             <Switch
               label={t('settings_highlights')}
@@ -295,6 +340,30 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
                 setHighlights(value);
                 void generalSettingsStore.updateSettings({ displayHighlights: value });
               }}
+            />
+          </Row>
+        </Section>
+
+        <Section label={t('settings_meetings')}>
+          <Row title={t('settings_meetings_auto')} hint={t('settings_meetings_auto_hint')}>
+            <Switch
+              label={t('settings_meetings_auto')}
+              checked={meeting.autoNotes}
+              onChange={value => void setMeetingSetting({ autoNotes: value })}
+            />
+          </Row>
+          <Row title={t('options_meetings_includeMic')}>
+            <Switch
+              label={t('options_meetings_includeMic')}
+              checked={meeting.includeMic}
+              onChange={value => void setMeetingSetting({ includeMic: value })}
+            />
+          </Row>
+          <Row title={t('options_meetings_liveCaptions')}>
+            <Switch
+              label={t('options_meetings_liveCaptions')}
+              checked={meeting.liveCaptions}
+              onChange={value => void setMeetingSetting({ liveCaptions: value })}
             />
           </Row>
         </Section>
@@ -380,49 +449,6 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
           </Row>
         </Section>
 
-        <Section label={t('settings_workspaces')}>
-          <WorkspacesSettings />
-        </Section>
-        <p className="text-muted-foreground -mt-3 px-1 text-[11.5px]">{t('settings_workspaces_hint')}</p>
-
-        <Section label={t('settings_brief')}>
-          <BriefSettings onOpen={onOpenThread} />
-        </Section>
-
-        <Section label={t('settings_obsidian')}>
-          <VaultSettings />
-        </Section>
-
-        <Section label={t('settings_voice')}>
-          <Row title={t('settings_wake')} hint={wakeError || t('settings_wake_hint')}>
-            <Switch label={t('settings_wake')} checked={meeting.wakeWord} onChange={value => void setWakeWord(value)} />
-          </Row>
-        </Section>
-
-        <Section label={t('settings_meetings')}>
-          <Row title={t('settings_meetings_auto')} hint={t('settings_meetings_auto_hint')}>
-            <Switch
-              label={t('settings_meetings_auto')}
-              checked={meeting.autoNotes}
-              onChange={value => void setMeetingSetting({ autoNotes: value })}
-            />
-          </Row>
-          <Row title={t('options_meetings_includeMic')}>
-            <Switch
-              label={t('options_meetings_includeMic')}
-              checked={meeting.includeMic}
-              onChange={value => void setMeetingSetting({ includeMic: value })}
-            />
-          </Row>
-          <Row title={t('options_meetings_liveCaptions')}>
-            <Switch
-              label={t('options_meetings_liveCaptions')}
-              checked={meeting.liveCaptions}
-              onChange={value => void setMeetingSetting({ liveCaptions: value })}
-            />
-          </Row>
-        </Section>
-
         <Section label={t('settings_memory')}>
           <Row title={t('options_kb_indexChats')}>
             <Switch
@@ -473,38 +499,11 @@ export default function SettingsView({ onBack, onOpenThread }: SettingsViewProps
           </Row>
         </Section>
 
-        <Section label={t('options_skills_header')}>
-          {skills.map(skill => (
-            <Row key={skill.id} title={`/${skill.id}`} hint={skill.description || undefined}>
-              <Switch
-                label={`/${skill.id}`}
-                checked={skill.enabled}
-                onChange={value => void skillStore.setEnabled(skill.id, value)}
-              />
-            </Row>
-          ))}
-        </Section>
-
-        <Section label={t('settings_look')}>
-          <div role="radiogroup" aria-label={t('settings_look')} className="grid grid-cols-3 gap-1 p-1">
-            {(['dark', 'light', 'system'] as ThemeChoice[]).map(option => (
-              <button
-                key={option}
-                type="button"
-                role="radio"
-                aria-checked={choice === option}
-                onClick={() => saveTheme(option)}
-                className={cn(
-                  'h-8 rounded-xl text-[12.5px] transition-colors',
-                  choice === option
-                    ? 'border bg-accent text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}>
-                {t(`settings_look_${option}`)}
-              </button>
-            ))}
-          </div>
-        </Section>
+        {registeredSettingsSections().map(section => (
+          <Section key={section.id} label={t(section.label)}>
+            <section.Component api={api} />
+          </Section>
+        ))}
 
         <Button variant="glass" size="lg" onClick={() => void chrome.runtime.openOptionsPage()}>
           <ExternalLink className="size-4" />

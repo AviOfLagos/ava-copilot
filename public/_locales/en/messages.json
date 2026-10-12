@@ -2350,7 +2350,7 @@
     "message": "Teach it a way of doing something"
   },
   "help_skill_where": {
-    "message": "After a task: Save as skill. Manage them in Settings › Skills"
+    "message": "After a task: Save as skill. Manage them from the profile menu › Skills"
   },
   "help_find_q": {
     "message": "Find an old chat"
@@ -2368,7 +2368,7 @@
     "message": "Change the AI models or API keys"
   },
   "help_models_where": {
-    "message": "Settings › Model › All settings"
+    "message": "Profile menu › Models & usage"
   },
   "help_cap_q": {
     "message": "Limit what it spends a day"
@@ -2695,5 +2695,92 @@
   },
   "threads_retried": {
     "message": "Trying the task again from the start."
+  },
+  "shell_profile_open": {
+    "message": "Account menu"
+  },
+  "shell_profile_defaultName": {
+    "message": "You"
+  },
+  "shell_profile_localChip": {
+    "message": "Local"
+  },
+  "shell_settings_general": {
+    "message": "General"
+  },
+  "shell_settings_name": {
+    "message": "Your name"
+  },
+  "shell_settings_agentBehaviour": {
+    "message": "Agent behaviour"
+  },
+  "shell_settings_modelOpen": {
+    "message": "Open Models & usage"
+  },
+  "shell_workspaces_hint": {
+    "message": "The starred workspace is the default: new chats, background runs and routing fall back to it when nothing else decides."
+  },
+  "shell_workspace_setDefault": {
+    "message": "Make $NAME$ the default workspace",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_workspace_isDefault": {
+    "message": "$NAME$ is the default workspace",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_skills_teachHint_title": {
+    "message": "Teach a skill"
+  },
+  "shell_skills_teachHint": {
+    "message": "Finish a task that goes well and the copilot offers to save what it did as a skill — call it again any time with /name."
+  },
+  "shell_skills_empty": {
+    "message": "No skills yet."
+  },
+  "help_workflows_q": {
+    "message": "Set up a routine that runs on its own"
+  },
+  "help_workflows_where": {
+    "message": "Workflows, from the drawer"
+  },
+  "help_inbox_q": {
+    "message": "See what needs my attention"
+  },
+  "help_inbox_where": {
+    "message": "Inbox, from the drawer"
+  },
+  "help_agents_q": {
+    "message": "Give a task to a sub-agent"
+  },
+  "help_agents_where": {
+    "message": "Agents, from the drawer"
+  },
+  "help_connectors_q": {
+    "message": "Connect Slack, Gmail or another tool"
+  },
+  "help_connectors_where": {
+    "message": "Profile menu › Connectors"
+  },
+  "help_defaultWorkspace_q": {
+    "message": "Set a default workspace"
+  },
+  "help_defaultWorkspace_where": {
+    "message": "Profile menu › Workspaces"
+  },
+  "help_readAloud_q": {
+    "message": "Get answers read aloud"
+  },
+  "help_readAloud_where": {
+    "message": "Settings › Voice"
   }
 }

@@ -14,15 +14,22 @@ const TASKS: { id: string; place: Place }[] = [
   { id: 'calendar', place: 'settings' },
   { id: 'ask', place: 'memory' },
   { id: 'save', place: 'memory' },
-  { id: 'skill', place: 'settings' },
+  { id: 'skill', place: 'skills' },
   { id: 'find', place: 'chat' },
   { id: 'manage', place: 'chat' },
-  { id: 'models', place: 'settings' },
+  { id: 'models', place: 'models' },
   { id: 'cap', place: 'settings' },
   { id: 'confirm', place: 'settings' },
   { id: 'form', place: 'chat' },
   { id: 'popout', place: 'chat' },
   { id: 'today', place: 'today' },
+  // Wave 2 places: absent until the owning stream registers them, per `registeredPlaces`
+  { id: 'workflows', place: 'workflows' },
+  { id: 'inbox', place: 'inbox' },
+  { id: 'agents', place: 'agents' },
+  { id: 'connectors', place: 'connectors' },
+  { id: 'defaultWorkspace', place: 'workspaces' },
+  { id: 'readAloud', place: 'settings' },
 ];
 
 type Key = Parameters<typeof t>[0];

@@ -2350,7 +2350,7 @@
     "message": "教它做某件事的方法"
   },
   "help_skill_where": {
-    "message": "完成任務後：儲存為技能。在 設定 › 技能 中管理"
+    "message": "完成任務後：儲存為技能。於個人資料選單 › 技能 中管理"
   },
   "help_find_q": {
     "message": "尋找舊的對話"
@@ -2368,7 +2368,7 @@
     "message": "變更 AI 模型或 API 金鑰"
   },
   "help_models_where": {
-    "message": "設定 › 模型 › 所有設定"
+    "message": "個人資料選單 › 模型與用量"
   },
   "help_cap_q": {
     "message": "限制每日花費"
@@ -2695,5 +2695,92 @@
   },
   "threads_retried": {
     "message": "從頭再試一次這項任務。"
+  },
+  "shell_profile_open": {
+    "message": "帳戶選單"
+  },
+  "shell_profile_defaultName": {
+    "message": "你"
+  },
+  "shell_profile_localChip": {
+    "message": "本機"
+  },
+  "shell_settings_general": {
+    "message": "一般"
+  },
+  "shell_settings_name": {
+    "message": "你的名字"
+  },
+  "shell_settings_agentBehaviour": {
+    "message": "代理行為"
+  },
+  "shell_settings_modelOpen": {
+    "message": "開啟模型與用量"
+  },
+  "shell_workspaces_hint": {
+    "message": "加星號的工作區是預設工作區：當沒有其他依據時，新對話、背景執行與路由都會使用它。"
+  },
+  "shell_workspace_setDefault": {
+    "message": "將 $NAME$ 設為預設工作區",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_workspace_isDefault": {
+    "message": "$NAME$ 是預設工作區",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_skills_teachHint_title": {
+    "message": "教一個技能"
+  },
+  "shell_skills_teachHint": {
+    "message": "完成一項順利的任務後，副駕會提議將它的做法存成技能——之後隨時可用 /名稱 再次呼叫。"
+  },
+  "shell_skills_empty": {
+    "message": "目前沒有技能。"
+  },
+  "help_workflows_q": {
+    "message": "設定一個自動執行的例行工作"
+  },
+  "help_workflows_where": {
+    "message": "側邊選單的「工作流程」"
+  },
+  "help_inbox_q": {
+    "message": "查看需要我處理的事項"
+  },
+  "help_inbox_where": {
+    "message": "側邊選單的「收件匣」"
+  },
+  "help_agents_q": {
+    "message": "把任務交給子代理"
+  },
+  "help_agents_where": {
+    "message": "側邊選單的「代理」"
+  },
+  "help_connectors_q": {
+    "message": "連接 Slack、Gmail 或其他工具"
+  },
+  "help_connectors_where": {
+    "message": "個人資料選單 › 連接器"
+  },
+  "help_defaultWorkspace_q": {
+    "message": "設定預設工作區"
+  },
+  "help_defaultWorkspace_where": {
+    "message": "個人資料選單 › 工作區"
+  },
+  "help_readAloud_q": {
+    "message": "讓回答用語音朗讀"
+  },
+  "help_readAloud_where": {
+    "message": "設定 › 語音"
   }
 }

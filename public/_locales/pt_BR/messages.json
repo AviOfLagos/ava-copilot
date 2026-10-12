@@ -2350,7 +2350,7 @@
     "message": "Ensinar uma forma de fazer algo"
   },
   "help_skill_where": {
-    "message": "Após uma tarefa: Salvar como habilidade. Gerencie em Configurações › Habilidades"
+    "message": "Após uma tarefa: Salvar como habilidade. Gerencie no menu de perfil › Habilidades"
   },
   "help_find_q": {
     "message": "Encontrar um chat antigo"
@@ -2368,7 +2368,7 @@
     "message": "Trocar os modelos de IA ou chaves de API"
   },
   "help_models_where": {
-    "message": "Configurações › Modelo › Todas as configurações"
+    "message": "Menu de perfil › Modelos e uso"
   },
   "help_cap_q": {
     "message": "Limitar o gasto diário"
@@ -2695,5 +2695,92 @@
   },
   "threads_retried": {
     "message": "Tentando a tarefa de novo do início."
+  },
+  "shell_profile_open": {
+    "message": "Menu da conta"
+  },
+  "shell_profile_defaultName": {
+    "message": "Você"
+  },
+  "shell_profile_localChip": {
+    "message": "Local"
+  },
+  "shell_settings_general": {
+    "message": "Geral"
+  },
+  "shell_settings_name": {
+    "message": "Seu nome"
+  },
+  "shell_settings_agentBehaviour": {
+    "message": "Comportamento do agente"
+  },
+  "shell_settings_modelOpen": {
+    "message": "Abrir Modelos e uso"
+  },
+  "shell_workspaces_hint": {
+    "message": "O workspace com estrela é o padrão: novos chats, execuções em segundo plano e o roteamento usam-no quando nada mais decide."
+  },
+  "shell_workspace_setDefault": {
+    "message": "Tornar $NAME$ o workspace padrão",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_workspace_isDefault": {
+    "message": "$NAME$ é o workspace padrão",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "shell_skills_teachHint_title": {
+    "message": "Ensinar uma habilidade"
+  },
+  "shell_skills_teachHint": {
+    "message": "Termine uma tarefa que deu certo e o copiloto se oferece para salvar o que fez como uma habilidade — chame de novo quando quiser com /nome."
+  },
+  "shell_skills_empty": {
+    "message": "Nenhuma habilidade ainda."
+  },
+  "help_workflows_q": {
+    "message": "Configurar uma rotina que roda por conta própria"
+  },
+  "help_workflows_where": {
+    "message": "Workflows, no menu"
+  },
+  "help_inbox_q": {
+    "message": "Ver o que precisa da minha atenção"
+  },
+  "help_inbox_where": {
+    "message": "Caixa de entrada, no menu"
+  },
+  "help_agents_q": {
+    "message": "Dar uma tarefa a um sub-agente"
+  },
+  "help_agents_where": {
+    "message": "Agentes, no menu"
+  },
+  "help_connectors_q": {
+    "message": "Conectar o Slack, Gmail ou outra ferramenta"
+  },
+  "help_connectors_where": {
+    "message": "Menu de perfil › Conectores"
+  },
+  "help_defaultWorkspace_q": {
+    "message": "Definir um workspace padrão"
+  },
+  "help_defaultWorkspace_where": {
+    "message": "Menu de perfil › Workspaces"
+  },
+  "help_readAloud_q": {
+    "message": "Ouvir as respostas em voz alta"
+  },
+  "help_readAloud_where": {
+    "message": "Configurações › Voz"
   }
 }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Plus, Star, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { ACCOUNT_PLATFORMS, workspaceId, workspaceStore } from '@extension/storage';
 import type { AccountPlatform, Workspace } from '@extension/storage';
+import { cn } from '@extension/ui';
 import { Button } from '../components/ui/button';
-import { useWorkspaces } from './WorkspacePicker';
+import { useDefaultWorkspaceId, useWorkspaces } from './WorkspacePicker';
 
 const PLATFORM_LABELS: Record<AccountPlatform, { label: string; placeholder: string }> = {
   google: { label: 'Google', placeholder: 'you@company.com' },
@@ -106,6 +107,7 @@ function Editor({ initial, taken, onDone }: { initial: Workspace; taken: string[
 /** The workspaces in settings: each opens to edit, and new ones are added at the end. */
 export default function WorkspacesSettings() {
   const workspaces = useWorkspaces();
+  const defaultId = useDefaultWorkspaceId();
   const [editing, setEditing] = useState<Workspace | null>(null);
 
   if (editing) {
@@ -116,21 +118,39 @@ export default function WorkspacesSettings() {
     <>
       {workspaces.map(workspace => {
         const accounts = Object.values(workspace.accounts).filter(value => value?.trim()).length;
+        const isDefault = defaultId === workspace.id;
+        const starLabel = isDefault
+          ? t('shell_workspace_isDefault', [workspace.name])
+          : t('shell_workspace_setDefault', [workspace.name]);
         return (
-          <button
-            key={workspace.id}
-            type="button"
-            onClick={() => setEditing(workspace)}
-            className="hover:bg-accent/50 flex w-full items-center gap-3 px-3 py-2.5 text-left">
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13px]">{workspace.name}</span>
-              <span className="text-muted-foreground block truncate text-[11.5px]">
-                {[workspace.about.split('\n')[0], accounts ? `${accounts} accounts` : ''].filter(Boolean).join(' · ') ||
-                  workspace.keywords.join(', ')}
+          <div key={workspace.id} className="hover:bg-accent/50 flex w-full items-center gap-0.5 pr-1.5">
+            <button
+              type="button"
+              onClick={() => setEditing(workspace)}
+              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px]">{workspace.name}</span>
+                <span className="text-muted-foreground block truncate text-[11.5px]">
+                  {[workspace.about.split('\n')[0], accounts ? `${accounts} accounts` : '']
+                    .filter(Boolean)
+                    .join(' · ') || workspace.keywords.join(', ')}
+                </span>
               </span>
-            </span>
-            <ChevronRight className="text-muted-foreground size-4" />
-          </button>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </button>
+            <button
+              type="button"
+              aria-pressed={isDefault}
+              aria-label={starLabel}
+              title={starLabel}
+              onClick={() => void workspaceStore.setDefaultWorkspaceId(isDefault ? null : workspace.id)}
+              className={cn(
+                'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                isDefault ? 'text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              )}>
+              <Star className={cn('size-4', isDefault && 'fill-current')} />
+            </button>
+          </div>
         );
       })}
       <button
