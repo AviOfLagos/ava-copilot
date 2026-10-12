@@ -872,46 +872,53 @@ export class AgentService {
     }
 
     const usage = threadId && run.agentId ? await runUsage(this.db, run.agentId, threadId, run.startedAt) : null;
-    await this.db.runs.update(run.id, {
-      status,
-      error,
-      endedAt: now,
-      leaseUntil: null,
-      ...(usage
-        ? {
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-            costUsd: usage.costUsd,
-            modelCalls: usage.calls,
-          }
-        : {}),
+    // The run's end and the agent's counts change together: whoever sees the run ended (a run starting right after,
+    // the agent page) also sees its failure count, so "paused after 3 failures in a row" never counts from stale data
+    const outcome = await this.db.transaction('rw', this.db.runs, this.db.agents, async () => {
+      await this.db.runs.update(run.id, {
+        status,
+        error,
+        endedAt: now,
+        leaseUntil: null,
+        ...(usage
+          ? {
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              costUsd: usage.costUsd,
+              modelCalls: usage.calls,
+            }
+          : {}),
+      });
+      const current = run.agentId ? await this.db.agents.get(run.agentId) : undefined;
+      if (!current) return null;
+      const failed = status === 'failed' || status === 'unknown_outcome';
+      const failuresInRow =
+        status === 'succeeded' ? 0 : failed ? (current.failuresInRow ?? 0) + 1 : (current.failuresInRow ?? 0);
+      const pause = failed && failuresInRow >= AUTO_PAUSE_AFTER && current.enabled;
+      const pausedReason = pause
+        ? `It failed ${AUTO_PAUSE_AFTER} times in a row. The last error: ${error?.message ?? 'unknown'}`
+        : (current.pausedReason ?? null);
+      await this.db.agents.update(current.id, {
+        lastRunAt: now,
+        lastRunStatus: status,
+        failuresInRow,
+        ...(pause ? { enabled: false, pausedReason } : {}),
+      });
+      return { agent: current, failed, pause, pausedReason };
     });
     await this.db.jobs.where('key').equals(runJobKey(run.id)).delete();
-    if (agent) await this.deps.settleInbox(agentSource(agent.id), `${run.id}:click`).catch(() => {});
-    if (!agent) return;
-
-    const failed = status === 'failed' || status === 'unknown_outcome';
-    const failuresInRow =
-      status === 'succeeded' ? 0 : failed ? (agent.failuresInRow ?? 0) + 1 : (agent.failuresInRow ?? 0);
-    const pause = failed && failuresInRow >= AUTO_PAUSE_AFTER && agent.enabled;
-    const pausedReason = pause
-      ? `It failed ${AUTO_PAUSE_AFTER} times in a row. The last error: ${error?.message ?? 'unknown'}`
-      : (agent.pausedReason ?? null);
-    await this.db.agents.update(agent.id, {
-      lastRunAt: now,
-      lastRunStatus: status,
-      failuresInRow,
-      ...(pause ? { enabled: false, pausedReason } : {}),
-    });
-    const base = { source: agentSource(agent.id), workspaceId: agent.workspaceId, agentId: agent.id, runId: run.id };
+    if (!outcome) return;
+    const { agent: ended, failed, pause, pausedReason } = outcome;
+    await this.deps.settleInbox(agentSource(ended.id), `${run.id}:click`).catch(() => {});
+    const base = { source: agentSource(ended.id), workspaceId: ended.workspaceId, agentId: ended.id, runId: run.id };
     if (pause) {
-      await this.dropSchedules(agent.id);
+      await this.dropSchedules(ended.id);
       await this.deps
         .inbox({
           ...base,
           externalId: `paused:${run.id}`,
           kind: 'alert',
-          title: `Paused "${agent.name}"`,
+          title: `Paused "${ended.name}"`,
           body: `${pausedReason}. Fix it and resume it in Agents.`,
           priority: 'high',
         })
@@ -922,27 +929,27 @@ export class AgentService {
           ...base,
           externalId: `ended:${run.id}`,
           kind: 'alert',
-          title: `"${agent.name}" ${status === 'interrupted' ? 'was interrupted' : 'failed'}`,
+          title: `"${ended.name}" ${status === 'interrupted' ? 'was interrupted' : 'failed'}`,
           body: error?.message ?? '',
           priority: 'normal',
         })
         .catch(() => {});
     }
-    if (status === 'succeeded' && !run.attended && (agent.inboxResults ?? true) && answer) {
+    if (status === 'succeeded' && !run.attended && (ended.inboxResults ?? true) && answer) {
       await this.deps
         .inbox({
           ...base,
           externalId: `${run.id}:result`,
           kind: 'result',
-          title: `${agent.name}: ${firstLine(answer)}`,
+          title: `${ended.name}: ${firstLine(answer)}`,
           body: answer,
           priority: 'normal',
         })
         .catch(() => {});
     }
-    await this.deps.window.trim(agent.id).catch(() => {});
-    await this.pruneRuns(agent.id).catch(() => {});
-    void this.startNext(agent.id);
+    await this.deps.window.trim(ended.id).catch(() => {});
+    await this.pruneRuns(ended.id).catch(() => {});
+    void this.startNext(ended.id);
   }
 
   /** Posts a successful run's answer to the agent's topics, one hop further than what set it off. */

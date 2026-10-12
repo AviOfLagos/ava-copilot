@@ -25,10 +25,11 @@ class FakeThreads implements ThreadsPort {
     return this.running.size + this.others;
   }
   async send(request: { threadId: string; text: string }) {
-    this.sent.push(request);
     this.running.add(request.threadId);
     await createThreadStore(this.db).addMessage(request.threadId, 'user', request.text);
     await this.db.threads.update(request.threadId, { status: 'running', runStartedAt: Date.now() });
+    // Seen by the test only once the chat runs: a test that ends it right away is not undone by this send
+    this.sent.push(request);
     return request.threadId;
   }
   async cancel(threadId: string, reason?: { kind: ThreadErrorKind; message: string } | null) {
@@ -137,8 +138,12 @@ afterEach(async () => {
   );
 });
 
+// Runs go through many database steps: on a busy machine running every test file at once they can take seconds
+vi.setConfig({ testTimeout: 30_000 });
+
 async function until<T>(check: () => Promise<T | null | undefined | false>, what = 'it'): Promise<T> {
-  for (let index = 0; index < 300; index++) {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
     const value = await check();
     if (value) return value;
     await new Promise(resolve => setTimeout(resolve, 10));
@@ -263,6 +268,8 @@ describe('runs', () => {
     expect((await runOf(run.id)).tainted).toBe(true);
     await threads.answer(sent.threadId, 'Nothing to do.');
     await runEnded(run.id);
+    // The answer goes to the Inbox just after the run is marked ended
+    await until(async () => inbox.length > 0, 'the answer in the Inbox');
     expect(inbox).toEqual([
       expect.objectContaining({ kind: 'result', source: `agent:${agent.id}`, body: 'Nothing to do.', runId: run.id }),
     ]);
@@ -399,8 +406,11 @@ describe('budgets', () => {
       return stored && !stored.enabled ? stored : null;
     }, 'the pause');
     expect(paused.pausedReason).toMatch(/3 times in a row.*boom 2/);
+    await until(
+      async () => inbox.some(item => item.kind === 'alert' && item.externalId.startsWith('paused:')),
+      'the pause in the Inbox',
+    );
     expect(await db.jobs.where('kind').equals('agent-schedule').count()).toBe(0);
-    expect(inbox.some(item => item.kind === 'alert' && item.externalId.startsWith('paused:'))).toBe(true);
     await expect(service.requestRun(agent.id, { ...manual, attended: false })).rejects.toThrow(/paused/);
 
     const resumed = await service.setEnabled(agent.id, true);
@@ -426,7 +436,8 @@ describe('the user in the loop', () => {
     await until(async () => (await runOf(run.id)).status === 'running', 'running again');
     await threads.answer(sent.threadId, 'done');
     await runEnded(run.id);
-    expect(settled).toContain(`agent:${agent.id}|${run.id}:click`);
+    // Settled just after the run is marked ended
+    await until(async () => settled.includes(`agent:${agent.id}|${run.id}:click`), 'the Inbox approval settled');
   });
 });
 
