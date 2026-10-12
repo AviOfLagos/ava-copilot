@@ -1,13 +1,4 @@
-import {
-  generalSettingsStore,
-  graphStore,
-  kbSettingsStore,
-  kbStore,
-  localDay,
-  meetingStore,
-  threadStore,
-  usageStore,
-} from '@extension/storage';
+import { graphStore, kbSettingsStore, kbStore, meetingStore, threadStore } from '@extension/storage';
 import type { GraphStore, KbStore, KnowledgeItem, MeetingStore, ThreadStore } from '@extension/storage';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import type { KbChange } from '../kb/manager';
@@ -18,7 +9,7 @@ import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
 import { resolveModels } from '../threads/factory';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
 import { mergeReadings, READING_INSTRUCTIONS, readingFromNote, readingSchema, sliceFrom } from './extract';
 import type { Reading } from './extract';
 
@@ -46,10 +37,8 @@ const defaultDeps: GraphDeps = {
   meetings: meetingStore,
   // The navigator's model: usually the faster, cheaper one
   model: async () => (await resolveModels(null, { sessionId: KB_SESSION, notify: () => {} })).navigator,
-  overCap: async () => {
-    const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-    return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
-  },
+  // The cost cap, and the token cap when models with no known price are in use
+  overCap: () => isOverDailyBudget(),
   enabled: async () => (await kbSettingsStore.getSettings()).buildGraph,
 };
 

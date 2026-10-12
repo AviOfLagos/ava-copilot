@@ -77,6 +77,8 @@ export default defineConfig({
       'notifications',
       // Reading answers aloud with the Mac's own voices, free and on the device
       'tts',
+      // Signing in to connectors (MCP servers) with OAuth, through Brave's own sign-in window
+      'identity',
     ],
     // The on-device "Hey Ava" recogniser is WebAssembly; nothing else is allowed to compile code
     content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },

@@ -1,21 +1,12 @@
 import { t } from '@extension/i18n';
-import {
-  briefSettingsStore,
-  db,
-  generalSettingsStore,
-  graphStore,
-  localDay,
-  threadStore,
-  usageStore,
-  workspaceStore,
-} from '@extension/storage';
+import { briefSettingsStore, db, graphStore, threadStore, workspaceStore } from '@extension/storage';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
 import { resolveModels } from '../threads/factory';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
 import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
 import { briefDue, briefMarkdown, localDate, PRIORITIES_INSTRUCTIONS, priorityLines, todaysEvents } from './brief';
@@ -172,7 +163,6 @@ export class MorningBrief {
   }
 
   private async overCap(): Promise<boolean> {
-    const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-    return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
+    return isOverDailyBudget();
   }
 }

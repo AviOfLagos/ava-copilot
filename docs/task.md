@@ -587,6 +587,11 @@ foreground tab: a background tab gets no animation frames (already noted above f
 `session.panel.bringToFront()` before opening or closing one, and after anything (`session.send`)
 that refocuses the web page.
 
+- **Wave B dependencies (lead, 2026-10-12):** `@modelcontextprotocol/sdk` + `@cfworker/json-schema` (MCP without
+  eval), `kitten-tts-js` + `@huggingface/transformers` (local voices and speech recognition, loaded on demand); the
+  `identity` permission for connector sign-in. Routines pick models through `createRoleModel`; the graph, the brief and
+  routines hold on the shared daily budget (`isOverDailyBudget`).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

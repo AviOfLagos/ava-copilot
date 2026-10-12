@@ -1,7 +1,8 @@
-import { generalSettingsStore, localDay, usageStore } from '@extension/storage';
+import { generalSettingsStore, usageStore } from '@extension/storage';
 import type { ChatModel } from '../llm/types';
 import { resolveModels } from '../threads/factory';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
+import { createRoleModel } from '../models/roles';
 
 /**
  * The one place workflows pick a model, so the model registry's role resolver can take over here without
@@ -10,8 +11,14 @@ import { isOverCap } from '../usage/budget';
 export type WorkflowModelRole = 'smart' | 'fast';
 
 export async function workflowModel(role: WorkflowModelRole, sessionId: string): Promise<ChatModel> {
-  const { navigator, planner } = await resolveModels(null, { sessionId, notify: () => {} });
-  return role === 'fast' ? navigator : planner;
+  try {
+    // The registry's best available model for the role (local first when the cloud is down)
+    return (await createRoleModel(role, { sessionId, notify: () => {} })).chatModel;
+  } catch {
+    // No catalog yet (first run, offline): the agent models from settings
+    const { navigator, planner } = await resolveModels(null, { sessionId, notify: () => {} });
+    return role === 'fast' ? navigator : planner;
+  }
 }
 
 /** The usage recorded so far under a session, to measure what one step spent. */
@@ -28,9 +35,7 @@ export async function usageOf(
 
 /** A sentence when today's spending reached the user's cap, else null. */
 export async function overDailyCap(): Promise<string | null> {
+  if (!(await isOverDailyBudget())) return null;
   const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-  const spent = (await usageStore.getDay(localDay())).costUsd;
-  return isOverCap(spent, dailyCostCapUsd)
-    ? `Today's spending cap ($${dailyCostCapUsd.toFixed(2)}) is reached; raise it in Settings to run model steps.`
-    : null;
+  return `Today's budget is reached (spending cap $${dailyCostCapUsd.toFixed(2)}, or the token cap for models with no known price); raise it in Settings to run model steps.`;
 }
