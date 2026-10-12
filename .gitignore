@@ -34,3 +34,6 @@ public/wake/
 # Packed extension and its signing key (from "Pack extension"); never committed
 *.crx
 *.pem
+
+# Working copies of Wave 2 stream agents
+.claude/worktrees/

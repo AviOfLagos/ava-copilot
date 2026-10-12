@@ -1,14 +1,5 @@
 import { t } from '@extension/i18n';
-import {
-  generalSettingsStore,
-  kbItemId,
-  kbSettingsStore,
-  kbStore,
-  localDay,
-  meetingStore,
-  threadStore,
-  usageStore,
-} from '@extension/storage';
+import { kbItemId, kbSettingsStore, kbStore, meetingStore, threadStore } from '@extension/storage';
 import type {
   KbExport,
   KbSettingsConfig,
@@ -23,7 +14,7 @@ import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
 import { resolveModels } from '../threads/factory';
 import { readPageText } from '../reader/probes';
 import { ANSWER_INSTRUCTIONS, citationsIn, questionPrompt } from './answer';
@@ -59,8 +50,8 @@ export interface KbDeps {
 }
 
 async function overDailyCap(): Promise<boolean> {
-  const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-  return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
+  // The cost cap, and the token cap when models with no known price are in use
+  return isOverDailyBudget();
 }
 
 /** Reads the text a tab shows, the same way the agent's read_page_text does. */

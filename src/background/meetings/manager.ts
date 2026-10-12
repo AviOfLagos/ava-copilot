@@ -1,7 +1,6 @@
 import { APICallError } from 'ai';
 import { t } from '@extension/i18n';
 import {
-  generalSettingsStore,
   llmProviderStore,
   localDay,
   meetingSettingsStore,
@@ -28,7 +27,7 @@ import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
 import { meterModel } from '../usage/meter';
 import type { UsageScope } from '../usage/meter';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE } from '../usage/pricing';
 import { resolveModels } from '../threads/factory';
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
@@ -456,8 +455,7 @@ export class MeetingManager {
   }
 
   private async overCap(): Promise<boolean> {
-    const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-    return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
+    return isOverDailyBudget();
   }
 
   /**

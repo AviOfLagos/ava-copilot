@@ -102,31 +102,64 @@ export class JobRunner {
     await this.db.jobs.update(job.id, { status: paused ? 'paused' : 'scheduled', updatedAt: this.now() });
   }
 
-  /** Jobs cut off by a stopped background go back to the queue once their lease is over. */
+  /**
+   * Jobs cut off by a stopped background go back to the queue at once: there is only one background,
+   * and a fresh one is running none of them, so a job still marked running was interrupted.
+   */
   async recover(): Promise<void> {
     const now = this.now();
     const stale = await this.db.jobs.where('status').equals('running').toArray();
     for (const job of stale) {
-      if ((job.leaseUntil ?? 0) < now) {
-        await this.db.jobs.update(job.id, { status: 'scheduled', leaseUntil: null, updatedAt: now });
-        logger.info(`Job ${job.key} was interrupted and is queued again`);
-      }
+      if (this.running.has(job.key)) continue;
+      await this.db.jobs.update(job.id, { status: 'scheduled', leaseUntil: null, updatedAt: now });
+      logger.info(`Job ${job.key} was interrupted and is queued again`);
     }
   }
 
-  /** Runs what is due, a few at a time. */
-  async tick(): Promise<void> {
+  /**
+   * Runs what is due, a few at a time. Ticks never overlap (the alarm and a direct call may arrive
+   * together), and each job is claimed in memory before anything is awaited, so no job runs twice.
+   */
+  tick(): Promise<void> {
+    this.ticking ??= this.tickOnce().finally(() => {
+      this.ticking = null;
+    });
+    return this.ticking;
+  }
+
+  private ticking: Promise<void> | null = null;
+
+  private async tickOnce(): Promise<void> {
     const now = this.now();
     const due = await this.db.jobs
       .where('runAt')
       .belowOrEqual(now)
-      .filter(job => job.status === 'scheduled' && !this.running.has(job.key))
+      .filter(
+        job =>
+          !this.running.has(job.key) &&
+          // A job left running past its lease by a background that stopped is taken back too
+          (job.status === 'scheduled' || (job.status === 'running' && (job.leaseUntil ?? 0) < now)),
+      )
       .sortBy('runAt');
-    const free = CONCURRENCY - this.running.size;
-    await Promise.all(due.slice(0, Math.max(0, free)).map(job => this.run(job)));
+    const claimed: JobRecord[] = [];
+    for (const job of due) {
+      if (this.running.size >= CONCURRENCY) break;
+      if (this.running.has(job.key)) continue;
+      this.running.set(job.key, new AbortController());
+      claimed.push(job);
+    }
+    await Promise.all(claimed.map(job => this.run(job)));
   }
 
   private async run(job: JobRecord): Promise<void> {
+    try {
+      await this.runClaimed(job);
+    } finally {
+      this.running.delete(job.key);
+    }
+  }
+
+  private async runClaimed(job: JobRecord): Promise<void> {
     const now = this.now();
     // A repeat missed by too much moves to its next time instead of running late
     if (job.cron && now - job.runAt > job.catchUpMs) {
@@ -145,8 +178,7 @@ export class JobRunner {
       return;
     }
 
-    const controller = new AbortController();
-    this.running.set(job.key, controller);
+    const controller = this.running.get(job.key) ?? new AbortController();
     const attempts = job.attempts + 1;
     await this.db.jobs.update(job.id, { status: 'running', attempts, leaseUntil: now + LEASE_MS, updatedAt: now });
     // A running job keeps the background awake
@@ -184,7 +216,6 @@ export class JobRunner {
       logger.warning(`Job ${job.key} failed (${error.kind})`);
     } finally {
       clearInterval(keepAlive);
-      this.running.delete(job.key);
     }
   }
 }

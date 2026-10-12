@@ -4,3 +4,4 @@ import './workflows/register';
 import './agents/register';
 import './integrations/register';
 import './account/register';
+import './models/register';

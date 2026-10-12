@@ -11,7 +11,7 @@ import {
 } from '@extension/storage';
 import type { ThreadRecord } from '@extension/storage';
 import { createLogger } from '../log';
-import { isOverCap } from '../usage/budget';
+import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE, LIVE_AUDIO_OUT_USD_PER_MINUTE } from '../usage/pricing';
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
 import type { ThreadManager } from '../threads/manager';
@@ -404,8 +404,7 @@ export class VoiceManager {
   }
 
   private async overCap(): Promise<boolean> {
-    const { dailyCostCapUsd } = await generalSettingsStore.getSettings();
-    return isOverCap((await usageStore.getDay(localDay())).costUsd, dailyCostCapUsd);
+    return isOverDailyBudget();
   }
 
   private async describeStatus(): Promise<string> {

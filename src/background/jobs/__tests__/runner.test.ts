@@ -73,13 +73,12 @@ describe('JobRunner', () => {
     expect(broken.lastError).toBe('bad input');
   });
 
-  it('takes back a job a stopped background left running, once its lease is over', async () => {
+  it('takes back a job left running past its lease, even without a restart', async () => {
     const job = await runner.schedule({ kind: 'note', key: 'cut', runAt: now });
     await db.jobs.update(job.id, { status: 'running', leaseUntil: now + 1000 });
-    await runner.recover();
-    expect((await db.jobs.get(job.id))!.status).toBe('running');
+    await runner.tick();
+    expect(ran).toEqual([]);
     now += 2000;
-    await runner.recover();
     await runner.tick();
     expect(ran).toEqual(['cut']);
   });
@@ -89,5 +88,26 @@ describe('JobRunner', () => {
     await runner.schedule({ kind: 'note', key: 'k', runAt: now + 5000 });
     expect(await db.jobs.count()).toBe(1);
     expect(nextCronRun('0 0 30 2 *', null, now)).toBeNull();
+  });
+
+  it('never runs a job twice when two ticks come together', async () => {
+    let calls = 0;
+    registerJobHandler('slow', async () => {
+      calls++;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+    await runner.schedule({ kind: 'slow', key: 'slow', runAt: now });
+    await Promise.all([runner.tick(), runner.tick(), runner.tick()]);
+    expect(calls).toBe(1);
+  });
+
+  it('takes back a job a stopped background left running, right after the restart', async () => {
+    const job = await runner.schedule({ kind: 'note', key: 'orphan', runAt: now });
+    await db.jobs.update(job.id, { status: 'running', leaseUntil: now + 10 * 60_000 });
+    // A fresh runner, as after a restart, runs none of them
+    const fresh = new JobRunner(db, () => now);
+    await fresh.recover();
+    await fresh.tick();
+    expect(ran).toContain('orphan');
   });
 });
