@@ -2592,6 +2592,39 @@
       }
     }
   },
+  "graph_filters_label": {
+    "message": "Filtrar o grafo"
+  },
+  "graph_filtered_empty": {
+    "message": "Nada corresponde a esses filtros."
+  },
+  "graph_fit": {
+    "message": "Ajustar vista"
+  },
+  "graph_popout": {
+    "message": "Abrir em uma aba"
+  },
+  "graph_agent_label": {
+    "message": "Agente"
+  },
+  "graph_agent_all": {
+    "message": "Todos os agentes"
+  },
+  "graph_time_label": {
+    "message": "Período"
+  },
+  "graph_time_7d": {
+    "message": "7 dias"
+  },
+  "graph_time_30d": {
+    "message": "30 dias"
+  },
+  "graph_time_90d": {
+    "message": "90 dias"
+  },
+  "graph_time_all": {
+    "message": "Todo o período"
+  },
   "settings_obsidian": {
     "message": "Obsidian"
   },

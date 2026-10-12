@@ -2592,6 +2592,39 @@
       }
     }
   },
+  "graph_filters_label": {
+    "message": "篩選關係圖"
+  },
+  "graph_filtered_empty": {
+    "message": "沒有符合這些篩選條件的項目。"
+  },
+  "graph_fit": {
+    "message": "縮放至全圖"
+  },
+  "graph_popout": {
+    "message": "在新分頁開啟"
+  },
+  "graph_agent_label": {
+    "message": "代理人"
+  },
+  "graph_agent_all": {
+    "message": "所有代理人"
+  },
+  "graph_time_label": {
+    "message": "時間範圍"
+  },
+  "graph_time_7d": {
+    "message": "7 天"
+  },
+  "graph_time_30d": {
+    "message": "30 天"
+  },
+  "graph_time_90d": {
+    "message": "90 天"
+  },
+  "graph_time_all": {
+    "message": "不限時間"
+  },
   "settings_obsidian": {
     "message": "Obsidian"
   },
