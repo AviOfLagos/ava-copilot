@@ -170,15 +170,17 @@ describe('call_tool', () => {
     expect(mcp.state.calls).toHaveLength(0);
   });
 
-  it('refuses a tool that asks first in a chat nobody watches, without asking', async () => {
+  it('waits for the click in a chat an agent or a routine started too, sending nothing before it', async () => {
     caller.attended = false;
-    const { context, requests } = fakeContext();
-    const result = await callToolAction(service, context, input('send_message', { channel: '#a', text: 'x' }));
-    expect(requests).toHaveLength(0);
-    expect(result.error).toMatch(/approval item/);
+    const { context, requests } = fakeContext('none');
+    const pending = callToolAction(service, context, input('send_message', { channel: '#a', text: 'x' }));
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
     expect(mcp.state.calls).toHaveLength(0);
-    // A read still runs there
-    const read = await callToolAction(service, context, input('lookup_order', { order_id: '1' }));
+    context.confirmGate.answer(requests[0].id, false);
+    expect((await pending).error).toBe('gate_declined');
+    expect(mcp.state.calls).toHaveLength(0);
+    // A read still runs there without asking
+    const read = await callToolAction(service, fakeContext().context, input('lookup_order', { order_id: '1' }));
     expect(read.error).toBeNull();
   });
 

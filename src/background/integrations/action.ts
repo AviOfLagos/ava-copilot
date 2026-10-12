@@ -68,19 +68,14 @@ export async function callToolAction(
   const args = parseToolArgs(input.args);
   if (!args) return fail(context, `The args for ${label} are not a JSON object. Write them like {"name": "value"}.`);
 
-  const { scope, attended } = await callerOf(context);
+  const { scope } = await callerOf(context);
   const prepared = await service.prepare(scope, input.connector, input.tool, args);
   if ('refused' in prepared) return fail(context, prepared.refused);
   const { connector, fingerprint, policy } = prepared;
   const name = `${connector.name} › ${fingerprint.tool}`;
 
   if (policy === 'approve') {
-    if (!attended) {
-      return fail(
-        context,
-        `${name} asks the user before it runs, and nobody is watching this chat (a routine or an agent started it), so it was not run. It needs an approval item in the user's Inbox.`,
-      );
-    }
+    // In a chat an agent or a routine started, the card waits there and the Inbox points the user to it
     const answer = await reviewToolCall(context, {
       connector,
       tool: fingerprint,
