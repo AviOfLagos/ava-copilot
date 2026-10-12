@@ -527,6 +527,66 @@ Routines the user asks for in chat, drawn as a diagram, confirmed with a click, 
   section). `e2e/manual/flow-shots.mjs` takes the panel screenshots. The test-only `workflow-settings.urlOverrides`
   points real sources at a local server (local targets only).
 
+### Wave 2 — WS1 Shell & account (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md) § WS1. Drawer top = New chat, search, Home/Today/Meetings (core) merged with
+`registeredPlaces('top')` and sorted by `order` (gaps at 10/40/50 left for Inbox/Workflows/Agents), then chats by
+date unchanged. Knowledge base and Settings left the top list; the drawer's foot is now a profile button (initials
+avatar from a new `accountProfileStore` display name, "You" when unset, a "Local" chip) opening an upward popover —
+Knowledge base, Workspaces, Connectors, Skills, Models & usage, Settings, How do I… (core + `registeredPlaces('profile')`,
+same `order` merge) — above the existing archived/pop-out row.
+
+One menu primitive, `src/side-panel/components/ui/row-menu.tsx` (`@radix-ui/react-dropdown-menu`: portal, solid
+`bg-popover` + blur, shadow, collision-aware, Esc/outside/focus/arrow-keys free), replaces the chat row's old
+see-through, clipped "⋯" menu (`layout/Sidebar.tsx`'s `HistoryRow`) and is the profile menu. The drawer's own
+Escape handler now steps back one layer at a time: it skips closing the drawer while `document.querySelector('[role="menu"]')`
+finds an open menu, so a first Esc closes the open menu and a second closes the drawer.
+
+**Default workspace**: `workspaceStore` (`src/storage/lib/workspaces/workspaces.ts`) gained `defaultWorkspaceId` +
+a one-time `defaultWorkspaceMigrated` flag — `ensureSeeded()` gives a brand-new install Nexprove as the default as
+part of normal seeding, and gives an install that was already `seeded` (from before this field existed) the same
+default once, without ever overwriting a default the user later picked or cleared; removing the default workspace
+clears it back to none rather than silently pointing at a gone id. New place `workspaces` (registered profile,
+order 10, from `src/side-panel/account/register.tsx` — `registers.ts` only imports that one file for this stream,
+so every place WS1 registers goes through it) shows the same list/add/edit as before (`WorkspacesSettings.tsx`,
+now with a star per row to set or clear the default, `useDefaultWorkspaceId()` alongside the existing `useWorkspaces()`)
+plus what the star means. **Not wired to Home**: the actual `<WorkspacePicker>` on Home is instantiated in
+`SidePanel.tsx` (shared, not ours), so preselecting it needs that file's `nextWorkspace` state initialised from
+`workspaceStore.getDefaultWorkspaceId()` — reported to the lead, not done here. Same reason `ThreadManager.placeInWorkspace`
+still returns with no workspace when nothing is picked or routed; the one-line fallback to the default is reported too.
+
+New place `skills` (registered profile, order 30) moves the on/off list that lived in Settings (`SkillsPlace.tsx`,
+`src/side-panel/skills/`, new file, `TeachCard.tsx` untouched) plus a line on how teaching a skill actually happens
+(after a task, never from this page). Settings (`settings/SettingsView.tsx`) regrouped: General (new name field via
+`accountProfileStore`, `src/storage/lib/account/`, + the theme radios that used to be their own section), Voice,
+Morning brief, Obsidian, Agent behaviour (the read-only Model row — now a button to `api.go('models')` when
+registered, else the full options page — confirm gate, spending, writing style, highlights, all merged), Meetings,
+Calendar, Memory, then `registeredSettingsSections()` appended. This needed `api: PanelApi` on `SettingsViewProps`,
+so its one call site in `SidePanel.tsx` also needs `api={panelApi}` — reported. `HelpView.tsx` gained entries for
+workflows/inbox/agents/connectors/default workspace/read aloud (absent targets degrade to Home, same as any
+unregistered place) and pointed the existing "models"/"skill" entries at their new homes.
+
+E2E `e2e/shell.e2e.mjs`: the top list drops Knowledge base/Settings, the profile menu opens upward with its items,
+the row menu is portaled outside the scrolling history region and stays fully on screen at 400×760, Esc closes one
+layer at a time, and the default workspace persists across leaving and returning to the Workspaces place.
+`e2e/kb.e2e.mjs`'s `openKnowledge()` helper and its two `Settings` flows now click `Account menu` first (reported
+below instead of changed silently). Screens: `node e2e/manual/shell.mjs <dir>`.
+
+**Two Radix/E2E gotchas for any stream adding a floating menu, popover or dialog** (found building
+the row menu): (1) `@radix-ui/react-dropdown-menu`'s trigger opens on `pointerdown` or a keyboard
+Enter/Space, never `click`, so the harness's `session.click(label)` (a synthetic
+`element.click()` run through `evaluate()`) never opens it; Puppeteer's own `ElementHandle.click()`
+is not a fix either — with this Brave build under CDP it hangs inside `clickablePoint()`'s
+`Runtime.callFunctionOn` round trip until the default 180000ms `protocolTimeout`, every time. Open
+it by focusing the trigger and dispatching a real `keydown` for Enter instead, inside one plain
+`evaluate()` call (see `openAccountMenu`/`openRowMenu` in `e2e/shell.e2e.mjs`). (2) Any
+`Presence`-based exit animation (what `data-[state=closed]:animate-out` + friends gives a Radix
+content) will not unmount at all — not eventually, not after a long wait — unless the page is the
+foreground tab: a background tab gets no animation frames (already noted above for `MorphOrb`), so
+`animationend` never fires and `Presence` waits forever in `unmountSuspended`. Call
+`session.panel.bringToFront()` before opening or closing one, and after anything (`session.send`)
+that refocuses the web page.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

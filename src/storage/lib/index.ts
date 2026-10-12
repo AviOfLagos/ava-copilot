@@ -8,6 +8,7 @@ export * from './kb';
 export * from './skills';
 export * from './profile';
 export * from './prompt/favorites';
+export * from './account';
 
 // Re-export the favorites instance for direct use
 export { default as favoritesStorage } from './prompt/favorites';

@@ -20,6 +20,21 @@ export function useWorkspaces(): Workspace[] {
   return workspaces;
 }
 
+/** The workspace new chats, background runs and routing fall back to; null means none chosen. */
+export function useDefaultWorkspaceId(): string | null {
+  const [id, setId] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => void workspaceStore.getDefaultWorkspaceId().then(setId);
+    load();
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && changes.workspaces) load();
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
+  }, []);
+  return id;
+}
+
 interface WorkspacePickerProps {
   value: string | null;
   onChange: (workspaceId: string | null) => void;

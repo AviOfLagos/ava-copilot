@@ -4,6 +4,7 @@ import {
   ArchiveRestore,
   BookOpen,
   CalendarDays,
+  ChevronUp,
   CircleHelp,
   Disc,
   ExternalLink,
@@ -29,8 +30,13 @@ import { groupByDate } from '../threads/history';
 import { registeredPlaces } from '../registry';
 import type { RegisteredPlaceId } from '../registry';
 import type { HistoryGroup } from '../threads/history';
+import { RowMenu, RowMenuContent, RowMenuItem, RowMenuTrigger } from '../components/ui/row-menu';
+import { Badge } from '../components/ui/badge';
+import { initialsOf, useDisplayName } from '../account/useProfile';
 
 export type Place = 'chat' | 'today' | 'meetings' | 'memory' | 'settings' | 'help' | RegisteredPlaceId;
+
+type Key = Parameters<typeof t>[0];
 
 interface SidebarProps {
   open: boolean;
@@ -46,13 +52,22 @@ interface SidebarProps {
   onPopOut: () => void;
 }
 
-const PLACES: { place: Place; label: string; icon: LucideIcon }[] = [
-  { place: 'chat', label: 'nav_home', icon: House },
-  { place: 'today', label: 'today_title', icon: CalendarDays },
-  { place: 'meetings', label: 'nav_meetings', icon: Disc },
-  { place: 'memory', label: 'kb_title', icon: BookOpen },
-  { place: 'settings', label: 'settings_title', icon: SlidersHorizontal },
-  { place: 'help', label: 'nav_help', icon: CircleHelp },
+// The drawer's top list: the everyday places, plus whatever a stream registered for 'top', merged
+// and sorted by `order`. Gaps (10, 40, 50) are left for places not built yet (a registered place
+// that does not exist yet is simply absent, so the list degrades gracefully wave over wave).
+const CORE_TOP: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
+  { place: 'chat', label: 'nav_home', icon: House, order: 0 },
+  { place: 'today', label: 'today_title', icon: CalendarDays, order: 20 },
+  { place: 'meetings', label: 'nav_meetings', icon: Disc, order: 30 },
+];
+
+// The profile popover: account-ish places. Knowledge base and Settings used to live in the top
+// list; they live here now, alongside Workspaces/Skills (registered by this stream) and whatever
+// Connectors/Models & usage/other streams add.
+const CORE_PROFILE: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
+  { place: 'memory', label: 'kb_title', icon: BookOpen, order: 0 },
+  { place: 'settings', label: 'settings_title', icon: SlidersHorizontal, order: 50 },
+  { place: 'help', label: 'nav_help', icon: CircleHelp, order: 60 },
 ];
 
 function groupLabel(group: HistoryGroup): string {
@@ -84,7 +99,6 @@ function HistoryRow({
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const title = thread.title || t('threads_untitled');
@@ -136,7 +150,7 @@ function HistoryRow({
     );
   }
 
-  const item = 'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-accent';
+  const item = 'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12.5px]';
   return (
     <li className="relative">
       <div
@@ -152,74 +166,51 @@ function HistoryRow({
           className="min-w-0 flex-1 truncate py-1.5 text-left text-[13px]">
           {title}
         </button>
-        <button
-          type="button"
-          aria-label={t('history_menu', [title])}
-          aria-expanded={menu}
-          onClick={() => setMenu(!menu)}
-          className="text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md opacity-0 hover:text-foreground focus:opacity-100 group-hover:opacity-100 aria-expanded:opacity-100">
-          <MoreHorizontal className="size-4" />
-        </button>
+        <RowMenu>
+          <RowMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t('history_menu', [title])}
+              className="text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md opacity-0 hover:text-foreground focus:opacity-100 group-hover:opacity-100 aria-expanded:opacity-100">
+              <MoreHorizontal className="size-4" />
+            </button>
+          </RowMenuTrigger>
+          <RowMenuContent data-row-menu="history" align="end" sideOffset={4} className="w-40">
+            <RowMenuItem asChild onSelect={() => setRenaming(thread.title)}>
+              <button type="button" className={item}>
+                <Pencil className="size-3.5" />
+                {t('threads_action_rename')}
+              </button>
+            </RowMenuItem>
+            <RowMenuItem asChild onSelect={() => void threadStore.setPinned(thread.id, !thread.pinned)}>
+              <button type="button" className={item}>
+                {thread.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+                {thread.pinned ? t('threads_action_unpin') : t('threads_action_pin')}
+              </button>
+            </RowMenuItem>
+            <RowMenuItem asChild onSelect={() => void threadStore.setArchived(thread.id, !thread.archived)}>
+              <button type="button" className={item}>
+                {thread.archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
+                {thread.archived ? t('threads_action_unarchive') : t('threads_action_archive')}
+              </button>
+            </RowMenuItem>
+            <RowMenuItem asChild destructive onSelect={() => setConfirming(true)}>
+              <button type="button" className={item}>
+                <Trash2 className="size-3.5" />
+                {t('threads_action_delete')}
+              </button>
+            </RowMenuItem>
+          </RowMenuContent>
+        </RowMenu>
       </div>
-      {menu && (
-        <div
-          role="menu"
-          tabIndex={-1}
-          className="glass absolute right-1 top-8 z-20 w-40 rounded-xl p-1 shadow-lg"
-          onMouseLeave={() => setMenu(false)}>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => {
-              setMenu(false);
-              setRenaming(thread.title);
-            }}>
-            <Pencil className="size-3.5" />
-            {t('threads_action_rename')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => {
-              setMenu(false);
-              void threadStore.setPinned(thread.id, !thread.pinned);
-            }}>
-            {thread.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-            {thread.pinned ? t('threads_action_unpin') : t('threads_action_pin')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => {
-              setMenu(false);
-              void threadStore.setArchived(thread.id, !thread.archived);
-            }}>
-            {thread.archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
-            {thread.archived ? t('threads_action_unarchive') : t('threads_action_archive')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={cn(item, 'text-destructive')}
-            onClick={() => {
-              setMenu(false);
-              setConfirming(true);
-            }}>
-            <Trash2 className="size-3.5" />
-            {t('threads_action_delete')}
-          </button>
-        </div>
-      )}
     </li>
   );
 }
 
 /**
- * The drawer from the left, as in chat apps: a new chat, search, every place in the copilot by name,
- * and the chat history grouped by date. It is how you find your way, so every place has a label.
+ * The drawer from the left, as in chat apps: a new chat, search, the everyday places, the chat
+ * history grouped by date, and a profile button whose popover holds the account-ish places. It is
+ * how you find your way, so every place has a label.
  */
 export default function Sidebar(props: SidebarProps) {
   const [search, setSearch] = useState('');
@@ -228,11 +219,26 @@ export default function Sidebar(props: SidebarProps) {
   const threads = useLive(() => threadStore.list({ archived, search }), [archived, search], []);
   const groups = groupByDate(threads);
   const current = props.place === 'chat' && props.inChat ? null : props.place;
+  const displayName = useDisplayName();
+
+  const topPlaces = [
+    ...CORE_TOP,
+    ...registeredPlaces('top').map(({ id, label, icon, order }) => ({ place: id as Place, label, icon, order })),
+  ].sort((a, b) => a.order - b.order);
+
+  const profilePlaces = [
+    ...CORE_PROFILE,
+    ...registeredPlaces('profile').map(({ id, label, icon, order }) => ({ place: id as Place, label, icon, order })),
+  ].sort((a, b) => a.order - b.order);
 
   useEffect(() => {
     if (!props.open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') props.onClose();
+      if (event.key !== 'Escape') return;
+      // A floating menu (the profile popover, or a chat row's "⋯") handles its own Escape first;
+      // a second press, with no menu left open, closes the drawer.
+      if (document.querySelector('[role="menu"]')) return;
+      props.onClose();
     };
     window.addEventListener('keydown', onKey);
     panelRef.current?.focus();
@@ -280,11 +286,7 @@ export default function Sidebar(props: SidebarProps) {
         </label>
 
         <nav aria-label={t('nav_places')} className="mt-2 px-1.5">
-          {[
-            ...PLACES,
-            // Places that features registered for the drawer's list
-            ...registeredPlaces('top').map(({ id, label, icon }) => ({ place: id as Place, label, icon })),
-          ].map(({ place, label, icon: Icon }) => (
+          {topPlaces.map(({ place, label, icon: Icon }) => (
             <button
               key={place}
               type="button"
@@ -297,7 +299,7 @@ export default function Sidebar(props: SidebarProps) {
                   : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
               )}>
               <Icon className="size-4" />
-              {t(label as Parameters<typeof t>[0])}
+              {t(label)}
             </button>
           ))}
         </nav>
@@ -330,21 +332,54 @@ export default function Sidebar(props: SidebarProps) {
           ))}
         </div>
 
-        <div className="border-border/60 flex items-center justify-between border-t px-2.5 py-1.5">
-          <button
-            type="button"
-            onClick={() => setArchived(!archived)}
-            className="text-muted-foreground hover:bg-accent whitespace-nowrap rounded-lg px-2 py-1 text-[12px] hover:text-foreground">
-            {archived ? t('history_live') : t('history_archived')}
-          </button>
-          <button
-            type="button"
-            onClick={props.onPopOut}
-            aria-label={t('threads_popOut')}
-            className="text-muted-foreground hover:bg-accent flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[12px] hover:text-foreground">
-            <ExternalLink className="size-3.5" />
-            {t('nav_popOut')}
-          </button>
+        <div className="border-border/60 border-t">
+          <RowMenu>
+            <RowMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t('shell_profile_open')}
+                className="hover:bg-accent flex w-full items-center gap-2.5 px-2.5 py-2 text-left">
+                <span className="bg-primary/20 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                  {initialsOf(displayName)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[13px]">
+                  {displayName || t('shell_profile_defaultName')}
+                </span>
+                <Badge variant="outline" className="shrink-0">
+                  {t('shell_profile_localChip')}
+                </Badge>
+                <ChevronUp className="text-muted-foreground size-3.5 shrink-0" />
+              </button>
+            </RowMenuTrigger>
+            <RowMenuContent data-row-menu="profile" side="top" align="start" sideOffset={8} className="w-[232px]">
+              {profilePlaces.map(({ place, label, icon: Icon }) => (
+                <RowMenuItem key={place} asChild onSelect={() => props.onGo(place)}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-[13px]">
+                    <Icon className="size-4" />
+                    {t(label)}
+                  </button>
+                </RowMenuItem>
+              ))}
+            </RowMenuContent>
+          </RowMenu>
+          <div className="flex items-center justify-between px-2.5 py-1.5">
+            <button
+              type="button"
+              onClick={() => setArchived(!archived)}
+              className="text-muted-foreground hover:bg-accent whitespace-nowrap rounded-lg px-2 py-1 text-[12px] hover:text-foreground">
+              {archived ? t('history_live') : t('history_archived')}
+            </button>
+            <button
+              type="button"
+              onClick={props.onPopOut}
+              aria-label={t('threads_popOut')}
+              className="text-muted-foreground hover:bg-accent flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[12px] hover:text-foreground">
+              <ExternalLink className="size-3.5" />
+              {t('nav_popOut')}
+            </button>
+          </div>
         </div>
       </div>
       <button

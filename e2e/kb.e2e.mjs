@@ -11,6 +11,26 @@ import { launchExtension, openSession, sleep } from './harness.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 
+// WS1 Wave 2: the drawer's profile button opens a Radix dropdown menu, which reacts to
+// `pointerdown` or a keyboard Enter/Space, not `click` — so the harness's own
+// `session.click(label)` (a synthetic element.click() from evaluate()) never opens it. Puppeteer's
+// native `ElementHandle.click()` is not a fix either: with this Brave build under CDP it hangs in
+// `clickablePoint()`'s `Runtime.callFunctionOn` round trip until the default 180000ms
+// `protocolTimeout`. This focuses the trigger and dispatches a real `keydown` for Enter instead,
+// synthetically, inside one plain `evaluate()` call, same as every other click in this file.
+async function clickAccountMenu(session) {
+  // A background tab gets no animation frames (CLAUDE.md), so the menu's Radix exit animation
+  // would never fire `animationend` and Presence would leave it mounted, invisible-but-present,
+  // over whatever renders next. Earlier steps (e.g. `session.send`) may have focused the web page.
+  await session.panel.bringToFront();
+  await session.panel.evaluate(() => {
+    const el = document.querySelector('[aria-label="Account menu"]');
+    if (!el) throw new Error('No button "Account menu"');
+    el.focus();
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  });
+}
+
 const scenarios = {
   'kb-chat': [() => [{ done: { text: 'Scripted steps complete.', success: true } }]],
   'kb-agent': [
@@ -94,6 +114,8 @@ async function waitForItem(page, predicate, timeout = 20000) {
 
 async function openKnowledge(session) {
   await session.click('Menu');
+  // WS1 Wave 2: Knowledge base and Settings moved from the drawer's top list into the profile menu
+  await clickAccountMenu(session);
   await session.click('Knowledge base');
   await session.panel.waitForSelector('[role="tablist"][aria-label="Knowledge base"]', { timeout: 10000 });
 }
@@ -374,6 +396,8 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
   });
 
   await session.click('Menu');
+  // WS1 Wave 2: Settings moved from the drawer's top list into the profile menu
+  await clickAccountMenu(session);
   await session.click('Settings');
   await session.panel.waitForFunction(() => document.body.innerText.includes('Sync now'), { polling: 300 });
   await session.click('Sync now');
@@ -415,6 +439,8 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
 test('the morning brief comes as a chat with the priorities first, made from the data as untrusted', async () => {
   const session = await openSession(extension, mock);
   await session.click('Menu');
+  // WS1 Wave 2: Settings moved from the drawer's top list into the profile menu
+  await clickAccountMenu(session);
   await session.click('Settings');
   await session.panel.waitForFunction(() => document.body.innerText.includes('Make one now'), { polling: 300 });
   await session.click('Make one now');
