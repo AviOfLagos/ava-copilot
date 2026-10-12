@@ -3727,5 +3727,102 @@
   },
   "help_readAloud_where": {
     "message": "Configurações › Voz"
+  },
+  "brain_settings_title": {
+    "message": "Avi Brain (Mac)"
+  },
+  "brain_state_unpaired": {
+    "message": "Não pareado"
+  },
+  "brain_state_online": {
+    "message": "Conectado"
+  },
+  "brain_state_offline": {
+    "message": "Não está em execução"
+  },
+  "brain_state_error": {
+    "message": "Precisa de atenção"
+  },
+  "brain_check": {
+    "message": "Verificar"
+  },
+  "brain_pair_hint": {
+    "message": "No seu Mac, execute \"avi-brain pair\" (ou \"pnpm pair\" na pasta companion) e digite o código que aparecer."
+  },
+  "brain_port_label": {
+    "message": "Porta"
+  },
+  "brain_code_label": {
+    "message": "Código de pareamento"
+  },
+  "brain_pair": {
+    "message": "Parear"
+  },
+  "brain_pairing": {
+    "message": "Pareando…"
+  },
+  "brain_docker_label": {
+    "message": "Docker"
+  },
+  "brain_docker_ready": {
+    "message": "Em execução"
+  },
+  "brain_docker_noImage": {
+    "message": "Em execução; imagem do sandbox não criada"
+  },
+  "brain_docker_down": {
+    "message": "Parado: inicie o Docker Desktop"
+  },
+  "brain_engine_label": {
+    "message": "Motor de agentes"
+  },
+  "brain_engine_ready": {
+    "message": "Pronto"
+  },
+  "brain_engine_off": {
+    "message": "Desligado"
+  },
+  "brain_mcp_label": {
+    "message": "Servidores MCP"
+  },
+  "brain_mcp_count": {
+    "message": "$READY$ de $TOTAL$ em execução",
+    "placeholders": {
+      "ready": {
+        "content": "$1",
+        "example": "2"
+      },
+      "total": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "brain_artifacts_label": {
+    "message": "Feito por agentes"
+  },
+  "brain_artifact_open": {
+    "message": "Abrir $TITLE$ no Avi Studio",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Landing page"
+      }
+    }
+  },
+  "brain_artifact_openShort": {
+    "message": "Abrir"
+  },
+  "brain_paired_on": {
+    "message": "Pareado em $ADDRESS$",
+    "placeholders": {
+      "address": {
+        "content": "$1",
+        "example": "127.0.0.1:47615"
+      }
+    }
+  },
+  "brain_unpair": {
+    "message": "Desparear"
   }
 }

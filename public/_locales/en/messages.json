@@ -3727,5 +3727,102 @@
   },
   "help_readAloud_where": {
     "message": "Settings › Voice"
+  },
+  "brain_settings_title": {
+    "message": "Avi Brain (Mac)"
+  },
+  "brain_state_unpaired": {
+    "message": "Not paired"
+  },
+  "brain_state_online": {
+    "message": "Connected"
+  },
+  "brain_state_offline": {
+    "message": "Not running"
+  },
+  "brain_state_error": {
+    "message": "Needs attention"
+  },
+  "brain_check": {
+    "message": "Check"
+  },
+  "brain_pair_hint": {
+    "message": "On your Mac, run \"avi-brain pair\" (or \"pnpm pair\" in the companion folder) and type the code it shows."
+  },
+  "brain_port_label": {
+    "message": "Port"
+  },
+  "brain_code_label": {
+    "message": "Pairing code"
+  },
+  "brain_pair": {
+    "message": "Pair"
+  },
+  "brain_pairing": {
+    "message": "Pairing…"
+  },
+  "brain_docker_label": {
+    "message": "Docker"
+  },
+  "brain_docker_ready": {
+    "message": "Running"
+  },
+  "brain_docker_noImage": {
+    "message": "Running; sandbox image not built"
+  },
+  "brain_docker_down": {
+    "message": "Not running: start Docker Desktop"
+  },
+  "brain_engine_label": {
+    "message": "Agent engine"
+  },
+  "brain_engine_ready": {
+    "message": "Ready"
+  },
+  "brain_engine_off": {
+    "message": "Off"
+  },
+  "brain_mcp_label": {
+    "message": "MCP servers"
+  },
+  "brain_mcp_count": {
+    "message": "$READY$ of $TOTAL$ running",
+    "placeholders": {
+      "ready": {
+        "content": "$1",
+        "example": "2"
+      },
+      "total": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "brain_artifacts_label": {
+    "message": "Made by agents"
+  },
+  "brain_artifact_open": {
+    "message": "Open $TITLE$ in Avi Studio",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Landing page"
+      }
+    }
+  },
+  "brain_artifact_openShort": {
+    "message": "Open"
+  },
+  "brain_paired_on": {
+    "message": "Paired on $ADDRESS$",
+    "placeholders": {
+      "address": {
+        "content": "$1",
+        "example": "127.0.0.1:47615"
+      }
+    }
+  },
+  "brain_unpair": {
+    "message": "Unpair"
   }
 }

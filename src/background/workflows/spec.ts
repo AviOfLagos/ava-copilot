@@ -52,7 +52,6 @@ export const NOT_YET_AVAILABLE: ReadonlySet<NodeType> = new Set<NodeType>([
   'trigger.tab',
   'step.agent',
   'step.tool',
-  'step.sandbox',
   'out.speak',
 ]);
 

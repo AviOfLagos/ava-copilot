@@ -1,0 +1,481 @@
+import { createHash } from 'node:crypto';
+import type { z } from 'zod';
+import {
+  ARTIFACT_HEADERS,
+  artifactCreateRequestSchema,
+  COMPANION_PROTOCOL_VERSION,
+  COMPANION_ROUTES,
+  cursorRequestSchema,
+  ghRequestSchema,
+  healthRequestSchema,
+  pairRequestSchema,
+  sandboxRunRequestSchema,
+  sessionAnswerRequestSchema,
+  sessionCreateRequestSchema,
+  sessionMessageRequestSchema,
+  STUDIO_SCRIPT,
+  STUDIO_STYLE,
+  studioCsp,
+  studioPageHtml,
+  studioSessionRequestSchema,
+  toolCallRequestSchema,
+  workflowAckRequestSchema,
+  workflowAnswerRequestSchema,
+  workflowPutRequestSchema,
+  workflowRunRequestSchema,
+} from '@protocol';
+import type { HealthReply } from '@protocol';
+import type { ArtifactStore, StudioKeys } from './artifacts/store';
+import type { PairingStore } from './auth/pairing';
+import type { GhRunner } from './cli/gh';
+import type { BrainConfig } from './config';
+import { fail } from './errors';
+import type { BrainServer, Route, RouteResult } from './http/server';
+import { json } from './http/server';
+import type { McpManager } from './mcp/manager';
+import type { SandboxManager } from './sandbox/manager';
+import type { SessionEngine } from './sessions/eve';
+import type { ProfileRegistry } from './sessions/registry';
+import { isToolName, runTool } from './sessions/tools';
+import type { MacWorkflows } from './workflows/service';
+
+export interface RouteDeps {
+  config: BrainConfig;
+  server: BrainServer;
+  pairing: PairingStore;
+  sandbox: SandboxManager;
+  gh: GhRunner;
+  mcp: McpManager;
+  artifacts: ArtifactStore;
+  studio: StudioKeys;
+  workflows: MacWorkflows;
+  registry: ProfileRegistry;
+  engine: SessionEngine | null;
+  startedAt: number;
+  now: () => number;
+}
+
+function parse<S extends z.ZodType>(schema: S, body: unknown): z.infer<S> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    fail(
+      'invalid',
+      `The request is not valid${issue ? ` (${issue.path.join('.') || 'body'}: ${issue.message})` : ''}.`,
+    );
+  }
+  return parsed.data;
+}
+
+const base64Sha256 = (text: string) => createHash('sha256').update(text).digest('base64');
+const STUDIO_CSP = studioCsp(base64Sha256(STUDIO_SCRIPT), base64Sha256(STUDIO_STYLE));
+
+function html(body: string, status = 200, extra: Record<string, string> = {}): RouteResult {
+  return {
+    kind: 'raw',
+    status,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+      ...extra,
+    },
+    body,
+  };
+}
+
+export function brainRoutes(deps: RouteDeps): Route[] {
+  const engine = () => deps.engine ?? fail('unavailable', 'Agent sessions are off on this Mac.');
+
+  return [
+    // ── Pairing and health ──
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.pair,
+      name: 'pair',
+      auth: 'pair',
+      rate: 'pair',
+      async handler({ body }) {
+        const request = parse(pairRequestSchema, body);
+        const { token, companionId } = await deps.pairing.redeem(request.code, request.client);
+        return json({
+          ok: true,
+          token,
+          companionId,
+          version: deps.config.version,
+          protocol: COMPANION_PROTOCOL_VERSION,
+        });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.unpair,
+      name: 'unpair',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        await deps.pairing.revoke();
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.health,
+      name: 'health',
+      auth: 'api',
+      rate: 'health',
+      async handler({ body }) {
+        const request = parse(healthRequestSchema, body);
+        const status = await deps.pairing.status();
+        const reply: HealthReply = {
+          ok: true,
+          protocol: COMPANION_PROTOCOL_VERSION,
+          version: deps.config.version,
+          companionId: status.companionId,
+          uptimeMs: deps.now() - deps.startedAt,
+          docker: await deps.sandbox.docker(request.fresh),
+          engine: deps.engine?.state() ?? { kind: 'none', state: 'off', message: null },
+          mcp: deps.mcp.states(),
+          workflows: deps.workflows.stats(),
+        };
+        return json(reply);
+      },
+    },
+
+    // ── Sandbox and gh ──
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.sandboxRun,
+      name: 'sandbox.run',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 1_100_000,
+      async handler({ body, signal }) {
+        const request = parse(sandboxRunRequestSchema, body);
+        return json(
+          await deps.sandbox.run({
+            profileId: request.profileId,
+            command: request.command,
+            policy: request.policy,
+            stdin: request.stdin,
+            signal,
+          }),
+        );
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.gh,
+      name: 'gh',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      async handler({ body, signal }) {
+        const request = parse(ghRequestSchema, body);
+        const result = await deps.gh.run(request.args, { approved: request.approved, signal });
+        return json({ ok: true, exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr });
+      },
+    },
+
+    // ── MCP tools (the companion as a connector) ──
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.tools,
+      name: 'tools.list',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        return json({ ok: true, servers: deps.mcp.states(), tools: deps.mcp.tools() });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.toolCall,
+      name: 'tools.call',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 1_000_000,
+      async handler({ body, signal }) {
+        const request = parse(toolCallRequestSchema, body);
+        return json(
+          await deps.mcp.callTool(request.server, request.tool, request.args, {
+            fingerprint: request.fingerprint,
+            signal,
+          }),
+        );
+      },
+    },
+
+    // ── Agent sessions ──
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.sessions,
+      name: 'sessions.create',
+      auth: 'api',
+      rate: 'sessions',
+      dedupe: true,
+      maxBodyBytes: 400_000,
+      async handler({ body }) {
+        const request = parse(sessionCreateRequestSchema, body);
+        await deps.registry.put(request.profile, request.model);
+        const sessionId = await engine().create(request.profile.id, request.message);
+        await deps.registry.bind(sessionId, request.profile.id);
+        return json({ ok: true, sessionId });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.sessions}/:id/messages`,
+      name: 'sessions.message',
+      auth: 'api',
+      rate: 'sessions',
+      dedupe: true,
+      maxBodyBytes: 400_000,
+      async handler({ body, params }) {
+        const request = parse(sessionMessageRequestSchema, body);
+        if (!deps.registry.profileOf(params.id)) fail('not_found', 'There is no such session.');
+        await engine().send(params.id, request.message);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.sessions}/:id/answer`,
+      name: 'sessions.answer',
+      auth: 'api',
+      rate: 'sessions',
+      dedupe: true,
+      async handler({ body, params }) {
+        const request = parse(sessionAnswerRequestSchema, body);
+        if (!deps.registry.profileOf(params.id)) fail('not_found', 'There is no such session.');
+        await engine().answer(params.id, request.approvalId, request.approved, request.note);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.sessions}/:id/cancel`,
+      name: 'sessions.cancel',
+      auth: 'api',
+      rate: 'sessions',
+      async handler({ params }) {
+        if (!deps.registry.profileOf(params.id)) fail('not_found', 'There is no such session.');
+        await engine().cancel(params.id);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.sessions}/:id/events`,
+      name: 'sessions.events',
+      auth: 'api',
+      rate: 'stream',
+      async handler({ body, params, signal }) {
+        if (!deps.registry.profileOf(params.id)) fail('not_found', 'There is no such session.');
+        const { cursor } = parse(cursorRequestSchema, body);
+        const events = engine().events(params.id, cursor, signal);
+        async function* lines() {
+          for await (const event of events) yield JSON.stringify(event);
+        }
+        return { kind: 'stream', contentType: 'application/x-ndjson', lines: lines() };
+      },
+    },
+
+    // ── Routines on the Mac ──
+    {
+      method: 'PUT',
+      path: `${COMPANION_ROUTES.workflows}/:id`,
+      name: 'workflows.put',
+      auth: 'api',
+      rate: 'read',
+      maxBodyBytes: 400_000,
+      async handler({ body, params }) {
+        const request = parse(workflowPutRequestSchema, body);
+        if (request.workflow.id !== params.id) fail('invalid', 'The routine id does not match the address.');
+        const workflow = await deps.workflows.put(request);
+        return json({ ok: true, nextRunAt: workflow.nextRunAt });
+      },
+    },
+    {
+      method: 'DELETE',
+      path: `${COMPANION_ROUTES.workflows}/:id`,
+      name: 'workflows.delete',
+      auth: 'api',
+      rate: 'read',
+      async handler({ params }) {
+        await deps.workflows.remove(params.id);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.workflows}/:id/run`,
+      name: 'workflows.run',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      async handler({ body, params }) {
+        parse(workflowRunRequestSchema, body);
+        return json({ ok: true, runId: await deps.workflows.runNow(params.id) });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.workflows}/runs/answer`,
+      name: 'workflows.answer',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      async handler({ body }) {
+        const request = parse(workflowAnswerRequestSchema, body);
+        await deps.workflows.answer(request.runId, request.nodeId, request.approved);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.workflowSync,
+      name: 'workflows.sync',
+      auth: 'api',
+      rate: 'read',
+      async handler({ body }) {
+        return json(deps.workflows.sync(parse(cursorRequestSchema, body).cursor));
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.workflowAck,
+      name: 'workflows.ack',
+      auth: 'api',
+      rate: 'read',
+      async handler({ body }) {
+        const request = parse(workflowAckRequestSchema, body);
+        await deps.workflows.ack(request.outboxIds);
+        return json({ ok: true });
+      },
+    },
+
+    // ── Artifacts and Avi Studio ──
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.artifactList,
+      name: 'artifacts.list',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        return json({ ok: true, artifacts: await deps.artifacts.list() });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.artifacts,
+      name: 'artifacts.create',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 26_000_000,
+      async handler({ body }) {
+        const request = parse(artifactCreateRequestSchema, body);
+        return json({ ok: true, artifact: await deps.artifacts.create(request) });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.artifacts}/:id/open`,
+      name: 'artifacts.open',
+      auth: 'api',
+      rate: 'studio',
+      async handler({ params }) {
+        if (!(await deps.artifacts.get(params.id))) fail('not_found', 'There is no such artifact.');
+        const token = deps.studio.issueToken(params.id);
+        return json({ ok: true, url: `${deps.server.selfOrigin}${COMPANION_ROUTES.studio}/${params.id}#${token}` });
+      },
+    },
+    {
+      method: 'GET',
+      path: `${COMPANION_ROUTES.studio}/:id`,
+      name: 'studio.page',
+      auth: 'studio-page',
+      rate: 'studio',
+      async handler({ params }) {
+        const artifact = await deps.artifacts.get(params.id);
+        if (!artifact) return html('<!doctype html><title>Not found</title><p>There is no such artifact.</p>', 404);
+        return html(studioPageHtml(artifact), 200, { 'Content-Security-Policy': STUDIO_CSP });
+      },
+    },
+    {
+      method: 'POST',
+      path: `${COMPANION_ROUTES.studio}/:id/session`,
+      name: 'studio.session',
+      auth: 'studio-session',
+      rate: 'studio',
+      async handler({ body, params }) {
+        const request = parse(studioSessionRequestSchema, body);
+        const viewKey = deps.studio.redeem(params.id, request.token);
+        if (!viewKey) fail('forbidden', 'This link has expired. Open the artifact again from Avi Copilot.');
+        return json({ ok: true, viewKey });
+      },
+    },
+    {
+      method: 'GET',
+      path: `${COMPANION_ROUTES.view}/:id/:key/*`,
+      name: 'studio.view',
+      auth: 'view',
+      rate: 'view',
+      async handler({ params }) {
+        if (!deps.studio.checkView(params.id, params.key)) fail('not_found', 'There is nothing here.');
+        const file = await deps.artifacts.readFile(params.id, params.rest);
+        return {
+          kind: 'raw',
+          status: 200,
+          headers: { ...ARTIFACT_HEADERS, 'Content-Type': file.contentType },
+          body: file.body,
+        };
+      },
+    },
+
+    // ── For the eve agent process only ──
+    {
+      method: 'GET',
+      path: '/internal/profiles/:id',
+      name: 'internal.profile',
+      auth: 'internal',
+      rate: 'internal',
+      async handler({ params }) {
+        const profile = deps.registry.profile(params.id);
+        if (!profile) fail('not_found', 'Unknown profile.');
+        return json({ ok: true, profile });
+      },
+    },
+    {
+      method: 'GET',
+      path: '/internal/models/:id',
+      name: 'internal.model',
+      auth: 'internal',
+      rate: 'internal',
+      async handler({ params }) {
+        const model = await deps.registry.model(params.id);
+        if (!model) fail('not_found', 'Unknown profile.');
+        return json({ ok: true, model });
+      },
+    },
+    {
+      method: 'POST',
+      path: '/internal/tools/:name',
+      name: 'internal.tool',
+      auth: 'internal',
+      rate: 'internal',
+      maxBodyBytes: 26_000_000,
+      async handler({ body, params, signal }) {
+        if (!isToolName(params.name)) fail('not_found', 'Unknown tool.');
+        const request = body as { profileId?: unknown; input?: unknown };
+        if (typeof request.profileId !== 'string') fail('invalid', 'Which profile?');
+        const output = await runTool(deps, params.name, request.profileId, request.input, signal);
+        return json({ ok: true, output });
+      },
+    },
+  ];
+}
