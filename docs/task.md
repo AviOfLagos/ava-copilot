@@ -904,6 +904,49 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   (`companionToolSource()`), agent sessions in Avi Brain's sandbox (`CompanionClient.createSession`), local
   speech-to-text for the chat box's dictation, deep links from an Inbox item to one workflow run.
 
+### Wake word: only on Ava (fixed 2026-10-12)
+
+Bug: "hey" alone woke it ("hey there", "hey everyone", "hey, how are you", "hey, have a look at this" too).
+Cause: the grammar `["hey ava", "[unk]"]` gives the decoder nowhere accurate to land but the full phrase, so
+almost any "hey…" onset got forced into it.
+
+Measured three options against 91 `say`-synthesized clips (Samantha, Daniel, Karen, Moira, Rishi, Aman, Tessa;
+3 positive phrases incl. "Hey Ava, what's on my calendar today?" said in one breath, 10 negative — "Hey,
+Eva's here" skipped as ambiguous per the brief) fed through the real Vosk worker in Brave — false wakes /
+missed wakes out of 70 negatives / 21 positives:
+
+| Option | False wakes | Missed wakes | Added latency |
+| --- | --- | --- | --- |
+| Today's grammar (baseline) | 15 | 0 | — |
+| Competing-phrase grammar (`hey ava`/`hey`/`ava`/`[unk]`) live | 6 | 0 | — |
+| Verify the candidate with a **free-form** decode | 0 | 18 | ~730 ms avg |
+| **Verify the candidate with a grammar-constrained decode (chosen)** | **0** | **0** | **~260 ms avg, ~425 ms max** |
+
+The free-form verifier missed almost everything because the small model (`vosk-model-small-en-us-0.15`) often
+cannot say the name "Ava" at all when decoding freely, even on clean audio (empty or garbage text instead) —
+it reliably manages it when a grammar can just offer the word. So the fix keeps today's grammar as the live
+candidate detector (unchanged, still fires on any "hey…"), then decodes the candidate's phrase window (the
+1.2 s ring from before it, plus 250 ms collected after, so a trailing "ava" completes) once more as a single
+final result, on a second recogniser in the same worker, with `VERIFY_GRAMMAR = ["hey ava","hey","ava",
+"[unk]"]`. Accepted only if the first two words are "hey"/"ava" (`heyAvaPrefix` — a prefix match, not exact:
+the window can run a little past "ava" into the next word, which the grammar's own loop then tags as trailing
+"[unk]", e.g. "hey ava [unk] [unk]" on the calendar sentence). No "eva"/"ever" weighing needed: neither word
+is in this grammar's vocabulary, so the verifier cannot land on them by mistake. A rejected candidate resumes
+listening at once, throttled 500 ms (`VERIFY_RETRY_MS`) so an ordinary sentence that starts with "hey" does
+not re-trigger verification on almost every following chunk while it keeps going; a second candidate cannot
+start verifying while one is already mid-decode (`deciding`), so the two can never have their worker replies
+mixed up on the shared reply queue.
+
+- `src/offscreen/wake.ts`: `VERIFY_GRAMMAR`, `VERIFY_TAIL_SECONDS`, `VERIFY_RETRY_MS`, `heyAvaPrefix`;
+  `WakeListener` gains the verification sub-state (`verifying`, `deciding`) between a candidate and a wake,
+  still on the same worker and model — nothing leaves the device at any point, and the conversation still gets
+  exactly the phrase window plus what follows (`takeCapture`, unchanged).
+- Tests: `src/offscreen/__tests__/wake.test.ts` (+`heyAvaPrefix`, two cases); new `e2e/wake-negative.e2e.mjs`
+  ("Hey" alone, looped, never wakes it — its own browser instance, since the fake microphone's file is fixed
+  for the life of the Chrome process); `e2e/wake.e2e.mjs` unchanged and still green ("Hey Ava" wakes it with
+  the panel closed); `e2e/voice.e2e.mjs` unaffected (its fake mic plays `hey-ava.wav` for VAD content with the
+  wake listener off, never through this path) — 5/5. `e2e/fixtures/wake/hey-only.wav` is the one fixture kept.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
