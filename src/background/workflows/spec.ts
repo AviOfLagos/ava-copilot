@@ -1,3 +1,4 @@
+import { isPrivateHost } from './net';
 import { Cron } from 'croner';
 import { z } from 'zod';
 import { malformedPlaces, templateRefs } from './template';
@@ -499,6 +500,10 @@ export function validateSpec(input: unknown, now = Date.now()): SpecCheck {
       const [host] = hostsOf([node.url]);
       if (host && !hostAllowed(host, spec.allowHosts)) {
         issues.push({ nodeId: node.id, message: `Step "${node.id}" fetches ${host}, which is not in allowHosts.` });
+      }
+      // A routine never reaches this machine or a private network (the test-only stand-ins are applied later)
+      if (host && isPrivateHost(host)) {
+        issues.push({ nodeId: node.id, message: `Step "${node.id}" reaches ${host}, a private or local address.` });
       }
     }
   }

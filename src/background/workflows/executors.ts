@@ -1,3 +1,4 @@
+import { isPrivateHost } from './net';
 import {
   abortableSleep,
   AppError,
@@ -164,6 +165,10 @@ export function httpGetExecutor(deps: HttpDeps = defaultHttpDeps): StepExecutor 
       if (!hostAllowed(host, allowHosts)) {
         throw new AppError('forbidden', `${host} is not on this workflow's list of sites it may reach.`);
       }
+      // Never this machine or a private network, whatever the list says
+      if (isPrivateHost(host)) {
+        throw new AppError('forbidden', `${host} is a private or local address; routines may only reach public sites.`);
+      }
       const target = applyOverride(node.url, await deps.overrides());
       const breaker = await deps.breaker(host);
       try {
@@ -171,10 +176,16 @@ export function httpGetExecutor(deps: HttpDeps = defaultHttpDeps): StepExecutor 
           const response = await deps.fetch(target, {
             method: 'GET',
             credentials: 'omit',
-            redirect: 'follow',
+            // A redirect is never followed: following it would reach the next address before any check
+            redirect: 'manual',
             signal: AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]),
             headers: { Accept: node.format === 'json' ? 'application/json' : 'text/html, text/plain;q=0.9, */*;q=0.5' },
           });
+          if (response.type === 'opaqueredirect') {
+            throw new AppError('forbidden', `${host} redirects elsewhere; add the address it leads to instead.`, {
+              retryable: false,
+            });
+          }
           if (!response.ok) {
             throw new AppError(kindOfStatus(response.status), `${host} answered ${response.status}.`, {
               status: response.status,
@@ -244,13 +255,17 @@ export function readPageExecutor(): StepExecutor {
       if (!hostAllowed(host, allowHosts)) {
         throw new AppError('forbidden', `${host} is not on this workflow's list of sites it may reach.`);
       }
+      if (isPrivateHost(host)) {
+        throw new AppError('forbidden', `${host} is a private or local address; routines may only reach public sites.`);
+      }
       const target = applyOverride(node.url, (await workflowSettingsStore.getSettings()).urlOverrides);
       const tab = await backgroundTab(target);
       if (tab.id === undefined) throw new AppError('unavailable', 'Could not open a tab.');
       try {
         const loaded = await waitForLoad(tab.id, signal);
         const finalHost = loaded.url ? new URL(loaded.url).hostname : host;
-        if (target === node.url && !hostAllowed(finalHost, allowHosts)) {
+        // A page that redirected elsewhere is never read (the browser tab follows redirects by itself)
+        if (target === node.url && (!hostAllowed(finalHost, allowHosts) || isPrivateHost(finalHost))) {
           throw new AppError('forbidden', `${host} sent it on to ${finalHost}, which is not on the list.`);
         }
         const [injection] = await chrome.scripting.executeScript({

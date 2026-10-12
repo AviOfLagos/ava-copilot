@@ -96,6 +96,9 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'ask_knowledge',
       'get_status',
       'stop_tasks',
+      // Registered by features (routines)
+      'run_workflow',
+      'list_workflows',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
