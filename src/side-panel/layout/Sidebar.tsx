@@ -26,9 +26,11 @@ import { cn } from '@extension/ui';
 import { useLive } from '../hooks/useLive';
 import { StatusDot } from '../threads/ThreadList';
 import { groupByDate } from '../threads/history';
+import { registeredPlaces } from '../registry';
+import type { RegisteredPlaceId } from '../registry';
 import type { HistoryGroup } from '../threads/history';
 
-export type Place = 'chat' | 'today' | 'meetings' | 'memory' | 'settings' | 'help';
+export type Place = 'chat' | 'today' | 'meetings' | 'memory' | 'settings' | 'help' | RegisteredPlaceId;
 
 interface SidebarProps {
   open: boolean;
@@ -278,7 +280,11 @@ export default function Sidebar(props: SidebarProps) {
         </label>
 
         <nav aria-label={t('nav_places')} className="mt-2 px-1.5">
-          {PLACES.map(({ place, label, icon: Icon }) => (
+          {[
+            ...PLACES,
+            // Places that features registered for the drawer's list
+            ...registeredPlaces('top').map(({ id, label, icon }) => ({ place: id as Place, label, icon })),
+          ].map(({ place, label, icon: Icon }) => (
             <button
               key={place}
               type="button"

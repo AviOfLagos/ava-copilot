@@ -347,6 +347,32 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
   Settings › Morning brief sets the time and makes one now; voice tool `get_brief` (guarded). The E2E harness turns the
   brief off so it never lands in another test.
 
+### Wave 2 — Phase 0a foundations (built 2026-10-12)
+
+Plan: [wave2-plan.md](wave2-plan.md). Built by the lead so the parallel streams never edit the same files:
+- **Pinned extension ID** `fckijnclcihjnokahdnbogpbeiimfdio` (manifest `key` = public half of `dist.pem`, which stays
+  out of git). Data starts fresh once on the next load.
+- `src/shared/lib/errors` (`AppError`, `toAppError`, `parseRetryAfter`), `src/shared/lib/retry` (`withRetry` with
+  full-jitter back-off and Retry-After, `RETRY_POLICIES`, `CircuitBreaker` with snapshot/restore).
+- Dexie **v5**: tables `agents`, `bus`, `workflows`, `runs`, `runSteps`, `jobs` (unique `key`), `inbox` (unique
+  `[source+externalId]`), `connectors`, `toolFingerprints`, `artifacts`, `modelCatalog`, `usageEvents`, `logs`; optional
+  `agentId`/`origin` on threads, meetings and knowledge items. Record types in `src/storage/lib/<domain>/types.ts`;
+  upgrade from v4 tested.
+- `src/background/jobs/runner.ts`: the one scheduler (persisted jobs, one 30-s alarm armed once, cron via croner,
+  catch-up window, leases + recovery, retry with back-off, two at a time).
+- Registration points: `src/background/registry` (commands with zod validation, recovery, agent actions + prompt
+  lines, voice tools — always guarded unless in `voice/guard.ts` — and offscreen busy checks) and
+  `src/side-panel/registry.ts` (places for the drawer or profile menu, settings sections, `PanelApi` with request ids
+  and timeouts). Each stream fills its own `register.ts(x)`; `registers.ts` imports them at startup. Panel routes run
+  inside `RouteBoundary`.
+- Tooling: `.claude/skills/avi-conventions` (the rules every stream loads), `scripts/check-locales.mjs`
+  (`pnpm check:locales`), the `jsonunion` merge driver for locale files (`scripts/json-union-merge.mjs`,
+  `.gitattributes`), `scripts/worktree-bootstrap.sh`, `test:e2e` runs every `e2e/*.e2e.mjs`. The E2E card wait now
+  says what the panel showed when it times out. Under heavy machine load the gate tests can time out in a cascade;
+  rerun when the load average is low.
+- Wave A dependencies: `@xyflow/react`, `@dagrejs/dagre`, `react-force-graph-2d`, `@radix-ui/react-dropdown-menu`,
+  `croner`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

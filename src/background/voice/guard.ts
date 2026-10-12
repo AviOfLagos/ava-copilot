@@ -1,7 +1,7 @@
 // In a conversation "Hey Ava" started while sound was playing, or with sound since, the order may have
 // come from that sound: every tool needs a click, the ones that only read too, since an answer spoken
 // aloud can reach a call. Only these need none; a tool added later is guarded until listed here.
-export const UNGUARDED_TOOLS = new Set(['stop_tasks']);
+export const UNGUARDED_TOOLS = new Set(['stop_tasks', 'end_conversation']);
 // How the click-to-allow notice names each tool; one not named here is "act for you"
 export const TOOL_ACTIONS: Record<string, string> = {
   run_browser_task: 'run a task in the browser',

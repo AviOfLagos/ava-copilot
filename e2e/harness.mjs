@@ -163,7 +163,10 @@ export async function openSession(extension, mock, query = '') {
     },
     /** Waits for the confirm card and returns its text. */
     async waitForCard(timeout = 30000) {
-      const card = await panel.waitForSelector('[role="alertdialog"]', { timeout });
+      const card = await panel.waitForSelector('[role="alertdialog"]', { timeout }).catch(async error => {
+        // Say what the panel showed instead, so a failure explains itself
+        throw new Error(`${error.message}. Panel shows: ${(await panelText()).slice(0, 600)}`);
+      });
       return (await card.evaluate(el => el.innerText)).replace(/\s+/g, ' ');
     },
     /** Clicks a button on the confirm card. Confirming a commit takes a second click. */

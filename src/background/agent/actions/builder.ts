@@ -29,6 +29,7 @@ import { ExecutionState, Actors } from '../event/types';
 import type { ChatModel } from '@src/background/llm/types';
 import { wrapUntrustedContent } from '../messages/utils';
 import { reviewAction, verifyCommit } from '@src/background/gate/review';
+import { registeredActions } from '@src/background/registry';
 import { fillFormAction, fillFormActionSchema } from '@src/background/forms/fill';
 import { lookUpGraphAction, lookUpGraphActionSchema } from '@src/background/graph/action';
 import { readPageTextAction, readPageTextActionSchema } from '@src/background/reader/reader';
@@ -771,6 +772,9 @@ export class ActionBuilder {
       true,
     );
     actions.push(selectDropdownOption);
+
+    // Actions that features register (routines, connectors, agents)
+    actions.push(...registeredActions(this.context));
 
     return actions;
   }

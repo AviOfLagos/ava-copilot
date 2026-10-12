@@ -1,3 +1,4 @@
+import { offscreenBusyAnywhere } from './registry';
 /**
  * The one offscreen document, shared by the meeting recorder and the voice session. It closes only
  * when neither is using it.
@@ -28,7 +29,7 @@ export async function closeOffscreenIfIdle(): Promise<void> {
     toOffscreen<{ running?: boolean }>({ type: 'voice_running' }).catch(() => ({ running: false })),
     toOffscreen<{ running?: boolean }>({ type: 'wake_running' }).catch(() => ({ running: false })),
   ]);
-  if (!recorder.recording && !voice.running && !wake.running) {
+  if (!recorder.recording && !voice.running && !wake.running && !(await offscreenBusyAnywhere())) {
     await chrome.offscreen.closeDocument().catch(() => {});
   }
 }

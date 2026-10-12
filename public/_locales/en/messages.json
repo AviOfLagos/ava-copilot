@@ -2683,5 +2683,14 @@
   },
   "settings_brief_now": {
     "message": "Make one now"
+  },
+  "route_failed": {
+    "message": "This screen ran into a problem."
+  },
+  "route_retry": {
+    "message": "Try again"
+  },
+  "errors_timeout": {
+    "message": "No answer came in time. Try again."
   }
 }

@@ -2683,5 +2683,14 @@
   },
   "settings_brief_now": {
     "message": "立即產生"
+  },
+  "route_failed": {
+    "message": "此畫面發生問題。"
+  },
+  "route_retry": {
+    "message": "再試一次"
+  },
+  "errors_timeout": {
+    "message": "未及時收到回應，請再試一次。"
   }
 }

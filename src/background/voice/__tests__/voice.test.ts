@@ -112,7 +112,7 @@ describe('voiceHistory', () => {
 describe('voice tool guard', () => {
   it('guards every tool but stopping tasks, and names each one', async () => {
     const { TOOL_ACTIONS, UNGUARDED_TOOLS } = await import('../guard');
-    expect([...UNGUARDED_TOOLS]).toEqual(['stop_tasks']);
+    expect([...UNGUARDED_TOOLS]).toEqual(['stop_tasks', 'end_conversation']);
     for (const tool of VOICE_TOOLS) {
       if (!UNGUARDED_TOOLS.has(tool.name)) expect(TOOL_ACTIONS[tool.name], tool.name).toBeTruthy();
     }

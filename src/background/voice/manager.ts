@@ -22,6 +22,7 @@ import { quoteTitle } from '../calendar/watcher';
 import { allowedByClick } from './confirm';
 import { soundRecently } from './sound';
 import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
+import { registeredVoiceTool, registeredVoiceTools } from '../registry';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
@@ -129,7 +130,7 @@ export class VoiceManager {
         instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`, history]
           .filter(Boolean)
           .join('\n\n'),
-        tools: VOICE_TOOLS,
+        tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
       },
     });
     if (!response?.ok) {
@@ -193,7 +194,8 @@ export class VoiceManager {
   /** Runs a tool the copilot called and returns what it should know. */
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     this.lastActivity = Date.now();
-    const action = TOOL_ACTIONS[name] ?? 'act for you';
+    const registered = registeredVoiceTool(name);
+    const action = TOOL_ACTIONS[name] ?? registered?.guardLabel ?? 'act for you';
     if (
       !UNGUARDED_TOOLS.has(name) &&
       this.wakeSession &&
@@ -323,8 +325,10 @@ export class VoiceManager {
       case 'stop_tasks':
         await this.threads.cancelAll();
         return 'Every running task was stopped.';
-      default:
-        return `There is no tool called ${name}.`;
+      default: {
+        const tool = registeredVoiceTool(name);
+        return tool ? tool.handler(args, heard) : `There is no tool called ${name}.`;
+      }
     }
   }
 

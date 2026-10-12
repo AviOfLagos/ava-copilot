@@ -2683,5 +2683,14 @@
   },
   "settings_brief_now": {
     "message": "Fazer agora"
+  },
+  "route_failed": {
+    "message": "Esta tela encontrou um problema."
+  },
+  "route_retry": {
+    "message": "Tentar de novo"
+  },
+  "errors_timeout": {
+    "message": "Nenhuma resposta a tempo. Tente de novo."
   }
 }

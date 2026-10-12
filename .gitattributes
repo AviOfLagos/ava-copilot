@@ -50,3 +50,7 @@ tsconfig.json text
 package-lock.json text -diff
 yarn.lock text -diff
 pnpm-lock.yaml text -diff
+
+# Locale files: streams adding their own keys merge without conflicts (driver: scripts/json-union-merge.mjs)
+public/_locales/*/messages.json merge=jsonunion
+

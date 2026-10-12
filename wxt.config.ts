@@ -52,6 +52,10 @@ export default defineConfig({
   },
   manifest: {
     default_locale: 'en',
+    // The public half of the extension's signing key: it pins the ID (fckijnclcihjnokahdnbogpbeiimfdio) so OAuth
+    // redirects, the Mac companion's origin check and saved data survive rebuilds in any folder. The private half
+    // (dist.pem) never enters git.
+    key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3RW2haPZP8/U/PAXqgFU/1ndiisweq6OP4Sm6DCO9+RjGbsRyj3Q+wUlAeNIiPTqaP3WAy8VA1+EdfuIkcMTRiTSF8KHSqTzdp9VoanvR3YqgLDKCm1Ri9w6jc0fSsWg6EqbduALUJZTHtOKwzQrad2zxK6zrFnelsmWfT+KwPX3yput4Th/G6nd2iYSbLgwJ6bQqEqnjBQgHrtdHzsQRo+pnRlzifVph21Z6gMnMcSA3TzrXhNWflPxL3L/S5KEimfe2vkhVdKcPo805PfsbiyWp9lEkCbS5PffxOIpZV2FsqpZe1sl7ZHcNUsscChma+/SJoB4Z1uXGSmMvQLkgwIDAQAB',
     name: '__MSG_app_metadata_name__',
     description: '__MSG_app_metadata_description__',
     host_permissions: ['<all_urls>'],

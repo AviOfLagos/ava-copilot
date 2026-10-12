@@ -6,6 +6,9 @@ import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
+import { dispatchCommand, registerRecovery, runRecoveries } from './registry';
+import './registers';
+import { jobs } from './jobs/runner';
 import { MorningBrief } from './brief/manager';
 import { GraphBuilder } from './graph/builder';
 import { WakeWord } from './voice/wake';
@@ -244,6 +247,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 void threads.recover().catch(error => logger.error('Failed to recover threads', error));
 void meetings.recover().catch(error => logger.error('Failed to recover meetings', error));
 void voice.recover().catch(error => logger.error('Failed to recover voice', error));
+// The one scheduler: routines, pollers and delayed retries; jobs a stopped background left running come back
+registerRecovery('jobs', () => jobs.recover());
+void jobs.start();
+void runRecoveries();
 // Highlights used to be on by default; they go off once for every install, and the user's later choice stays
 void chrome.storage.local.get('highlights-default-off').then(async ({ ['highlights-default-off']: done }) => {
   if (done) return;
@@ -424,8 +431,15 @@ chrome.runtime.onConnect.addListener(port => {
           }
         }
 
-        default:
+        default: {
+          // Features of Wave 2 register their commands instead of growing this switch
+          const handled = await dispatchCommand(message, {
+            reply: reply => port.postMessage(reply),
+            requestId: typeof message?.requestId === 'string' ? message.requestId : null,
+          });
+          if (handled) return;
           return port.postMessage({ type: 'error', threadId, error: t('errors_cmd_unknown', [String(message?.type)]) });
+        }
       }
     } catch (error) {
       logger.error('Error handling panel message:', error);

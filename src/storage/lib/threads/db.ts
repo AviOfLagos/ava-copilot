@@ -1,4 +1,12 @@
 import { Dexie } from 'dexie';
+import type { AgentProfile, BusMessage } from '../agents/types';
+import type { ArtifactRecord } from '../artifacts/types';
+import type { InboxItem } from '../inbox/types';
+import type { ConnectorRecord, ToolFingerprint } from '../integrations/types';
+import type { JobRecord } from '../jobs/types';
+import type { ModelCatalogEntry, UsageEvent } from '../models/types';
+import type { LogEntry } from '../observability/types';
+import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ConfirmRequest } from '../settings/gateSettings';
@@ -43,6 +51,10 @@ export interface ThreadRecord {
   meetingId: string | null;
   // The workspace it belongs to: its context and accounts guide the agent, and its knowledge stays there
   workspaceId?: string | null;
+  // The agent it runs as, when an agent or routine started it
+  agentId?: string | null;
+  // Who started it: the user typing or talking, an agent, a routine, the morning brief
+  origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief';
 }
 
 export interface ThreadMessage {
@@ -116,6 +128,8 @@ export interface MeetingRecord {
   auto?: boolean;
   // The workspace the call belongs to
   workspaceId?: string | null;
+  // The agent that took the notes, when one did
+  agentId?: string | null;
 }
 
 export interface AudioChunk {
@@ -175,6 +189,8 @@ export interface KnowledgeItem {
   unembedded: number;
   // The workspace of the chat or meeting it came from; a search in one workspace never sees another's
   workspaceId?: string | null;
+  // The agent whose work it came from, for knowledge filtered by agent
+  agentId?: string | null;
 }
 
 export interface KnowledgeChunk {
@@ -233,6 +249,19 @@ export class AviCopilotDb extends Dexie {
   kbChunks!: Table<KnowledgeChunk, string>;
   graphNodes!: Table<GraphNode, string>;
   graphEdges!: Table<GraphEdge, string>;
+  agents!: Table<AgentProfile, string>;
+  bus!: Table<BusMessage, string>;
+  workflows!: Table<WorkflowRecord, string>;
+  runs!: Table<RunRecord, string>;
+  runSteps!: Table<RunStep, string>;
+  jobs!: Table<JobRecord, string>;
+  inbox!: Table<InboxItem, string>;
+  connectors!: Table<ConnectorRecord, string>;
+  toolFingerprints!: Table<ToolFingerprint, string>;
+  artifacts!: Table<ArtifactRecord, string>;
+  modelCatalog!: Table<ModelCatalogEntry, string>;
+  usageEvents!: Table<UsageEvent, string>;
+  logs!: Table<LogEntry, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -256,6 +285,25 @@ export class AviCopilotDb extends Dexie {
     this.version(4).stores({
       graphNodes: 'id, type, workspaceId, *sourceItemIds',
       graphEdges: 'id, from, to, sourceItemId',
+    });
+    // Wave 2: agents, routines, the job runner, the inbox, connectors and usage per agent. Tables are only
+    // added (and an agentId index on threads and knowledge), so nothing already stored is rewritten.
+    this.version(5).stores({
+      threads: 'id, updatedAt, status, agentId',
+      kbItems: 'id, sourceType, [sourceType+sourceId], updatedAt, sourceDate, agentId',
+      agents: 'id, workspaceId, enabled',
+      bus: 'id, topic, createdAt',
+      workflows: 'id, workspaceId, status, agentId',
+      runs: 'id, kind, workflowId, agentId, status, startedAt',
+      runSteps: 'id, runId, [runId+index]',
+      jobs: 'id, kind, &key, runAt, status',
+      inbox: 'id, &[source+externalId], status, createdAt, workspaceId, agentId',
+      connectors: 'id, kind, status',
+      toolFingerprints: 'id, connectorId',
+      artifacts: 'id, createdAt, agentId',
+      modelCatalog: 'id, providerId, local',
+      usageEvents: 'id, day, model, agentId, workflowId, workspaceId',
+      logs: 'id, at, level, runId',
     });
   }
 }

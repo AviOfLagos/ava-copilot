@@ -29,6 +29,10 @@ import HelpView from './help/HelpView';
 import MeetingsList from './meetings/MeetingsList';
 import WorkspacePicker from './workspaces/WorkspacePicker';
 import { syncVault } from './vault/vault';
+import RouteBoundary from './components/RouteBoundary';
+import { registeredPlace } from './registry';
+import type { PanelApi } from './registry';
+import './registers';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
@@ -97,6 +101,10 @@ const SidePanel = () => {
   const pendingSendsRef = useRef(new Set<string>());
   // Questions about a meeting waiting for their answer
   const pendingAsksRef = useRef(new Map<string, () => void>());
+  // Requests from registered places waiting for their reply
+  const pendingRequestsRef = useRef(
+    new Map<string, { resolve: (value: Record<string, unknown>) => void; reject: (error: Error) => void }>(),
+  );
   // Knowledge base questions and page saves waiting for the background's reply
   const pendingKbRef = useRef(new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>());
 
@@ -165,6 +173,18 @@ const SidePanel = () => {
 
   const onPortMessage = useCallback(
     (message: PanelMessage) => {
+      // A reply to a registered feature's request: it goes to whoever asked, nowhere else
+      const requestId = (message as { requestId?: unknown }).requestId;
+      if (typeof requestId === 'string' && pendingRequestsRef.current.has(requestId)) {
+        const pending = pendingRequestsRef.current.get(requestId)!;
+        pendingRequestsRef.current.delete(requestId);
+        if (message.type === 'error') {
+          pending.reject(new Error((message as { error?: string }).error || t('errors_unknown')));
+        } else {
+          pending.resolve(message as unknown as Record<string, unknown>);
+        }
+        return;
+      }
       switch (message.type) {
         case 'thread_started':
           if (pendingSendsRef.current.delete(message.clientId)) {
@@ -266,6 +286,38 @@ const SidePanel = () => {
   }, [onPortMessage]);
 
   const post = useCallback((message: Record<string, unknown>) => connect().postMessage(message), [connect]);
+
+  // What registered places use to reach the background: requests carry an id, and give up after a while
+  const panelApi: PanelApi = {
+    go: next => (next === 'chat' ? handleNewThread() : go(next as Place)),
+    openThread: id => handleSelect(id),
+    post,
+    request: <T,>(message: Record<string, unknown>, timeoutMs = 30_000) =>
+      new Promise<T>((resolve, reject) => {
+        const requestId = crypto.randomUUID();
+        const timer = window.setTimeout(() => {
+          pendingRequestsRef.current.delete(requestId);
+          reject(new Error(t('errors_timeout')));
+        }, timeoutMs);
+        pendingRequestsRef.current.set(requestId, {
+          resolve: value => {
+            window.clearTimeout(timer);
+            resolve(value as T);
+          },
+          reject: error => {
+            window.clearTimeout(timer);
+            reject(error);
+          },
+        });
+        try {
+          post({ ...message, requestId });
+        } catch (error) {
+          window.clearTimeout(timer);
+          pendingRequestsRef.current.delete(requestId);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      }),
+  };
   const postRef = useRef(post);
   postRef.current = post;
 
@@ -479,6 +531,7 @@ const SidePanel = () => {
 
   const view:
     | 'consent'
+    | 'registered'
     | 'settings'
     | 'kb'
     | 'today'
@@ -490,25 +543,27 @@ const SidePanel = () => {
     | 'chat'
     | 'home' = consent
     ? 'consent'
-    : place === 'settings'
-      ? 'settings'
-      : place === 'today'
-        ? 'today'
-        : place === 'memory'
-          ? 'kb'
-          : place === 'help'
-            ? 'help'
-            : place === 'meetings'
-              ? meetingId
-                ? 'meeting'
-                : 'meetings'
-              : hasConfiguredModels === null
-                ? 'checking'
-                : hasConfiguredModels === false
-                  ? 'welcome'
-                  : thread && threadMessages.length > 0
-                    ? 'chat'
-                    : 'home';
+    : registeredPlace(place)
+      ? 'registered'
+      : place === 'settings'
+        ? 'settings'
+        : place === 'today'
+          ? 'today'
+          : place === 'memory'
+            ? 'kb'
+            : place === 'help'
+              ? 'help'
+              : place === 'meetings'
+                ? meetingId
+                  ? 'meeting'
+                  : 'meetings'
+                : hasConfiguredModels === null
+                  ? 'checking'
+                  : hasConfiguredModels === false
+                    ? 'welcome'
+                    : thread && threadMessages.length > 0
+                      ? 'chat'
+                      : 'home';
 
   // Where you are, each step back one click away
   const home: Crumb = { label: t('nav_home'), onClick: handleNewThread };
@@ -543,7 +598,9 @@ const SidePanel = () => {
                 ? [home, { label: t('settings_title') }]
                 : view === 'help'
                   ? [home, { label: t('nav_help') }]
-                  : [{ label: t('nav_home') }];
+                  : view === 'registered'
+                    ? [home, { label: t(registeredPlace(place)!.label) }]
+                    : [{ label: t('nav_home') }];
 
   const alerts = (
     <>
@@ -668,6 +725,16 @@ const SidePanel = () => {
       {view === 'settings' && <SettingsView onBack={handleNewThread} onOpenThread={handleSelect} />}
 
       {view === 'help' && <HelpView onGo={next => (next === 'chat' ? handleNewThread() : go(next))} />}
+
+      {view === 'registered' &&
+        (() => {
+          const { Component } = registeredPlace(place)!;
+          return (
+            <RouteBoundary key={place}>
+              <Component api={panelApi} />
+            </RouteBoundary>
+          );
+        })()}
 
       {view === 'meetings' && (
         <MeetingsList

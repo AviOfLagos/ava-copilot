@@ -1,3 +1,4 @@
+import { registeredActionPrompts } from '@src/background/registry';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BasePrompt } from './base';
 import type { SystemModelMessage, UserModelMessage } from '@src/background/llm/types';
@@ -25,7 +26,7 @@ export class NavigatorPrompt extends BasePrompt {
     const promptTemplate = navigatorSystemPromptTemplate.replace(
       '</system_instructions>',
       () =>
-        `${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
+        `${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${registeredActionPrompts()}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
     );
     // Format the template with the maxActionsPerStep
     const formattedPrompt = promptTemplate.replace('{{max_actions}}', this.maxActionsPerStep.toString()).trim();
