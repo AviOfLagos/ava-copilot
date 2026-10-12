@@ -11,6 +11,7 @@ import {
   type KbAnswer,
   type KbCitation,
   meetingStore,
+  workspaceStore,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -76,6 +77,18 @@ const SidePanel = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The workspace for the next new chat, picked on Home; none lets the chat's words choose
   const [nextWorkspace, setNextWorkspace] = useState<string | null>(null);
+  // Where a chat goes when its words name no workspace: shown next to "auto" so it is no surprise
+  const [defaultWorkspaceName, setDefaultWorkspaceName] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () =>
+      void workspaceStore
+        .getDefaultWorkspaceId()
+        .then(id => workspaceStore.get(id))
+        .then(workspace => setDefaultWorkspaceName(workspace?.name ?? null))
+        .catch(() => setDefaultWorkspaceName(null));
+    load();
+    return workspaceStore.subscribe(load);
+  }, []);
   // The meeting shown instead of a thread, and whether the recording reminder is up
   const [meetingId, setMeetingId] = useState<string | null>(null);
   // The voice screen was put away while the conversation goes on
@@ -724,7 +737,7 @@ const SidePanel = () => {
         />
       )}
 
-      {view === 'settings' && <SettingsView onBack={handleNewThread} onOpenThread={handleSelect} />}
+      {view === 'settings' && <SettingsView onBack={handleNewThread} onOpenThread={handleSelect} api={panelApi} />}
 
       {view === 'help' && <HelpView onGo={next => (next === 'chat' ? handleNewThread() : go(next))} />}
 
@@ -896,7 +909,9 @@ const SidePanel = () => {
             <WorkspacePicker
               value={nextWorkspace}
               onChange={setNextWorkspace}
-              emptyLabel={t('workspace_auto')}
+              emptyLabel={
+                defaultWorkspaceName ? `${t('workspace_auto')} · ${defaultWorkspaceName}` : t('workspace_auto')
+              }
               className="max-w-[60%]"
             />
           </div>

@@ -130,7 +130,12 @@ export class ThreadManager {
     if (thread.workspaceId) return;
     // A chat with no workspace still runs: placing it never fails a send
     const workspaces = await workspaceStore.list().catch(() => []);
-    const workspace = picked ? workspaces.find(item => item.id === picked) : routeWorkspace(text, workspaces);
+    // The user's pick, else the one the words name, else the default workspace
+    let workspace = picked ? workspaces.find(item => item.id === picked) : routeWorkspace(text, workspaces);
+    if (!workspace && !picked) {
+      const fallback = await workspaceStore.getDefaultWorkspaceId().catch(() => null);
+      workspace = workspaces.find(item => item.id === fallback) ?? null;
+    }
     if (!workspace) return;
     await this.store.update(thread.id, { workspaceId: workspace.id });
     await this.store.addMessage(thread.id, 'system', t('workspace_placed', [workspace.name]));
@@ -356,10 +361,13 @@ export class ThreadManager {
    */
   private async contextFor(thread: ThreadRecord, summarizer: ChatModel, resumed: boolean, task: string) {
     let messages = await this.store.messages(thread.id, thread.memoryUpToSeq);
-    // The task itself is the newest user message; it goes to the executor as the task, not as history
-    const last = messages[messages.length - 1];
+    // The task itself is the newest user message; it goes to the executor as the task, not as history.
+    // Notes the copilot added after it (the workspace it landed in) do not count as the newest message.
+    let lastIndex = messages.length - 1;
+    while (lastIndex >= 0 && messages[lastIndex].actor === 'system') lastIndex--;
+    const last = messages[lastIndex];
     if (!resumed && last?.actor === 'user' && last.content === task) {
-      messages = messages.slice(0, -1);
+      messages = messages.filter((_, index) => index !== lastIndex);
     }
 
     let memory = thread.memory;

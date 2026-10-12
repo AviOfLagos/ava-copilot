@@ -1,3 +1,4 @@
+import { readablePage } from './page-text';
 import { isPrivateHost } from './net';
 import {
   abortableSleep,
@@ -14,8 +15,6 @@ import { hitsForAgent } from '../kb/answer';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
-import { readPageText } from '../reader/probes';
-import type { PageTextSlice } from '../reader/probes';
 import { services } from '../registry/services';
 import { sanitizeSectionMarkdown } from './brief';
 import type { WorkflowBriefSection } from './brief';
@@ -244,7 +243,13 @@ async function waitForLoad(tabId: number, signal: AbortSignal): Promise<chrome.t
 }
 
 /** Opens an allowed page in a background tab, reads its text and closes it. */
-export function readPageExecutor(): StepExecutor {
+
+/**
+ * Reads a page on the workflow's allowed hosts as text. It is fetched, not opened in a tab: no cookies,
+ * no page code, and no redirect is followed, so nothing is ever requested beyond the checked address.
+ * Pages that only show their content with script need a browse step instead.
+ */
+export function readPageExecutor(deps: HttpDeps = defaultHttpDeps): StepExecutor {
   return {
     retry: RETRY_POLICIES.connectorRead,
     taints: true,
@@ -258,30 +263,35 @@ export function readPageExecutor(): StepExecutor {
       if (isPrivateHost(host)) {
         throw new AppError('forbidden', `${host} is a private or local address; routines may only reach public sites.`);
       }
-      const target = applyOverride(node.url, (await workflowSettingsStore.getSettings()).urlOverrides);
-      const tab = await backgroundTab(target);
-      if (tab.id === undefined) throw new AppError('unavailable', 'Could not open a tab.');
-      try {
-        const loaded = await waitForLoad(tab.id, signal);
-        const finalHost = loaded.url ? new URL(loaded.url).hostname : host;
-        // A page that redirected elsewhere is never read (the browser tab follows redirects by itself)
-        if (target === node.url && (!hostAllowed(finalHost, allowHosts) || isPrivateHost(finalHost))) {
-          throw new AppError('forbidden', `${host} sent it on to ${finalHost}, which is not on the list.`);
-        }
-        const [injection] = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: readPageText,
-          args: [{ offset: 0, max: TEXT_CHARS }],
+      const target = applyOverride(node.url, await deps.overrides());
+      const breaker = await deps.breaker(host);
+      const { text, cut } = await breaker.call(async () => {
+        const response = await deps.fetch(target, {
+          method: 'GET',
+          credentials: 'omit',
+          redirect: 'manual',
+          signal: AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]),
+          headers: { Accept: 'text/html, text/plain;q=0.9, */*;q=0.5' },
         });
-        const slice = injection?.result as PageTextSlice | undefined;
-        return {
-          kind: 'done',
-          output: { url: loaded.url ?? node.url, title: loaded.title ?? '', text: slice?.text ?? '' },
-          tainted: true,
-        };
-      } finally {
-        await chrome.tabs.remove(tab.id).catch(() => {});
-      }
+        if (response.type === 'opaqueredirect') {
+          throw new AppError('forbidden', `${host} redirects elsewhere; add the address it leads to instead.`, {
+            retryable: false,
+          });
+        }
+        if (!response.ok) {
+          throw new AppError(kindOfStatus(response.status), `${host} answered ${response.status}.`, {
+            status: response.status,
+            retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+          });
+        }
+        return readCapped(response, 2_000_000);
+      });
+      const page = readablePage(text);
+      return {
+        kind: 'done',
+        output: { url: node.url, title: page.title, text: page.text.slice(0, TEXT_CHARS), cut },
+        tainted: true,
+      };
     },
   };
 }

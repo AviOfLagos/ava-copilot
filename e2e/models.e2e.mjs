@@ -238,7 +238,10 @@ test('the registry lists each provider’s models with prices, local models and 
   const byId = Object.fromEntries(catalog.map(row => [row.id, row]));
 
   assert.deepEqual(
-    [byId['openrouter:anthropic/claude-opus-5-5'].inputUsdPerM, byId['openrouter:anthropic/claude-opus-5-5'].outputUsdPerM],
+    [
+      byId['openrouter:anthropic/claude-opus-5-5'].inputUsdPerM,
+      byId['openrouter:anthropic/claude-opus-5-5'].outputUsdPerM,
+    ],
     [3, 15],
   );
   assert.equal(byId['openrouter:anthropic/claude-opus-5-5'].local, false);
@@ -250,7 +253,9 @@ test('the registry lists each provider’s models with prices, local models and 
 
   // The background decrypted each key and sent it to its own provider only
   assert.ok(models.seen.some(request => request.path === '/nim/v1/models' && request.auth === `Bearer ${NVIDIA_KEY}`));
-  assert.ok(models.seen.some(request => request.path === '/api/v1/models' && request.auth === `Bearer ${OPENROUTER_KEY}`));
+  assert.ok(
+    models.seen.some(request => request.path === '/api/v1/models' && request.auth === `Bearer ${OPENROUTER_KEY}`),
+  );
   assert.ok(models.seen.filter(request => request.path === '/api/tags').every(request => request.auth === null));
 
   const health = await until(async () => {
@@ -322,7 +327,7 @@ test('model calls are recorded as usage events, with no price for a model nobody
   await session.close();
 });
 
-test('the Models & usage page in the panel lists providers, models and usage', async t => {
+test('the Models & usage page in the panel lists providers, models and usage', async () => {
   const panel = await extension.browser.newPage();
   await panel.goto(`${extension.origin}/sidepanel.html`);
   await panel.waitForSelector('textarea');
@@ -341,26 +346,24 @@ test('the Models & usage page in the panel lists providers, models and usage', a
   await sleep(300);
   let found = await clickByName('Models & usage');
   if (!found) {
-    // A profile menu opens upwards from the drawer's foot
-    await panel.evaluate(() => document.querySelector('[aria-haspopup="menu"]')?.click());
+    // The profile menu at the drawer's foot opens on a key press (Radix), with the panel in front
+    await panel.bringToFront();
+    await panel.evaluate(() => {
+      const button = document.querySelector('[aria-label="Account menu"]');
+      button?.focus();
+      button?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    });
     await sleep(300);
     found = await clickByName('Models & usage');
   }
-  if (!found) {
-    t.skip('Models & usage is not reachable yet: src/side-panel/registers.ts must import ./models/register (lead)');
-    await panel.close();
-    return;
-  }
+  assert.ok(found, 'Models & usage is reachable from the profile menu');
 
   await panel.waitForSelector('[data-place="models"]', { timeout: 10000 });
   await until(
     () => panel.evaluate(() => document.querySelector('[data-provider="nvidia"] [data-key-display]')?.textContent),
     'the masked key in the panel',
   );
-  assert.equal(
-    await panel.$eval('[data-provider="nvidia"] [data-key-display]', el => el.textContent),
-    '••••9876',
-  );
+  assert.equal(await panel.$eval('[data-provider="nvidia"] [data-key-display]', el => el.textContent), '••••9876');
   await until(
     () => panel.evaluate(() => document.querySelector('[data-model="openrouter:anthropic/claude-opus-5-5"]') !== null),
     'the catalog in the panel',
@@ -370,7 +373,8 @@ test('the Models & usage page in the panel lists providers, models and usage', a
     /\$3\s*\/\s*\$15\b/,
   );
   await until(
-    () => panel.evaluate(() => Number(document.querySelector('[data-usage-total]')?.getAttribute('data-usage-total')) > 0),
+    () =>
+      panel.evaluate(() => Number(document.querySelector('[data-usage-total]')?.getAttribute('data-usage-total')) > 0),
     'usage in the panel',
   );
   const text = await panel.evaluate(() => document.body.innerText);

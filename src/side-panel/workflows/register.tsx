@@ -8,6 +8,6 @@ registerPlace({
   label: 'flow_place',
   icon: Workflow,
   group: 'top',
-  order: 30,
+  order: 40,
   Component: WorkflowsPlace,
 });

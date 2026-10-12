@@ -166,6 +166,8 @@ describe('ThreadManager', () => {
     expect(thread?.activeTask).toBeNull();
     expect((await store.messages(threadId)).map(m => [m.actor, m.content])).toEqual([
       ['user', 'Post the standup note'],
+      // A chat whose words name no workspace goes to the default one, and says so
+      ['system', 'workspace_placed:Nexprove'],
       ['planner', 'Posted in #general.'],
     ]);
   });

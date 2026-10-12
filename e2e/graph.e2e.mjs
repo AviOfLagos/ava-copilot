@@ -62,9 +62,8 @@ function writeStore(page, name, records) {
 }
 
 async function openKnowledge(session) {
-  await session.click('Menu');
-  await session.click('Knowledge base');
-  await session.panel.waitForSelector('[role="tablist"][aria-label="Knowledge base"]', { timeout: 10000 });
+  // Knowledge base lives in the profile menu at the foot of the drawer
+  await session.openKnowledge();
 }
 
 function agentProfile(id, name) {

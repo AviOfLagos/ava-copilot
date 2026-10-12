@@ -161,6 +161,26 @@ export async function openSession(extension, mock, query = '') {
           .click();
       });
     },
+    /**
+     * Opens the profile menu at the foot of the drawer. Radix opens it on keydown (a synthetic click does
+     * not), and its exit animation needs animation frames, so the panel comes to the front first.
+     */
+    async openAccountMenu() {
+      await panel.bringToFront();
+      await panel.evaluate(() => {
+        const button = document.querySelector('[aria-label="Account menu"]');
+        if (!button) throw new Error('No button "Account menu"');
+        button.focus();
+        button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      });
+    },
+    /** Opens Knowledge base from the profile menu. */
+    async openKnowledge() {
+      await session.click('Menu');
+      await session.openAccountMenu();
+      await session.click('Knowledge base');
+      await panel.waitForSelector('[role="tablist"][aria-label="Knowledge base"]', { timeout: 10000 });
+    },
     /** Waits for the confirm card and returns its text. */
     async waitForCard(timeout = 30000) {
       const card = await panel.waitForSelector('[role="alertdialog"]', { timeout }).catch(async error => {

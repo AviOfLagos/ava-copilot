@@ -18,18 +18,8 @@ const DAY = 24 * 60 * 60 * 1000;
 // `clickablePoint()`'s `Runtime.callFunctionOn` round trip until the default 180000ms
 // `protocolTimeout`. This focuses the trigger and dispatches a real `keydown` for Enter instead,
 // synthetically, inside one plain `evaluate()` call, same as every other click in this file.
-async function clickAccountMenu(session) {
-  // A background tab gets no animation frames (CLAUDE.md), so the menu's Radix exit animation
-  // would never fire `animationend` and Presence would leave it mounted, invisible-but-present,
-  // over whatever renders next. Earlier steps (e.g. `session.send`) may have focused the web page.
-  await session.panel.bringToFront();
-  await session.panel.evaluate(() => {
-    const el = document.querySelector('[aria-label="Account menu"]');
-    if (!el) throw new Error('No button "Account menu"');
-    el.focus();
-    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-  });
-}
+// The profile menu opens through the harness: session.openAccountMenu()
+const clickAccountMenu = session => session.openAccountMenu();
 
 const scenarios = {
   'kb-chat': [() => [{ done: { text: 'Scripted steps complete.', success: true } }]],
