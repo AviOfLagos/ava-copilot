@@ -3727,5 +3727,356 @@
   },
   "help_readAloud_where": {
     "message": "Settings › Voice"
+  },
+  "conn_place": {
+    "message": "Connectors"
+  },
+  "conn_act_start": {
+    "message": "Calling $1"
+  },
+  "conn_act_ok": {
+    "message": "$1 answered"
+  },
+  "conn_alert_reconnect_title": {
+    "message": "Sign in to $1 again"
+  },
+  "conn_alert_reconnect_body": {
+    "message": "$1 stopped working: its sign-in was refused or ran out. Open Connectors from the profile menu and sign in again."
+  },
+  "conn_back": {
+    "message": "Back to connectors"
+  },
+  "conn_cancel": {
+    "message": "Cancel"
+  },
+  "conn_save": {
+    "message": "Save"
+  },
+  "conn_list_title": {
+    "message": "Your connectors"
+  },
+  "conn_list_empty": {
+    "message": "No connectors yet. Add one below: the agent and your routines can then use its tools."
+  },
+  "conn_row_tools": {
+    "message": "$1 tools"
+  },
+  "conn_row_review": {
+    "message": "$1 to review"
+  },
+  "conn_row_noWorkspace": {
+    "message": "no workspace yet"
+  },
+  "conn_catalog_title": {
+    "message": "Add a connector"
+  },
+  "conn_catalog_add": {
+    "message": "Add"
+  },
+  "conn_catalog_addAnother": {
+    "message": "Add another"
+  },
+  "conn_catalog_addNamed": {
+    "message": "Add $1"
+  },
+  "conn_catalog_github": {
+    "message": "Personal access token"
+  },
+  "conn_catalog_signIn": {
+    "message": "Sign in with your account"
+  },
+  "conn_catalog_slack": {
+    "message": "Sign in through your own Slack app (client ID and secret)"
+  },
+  "conn_catalog_google": {
+    "message": "Sign in through your own Google Cloud client (ID and secret)"
+  },
+  "conn_custom_title": {
+    "message": "Custom server"
+  },
+  "conn_custom_hint": {
+    "message": "Any remote MCP server, by its address"
+  },
+  "conn_custom_add": {
+    "message": "Add custom server"
+  },
+  "conn_mac_title": {
+    "message": "On this Mac"
+  },
+  "conn_mac_name": {
+    "message": "Mac companion"
+  },
+  "conn_mac_soon": {
+    "message": "Coming soon"
+  },
+  "conn_mac_hint": {
+    "message": "Local MCP servers and command-line tools will run through Avi Brain on your Mac, in its sandbox."
+  },
+  "conn_add_titleNamed": {
+    "message": "Add $1"
+  },
+  "conn_add_titleCustom": {
+    "message": "Add a custom server"
+  },
+  "conn_add_docs": {
+    "message": "How to set it up"
+  },
+  "conn_add_name": {
+    "message": "Name"
+  },
+  "conn_add_namePlaceholder": {
+    "message": "e.g. Company tools"
+  },
+  "conn_add_url": {
+    "message": "Address"
+  },
+  "conn_add_urlHint": {
+    "message": "The server's MCP address, often ending in /mcp."
+  },
+  "conn_add_urlInvalid": {
+    "message": "That is not a web address."
+  },
+  "conn_add_urlInsecure": {
+    "message": "Use an https:// address (plain http:// only for this computer)."
+  },
+  "conn_add_urlCredentials": {
+    "message": "Leave the user name and password out of the address; add a token instead."
+  },
+  "conn_add_auth": {
+    "message": "Sign-in"
+  },
+  "conn_auth_none": {
+    "message": "None"
+  },
+  "conn_auth_token": {
+    "message": "Token"
+  },
+  "conn_auth_oauth": {
+    "message": "Sign in"
+  },
+  "conn_add_token": {
+    "message": "Token"
+  },
+  "conn_add_tokenHint": {
+    "message": "Kept encrypted on this computer; only its last characters are shown again."
+  },
+  "conn_add_redirect": {
+    "message": "Redirect URL to register with the service:"
+  },
+  "conn_add_copyRedirect": {
+    "message": "Copy the redirect URL"
+  },
+  "conn_add_clientId": {
+    "message": "Client ID"
+  },
+  "conn_add_clientSecret": {
+    "message": "Client secret"
+  },
+  "conn_add_clientSecretHint": {
+    "message": "Only if the service gave you one. Kept encrypted."
+  },
+  "conn_add_moreOptions": {
+    "message": "More options"
+  },
+  "conn_add_lessOptions": {
+    "message": "Fewer options"
+  },
+  "conn_add_tokenHeader": {
+    "message": "Header for the token"
+  },
+  "conn_add_tokenHeaderHint": {
+    "message": "Leave empty to send it as Authorization: Bearer."
+  },
+  "conn_add_scope": {
+    "message": "Scopes"
+  },
+  "conn_add_scopeHint": {
+    "message": "Leave empty to ask for what the server says it needs."
+  },
+  "conn_add_timeout": {
+    "message": "Time limit per call (seconds)"
+  },
+  "conn_add_timeoutHint": {
+    "message": "From 2 to 120; 30 when empty."
+  },
+  "conn_add_submit": {
+    "message": "Add connector"
+  },
+  "conn_add_adding": {
+    "message": "Adding…"
+  },
+  "conn_workspaces": {
+    "message": "Workspaces"
+  },
+  "conn_workspacesHint": {
+    "message": "Only chats and routines in these workspaces can use it."
+  },
+  "conn_workspacesNone": {
+    "message": "No workspaces yet: make one in Workspaces first."
+  },
+  "conn_workspacesEmpty": {
+    "message": "No workspace picked: nothing can use it yet."
+  },
+  "conn_detail_gone": {
+    "message": "This connector was removed."
+  },
+  "conn_detail_enabled": {
+    "message": "$1 on"
+  },
+  "conn_detail_needsSignIn": {
+    "message": "Sign in to use its tools."
+  },
+  "conn_detail_refresh": {
+    "message": "Check tools"
+  },
+  "conn_detail_remove": {
+    "message": "Remove connector"
+  },
+  "conn_status_connected": {
+    "message": "Connected"
+  },
+  "conn_status_needsAuth": {
+    "message": "Needs sign-in"
+  },
+  "conn_status_error": {
+    "message": "Not working"
+  },
+  "conn_status_disabled": {
+    "message": "Off"
+  },
+  "conn_signIn_start": {
+    "message": "Sign in"
+  },
+  "conn_signIn_reconnect": {
+    "message": "Reconnect"
+  },
+  "conn_signIn_busy": {
+    "message": "Signing in…"
+  },
+  "conn_signIn_cancelled": {
+    "message": "Sign-in cancelled."
+  },
+  "conn_signIn_done": {
+    "message": "Signed in. $1 tools found."
+  },
+  "conn_signIn_doneNoTools": {
+    "message": "Signed in, but its tools could not be read: $1"
+  },
+  "conn_token_add": {
+    "message": "Add token"
+  },
+  "conn_token_replace": {
+    "message": "Replace token"
+  },
+  "conn_token_saved": {
+    "message": "Token saved."
+  },
+  "conn_refresh_done": {
+    "message": "$1 tools: $2 new, $3 changed."
+  },
+  "conn_remove_confirm": {
+    "message": "Remove $1? Its tools, your choices for them and its sign-in are forgotten."
+  },
+  "conn_tools_title": {
+    "message": "Tools ($1)"
+  },
+  "conn_tools_allAsk": {
+    "message": "Turn on new ones, asking first"
+  },
+  "conn_tools_waiting": {
+    "message": "$1 waiting for you"
+  },
+  "conn_tools_waitingHint": {
+    "message": "New and changed tools stay off until you choose for each."
+  },
+  "conn_tools_none": {
+    "message": "No tools yet. Check tools to read them from the server."
+  },
+  "conn_tools_signInFirst": {
+    "message": "Sign in to see its tools."
+  },
+  "conn_tool_new": {
+    "message": "New"
+  },
+  "conn_tool_changed": {
+    "message": "Changed"
+  },
+  "conn_tool_missing": {
+    "message": "Gone"
+  },
+  "conn_tool_saysReadOnly": {
+    "message": "says it only reads"
+  },
+  "conn_tool_saysDestructive": {
+    "message": "says it can delete"
+  },
+  "conn_tool_more": {
+    "message": "More"
+  },
+  "conn_tool_less": {
+    "message": "Less"
+  },
+  "conn_tool_args": {
+    "message": "Arguments"
+  },
+  "conn_tool_changedNote": {
+    "message": "This tool changed since you approved it. It stays off until you choose again."
+  },
+  "conn_tool_before": {
+    "message": "Before:"
+  },
+  "conn_tool_argsChanged": {
+    "message": "Its arguments changed too."
+  },
+  "conn_tool_policyLabel": {
+    "message": "What $1 may do"
+  },
+  "conn_policy_off": {
+    "message": "Off"
+  },
+  "conn_policy_approve": {
+    "message": "Ask first"
+  },
+  "conn_policy_read": {
+    "message": "Always allow"
+  },
+  "conn_policy_approveHint": {
+    "message": "Each call waits for your click."
+  },
+  "conn_policy_readConfirm": {
+    "message": "Its server does not say this tool only reads. Let it run without asking anyway?"
+  },
+  "conn_policy_readAnyway": {
+    "message": "Allow anyway"
+  },
+  "conn_error_auth": {
+    "message": "$1 did not accept the sign-in. Sign in again."
+  },
+  "conn_error_forbidden": {
+    "message": "$1 refused: the account has no permission for that."
+  },
+  "conn_error_notFound": {
+    "message": "Nothing answers as an MCP server at this address."
+  },
+  "conn_error_rateLimit": {
+    "message": "$1 asked to slow down."
+  },
+  "conn_error_timeout": {
+    "message": "$1 did not answer in time."
+  },
+  "conn_error_network": {
+    "message": "Could not reach $1."
+  },
+  "conn_error_unavailable": {
+    "message": "$1 is having trouble right now."
+  },
+  "conn_error_invalid": {
+    "message": "$1 refused the request."
+  },
+  "conn_signOut": {
+    "message": "Sign out"
+  },
+  "conn_signOut_done": {
+    "message": "Signed out: its sign-in was deleted from this computer."
   }
 }
