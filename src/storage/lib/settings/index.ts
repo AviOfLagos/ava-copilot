@@ -12,3 +12,4 @@ export * from './calendarSettings';
 export * from './briefSettings';
 export * from './ttsSettings';
 export * from './voiceEngineSettings';
+export * from './assistant';

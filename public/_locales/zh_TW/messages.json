@@ -1378,7 +1378,13 @@
     "message": "Ask"
   },
   "meeting_asking": {
-    "message": "Thinking…"
+    "message": "$NAME$ 正在思考…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "options_meetings_liveCaptions": {
     "message": "Live captions"
@@ -1399,7 +1405,13 @@
     "message": "Voice conversation"
   },
   "voice_talk": {
-    "message": "Talk to the copilot"
+    "message": "與 $NAME$ 對話",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "voice_stop": {
     "message": "Stop talking"
@@ -1762,7 +1774,13 @@
     }
   },
   "chat_run_planning": {
-    "message": "Planning"
+    "message": "$NAME$ 正在思考",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "chat_run_working": {
     "message": "Working on the page"
@@ -1846,7 +1864,13 @@
     "message": "Voice conversation"
   },
   "voice_label": {
-    "message": "Voice"
+    "message": "$NAME$ · 語音",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "voice_neverInCall": {
     "message": "only you hear it"
@@ -2221,10 +2245,22 @@
     "message": "語音"
   },
   "settings_wake": {
-    "message": "聆聽「Hey Ava」"
+    "message": "聆聽「$PHRASE$」",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "settings_wake_hint": {
-    "message": "即使關閉面板也持續開啟。僅在本機聆聽；在您說「Hey Ava」之前不會傳送任何內容。"
+    "message": "即使關閉面板也持續開啟。僅在本機聆聽；在您說「$PHRASE$」之前不會傳送任何內容。",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "settings_wake_failed": {
     "message": "聆聽未啟動。請執行 node scripts/wake-word-setup.mjs，重新建置並重新載入。"
@@ -2311,10 +2347,22 @@
     "message": "用說的代替打字"
   },
   "help_voice_where": {
-    "message": "頂部的麥克風按鈕，或說「Hey Ava」"
+    "message": "頂部的麥克風按鈕，或說「$PHRASE$」",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_wake_q": {
-    "message": "開啟「Hey Ava」"
+    "message": "開啟「$PHRASE$」",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_wake_where": {
     "message": "設定 › 語音"
@@ -2329,7 +2377,13 @@
     "message": "離開或結束 Google Meet 通話"
   },
   "help_call_where": {
-    "message": "說「Hey Ava, leave the call」或「end the call」"
+    "message": "說「$PHRASE$, leave the call」或「end the call」",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_pastmeeting_q": {
     "message": "找出會議中說過的內容"
@@ -2353,7 +2407,13 @@
     "message": "將頁面儲存到記憶"
   },
   "help_save_where": {
-    "message": "Knowledge base › 儲存此頁面，或說「Hey Ava, remember this」"
+    "message": "Knowledge base › 儲存此頁面，或說「$PHRASE$, remember this」",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_skill_q": {
     "message": "教它做某件事的方法"
@@ -4965,7 +5025,7 @@
     "message": "Whisper base"
   },
   "voice_engine_model_vosk": {
-    "message": "Vosk（來自 Hey Ava）"
+    "message": "Vosk（喚醒詞的模型）"
   },
   "voice_engine_model_kitten": {
     "message": "KittenTTS nano"
@@ -5223,5 +5283,114 @@
   },
   "chat_stt_hint": {
     "message": "停止可先編輯 · 傳送會在轉好後送出 · Esc 捨棄"
+  },
+  "onboard_dialog": {
+    "message": "設定您的助理"
+  },
+  "onboard_step": {
+    "message": "第 $STEP$ 步，共 $TOTAL$ 步",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "onboard_skip": {
+    "message": "略過"
+  },
+  "onboard_back": {
+    "message": "上一步"
+  },
+  "onboard_next": {
+    "message": "下一步"
+  },
+  "onboard_done": {
+    "message": "完成"
+  },
+  "onboard_name_title": {
+    "message": "為您的助理命名"
+  },
+  "onboard_name_body": {
+    "message": "它在面板中與語音中都以此名稱回應。保留 Ava，或自己取一個。之後可在「設定」中更改。"
+  },
+  "onboard_name_field": {
+    "message": "助理名稱"
+  },
+  "onboard_name_error_empty": {
+    "message": "請輸入名稱，或保留 Ava。"
+  },
+  "onboard_name_error_tooLong": {
+    "message": "最多 24 個字元。"
+  },
+  "onboard_name_error_characters": {
+    "message": "只能使用字母、空格、連字號與撇號。"
+  },
+  "onboard_model_title": {
+    "message": "新增模型"
+  },
+  "onboard_model_body": {
+    "message": "$NAME$ 使用您選擇的模型思考。在「模型與用量」中新增供應商與其金鑰；金鑰只存放在此瀏覽器。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_model_ready": {
+    "message": "已設定模型。可隨時在「模型與用量」中更改。"
+  },
+  "onboard_model_open": {
+    "message": "開啟「模型與用量」"
+  },
+  "onboard_wake_title": {
+    "message": "喚醒詞（選用）"
+  },
+  "onboard_wake_body": {
+    "message": "說「$PHRASE$」即可開始對話，即使面板已關閉。只在本機聆聽、只聽這句話；聽到之前不會傳送任何內容。在您開啟之前保持關閉。",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
+  },
+  "onboard_wake_fallback": {
+    "message": "喚醒詞維持「Hey Ava」：裝置上的模型詞彙中沒有「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_wake_unchecked": {
+    "message": "喚醒詞維持「Hey Ava」：裝置上的模型尚未安裝，無法檢查「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_resume": {
+    "message": "完成設定"
+  },
+  "onboard_settings_name_hint": {
+    "message": "它在面板與語音中的名稱。"
+  },
+  "onboard_readAloud_title": {
+    "message": "由 $NAME$ 朗讀",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   }
 }

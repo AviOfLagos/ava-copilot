@@ -9,6 +9,7 @@ import {
   calendarSettingsStore,
   upcomingEventsStore,
   agentModelStore,
+  checkAssistantName,
   gateSettingsStore,
   generalSettingsStore,
   kbSettingsStore,
@@ -25,6 +26,9 @@ import { Switch } from '../components/ui/switch';
 import { saveTheme, useTheme } from '../layout/theme';
 import type { ThemeChoice } from '../layout/theme';
 import { registeredPlace, registeredSettingsSections } from '../registry';
+import { displayPhrase, useAssistantName, useWakeChoice } from '../hooks/useAssistant';
+import { NameInput, WakeNote, nameError } from '../onboarding/AssistantName';
+import { setWakeWord as switchWakeWord } from '../onboarding/wake';
 import type { PanelApi } from '../registry';
 
 const KIND_LABELS: Record<CommitKind, Parameters<typeof t>[0]> = {
@@ -87,6 +91,10 @@ export default function SettingsView({ onBack, onOpenThread, api }: SettingsView
   const [found, setFound] = useState<{ calendar: string; url: string } | null>(null);
   const [meeting, setMeeting] = useState({ includeMic: true, liveCaptions: true, autoNotes: true, wakeWord: false });
   const [wakeError, setWakeError] = useState('');
+  const assistantName = useAssistantName();
+  const [assistantDraft, setAssistantDraft] = useState<string | null>(null);
+  const wakeChoice = useWakeChoice(assistantName);
+  const wakePhrase = displayPhrase(wakeChoice, assistantName);
   const [memory, setMemory] = useState({
     indexChats: true,
     indexMeetings: true,
@@ -148,25 +156,19 @@ export default function SettingsView({ onBack, onOpenThread, api }: SettingsView
 
   const setWakeWord = async (on: boolean) => {
     setWakeError('');
-    await setMeetingSetting({ wakeWord: on });
-    if (!on) return;
-    const result = (await chrome.runtime.sendMessage({ type: 'wake_sync' }).catch(() => null)) as {
-      ok?: boolean;
-      error?: string;
-      micDenied?: boolean;
-    } | null;
-    if (result?.micDenied) {
-      setWakeError(t('voice_micNeeded'));
-      void chrome.windows.create({
-        url: chrome.runtime.getURL('permission/index.html'),
-        type: 'popup',
-        width: 500,
-        height: 600,
-      });
-    } else if (!result?.ok) {
-      setWakeError(result?.error ?? t('settings_wake_failed'));
-    }
+    setMeeting({ ...meeting, wakeWord: on });
+    setWakeError(await switchWakeWord(on));
   };
+
+  // A valid name is saved when the field is left; an invalid one shows why and is not
+  const saveAssistantName = async () => {
+    const check = checkAssistantName(assistantDraft ?? '');
+    if (assistantDraft === null || !check.ok) return;
+    await generalSettingsStore.updateSettings({ assistantName: check.name });
+    setAssistantDraft(null);
+  };
+  const assistantValue = assistantDraft ?? assistantName;
+  const assistantError = assistantDraft !== null ? nameError(assistantDraft) : '';
 
   const setMemorySetting = async (changes: Partial<typeof memory>) => {
     setMemory({ ...memory, ...changes });
@@ -213,6 +215,29 @@ export default function SettingsView({ onBack, onOpenThread, api }: SettingsView
               className="bg-card focus:border-primary/50 w-32 rounded-lg border px-2 py-1 text-right text-[12.5px] text-foreground outline-none"
             />
           </Row>
+          <Row
+            title={t('onboard_name_field')}
+            hint={
+              assistantError ? (
+                <span id="settings-assistant-error" className="text-destructive">
+                  {assistantError}
+                </span>
+              ) : (
+                <>
+                  {t('onboard_settings_name_hint')}
+                  <WakeNote name={assistantValue} className="mt-0.5" />
+                </>
+              )
+            }>
+            <NameInput
+              id="settings-assistant-name"
+              errorId="settings-assistant-error"
+              value={assistantValue}
+              onChange={setAssistantDraft}
+              onBlur={() => void saveAssistantName()}
+              className="w-32 px-2 py-1 text-right text-[12.5px]"
+            />
+          </Row>
           <div role="radiogroup" aria-label={t('settings_look')} className="grid grid-cols-3 gap-1 p-1">
             {(['dark', 'light', 'system'] as ThemeChoice[]).map(option => (
               <button
@@ -234,8 +259,12 @@ export default function SettingsView({ onBack, onOpenThread, api }: SettingsView
         </Section>
 
         <Section label={t('settings_voice')}>
-          <Row title={t('settings_wake')} hint={wakeError || t('settings_wake_hint')}>
-            <Switch label={t('settings_wake')} checked={meeting.wakeWord} onChange={value => void setWakeWord(value)} />
+          <Row title={t('settings_wake', [wakePhrase])} hint={wakeError || t('settings_wake_hint', [wakePhrase])}>
+            <Switch
+              label={t('settings_wake', [wakePhrase])}
+              checked={meeting.wakeWord}
+              onChange={value => void setWakeWord(value)}
+            />
           </Row>
         </Section>
 

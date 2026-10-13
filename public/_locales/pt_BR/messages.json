@@ -1378,7 +1378,13 @@
     "message": "Ask"
   },
   "meeting_asking": {
-    "message": "Thinking…"
+    "message": "$NAME$ está pensando…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "options_meetings_liveCaptions": {
     "message": "Live captions"
@@ -1399,7 +1405,13 @@
     "message": "Voice conversation"
   },
   "voice_talk": {
-    "message": "Talk to the copilot"
+    "message": "Falar com $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "voice_stop": {
     "message": "Stop talking"
@@ -1762,7 +1774,13 @@
     }
   },
   "chat_run_planning": {
-    "message": "Planning"
+    "message": "$NAME$ está pensando",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "chat_run_working": {
     "message": "Working on the page"
@@ -1846,7 +1864,13 @@
     "message": "Voice conversation"
   },
   "voice_label": {
-    "message": "Voice"
+    "message": "$NAME$ · Voz",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   },
   "voice_neverInCall": {
     "message": "only you hear it"
@@ -2221,10 +2245,22 @@
     "message": "Voz"
   },
   "settings_wake": {
-    "message": "Ouvir “Hey Ava”"
+    "message": "Ouvir “$PHRASE$”",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "settings_wake_hint": {
-    "message": "Sempre ativo, mesmo com o painel fechado. Ouve só neste computador; nada é enviado até você dizer “Hey Ava”."
+    "message": "Sempre ativo, mesmo com o painel fechado. Ouve só neste computador; nada é enviado até você dizer “$PHRASE$”.",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "settings_wake_failed": {
     "message": "A escuta não começou. Rode node scripts/wake-word-setup.mjs, recompile e recarregue."
@@ -2311,10 +2347,22 @@
     "message": "Falar em vez de digitar"
   },
   "help_voice_where": {
-    "message": "O botão de microfone no topo, ou diga “Hey Ava”"
+    "message": "O botão de microfone no topo, ou diga “$PHRASE$”",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_wake_q": {
-    "message": "Ativar “Hey Ava”"
+    "message": "Ativar “$PHRASE$”",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_wake_where": {
     "message": "Configurações › Voz"
@@ -2329,7 +2377,13 @@
     "message": "Sair ou encerrar uma chamada do Meet"
   },
   "help_call_where": {
-    "message": "Diga “Hey Ava, leave the call” ou “end the call”"
+    "message": "Diga “$PHRASE$, leave the call” ou “end the call”",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_pastmeeting_q": {
     "message": "Encontrar o que foi dito numa reunião"
@@ -2353,7 +2407,13 @@
     "message": "Salvar uma página na memória"
   },
   "help_save_where": {
-    "message": "Knowledge base › Salvar esta página, ou diga “Hey Ava, remember this”"
+    "message": "Knowledge base › Salvar esta página, ou diga “$PHRASE$, remember this”",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
   },
   "help_skill_q": {
     "message": "Ensinar uma forma de fazer algo"
@@ -4965,7 +5025,7 @@
     "message": "Whisper base"
   },
   "voice_engine_model_vosk": {
-    "message": "Vosk (do Hey Ava)"
+    "message": "Vosk (o modelo da palavra de ativação)"
   },
   "voice_engine_model_kitten": {
     "message": "KittenTTS nano"
@@ -5223,5 +5283,114 @@
   },
   "chat_stt_hint": {
     "message": "Parar para editar · Enviar envia quando pronto · Esc descarta"
+  },
+  "onboard_dialog": {
+    "message": "Configure seu assistente"
+  },
+  "onboard_step": {
+    "message": "Passo $STEP$ de $TOTAL$",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "onboard_skip": {
+    "message": "Pular"
+  },
+  "onboard_back": {
+    "message": "Voltar"
+  },
+  "onboard_next": {
+    "message": "Próximo"
+  },
+  "onboard_done": {
+    "message": "Concluir"
+  },
+  "onboard_name_title": {
+    "message": "Dê um nome ao seu assistente"
+  },
+  "onboard_name_body": {
+    "message": "Ele atende por este nome no painel e em voz alta. Mantenha Ava ou escolha outro. Dá para mudar depois em Configurações."
+  },
+  "onboard_name_field": {
+    "message": "Nome do assistente"
+  },
+  "onboard_name_error_empty": {
+    "message": "Dê um nome, ou mantenha Ava."
+  },
+  "onboard_name_error_tooLong": {
+    "message": "Use no máximo 24 caracteres."
+  },
+  "onboard_name_error_characters": {
+    "message": "Use apenas letras, espaços, hífens e apóstrofos."
+  },
+  "onboard_model_title": {
+    "message": "Adicione um modelo"
+  },
+  "onboard_model_body": {
+    "message": "$NAME$ pensa com um modelo que você escolhe. Adicione um provedor e a chave dele em Modelos e uso; as chaves ficam neste navegador.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_model_ready": {
+    "message": "Um modelo já está configurado. Mude quando quiser em Modelos e uso."
+  },
+  "onboard_model_open": {
+    "message": "Abrir Modelos e uso"
+  },
+  "onboard_wake_title": {
+    "message": "Palavra de ativação (opcional)"
+  },
+  "onboard_wake_body": {
+    "message": "Diga “$PHRASE$” para começar a conversar, mesmo com o painel fechado. Ouve só neste computador e só essa frase; nada é enviado até ouvi-la. Fica desligado até você ligar.",
+    "placeholders": {
+      "phrase": {
+        "content": "$1",
+        "example": "Hey Ava"
+      }
+    }
+  },
+  "onboard_wake_fallback": {
+    "message": "A palavra de ativação continua “Hey Ava”: “$NAME$” não está no vocabulário do modelo no dispositivo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_wake_unchecked": {
+    "message": "A palavra de ativação continua “Hey Ava”: o modelo no dispositivo não está instalado, então “$NAME$” não pode ser verificado.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "onboard_resume": {
+    "message": "Concluir configuração"
+  },
+  "onboard_settings_name_hint": {
+    "message": "Como ele é chamado no painel e em voz alta."
+  },
+  "onboard_readAloud_title": {
+    "message": "$NAME$ lê em voz alta",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
   }
 }

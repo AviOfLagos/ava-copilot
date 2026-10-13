@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AudioRing, heardWake, heyAvaPrefix, WakeListener } from '../wake';
+import { AudioRing, heardWake, heyAvaPrefix, wakeGrammars, WakeListener, wakePrefix } from '../wake';
 
 describe('heardWake', () => {
   it('hears the phrase, alone or with a request after it', () => {
@@ -33,6 +33,27 @@ describe('heyAvaPrefix', () => {
   });
 });
 
+describe('a wake phrase for another name', () => {
+  it('keeps the measured grammars for Ava and swaps the name in for others', () => {
+    expect(wakeGrammars(['ava'])).toEqual({ listen: ['hey ava', '[unk]'], verify: ['hey ava', 'hey', 'ava', '[unk]'] });
+    expect(wakeGrammars(['nova'])).toEqual({
+      listen: ['hey nova', '[unk]'],
+      verify: ['hey nova', 'hey', 'nova', '[unk]'],
+    });
+    expect(wakeGrammars(['mary', 'jane']).verify).toEqual(['hey mary jane', 'hey', 'mary jane', '[unk]']);
+  });
+
+  it('checks "hey" then every word of the name, in order', () => {
+    expect(wakePrefix('hey nova [unk]', ['nova'])).toBe(true);
+    expect(wakePrefix('hey mary jane', ['mary', 'jane'])).toBe(true);
+    expect(wakePrefix('hey mary [unk]', ['mary', 'jane'])).toBe(false);
+    expect(wakePrefix('hey ava', ['nova'])).toBe(false);
+    expect(wakePrefix('nova', ['nova'])).toBe(false);
+    expect(heardWake('hey nova', 'hey nova')).toBe(true);
+    expect(heardWake('hey ava', 'hey nova')).toBe(false);
+  });
+});
+
 describe('AudioRing', () => {
   it('keeps only the last seconds, in order, and empties when taken', () => {
     const ring = new AudioRing(4);
@@ -46,10 +67,11 @@ describe('WakeListener verification', () => {
   type Sent = { action: string; recognizerId?: string; grammar?: string; data?: Float32Array };
 
   /** A listener on a stand-in worker: what it sends is recorded, and replies are handed in by the test. */
-  function listen() {
+  function listen(words?: string[]) {
     const sent: Sent[] = [];
     const wakes: number[] = [];
     const listener = new WakeListener(() => wakes.push(Date.now()));
+    if (words) (listener as unknown as { wakeWords: string[] }).wakeWords = words;
     const internals = listener as unknown as {
       worker: { postMessage: (message: Sent) => void } | null;
       recognizerId: string;
@@ -67,11 +89,11 @@ describe('WakeListener verification', () => {
         for (let index = 0; index < times; index++) internals.feed(chunk(value));
       },
       // The main recogniser hears the phrase (or thinks it does)
-      candidate: () =>
+      candidate: (partial = 'hey ava') =>
         internals.handle({
           event: 'partialresult',
           recognizerId: internals.recognizerId,
-          result: { partial: 'hey ava' },
+          result: { partial },
         }),
       verifier: () => sent.find(message => message.action === 'create' && message.grammar)?.recognizerId,
       // The verifier's two answers: the chunk's, then the final one
@@ -103,6 +125,32 @@ describe('WakeListener verification', () => {
     expect(wake.sent.some(message => message.action === 'remove' && message.recognizerId === wake.verifier())).toBe(
       true,
     );
+  });
+
+  it('verifies a custom phrase with a grammar of its own name', async () => {
+    const wake = listen(['nova']);
+    // The default phrase is not a candidate any more
+    wake.candidate('hey ava');
+    wake.feed(0.2, 3);
+    expect(wake.verifier()).toBeUndefined();
+    wake.candidate('hey nova');
+    wake.feed(0.2, 3);
+    expect(JSON.parse(wake.sent.find(message => message.grammar)?.grammar ?? '[]')).toEqual([
+      'hey nova',
+      'hey',
+      'nova',
+      '[unk]',
+    ]);
+    await wake.answer('hey ava');
+    expect(wake.wakes).toHaveLength(0);
+  });
+
+  it('wakes on a confirmed custom phrase', async () => {
+    const wake = listen(['nova']);
+    wake.candidate('hey nova');
+    wake.feed(0.2, 3);
+    await wake.answer('hey nova [unk]');
+    expect(wake.wakes).toHaveLength(1);
   });
 
   it('does not wake on "hey" alone, and listens again', async () => {

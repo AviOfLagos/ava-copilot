@@ -4,6 +4,7 @@ import { cn } from '@extension/ui';
 import { db } from '@extension/storage';
 import type { ThreadMessage } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
+import { useAssistantName } from '../hooks/useAssistant';
 import { LiveOrb } from '../components/ui/live-orb';
 import { Shimmer } from '../components/ai/shimmer';
 import type { VoiceStatus } from '../layout/Header';
@@ -28,6 +29,7 @@ const SPEED = { connecting: 0.4, listening: 1, speaking: 2.2 } as const;
  * panel while it is on; Hide gives the panel back without ending it.
  */
 export default function VoiceView({ status, onEnd, onHide }: VoiceViewProps) {
+  const name = useAssistantName();
   // The conversation is kept in the newest thread tagged "voice"
   const recent = useLive(
     async (): Promise<ThreadMessage[]> => {
@@ -50,7 +52,7 @@ export default function VoiceView({ status, onEnd, onHide }: VoiceViewProps) {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(360px_360px_at_50%_34%,rgb(var(--primary-rgb)/0.18),transparent_70%)]"
       />
       <div className="relative flex items-center justify-between px-4 pt-4">
-        <span className="label-mono">{t('voice_label')}</span>
+        <span className="label-mono">{t('voice_label', [name])}</span>
         <span className="text-muted-foreground font-mono text-[10.5px]">{t('voice_neverInCall')}</span>
       </div>
 

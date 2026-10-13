@@ -70,7 +70,7 @@ test('a spoken request runs a browser task, and the copilot says when it is done
   mock.live.voiceRequest = 'Run the scripted scenario voice-task.';
   const session = await openSession(extension, mock);
   await session.web.bringToFront();
-  await session.click('Talk to the copilot');
+  await session.click('Talk to Ava');
 
   // The session is set up as a conversation with tools, and hears the microphone
   await waitFor(() => mock.live.sessions.some(s => s.voice), 'a voice session');
@@ -134,7 +134,7 @@ test('a send started by voice waits for the click, and the copilot says so', asy
   const noticesBefore = mock.live.notices.length;
   const session = await openSession(extension, mock);
   await session.web.bringToFront();
-  await session.click('Talk to the copilot');
+  await session.click('Talk to Ava');
 
   await session.waitForCard(30000);
   await waitFor(
@@ -201,7 +201,7 @@ async function speakTool(heard, tool) {
   const before = mock.live.toolResponses.length;
   const session = await openSession(extension, mock);
   await session.web.bringToFront();
-  await session.click('Talk to the copilot');
+  await session.click('Talk to Ava');
   await waitFor(() => mock.live.toolResponses.length > before, 'the tool response');
   const response = JSON.stringify(mock.live.toolResponses[before].response);
   await session.click('Stop talking');
@@ -238,14 +238,14 @@ test('ending the conversation while it connects closes it for good', async () =>
   const before = mock.live.sessions.filter(s => s.voice).length;
   const session = await openSession(extension, mock);
   await session.web.bringToFront();
-  await session.click('Talk to the copilot');
+  await session.click('Talk to Ava');
   await session.panel.waitForSelector('[aria-label="End the conversation"]', { timeout: 10000 });
   await session.click('End the conversation');
 
   // Whatever was still on its way, the screen stays closed and the session ends
   await sleep(5000);
   assert.equal(await session.panel.$('[aria-label="End the conversation"]'), null, 'the voice screen stayed closed');
-  assert.ok(await session.panel.$('[aria-label="Talk to the copilot"]'), 'the talk button is back');
+  assert.ok(await session.panel.$('[aria-label="Talk to Ava"]'), 'the talk button is back');
   const opened = mock.live.sessions.filter(s => s.voice).slice(before);
   assert.ok(
     opened.every(s => s.closed),

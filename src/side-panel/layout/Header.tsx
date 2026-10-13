@@ -5,6 +5,7 @@ import { LiveOrb } from '../components/ui/live-orb';
 import { ThinkingOrb } from '../components/ui/thinking-orb';
 import Breadcrumbs from './Breadcrumbs';
 import type { Crumb } from './Breadcrumbs';
+import { useAssistantName } from '../hooks/useAssistant';
 
 export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking';
 
@@ -37,6 +38,7 @@ const iconButton =
  */
 export default function Header(props: HeaderProps) {
   const voiceOn = props.voiceStatus !== 'off';
+  const name = useAssistantName();
   return (
     <header className="border-border/60 relative z-10 flex h-[52px] shrink-0 items-center gap-2 border-b px-2.5">
       <div className="flex size-7 items-center justify-center" aria-hidden="true">
@@ -100,8 +102,8 @@ export default function Header(props: HeaderProps) {
             type="button"
             className={iconButton}
             onClick={props.onVoice}
-            aria-label={t('voice_talk')}
-            title={t('voice_talk')}>
+            aria-label={t('voice_talk', [name])}
+            title={t('voice_talk', [name])}>
             <Mic className="size-4" />
           </button>
         )}

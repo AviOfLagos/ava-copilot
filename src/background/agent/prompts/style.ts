@@ -1,3 +1,5 @@
+import { assistantNameOf } from '@extension/storage';
+
 /**
  * Builds the system prompt section that carries the user's global response style.
  * The style is the user's own setting, so it is trusted, but it only governs the text
@@ -20,5 +22,21 @@ export function buildStyleSection(stylePrompt: string | undefined, target: strin
 <user_response_style>
 ${style}
 </user_response_style>
+`;
+}
+
+/**
+ * The section that tells the agents what the user calls the assistant. The name is the user's own
+ * setting and is checked to be letters, spaces, hyphens and apostrophes only, so it cannot carry
+ * instructions; an invalid or missing one falls back to "Ava".
+ *
+ * @param assistantName - The name from the general settings
+ * @returns The section to add to a system prompt
+ */
+export function buildIdentitySection(assistantName: string | undefined): string {
+  const name = assistantNameOf(assistantName);
+  return `
+# YOUR NAME:
+- The user calls you ${name}. When asked who you are, say you are ${name}, their assistant in this browser. Do not sign messages with it.
 `;
 }

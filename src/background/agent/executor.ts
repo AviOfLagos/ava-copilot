@@ -72,8 +72,9 @@ export class Executor {
     this.tasks.push(task);
     context.tasks = this.tasks;
     const stylePrompt = this.generalSettings?.stylePrompt;
-    this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep, stylePrompt);
-    this.plannerPrompt = new PlannerPrompt(stylePrompt);
+    const assistantName = this.generalSettings?.assistantName;
+    this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep, stylePrompt, assistantName);
+    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName);
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
     const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());

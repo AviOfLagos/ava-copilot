@@ -1,6 +1,7 @@
 import { t } from '@extension/i18n';
 import {
   db,
+  assistantNameOf,
   generalSettingsStore,
   llmProviderStore,
   localDay,
@@ -25,7 +26,7 @@ import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { registeredVoiceTool, registeredVoiceTools } from '../registry';
 import { usesLiveTokens } from '../models/liveToken';
 import { wrapUntrustedContent } from '../agent/messages/utils';
-import { noticeFor, VOICE_INSTRUCTIONS, VOICE_TOOLS, voiceHistory } from './prompt';
+import { noticeFor, voiceInstructions, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
 import { describeNote, hangUp, meetJoin, spokeEnd, spokeJoin, spokeLeave, waitForNote } from '../meetings/call-control';
 import type { CallMode } from '../meetings/call-control';
@@ -70,6 +71,8 @@ export class VoiceManager {
   // Refused once on screen: the rest of this conversation is refused without asking again
   private refused = false;
   private lastActivity = 0;
+  // What the user calls the assistant, read when the conversation starts
+  private assistantName = 'Ava';
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
   status: VoiceStatus = 'off';
@@ -116,7 +119,8 @@ export class VoiceManager {
     if (await this.overCap()) throw new Error(t('usage_capReached_short'));
 
     const settings = await meetingSettingsStore.getSettings();
-    const { stylePrompt } = await generalSettingsStore.getSettings();
+    const { stylePrompt, assistantName } = await generalSettingsStore.getSettings();
+    this.assistantName = assistantNameOf(assistantName);
     // A conversation from the last hours goes on where it stopped; an older one starts fresh
     const previous = (await db.threads.orderBy('updatedAt').reverse().toArray()).find(
       item => item.tags.includes('voice') && Date.now() - item.updatedAt < CONTINUE_WITHIN_MS,
@@ -136,7 +140,11 @@ export class VoiceManager {
             : { apiKey: gemini?.[1].apiKey ?? '' }),
           model: settings.liveModel,
         }),
-        instructions: [VOICE_INSTRUCTIONS, stylePrompt && `How the user likes answers: ${stylePrompt}`, history]
+        instructions: [
+          voiceInstructions(this.assistantName),
+          stylePrompt && `How the user likes answers: ${stylePrompt}`,
+          history,
+        ]
           .filter(Boolean)
           .join('\n\n'),
         tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
@@ -213,8 +221,8 @@ export class VoiceManager {
       if (this.refused) return 'Not allowed: the user refused an action on screen in this conversation.';
       // Fixed words only: nothing the model or the sound chose is shown, so the notice cannot be worded to mislead
       const allowed = await allowedByClick(
-        `Ava wants to ${action}`,
-        'A spoken order after “Hey Ava”. Allow only if you just asked for this yourself.',
+        `${this.assistantName} wants to ${action}`,
+        'A spoken order after the wake word. Allow only if you just asked for this yourself.',
       );
       this.lastActivity = Date.now();
       if (!allowed) {
