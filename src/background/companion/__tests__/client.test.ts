@@ -84,7 +84,7 @@ describe('CompanionClient', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('says plainly when Avi Brain is not running', async () => {
+  it('says plainly when Nex Brain is not running', async () => {
     const { client: brain } = client(() => {
       throw new TypeError('Failed to fetch');
     });

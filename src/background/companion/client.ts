@@ -35,14 +35,14 @@ import type {
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
 
 /**
- * The extension's side of Avi Brain: one HTTP client over the shared protocol, in the background only
+ * The extension's side of Nex Brain: one HTTP client over the shared protocol, in the background only
  * (it reads the token from the vault). Reads are retried with back-off (RETRY_POLICIES.companion); calls
  * that do something are sent once, with a request id, so a repeat by hand gets the first answer and never
  * runs twice. A breaker per address stops calling a companion that keeps failing, and remembers it in
  * session storage across worker restarts.
  */
 
-export const NOT_RUNNING_MESSAGE = 'Avi Brain is not running on your Mac. Start it, then try again.';
+export const NOT_RUNNING_MESSAGE = 'Nex Brain is not running on your Mac. Start it, then try again.';
 const BREAKER_KEY = 'brain-breaker';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -117,7 +117,7 @@ export class CompanionClient {
     const headers: Record<string, string> = {};
     if (options.auth !== false) {
       const token = await this.deps.token();
-      if (!token) throw new AppError('auth', 'Avi Brain is not paired with this browser yet.', { retryable: false });
+      if (!token) throw new AppError('auth', 'Nex Brain is not paired with this browser yet.', { retryable: false });
       headers.Authorization = `Bearer ${token}`;
     }
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -148,14 +148,14 @@ export class CompanionClient {
       if (!response.ok) {
         const parsed = errorReplySchema.safeParse(reply);
         const kind = parsed.success ? parsed.data.error.kind : response.status === 401 ? 'auth' : 'unavailable';
-        const message = parsed.success ? parsed.data.error.message : `Avi Brain answered ${response.status}.`;
+        const message = parsed.success ? parsed.data.error.message : `Nex Brain answered ${response.status}.`;
         throw new AppError(kind, message, {
           status: response.status,
           retryAfterMs: parsed.success ? parsed.data.error.retryAfterMs : undefined,
         });
       }
       const checked = options.schema.safeParse(reply);
-      if (!checked.success) throw new AppError('invalid', 'Avi Brain sent an answer this version does not understand.');
+      if (!checked.success) throw new AppError('invalid', 'Nex Brain sent an answer this version does not understand.');
       return checked.data;
     };
 
@@ -177,7 +177,7 @@ export class CompanionClient {
   // ── Pairing and health ──
 
   /** Trades a one-time code for a token, kept in the vault. */
-  async pair(code: string, client = 'Avi Copilot'): Promise<z.infer<typeof pairReplySchema>> {
+  async pair(code: string, client = 'Nex Copilot'): Promise<z.infer<typeof pairReplySchema>> {
     const reply = await this.call({
       method: 'POST',
       path: COMPANION_ROUTES.pair,
@@ -338,7 +338,7 @@ export class CompanionClient {
         async () => {
           const token = await this.deps.token();
           if (!token)
-            throw new AppError('auth', 'Avi Brain is not paired with this browser yet.', { retryable: false });
+            throw new AppError('auth', 'Nex Brain is not paired with this browser yet.', { retryable: false });
           let response: Response;
           try {
             response = await this.deps.fetch(
@@ -497,7 +497,7 @@ export class CompanionClient {
     const url = new URL(reply.url);
     const base = new URL(await this.baseUrl());
     if (url.origin !== base.origin || !url.pathname.startsWith(`${COMPANION_ROUTES.studio}/`)) {
-      throw new AppError('forbidden', 'Avi Brain gave an address that is not its own.');
+      throw new AppError('forbidden', 'Nex Brain gave an address that is not its own.');
     }
     return url.toString();
   }

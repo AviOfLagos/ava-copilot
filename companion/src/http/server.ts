@@ -9,7 +9,7 @@ import { RateLimiter } from './ratelimit';
 import type { RateGroup } from './ratelimit';
 
 /**
- * Avi Brain's HTTP server: bound to 127.0.0.1 only, and closed unless a request proves who it is.
+ * Nex Brain's HTTP server: bound to 127.0.0.1 only, and closed unless a request proves who it is.
  *
  * - every request must name this server in its Host header (no DNS rebinding);
  * - `api` routes need the extension's Origin and the paired bearer token (401/403 otherwise);
@@ -279,13 +279,13 @@ export class BrainServer {
   private async authorize(route: Route, req: IncomingMessage, origin: string | undefined): Promise<void> {
     switch (route.auth) {
       case 'api':
-        if (origin !== COMPANION_EXTENSION_ORIGIN) fail('forbidden', 'Only Avi Copilot may use Avi Brain.');
+        if (origin !== COMPANION_EXTENSION_ORIGIN) fail('forbidden', 'Only Nex Copilot may use Nex Brain.');
         if (!(await this.options.pairing.verify(bearerToken(req.headers.authorization)))) {
-          fail('auth', 'Avi Brain does not know this browser. Pair again in Avi Copilot settings.');
+          fail('auth', 'Nex Brain does not know this browser. Pair again in Nex Copilot settings.');
         }
         return;
       case 'pair':
-        if (origin !== COMPANION_EXTENSION_ORIGIN) fail('forbidden', 'Only Avi Copilot may pair with Avi Brain.');
+        if (origin !== COMPANION_EXTENSION_ORIGIN) fail('forbidden', 'Only Nex Copilot may pair with Nex Brain.');
         return;
       case 'internal': {
         // Web pages always send an Origin on these requests; the eve process never does

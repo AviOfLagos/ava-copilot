@@ -19,7 +19,7 @@ import { HF_DAILY_PAPERS_URL, HN_FRONT_PAGE_URL, PICK_BEST_INSTRUCTIONS } from '
  */
 
 // The first words of the instructions; tests' scripted models recognise the call by them
-export const AUTHORING_MARKER = 'You design routines (workflows) for Avi Copilot';
+export const AUTHORING_MARKER = 'You design routines (workflows) for Nex Copilot';
 
 const AUTHORED_TYPES = NODE_TYPES.filter(type => !NOT_YET_AVAILABLE.has(type)) as unknown as [string, ...string[]];
 
@@ -73,7 +73,7 @@ Steps:
 - step.llm: instructions (what to do with the input: pick, summarise, compare, translate), input (data from earlier steps). The only step that thinks.
 - step.agent: agent (one of the user's agents, by name), task (what it does this time). Hands the work to that agent; it runs in its own window.
 - step.tool: connector (its name), tool (its exact name), args (a JSON object as text, e.g. {"channel": "general", "text": "{{steps.digest.output}}"}; places go only inside its string values), readOnly (true only for a tool listed as running freely). Only the connector tools listed with the request exist; with none listed, there is no step.tool.
-- step.sandbox: command (one shell command line, run in Avi Brain's sandbox on the user's Mac: no network, no secrets; it waits for the user's click). Only when the user asks to run code, a script or a build.
+- step.sandbox: command (one shell command line, run in Nex Brain's sandbox on the user's Mac: no network, no secrets; it waits for the user's click). Only when the user asks to run code, a script or a build.
 - step.condition: left (usually data from an earlier step), op = contains | not_contains | equals | not_equals | greater_than | less_than | is_empty | is_not_empty, right. The edges leaving it say when = "true" or "false".
 
 Outputs:

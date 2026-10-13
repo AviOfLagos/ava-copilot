@@ -373,7 +373,7 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
     };
     await write('Nexprove/Pitch notes.md', 'Investor pitch on Monday with Acme Ventures.');
     // A file of the user's own where the copilot would write: it must stay as it is
-    await write('Avi Copilot/No workspace/Pages/Gate fixture.md', 'My own words');
+    await write('Nex Copilot/No workspace/Pages/Gate fixture.md', 'My own words');
     await new Promise((resolve, reject) => {
       const open = indexedDB.open('avi-vault', 1);
       open.onupgradeneeded = () => open.result.createObjectStore('kv');
@@ -411,7 +411,7 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
     await walk(vault, '');
     return found;
   });
-  const ours = Object.entries(files).filter(([path]) => path.startsWith('Avi Copilot/'));
+  const ours = Object.entries(files).filter(([path]) => path.startsWith('Nex Copilot/'));
   assert.ok(
     ours.some(([, text]) => text.includes('source: avi-copilot')),
     'the memory is written as notes',
@@ -420,7 +420,7 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
     ours.some(([path]) => /\/People\//.test(path)),
     'people get notes of their own',
   );
-  assert.equal(files['Avi Copilot/No workspace/Pages/Gate fixture.md'], 'My own words');
+  assert.equal(files['Nex Copilot/No workspace/Pages/Gate fixture.md'], 'My own words');
   // The user's own note is never written back into the copilot's folder
   assert.ok(!ours.some(([path]) => path.includes('Pitch notes')));
   await session.close();

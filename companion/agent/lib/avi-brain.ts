@@ -1,5 +1,5 @@
 /**
- * How the eve agent reaches Avi Brain: its internal API on 127.0.0.1, with the per-boot secret Avi Brain
+ * How the eve agent reaches Nex Brain: its internal API on 127.0.0.1, with the per-boot secret Nex Brain
  * gave this process. Profiles, models (with their keys) and every tool call go through here, so nothing
  * secret is ever part of a session, a tool closure or eve's durable store.
  */
@@ -26,7 +26,7 @@ export interface AviModel {
 function internal(path: string, init: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
   const base = process.env.AVI_BRAIN_INTERNAL_URL;
   const secret = process.env.AVI_BRAIN_INTERNAL_SECRET;
-  if (!base || !secret) throw new Error('Avi Brain did not start this agent.');
+  if (!base || !secret) throw new Error('Nex Brain did not start this agent.');
   return fetch(`${base}${path}`, {
     ...init,
     headers: { ...(init.headers as Record<string, string> | undefined), Authorization: `Bearer ${secret}` },
@@ -34,7 +34,7 @@ function internal(path: string, init: RequestInit = {}, timeoutMs = 30_000): Pro
   });
 }
 
-/** The profile id Avi Brain put on the session when it created it. */
+/** The profile id Nex Brain put on the session when it created it. */
 export function profileIdOf(ctx: {
   session: { auth: { initiator?: { attributes?: Record<string, unknown> } | null } };
 }): string {
@@ -46,7 +46,7 @@ export function profileIdOf(ctx: {
 export async function loadProfile(profileId: string): Promise<AviProfile> {
   const response = await internal(`/profiles/${profileId}`);
   const reply = (await response.json()) as { ok?: boolean; profile?: AviProfile };
-  if (!response.ok || !reply.profile) throw new Error('Avi Brain does not know this agent profile.');
+  if (!response.ok || !reply.profile) throw new Error('Nex Brain does not know this agent profile.');
   return reply.profile;
 }
 
@@ -58,15 +58,15 @@ export async function loadModel(profileId: string): Promise<AviModel> {
   if (cached && Date.now() - cached.at < 30_000) return cached.model;
   const response = await internal(`/models/${profileId}`);
   const reply = (await response.json()) as { ok?: boolean; model?: AviModel };
-  if (!response.ok || !reply.model) throw new Error('Avi Brain has no model for this agent profile.');
+  if (!response.ok || !reply.model) throw new Error('Nex Brain has no model for this agent profile.');
   modelCache.set(profileId, { at: Date.now(), model: reply.model });
   return reply.model;
 }
 
-/** Runs one of Avi Brain's tools for this session's profile; its rules are checked there. */
+/** Runs one of Nex Brain's tools for this session's profile; its rules are checked there. */
 /**
- * Runs one of the session's tools in Avi Brain. `approved` only from a tool eve holds for the user's click
- * (approval: always()), so Avi Brain can check the click happened; the model never sets it.
+ * Runs one of the session's tools in Nex Brain. `approved` only from a tool eve holds for the user's click
+ * (approval: always()), so Nex Brain can check the click happened; the model never sets it.
  */
 export async function callAviBrain(
   name: string,

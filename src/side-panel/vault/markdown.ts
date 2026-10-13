@@ -9,7 +9,7 @@ import type {
 } from '@extension/storage';
 
 /** The folder in the vault that the copilot writes; nothing outside it is ever written. */
-export const EXPORT_ROOT = 'Avi Copilot';
+export const EXPORT_ROOT = 'Nex Copilot';
 // Every file the copilot writes says so, and only such files are ever changed or removed
 export const MARKER = 'source: avi-copilot';
 const NO_WORKSPACE = 'No workspace';

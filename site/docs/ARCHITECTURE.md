@@ -54,9 +54,9 @@ Consequence: all copy is in the HTML; islands only for the gate demo and the voi
 
 | Route | Answers | Title | H1 idea |
 |---|---|---|---|
-| `/` | "AI browser agent extension that asks before acting" | Avi Copilot — the AI browser copilot that waits for your click | What it is + the gate, in one line |
-| `/install` | "install Avi Copilot" | Install Avi Copilot — one command for Brave, Chrome and Edge | Install Avi Copilot |
-| `/privacy` | "Avi Copilot privacy" | Privacy — Avi Copilot | What stays on your machine |
+| `/` | "AI browser agent extension that asks before acting" | Nex Copilot — the AI browser copilot that waits for your click | What it is + the gate, in one line |
+| `/install` | "install Nex Copilot" | Install Nex Copilot — one command for Brave, Chrome and Edge | Install Nex Copilot |
+| `/privacy` | "Nex Copilot privacy" | Privacy — Nex Copilot | What stays on your machine |
 
 JSON-LD: one `@graph` with `WebSite`, `SoftwareApplication` (browser extension, free `Offer`, operating systems),
 `FAQPage` on `/`, `BreadcrumbList` on inner pages.

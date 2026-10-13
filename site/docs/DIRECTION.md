@@ -95,7 +95,7 @@ computer (KittenTTS 8, Kokoro 8), 7 built-in connectors, 6 kinds of action that 
 
 ## Layout (from the moodboards)
 
-- **Giant wordmark** "Avi Copilot" across the foot of the hero, the globe in front of it (moodboard 8's ball over
+- **Giant wordmark** "Nex Copilot" across the foot of the hero, the globe in front of it (moodboard 8's ball over
   "Granger"); again at the very bottom of the footer, cut at the baseline.
 - **Bento grids** of rounded glass cards (radius 28) holding widgets, mixed sizes.
 - **Inline image pills** inside headlines: the amber diamond, the voice orb's face, the mint pill.
@@ -153,5 +153,5 @@ the voice island, audio and 3D images load on demand; everything readable with J
 ## Decided for you, say if wrong
 
 Ava's voice is Kokoro `af_heart` (warm, American English; the app's default local voice). The tour is about a minute
-and a half. Headlines are short enough that the FAQ keeps the long answers. The product name stays **Avi Copilot**
+and a half. Headlines are short enough that the FAQ keeps the long answers. The product name stays **Nex Copilot**
 in one constant; the narration never says it, so a rename doesn't need new audio.

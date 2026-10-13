@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import type { PanelApi } from '../registry';
 
 /**
- * Settings › Avi Brain: pair this browser with the companion on the Mac (a one-time code from
+ * Settings › Nex Brain: pair this browser with the companion on the Mac (a one-time code from
  * `avi-brain pair`), see whether it runs and whether Docker does, and open what agents made in an Avi
  * Studio tab. The background does all the talking; this page sends commands and reads the stored status.
  */

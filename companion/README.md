@@ -1,22 +1,22 @@
-# Avi Brain
+# Nex Brain
 
-Avi Copilot's companion on the Mac. It does what a browser extension cannot: runs code in a Docker sandbox per
+Nex Copilot's companion on the Mac. It does what a browser extension cannot: runs code in a Docker sandbox per
 agent, runs `gh` (reads, and posts only after a click), hosts local (stdio) MCP servers, runs routines while Brave is
 closed, builds artifacts and shows them in an **Avi Studio** tab. The extension works fully without it; with it,
-Settings › Avi Brain shows it connected.
+Settings › Nex Brain shows it connected.
 
 Agent sessions run on **Vercel eve** (see [SPIKE.md](SPIKE.md) for why, with the evidence); everything else is
-Avi Brain's own code. The extension only ever speaks one protocol: `src/shared/lib/protocol/companion.ts`.
+Nex Brain's own code. The extension only ever speaks one protocol: `src/shared/lib/protocol/companion.ts`.
 
 ```
-Brave (extension) ──HTTP 127.0.0.1:47615, Bearer + Origin──▶ avi-brain (Node, this package)
+Brave (extension) ──HTTP 127.0.0.1:47615, Bearer + Origin──▶ nex-brain (Node, this package)
                                                               ├─ pairing, rate limits, logs, health
                                                               ├─ sandbox: docker run per command, per agent profile
                                                               ├─ gh allowlist · stdio MCP · routines (croner + the
                                                               │  extension's workflow engine) · artifacts/Avi Studio
                                                               └─ eve start (random loopback port, per-boot secret)
                                                                  └─ agent/: one generic worker; model, instructions
-                                                                    and tools come from avi-brain per profile
+                                                                    and tools come from nex-brain per profile
 ```
 
 ## Install
@@ -29,15 +29,16 @@ snare shield check . && pnpm install     # its own lockfile; 72-hour release-age
 sh scripts/install-launchagent.sh        # builds, starts at login, prints a pairing code
 ```
 
-Then in Avi Copilot: **Settings › Avi Brain**, type the port (47615) and the code, **Pair**. The token goes into the
+Then in Nex Copilot: **Settings › Nex Brain**, type the port (47615) and the code, **Pair**. The token goes into the
 extension's vault; the Mac keeps only its hash. `pnpm pair` prints a new code; `pnpm status` shows pairing and
 Docker; `sh scripts/uninstall-launchagent.sh` removes the login item (data stays in
-`~/Library/Application Support/Avi Brain`). If Docker is not running, health and every sandbox call say
-"Docker is not running. Start Docker Desktop, then try again."; `pnpm sandbox:build` builds the sandbox image once.
+`~/Library/Application Support/Avi Brain`, unchanged so existing pairings and config are not lost). If Docker is not
+running, health and every sandbox call say "Docker is not running. Start Docker Desktop, then try again.";
+`pnpm sandbox:build` builds the sandbox image once.
 
 | Command | What |
 |---|---|
-| `pnpm build` | bundle `dist/avi-brain.mjs` (its sources + the shared protocol + the extension's workflow engine) |
+| `pnpm build` | bundle `dist/nex-brain.mjs` (its sources + the shared protocol + the extension's workflow engine) |
 | `pnpm build:agent` | `eve build` of `agent/` (telemetry off) |
 | `pnpm start` / `pair` / `status` / `sandbox:build` | the CLI |
 | `pnpm test` | unit tests (vitest, no Docker, no network) |
@@ -61,7 +62,7 @@ Docker; `sh scripts/uninstall-launchagent.sh` removes the login item (data stays
   (`node:24-bookworm-slim` pinned by digest, Python 3, pnpm). The companion touches a workspace only while no
   container of that profile runs, and never follows a link in it.
 - **Egress policy:** none by default. `open` is unrestricted egress for package installs; it can also reach
-  services on the Mac's localhost through `host.docker.internal` (Avi Brain itself needs the token; Ollama does
+  services on the Mac's localhost through `host.docker.internal` (Nex Brain itself needs the token; Ollama does
   not), so agent profiles that need it are approved per command. Domain allowlists would need a filtering proxy
   (not built).
 - **Host tools:** only `gh`, only `issue list/view/status`, `pr list/view/diff/checks/status`, `repo view`,
@@ -80,7 +81,7 @@ Docker; `sh scripts/uninstall-launchagent.sh` removes the login item (data stays
   the macOS Keychain, passed to `security -i` on standard input (never on a command line). Never on disk, never in
   eve's store, never in logs (`pnpm test:eve` checks the disk and the logs).
 - **eve:** started with `EVE_TELEMETRY_DISABLED=1` (every eve command reports usage to Vercel otherwise), on a
-  random loopback port, accepting only Avi Brain's per-boot secret and no browser `Origin`; `defaultTools: false`
+  random loopback port, accepting only Nex Brain's per-boot secret and no browser `Origin`; `defaultTools: false`
   so a session has only its profile's tools; `modelContextWindowTokens` always given (no AI Gateway lookup); its
   store `.eve/` made 0700. Pinned to `eve@0.75.1`: a session can only resume on the eve version that started it.
 

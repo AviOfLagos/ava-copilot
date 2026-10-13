@@ -4,7 +4,7 @@ import { brainSettingsStore, brainStatusStore } from './state';
 import type { BrainStatus } from './state';
 
 /**
- * Asks Avi Brain how it is and keeps the answer for the shell and Settings. Never throws: a companion
+ * Asks Nex Brain how it is and keeps the answer for the shell and Settings. Never throws: a companion
  * that is not running is a status ("offline"), not an error; one that no longer knows this browser
  * (its token was revoked on the Mac) unpairs it here too.
  */
@@ -21,7 +21,7 @@ export async function refreshStatus(
       return brainStatusStore.update({
         state: 'error',
         checkedAt: now(),
-        message: 'A different Avi Brain answers on this port. Pair again.',
+        message: 'A different Nex Brain answers on this port. Pair again.',
       });
     }
     const dockerProblem = health.docker.state !== 'up' || !health.docker.imageReady;
@@ -42,7 +42,7 @@ export async function refreshStatus(
       return brainStatusStore.update({
         state: 'unpaired',
         checkedAt: now(),
-        message: 'Avi Brain no longer knows this browser. Pair again.',
+        message: 'Nex Brain no longer knows this browser. Pair again.',
         docker: null,
         engine: null,
         mcp: [],

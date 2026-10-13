@@ -11,8 +11,8 @@ import narration from './narration.json';
 import narrationAudio from './narration-audio.json';
 
 /** The product's public name, in one place: a rename is this line. */
-export const PRODUCT = 'Avi Copilot';
-export const COMPANION = 'Avi Brain';
+export const PRODUCT = 'Nex Copilot';
+export const COMPANION = 'Nex Brain';
 /** The assistant's name, as the wake word says it. */
 export const ASSISTANT = 'Ava';
 
@@ -29,7 +29,7 @@ export const links = {
   install: '/install',
   privacy: '/privacy',
   installScript: INSTALL_SCRIPT_PATH,
-  releases: '/download/avi-copilot-latest.zip',
+  releases: '/download/nex-copilot-latest.zip',
   upstream: 'https://github.com/nanobrowser/nanobrowser',
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
 };
@@ -673,8 +673,8 @@ export const install = {
       id: 'windows',
       label: 'Windows',
       command: null,
-      badge: 'Script coming',
-      note: 'A PowerShell installer is on its way. Until then, install by hand: download the latest build, unzip it, and load the folder as below.',
+      badge: 'Sneak peek',
+      note: 'A PowerShell installer exists (install.ps1) but has not been run on a real Windows machine yet. Until it is verified, install by hand: download the latest build, unzip it, and load the folder as below.',
     },
   ],
   script: {
@@ -694,7 +694,7 @@ export const install = {
         steps: [
           'Open brave://extensions in the address bar.',
           'Switch on Developer mode, at the top right.',
-          'Click Load unpacked and choose the Avi Copilot folder.',
+          'Click Load unpacked and choose the Nex Copilot folder.',
           'Pin it from the puzzle-piece menu, then click its icon to open the panel.',
         ],
       },
@@ -704,7 +704,7 @@ export const install = {
         steps: [
           'Open chrome://extensions in the address bar.',
           'Switch on Developer mode, at the top right.',
-          'Click Load unpacked and choose the Avi Copilot folder.',
+          'Click Load unpacked and choose the Nex Copilot folder.',
           'Pin it from the puzzle-piece menu, then click its icon to open the panel.',
         ],
       },
@@ -714,7 +714,7 @@ export const install = {
         steps: [
           'Open edge://extensions in the address bar.',
           'Switch on Developer mode, in the left column.',
-          'Click Load unpacked and choose the Avi Copilot folder.',
+          'Click Load unpacked and choose the Nex Copilot folder.',
           'Show it in the toolbar from the extensions menu, then click its icon to open the panel.',
         ],
       },

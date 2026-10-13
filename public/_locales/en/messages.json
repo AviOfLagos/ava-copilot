@@ -5,7 +5,7 @@
   },
   "app_metadata_name": {
     "description": "Extension name",
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "errors_unknown": {
     "message": "Unknown error occurred"
@@ -38,7 +38,7 @@
     "message": "Back to chat"
   },
   "welcome_title": {
-    "message": "Welcome to Avi Copilot!"
+    "message": "Welcome to Nex Copilot!"
   },
   "welcome_instruction": {
     "message": "To get started, add your Gemini API key in the settings page."
@@ -167,7 +167,7 @@
     "message": "Enable Voice Input"
   },
   "permissions_microphone_description": {
-    "message": "Avi Copilot needs microphone access to convert your speech to text."
+    "message": "Nex Copilot needs microphone access to convert your speech to text."
   },
   "permissions_microphone_grantButton": {
     "message": "Grant Microphone Permission"
@@ -1204,7 +1204,7 @@
     "message": "A meeting is already being recorded. Stop it first."
   },
   "meeting_needsInvoke": {
-    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Avi Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Nex Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
   },
   "meeting_untitled": {
     "message": "Meeting"
@@ -1315,7 +1315,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Avi Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -1786,7 +1786,7 @@
     "message": "What should I take off your plate?"
   },
   "home_orb": {
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "home_suggestions": {
     "message": "Suggestions for this page"
@@ -2608,7 +2608,7 @@
     "message": "Connect your Obsidian vault"
   },
   "vault_connect_hint": {
-    "message": "Your memory is written into an “Avi Copilot” folder in it, linked for Obsidian’s graph, and your own notes join the knowledge base. Nothing leaves this computer."
+    "message": "Your memory is written into an “Nex Copilot” folder in it, linked for Obsidian’s graph, and your own notes join the knowledge base. Nothing leaves this computer."
   },
   "vault_connect": {
     "message": "Choose vault"
@@ -2632,7 +2632,7 @@
     "message": "Read my notes into memory"
   },
   "vault_readNotes_hint": {
-    "message": "Notes outside the Avi Copilot folder. A note’s top folder or a “workspace:” line puts it in a workspace."
+    "message": "Notes outside the Nex Copilot folder. A note’s top folder or a “workspace:” line puts it in a workspace."
   },
   "vault_disconnect": {
     "message": "Disconnect vault"
@@ -3654,7 +3654,7 @@
     "message": "no"
   },
   "flow_page_title": {
-    "message": "Workflows · Avi Copilot"
+    "message": "Workflows · Nex Copilot"
   },
   "shell_profile_open": {
     "message": "Account menu"
@@ -4439,7 +4439,7 @@
     "message": "Coming soon"
   },
   "conn_mac_hint": {
-    "message": "Local MCP servers and command-line tools will run through Avi Brain on your Mac, in its sandbox."
+    "message": "Local MCP servers and command-line tools will run through Nex Brain on your Mac, in its sandbox."
   },
   "conn_add_titleNamed": {
     "message": "Add $1"
@@ -5098,7 +5098,7 @@
     "message": "Installed"
   },
   "brain_settings_title": {
-    "message": "Avi Brain (Mac)"
+    "message": "Nex Brain (Mac)"
   },
   "brain_state_unpaired": {
     "message": "Not paired"

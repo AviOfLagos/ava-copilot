@@ -24,7 +24,7 @@ const turn = (changes: Partial<EconomyTurnRequest> = {}): EconomyTurnRequest => 
   type: 'voice_engine_turn',
   heard: 'what is going on',
   history: [],
-  instructions: 'You are Avi Copilot.',
+  instructions: 'You are Nex Copilot.',
   tools: TOOLS,
   ...changes,
 });
@@ -77,7 +77,7 @@ describe('runEconomyTurn', () => {
     expect(runTool).toHaveBeenCalledWith('run_browser_task', { task: 'open the inbox' }, 'open my inbox');
     const system = JSON.stringify(model.doGenerateCalls[0].prompt[0]);
     expect(system).toContain('read aloud by a small voice');
-    expect(system).toContain('You are Avi Copilot.');
+    expect(system).toContain('You are Nex Copilot.');
   });
 
   it('stops at end_conversation and says nothing more', async () => {

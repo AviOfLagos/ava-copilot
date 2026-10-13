@@ -6,12 +6,12 @@ import { privateDir } from '../config';
 import { AppError } from '../errors';
 
 /**
- * Pairing: `avi-brain pair` prints a one-time code (8 characters, 10 minutes, 5 tries); the extension
+ * Pairing: `nex-brain pair` prints a one-time code (8 characters, 10 minutes, 5 tries); the extension
  * trades it once for a long-lived token, which it keeps in its vault. The Mac keeps only the token's
  * hash. Pairing again replaces the token, so a lost browser profile is cut off by pairing anew.
  *
  * The code and the token live in two files only this user can read; the server reads them on each
- * request, so `avi-brain pair` in a terminal and the running server never need to talk to each other.
+ * request, so `nex-brain pair` in a terminal and the running server never need to talk to each other.
  */
 
 export const CODE_TTL_MS = 10 * 60_000;
@@ -98,7 +98,7 @@ export class PairingStore {
     const pending = await readJson<PendingCode>(this.codePath);
     if (!pending || pending.expiresAt < this.now()) {
       if (pending) await rm(this.codePath, { force: true });
-      throw new AppError('forbidden', 'No pairing code is waiting. Run `avi-brain pair` on your Mac for a new one.');
+      throw new AppError('forbidden', 'No pairing code is waiting. Run `nex-brain pair` on your Mac for a new one.');
     }
     const code = normalizePairingCode(input);
     if (!code || !sameSecret(code, pending.hash)) {
@@ -108,7 +108,7 @@ export class PairingStore {
       throw new AppError(
         'forbidden',
         attempts >= MAX_CODE_ATTEMPTS
-          ? 'That code is no longer valid after too many tries. Run `avi-brain pair` for a new one.'
+          ? 'That code is no longer valid after too many tries. Run `nex-brain pair` for a new one.'
           : 'That code is not right. Check it and try again.',
       );
     }

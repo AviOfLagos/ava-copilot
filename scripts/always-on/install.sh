@@ -1,5 +1,5 @@
 #!/bin/sh
-# Keeps Brave, and with it Avi Copilot and "Hey Ava", running: opens Brave at login, and every hour
+# Keeps Brave, and with it Nex Copilot and "Hey Ava", running: opens Brave at login, and every hour
 # opens it again if it was closed or crashed. Brave already running is left alone.
 # Undo with scripts/always-on/uninstall.sh.
 set -eu

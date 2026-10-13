@@ -2,9 +2,9 @@
 
 This file provides guidance to AI coding assistants (e.g., Claude Code, GitHub Copilot, Cursor) when working with this repository.
 
-## This is a fork: Avi Copilot
+## This is a fork: Nex Copilot
 
-This repository is **Avi Copilot**, a fork of Nanobrowser at tag `v0.2.0` (remote `upstream`). The sections below are
+This repository is **Nex Copilot**, a fork of Nanobrowser at tag `v0.2.0` (remote `upstream`). The sections below are
 upstream's guidance and still describe the code accurately. Where they conflict with this section, this section wins.
 
 - What is being built: `docs/spec.md`. Build order, decisions and progress: `docs/task.md`.
@@ -49,7 +49,7 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Wave 2 areas: workflows `src/background/workflows` (engine, `spec.ts`, authoring), agents `src/background/agents`,
   connectors (remote MCP) `src/background/integrations`, Inbox `src/background/inbox`, models and usage
   `src/background/models`, local voice engines `src/background/voice/engines` + `src/offscreen/{stt,tts-local}`,
-  and the Mac companion "Avi Brain" in `companion/` (own package; `cd companion && pnpm test`) with its client in
+  and the Mac companion "Nex Brain" in `companion/` (own package; `cd companion && pnpm test`) with its client in
   `src/background/companion`. Chats an agent or a routine started (`origin` 'agent' | 'workflow') always ask before
   committing, and the Inbox points the user to the waiting chat.
 

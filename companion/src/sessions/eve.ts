@@ -14,10 +14,10 @@ import { hostToolEnv } from '../sandbox/process';
 import { mapEveEvent, ndjson } from './events';
 
 /**
- * Agent sessions run by Vercel eve (see SPIKE.md). Avi Brain starts `eve start` on a random loopback
+ * Agent sessions run by Vercel eve (see SPIKE.md). Nex Brain starts `eve start` on a random loopback
  * port and is the only one who talks to it:
  * - eve's routes accept only a per-boot secret (agent/channels/eve.ts), and no browser Origin;
- * - the agent asks Avi Brain's internal API for its profile, model and tools (agent/lib/avi-brain.ts), so
+ * - the agent asks Nex Brain's internal API for its profile, model and tools (agent/lib/avi-brain.ts), so
  *   keys never enter eve's durable store;
  * - telemetry is off for every eve command; eve's store is made private (0700).
  * The extension never sees eve: it speaks the protocol, and this class translates.

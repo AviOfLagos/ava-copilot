@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { callAviBrain, loadProfile, profileIdOf } from '../lib/avi-brain';
 
 /**
- * The session's tools: exactly the ones its profile lists. Each forwards to Avi Brain, which checks its
+ * The session's tools: exactly the ones its profile lists. Each forwards to Nex Brain, which checks its
  * rules again. Calls that post or send outside the sandbox (gh_write, mcp_call, and commands when the
- * sandbox has network) wait for the user's approval, which Avi Copilot shows in its Inbox.
+ * sandbox has network) wait for the user's approval, which Nex Copilot shows in its Inbox.
  */
 export default defineDynamic({
   events: {

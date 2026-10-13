@@ -6,11 +6,11 @@ import type { CompanionClient } from './client';
 import { NOT_RUNNING_MESSAGE } from './client';
 
 /**
- * `step.sandbox` for routines run by the extension: the command runs in Avi Brain's Docker sandbox on
+ * `step.sandbox` for routines run by the extension: the command runs in Nex Brain's Docker sandbox on
  * the Mac (the agent's, or the one shared by routines). The engine already waited for the user's click
  * (it is a side effect), and never repeats it.
  *
- * Before sending, Avi Brain is asked whether it is there: if not, the command certainly did not run and
+ * Before sending, Nex Brain is asked whether it is there: if not, the command certainly did not run and
  * the step fails plainly. Once sent, a dropped connection means it may have run (unknown outcome). The
  * request id is the run and step, so a repeat reaching the Mac gets the first answer instead of running
  * the command again.

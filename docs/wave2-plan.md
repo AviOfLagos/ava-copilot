@@ -1,8 +1,8 @@
-# Avi Copilot — Wave 2 plan: agents, workflows, integrations, inbox, voice, new shell
+# Nex Copilot — Wave 2 plan: agents, workflows, integrations, inbox, voice, new shell
 
 ## Context
 
-Avi Copilot is a strong single-agent browser copilot today: chat agent behind a confirm gate, threads, meetings,
+Nex Copilot is a strong single-agent browser copilot today: chat agent behind a confirm gate, threads, meetings,
 voice + "Hey Ava", knowledge base + graph, workspaces, Obsidian, morning brief. Avi wants an operating layer on top:
 many agents working for him, routines that run on their own and show how they are wired, tools plugged in from
 anywhere (MCP, CLIs), an inbox where agents leave what needs him, answers he can hear, cheap or free voice, and a shell
@@ -88,7 +88,7 @@ OpenRouter, NVIDIA, the big providers) is discovered and used.
             │        inbox · run log · usage per agent/workflow         │
             └───────────────┬──────────────────────────────────────────┘
                             │ http://127.0.0.1 (pairing token + origin)
-            ┌───────────────▼──────── Mac: "Avi Brain" companion ───────┐
+            ┌───────────────▼──────── Mac: "Nex Brain" companion ───────┐
             │ agent sessions · Docker sandbox per agent · CLIs · stdio   │
             │ MCP · runs workflows with Brave closed · builds artifacts  │
             │ "Avi Studio": local pages opened in a tab for whatever the │
@@ -97,7 +97,7 @@ OpenRouter, NVIDIA, the big providers) is discovered and used.
 ```
 
 - The extension works with no companion: workflows, agents, MCP over HTTP, inbox, voice, graph all run in the browser.
-  The companion adds what a browser cannot do and degrades to "start Avi Brain" when it is not running.
+  The companion adds what a browser cannot do and degrades to "start Nex Brain" when it is not running.
 - **Agent** = profile (instructions, skills, allowed connectors/tools/domains, model role, workspace, triggers,
   budget). Browser work runs through ThreadManager in a **separate, unfocused agent window** (never Avi's tab, one run
   slot always kept for Avi); sandbox/CLI work goes to the companion. One abstraction, two executors.
@@ -191,7 +191,7 @@ release-age rule applies), so no stream touches `package.json` or the lockfile.
 | **WS5c Inbox & sources** | `background/inbox/*`, `storage/lib/inbox/*`, `side-panel/inbox/*` | B | 2.5 |
 | **WS5b Agents & run log** | `background/agents/*`, `storage/lib/agents/*`, `side-panel/agents/*` | B | 2 |
 | **WS8 Voice engines** | `offscreen/{stt,tts-local}/*`, `background/voice/engines/*`, `scripts/voice-models-setup.mjs` | B | 2.5 |
-| **WS7 Avi Brain** (after spike) | `companion/**`, `src/background/companion/*` | B | 4 |
+| **WS7 Nex Brain** (after spike) | `companion/**`, `src/background/companion/*` | B | 4 |
 | Integration by lead | merges, seams, full E2E | — | 2.5 |
 
 Effort is relative (WS6 = 1); total ≈ 28.
@@ -268,7 +268,7 @@ tokens, cost, errors, retries); voice tools for inbox, workflows and agents.
   demand in the offscreen document; nothing leaves the Mac.
 - `end_conversation` voice tool (free, never gated) and idle end for every conversation.
 
-**WS7 Avi Brain** — starts with a **one-day spike** with exit criteria: Eve model config per session (only
+**WS7 Nex Brain** — starts with a **one-day spike** with exit criteria: Eve model config per session (only
 `defineDynamic` / the `step.started` hook can return a live model such as Ollama or NVIDIA), per-session
 instructions and tool allowlists via `clientContext`, sandbox isolation per session, runtime-created schedules,
 `inputResponses` approvals → Inbox, fail-closed `AuthFn` bound to 127.0.0.1, stream resume, Docker/OrbStack egress

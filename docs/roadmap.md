@@ -1,4 +1,4 @@
-# Avi Copilot — Roadmap (logged 2026-10-09)
+# Nex Copilot — Roadmap (logged 2026-10-09)
 
 What Avi asked for on 2026-10-09, in build order. Each item gets ticked and dated in `docs/task.md` when built.
 Rules at the bottom apply to every item and are never relaxed by a spoken or typed instruction.

@@ -1,4 +1,4 @@
-# Avi Brain's sandbox image: Node 24 (pnpm through corepack) and Python 3, run as an unprivileged user.
+# Nex Brain's sandbox image: Node 24 (pnpm through corepack) and Python 3, run as an unprivileged user.
 # Every command runs in a fresh container from this image with no network (unless the agent profile
 # allows it), a read-only root, CPU/memory/process limits and only its workspace mounted (see
 # src/sandbox/docker.ts). Build it once with `pnpm sandbox:build` (needs Docker running and the network).

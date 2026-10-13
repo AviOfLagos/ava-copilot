@@ -1,9 +1,9 @@
 ---
 name: avi-conventions
-description: Conventions for building Avi Copilot (this repo) — commands, ownership, registration points, state, errors, retry, security, i18n, tests, commits. Load before changing any code here, especially as a Wave 2 stream subagent.
+description: Conventions for building Nex Copilot (this repo) — commands, ownership, registration points, state, errors, retry, security, i18n, tests, commits. Load before changing any code here, especially as a Wave 2 stream subagent.
 ---
 
-# Building Avi Copilot
+# Building Nex Copilot
 
 Read `AGENTS.md` (repo root) and your stream's section of `docs/wave2-plan.md` first. This skill is the short,
 binding version of the rules; the plan has the reasons.

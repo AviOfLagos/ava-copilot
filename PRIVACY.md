@@ -1,6 +1,6 @@
 # Privacy
 
-Avi Copilot is a fork of [Nanobrowser](https://github.com/nanobrowser/nanobrowser). It has no server, no account and
+Nex Copilot is a fork of [Nanobrowser](https://github.com/nanobrowser/nanobrowser). It has no server, no account and
 no analytics. The full, current page is the site's `/privacy` (source: `site/src/content/site.ts`).
 
 - **Stays in your browser.** Chats, meeting notes and transcripts, memory, routines, agents, the Inbox and settings

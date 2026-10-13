@@ -3,7 +3,7 @@ import type { Workspace } from '@extension/storage';
 import { EXPORT_ROOT, readFrontmatter, vaultNotes } from './markdown';
 
 /**
- * The Obsidian vault the user connected: the copilot's memory is written into its `Avi Copilot`
+ * The Obsidian vault the user connected: the copilot's memory is written into its `Nex Copilot`
  * folder, and the user's own notes are read into the knowledge base. Runs in an extension page,
  * which holds the folder the user picked; Brave may ask again for access after a restart.
  */

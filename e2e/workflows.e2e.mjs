@@ -15,7 +15,7 @@ import { launchExtension, openSession, sleep } from './harness.mjs';
  * and passes everything else to mock-llm.mjs. A test-only setting points the routine's real addresses at it.
  */
 
-const AUTHORING_MARKER = 'You design routines (workflows) for Avi Copilot';
+const AUTHORING_MARKER = 'You design routines (workflows) for Nex Copilot';
 const SUMMARY_MARKER = "You are one step of the user's routine";
 const REQUEST =
   'Every morning at 7:30 check Hacker News and Hugging Face for the latest and put the best in my morning brief';

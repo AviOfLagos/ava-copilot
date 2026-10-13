@@ -1,20 +1,21 @@
 {
-  "name": "avi-brain",
+  "name": "nex-brain",
   "version": "0.1.0",
   "private": true,
-  "description": "Avi Brain: Avi Copilot's companion on the Mac (sandboxed code, CLIs, stdio MCP, routines with the browser closed, artifacts).",
+  "description": "Nex Brain: Nex Copilot's companion on the Mac (sandboxed code, CLIs, stdio MCP, routines with the browser closed, artifacts).",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "avi-brain": "dist/avi-brain.mjs"
+    "nex-brain": "dist/nex-brain.mjs",
+    "avi-brain": "dist/nex-brain.mjs"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:agent": "EVE_TELEMETRY_DISABLED=1 eve build --skip-sandbox-prewarm",
-    "start": "node dist/avi-brain.mjs start",
-    "pair": "node dist/avi-brain.mjs pair",
-    "status": "node dist/avi-brain.mjs status",
-    "sandbox:build": "node dist/avi-brain.mjs sandbox-build",
+    "start": "node dist/nex-brain.mjs start",
+    "pair": "node dist/nex-brain.mjs pair",
+    "status": "node dist/nex-brain.mjs status",
+    "sandbox:build": "node dist/nex-brain.mjs sandbox-build",
     "test": "vitest run",
     "test:eve": "node scripts/build.mjs && EVE_TELEMETRY_DISABLED=1 eve build --skip-sandbox-prewarm && node scripts/smoke-eve.mjs",
     "type-check": "tsc --noEmit -p tsconfig.json"
