@@ -32,7 +32,7 @@ Every script sets `ASTRO_TELEMETRY_DISABLED=1` (so does `astro.config.mjs`): Ast
 ## `SITE_URL`
 
 One variable sets the canonicals, the sitemap, `robots.txt`, `llms.txt`, the OG image URLs and the host in the
-install command. Default `https://nex-copilot.vercel.app`.
+install command. Default `https://nex-copilot-one.vercel.app`.
 
 ```bash
 SITE_URL=https://avicopilot.example pnpm build

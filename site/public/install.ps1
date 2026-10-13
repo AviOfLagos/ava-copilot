@@ -38,7 +38,7 @@
   Don't ask for confirmation (used by -Uninstall).
 
 .EXAMPLE
-  irm https://nex-copilot.vercel.app/install.ps1 | iex
+  irm https://nex-copilot-one.vercel.app/install.ps1 | iex
 
 .EXAMPLE
   .\install.ps1 -Dir C:\Users\me\NexCopilot -Browser edge
@@ -62,7 +62,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $BaseUrl = if ($env:NEX_COPILOT_BASE_URL) { $env:NEX_COPILOT_BASE_URL.TrimEnd('/') }
   elseif ($env:AVI_COPILOT_BASE_URL) { $env:AVI_COPILOT_BASE_URL.TrimEnd('/') }
-  else { 'https://nex-copilot.vercel.app' }
+  else { 'https://nex-copilot-one.vercel.app' }
 
 function Write-Info($Message) { Write-Host $Message }
 function Write-Ok($Message) { Write-Host "OK $Message" -ForegroundColor Green }

@@ -9,7 +9,7 @@ import { appI18n } from './scripts/app-i18n.mjs';
 process.env.ASTRO_TELEMETRY_DISABLED = '1';
 
 // One variable sets canonicals, the sitemap, OG image URLs and the host in the install command.
-const SITE_URL = (process.env.SITE_URL || 'https://nex-copilot.vercel.app').replace(/\/+$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://nex-copilot-one.vercel.app').replace(/\/+$/, '');
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const siteRoot = fileURLToPath(new URL('.', import.meta.url));

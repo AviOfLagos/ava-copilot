@@ -1021,7 +1021,7 @@ mixed up on the shared reply queue.
   Verified end to end against a local `python3 -m http.server`: install, update (same folder, marker
   recognized), uninstall, and an old-marker folder correctly recognized and updated in place.
 - `SITE_URL` default (site/astro.config.mjs) and `site/src/content/site.ts`'s `links.releases` now point at
-  `https://nex-copilot.vercel.app`.
+  `https://nex-copilot-one.vercel.app`.
 - Narration audio: checked `site/src/content/narration.json` for "Avi" (case-insensitive, excluding "Ava", the
   in-app assistant's own name, which is untouched) — no hits, so no clip needed re-recording.
 - Kept unchanged, as internal identifiers that would lose data or break pairing/updates if renamed: IndexedDB

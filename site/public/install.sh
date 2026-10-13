@@ -7,8 +7,8 @@
 # page, because Chrome does not watch an unpacked folder for changes).
 #
 # Usage:
-#   curl -fsSL https://nex-copilot.vercel.app/install.sh | bash
-#   curl -fsSL https://nex-copilot.vercel.app/install.sh | sh
+#   curl -fsSL https://nex-copilot-one.vercel.app/install.sh | bash
+#   curl -fsSL https://nex-copilot-one.vercel.app/install.sh | sh
 #   sh install.sh [options]
 #
 # Options:
@@ -38,7 +38,7 @@ set -eu
 # `curl | sh` is cut off mid-download, the shell has a truncated *function body* with no closing
 # brace — a syntax error — and runs nothing, rather than executing whatever partial script it got.
 main() {
-  BASE_URL="${NEX_COPILOT_BASE_URL:-${AVI_COPILOT_BASE_URL:-https://nex-copilot.vercel.app}}"
+  BASE_URL="${NEX_COPILOT_BASE_URL:-${AVI_COPILOT_BASE_URL:-https://nex-copilot-one.vercel.app}}"
   BASE_URL="${BASE_URL%/}"
   TARGET_DIR=""
   BROWSER_CHOICE=""
@@ -211,8 +211,8 @@ usage() {
 Nex Copilot installer for macOS and Linux.
 
 Usage:
-  curl -fsSL https://nex-copilot.vercel.app/install.sh | bash
-  curl -fsSL https://nex-copilot.vercel.app/install.sh | sh
+  curl -fsSL https://nex-copilot-one.vercel.app/install.sh | bash
+  curl -fsSL https://nex-copilot-one.vercel.app/install.sh | sh
   sh install.sh [options]
 
 Options:
