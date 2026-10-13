@@ -14,7 +14,7 @@ import { launchExtension, openSession, sleep } from './harness.mjs';
  * by its instructions) and passes everything else to mock-llm.mjs.
  */
 
-const AUTHORING_MARKER = 'You design agents for Avi Copilot';
+const AUTHORING_MARKER = 'You design agents for Nex Copilot';
 const REQUEST = 'Make an agent that fills in the quote form on the fixture page when I open it with watch';
 const AGENT_NAME = 'Fixture scout';
 

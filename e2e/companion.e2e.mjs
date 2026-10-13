@@ -1,4 +1,4 @@
-// Avi Brain, the companion on the Mac, against a mock that speaks the real protocol: pairing from
+// Nex Brain, the companion on the Mac, against a mock that speaks the real protocol: pairing from
 // Settings, its status, a routine's step.sandbox run on the Mac, and an artifact in an Avi Studio tab that
 // cannot load a remote image. Needs `import './companion/register';` in src/side-panel/registers.ts.
 import assert from 'node:assert/strict';
@@ -8,7 +8,7 @@ import { startMockCompanion } from './mock-companion.mjs';
 import { startMockLlm } from './mock-llm.mjs';
 
 const EXTENSION_ORIGIN = 'chrome-extension://fckijnclcihjnokahdnbogpbeiimfdio';
-const SECTION = 'section[aria-label="Avi Brain (Mac)"]';
+const SECTION = 'section[aria-label="Nex Brain (Mac)"]';
 
 let mock;
 let companion;
@@ -99,7 +99,7 @@ function type(page, label, value) {
 const sectionText = () =>
   session.panel.evaluate(selector => document.querySelector(selector)?.innerText ?? '', SECTION);
 
-test('pairs with Avi Brain from Settings and shows it connected', async () => {
+test('pairs with Nex Brain from Settings and shows it connected', async () => {
   assert.equal(extension.origin, EXTENSION_ORIGIN, 'the extension ID is pinned, so the companion knows its origin');
   const { panel } = session;
   await panel.bringToFront();

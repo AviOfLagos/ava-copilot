@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Extension description",
-    "message": "使用 AI 自動化網頁任務！Avi Copilot 是一款開放原始碼的瀏覽器擴充功能，能協助您擷取資料、填寫表單等。"
+    "message": "使用 AI 自動化網頁任務！Nex Copilot 是一款開放原始碼的瀏覽器擴充功能，能協助您擷取資料、填寫表單等。"
   },
   "app_metadata_name": {
     "description": "Extension name",
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "errors_unknown": {
     "message": "發生未知錯誤"
@@ -38,7 +38,7 @@
     "message": "回到對話"
   },
   "welcome_title": {
-    "message": "歡迎使用 Avi Copilot！"
+    "message": "歡迎使用 Nex Copilot！"
   },
   "welcome_instruction": {
     "message": "開始使用前，請先完成 API 金鑰的設定。"
@@ -167,7 +167,7 @@
     "message": "啟用語音輸入"
   },
   "permissions_microphone_description": {
-    "message": "Avi Copilot 需要麥克風存取權限，才能將語音轉換為文字。"
+    "message": "Nex Copilot 需要麥克風存取權限，才能將語音轉換為文字。"
   },
   "permissions_microphone_grantButton": {
     "message": "授予麥克風權限"
@@ -1204,7 +1204,7 @@
     "message": "A meeting is already being recorded. Stop it first."
   },
   "meeting_needsInvoke": {
-    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Avi Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Nex Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
   },
   "meeting_untitled": {
     "message": "Meeting"
@@ -1315,7 +1315,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Avi Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -1786,7 +1786,7 @@
     "message": "What should I take off your plate?"
   },
   "home_orb": {
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "home_suggestions": {
     "message": "Suggestions for this page"
@@ -2608,7 +2608,7 @@
     "message": "連接你的 Obsidian 保管庫"
   },
   "vault_connect_hint": {
-    "message": "你的記憶會寫入其中的「Avi Copilot」資料夾並建立 Obsidian 連結，你自己的筆記也會加入知識庫。資料不會離開這台電腦。"
+    "message": "你的記憶會寫入其中的「Nex Copilot」資料夾並建立 Obsidian 連結，你自己的筆記也會加入知識庫。資料不會離開這台電腦。"
   },
   "vault_connect": {
     "message": "選擇保管庫"
@@ -2632,7 +2632,7 @@
     "message": "將我的筆記讀入記憶"
   },
   "vault_readNotes_hint": {
-    "message": "Avi Copilot 資料夾以外的筆記。最上層資料夾或「workspace:」行決定其工作區。"
+    "message": "Nex Copilot 資料夾以外的筆記。最上層資料夾或「workspace:」行決定其工作區。"
   },
   "vault_disconnect": {
     "message": "中斷連接保管庫"
@@ -3654,7 +3654,7 @@
     "message": "否"
   },
   "flow_page_title": {
-    "message": "工作流程 · Avi Copilot"
+    "message": "工作流程 · Nex Copilot"
   },
   "shell_profile_open": {
     "message": "帳戶選單"
@@ -4439,7 +4439,7 @@
     "message": "即將推出"
   },
   "conn_mac_hint": {
-    "message": "本機 MCP 伺服器與命令列工具將透過你 Mac 上的 Avi Brain，在其沙箱中執行。"
+    "message": "本機 MCP 伺服器與命令列工具將透過你 Mac 上的 Nex Brain，在其沙箱中執行。"
   },
   "conn_add_titleNamed": {
     "message": "新增 $1"
@@ -5098,7 +5098,7 @@
     "message": "已安裝"
   },
   "brain_settings_title": {
-    "message": "Avi Brain（Mac）"
+    "message": "Nex Brain（Mac）"
   },
   "brain_state_unpaired": {
     "message": "尚未配對"

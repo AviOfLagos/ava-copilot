@@ -4,7 +4,7 @@ import { COMPANION_DEFAULT_PORT } from '@src/shared/lib/protocol/companion';
 import type { DockerState, McpServerState } from '@src/shared/lib/protocol/companion';
 
 /**
- * What the extension knows about Avi Brain, for the background and the panel: where it listens, whether
+ * What the extension knows about Nex Brain, for the background and the panel: where it listens, whether
  * this browser is paired, and how it was last time it was asked. Nothing secret: the token lives in the
  * vault (src/storage/lib/secrets) under BRAIN_TOKEN_REF, and only the background reads it.
  */
@@ -31,7 +31,7 @@ export type BrainState = 'unpaired' | 'online' | 'offline' | 'error';
 export interface BrainStatus {
   state: BrainState;
   checkedAt: number | null;
-  // A plain sentence when something needs the user (start Avi Brain, start Docker, pair again)
+  // A plain sentence when something needs the user (start Nex Brain, start Docker, pair again)
   message: string | null;
   version: string | null;
   docker: DockerState | null;

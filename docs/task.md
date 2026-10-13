@@ -1,4 +1,4 @@
-# Avi Copilot — Build Plan
+# Nex Copilot — Build Plan
 
 Companion to [spec.md](spec.md). Written 2026-10-02 after reading the spec and the Nanobrowser source at tag `v0.2.0` (released the same day).
 
@@ -57,7 +57,7 @@ Each one ends in something usable. Sizes are relative: S, M, L.
 
 ### M0 — Fork and strip (S) — done 2026-10-02
 
-- [x] Clone `v0.2.0`, rename to Avi Copilot, build
+- [x] Clone `v0.2.0`, rename to Nex Copilot, build
 - [x] Remove PostHog and the analytics service
 - [x] Gemini as the default provider: saving a Gemini key assigns `gemini-3.1-pro-preview` to the planner and `gemini-3.8-flash` to the navigator, for any agent that has no model yet
 - [x] Ollama path confirmed: upstream already supports it through its OpenAI-compatible endpoint
@@ -328,7 +328,7 @@ in order in [roadmap.md](roadmap.md), with the rules that never bend.
 
 - **Obsidian (built 2026-10-11)**: `src/side-panel/vault` (Settings › Obsidian). The user picks the vault folder (File
   System Access; the handle is kept in IndexedDB `avi-vault`; Brave may ask again after a restart). Sync runs in the
-  panel on opening and every 10 minutes: the knowledge base and graph are written into `Avi Copilot/<workspace>/`
+  panel on opening and every 10 minutes: the knowledge base and graph are written into `Nex Copilot/<workspace>/`
   (Chats, Meetings, Pages, Notes, People, Projects, Organizations) as notes with full-path `[[links]]` and a
   `source: avi-copilot` line; only changed files are written, a file without that line is never overwritten or removed.
   The user's own notes outside that folder join the knowledge base as `note` items with source id `vault:<path>` (top
@@ -702,7 +702,7 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS4. Remote MCP servers become tools the
   disabled "Mac companion" entry. A connector's page: status, workspace chips, sign in / reconnect / replace token,
   on/off, Check tools, each tool with its badges, arguments, choice and drift warning.
 - **Companion**: `companion.ts` defines `CompanionToolBridge` (`available`, `listTools`, `callTool`) and
-  `registerCompanionToolBridge` for WS7; connectors of kind `mcp_stdio` / `cli` say they need Avi Brain until then.
+  `registerCompanionToolBridge` for WS7; connectors of kind `mcp_stdio` / `cli` say they need Nex Brain until then.
 - Tests: 69 unit tests (fingerprints and drift, policy, schema checks, OAuth begin/finish/PKCE with a mocked
   `launchWebAuthFlow`, state/issuer/redirect checks, sign-in addresses that must be https, single-flight renewal,
   the catalogue's lines, result formatting, the service against the SDK's own server
@@ -839,7 +839,7 @@ runs; nothing but text ever leaves the computer in economy mode.
   in `TtsEngineId`, `speak.ts` `engineFor`/`stopSpeaking` and Voice output's engine list; `end_conversation` added to
   the tool list `e2e/voice.e2e.mjs` asserts.
 
-### Wave 2 — WS7 Avi Brain, the Mac companion (built 2026-10-12)
+### Wave 2 — WS7 Nex Brain, the Mac companion (built 2026-10-12)
 
 Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../companion/README.md); spike:
 [companion/SPIKE.md](../companion/SPIKE.md).
@@ -861,7 +861,7 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   only with the click and a secret scan, nothing that writes code; stdio MCP from `mcp.json` with tool fingerprints;
   routines on the Mac with the extension's own engine compiled in; artifacts frozen and served with
   `CSP: sandbox allow-scripts`, no network, through a one-time token in the Studio URL's fragment; eve started on a
-  random loopback port with a per-boot secret, its agent resolving model/instructions/tools from Avi Brain;
+  random loopback port with a per-boot secret, its agent resolving model/instructions/tools from Nex Brain;
   `scripts/install-launchagent.sh`.
 - **Protocol** `src/shared/lib/protocol/companion.ts` (zod, Node-runnable): used by the extension, the companion and
   the E2E mock. **Found in Brave: the browser sends no `Origin` on an extension's GET** to a permitted host, so
@@ -871,7 +871,7 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   `brain-status` stores for the shell, commands `brain_status|set_port|pair|unpair|check|artifacts|open_artifact`,
   job `brain_health` (every 2 min while paired), `registerStepExecutor('step.sandbox')` (health first: "not running"
   never becomes an unknown outcome; request id = run + step), `companionToolSource()` for Connectors.
-  `src/side-panel/companion/`: Settings › Avi Brain (pair, status, Docker, engine, MCP, artifacts → Avi Studio).
+  `src/side-panel/companion/`: Settings › Nex Brain (pair, status, Docker, engine, MCP, artifacts → Avi Studio).
   `step.sandbox` taken out of `NOT_YET_AVAILABLE` in `spec.ts` (one line). Locale keys `brain_*` (25).
 - **Tests:** companion 60 unit + `pnpm test:eve` (13 checks, real eve, stdio MCP, approval relay, no secret on disk
   or in logs); extension 33 unit (protocol, client, executor, status); `e2e/companion.e2e.mjs` 3/3 in Brave (pair →
@@ -888,7 +888,7 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
 - **Merged** WS4 → WS5b → WS5c → WS8 → WS7 into `feat/restyle`, each with its wiring: connector tools in the
   agent's browser state (`connectorToolsSectionFor`) and in workflow authoring (`step.tool`, `step.sandbox`); a
   "Run a connector tool" kind on the confirm card; economy voice in `VoiceManager.start`, local voices in
-  read-aloud and Voice output; Avi Brain settings in the panel.
+  read-aloud and Voice output; Nex Brain settings in the panel.
 - **Seams closed:** a connector tool that asks first now waits for the click in agent and routine chats too (the
   Inbox points to the waiting chat), instead of being refused; an agent's chat is kept to the agent's sites from the
   first step (`allowListFor` in `threads/factory.ts`), with one site parser (`siteHost`) shared with the agent's own
@@ -900,8 +900,8 @@ Plan: [wave2-plan.md](wave2-plan.md) § WS7. Details: [companion/README.md](../c
   only to the address they checked (`companion/src/workflows/publicFetch.ts`, against DNS rebinding).
 - **Verified:** type-check, 1 052 unit tests, companion 65 tests, full E2E in Brave 87/87 (local voices included,
   with KittenTTS and Moonshine tiny installed by `scripts/voice-models-setup.mjs`).
-- **Not wired yet:** routines "run on the Mac" (sync with Avi Brain), Avi Brain's MCP tools as a connector
-  (`companionToolSource()`), agent sessions in Avi Brain's sandbox (`CompanionClient.createSession`), local
+- **Not wired yet:** routines "run on the Mac" (sync with Nex Brain), Nex Brain's MCP tools as a connector
+  (`companionToolSource()`), agent sessions in Nex Brain's sandbox (`CompanionClient.createSession`), local
   speech-to-text for the chat box's dictation, deep links from an Inbox item to one workflow run.
 
 ### Dictation you can see (2026-10-12)
@@ -1001,6 +1001,56 @@ mixed up on the shared reply queue.
   pre-existing warnings on lines not touched); in Brave — `models.e2e.mjs` 6/6 (incl. the new dropdown test),
   `shell.e2e.mjs` 3/3, `workflows.e2e.mjs` 2/2 (incl. New workflow), `agents.e2e.mjs` 2/2 (incl. New agent),
   `integrations.e2e.mjs` 11/11 (incl. Add connector).
+
+### Rename: Avi Copilot → Nex Copilot, Avi Brain → Nex Brain (2026-10-13)
+
+- Every user-visible string: manifest name/description (via `public/_locales/*`), all three locales, UI strings
+  in `src/`, `site/src/content/site.ts`'s `PRODUCT`/`COMPANION` constants (and the OG images, regenerated by
+  `pnpm build`), `site/public/install.sh` and `install.ps1`, `scripts/release.mjs`'s zip names, `companion/`'s
+  README/SPIKE/CLI, and doc titles (README, PRIVACY, NOTICE, CLAUDE.md, docs/, `.agents/skills/`).
+- `companion/` CLI: `nex-brain` is now primary (`bin.nex-brain` in `package.json`, built to
+  `dist/nex-brain.mjs`); `avi-brain` stays as an alias pointing at the same built file. Help text, pairing
+  prompts and error messages now say `nex-brain` / Nex Brain / Nex Copilot.
+- `install.sh`/`install.ps1`: `NEX_COPILOT_BASE_URL` is now the primary env var; the old `AVI_COPILOT_BASE_URL`
+  is still read as a fallback. The install-folder marker file is now `nex-copilot-install.txt`; the installer
+  still recognizes the old `avi-copilot-install.txt` on an existing install, so update/uninstall keep working
+  on a folder the old installer made. Default install folder is now "Nex Copilot" (macOS) / `nex-copilot`
+  (Linux) / "Nex Copilot" (Windows, `%LOCALAPPDATA%`) — an install made under the old default path is not
+  auto-discovered; the user would re-run with `--dir` pointing at the old location, or reinstall.
+  `scripts/release.mjs` now writes `nex-copilot-<version>.zip` / `nex-copilot-latest.zip`.
+  Verified end to end against a local `python3 -m http.server`: install, update (same folder, marker
+  recognized), uninstall, and an old-marker folder correctly recognized and updated in place.
+- `SITE_URL` default (site/astro.config.mjs) and `site/src/content/site.ts`'s `links.releases` now point at
+  `https://nex-copilot.vercel.app`.
+- Narration audio: checked `site/src/content/narration.json` for "Avi" (case-insensitive, excluding "Ava", the
+  in-app assistant's own name, which is untouched) — no hits, so no clip needed re-recording.
+- Kept unchanged, as internal identifiers that would lose data or break pairing/updates if renamed: IndexedDB
+  names (`avi-copilot`, `avi-secrets`, `avi-vault`), the vault's file marker `source: avi-copilot`
+  (`src/side-panel/vault/markdown.ts`'s `MARKER`, written into existing exported notes), `VITE_SEED_PROFILE=avi`,
+  the manifest `key`/extension ID, the companion's macOS `~/Library/Application Support/Avi Brain` data
+  directory and `~/Library/Logs/Avi Brain` (and the `com.avicopilot.brain` LaunchAgent label that points at
+  them), the companion's Keychain service name (`src/workflows/keys.ts`'s `SERVICE`), Docker image tag/labels
+  and container-name prefixes, the `AVI_BRAIN_*` env vars, and the companion's internal `avi-brain.ts` lib
+  filename/MCP-client/eve-channel identifiers. `EXPORT_ROOT` (the Obsidian folder name shown to the user) was
+  renamed to "Nex Copilot" since the locale text describing it changed too; `companion/spike/` (an unshipped
+  experiment) was left alone.
+- "Avi Studio" (the companion's artifacts viewer) is a separate feature name, not in scope for this rename, and
+  was left as is.
+- Site: audited every feature shown against `docs/task.md`'s "Not wired yet" list and `docs/distribution.md`.
+  Existing badges already matched reality (Local voices "Optional", Nex Brain "Optional · macOS · coming soon",
+  whose installer is genuinely not public yet). Fixed one stale badge: the Windows install tab said "Script
+  coming" even though `install.ps1` has existed for a while (just never run on a real Windows box per
+  `docs/distribution.md`) — changed to "Sneak peek" with a note explaining it is unverified.
+- Tests: root `pnpm type-check`, full `vitest run` (1069/1069), touched-file lint (0 errors, only pre-existing
+  warnings), `node scripts/check-locales.mjs` (3 locales, 1425 keys each), `pnpm build`; in Brave —
+  `shell.e2e.mjs` 3/3, `models.e2e.mjs` 6/6, `agents.e2e.mjs`+`kb.e2e.mjs`+`workflows.e2e.mjs` 11/11,
+  `meeting.e2e.mjs`+`companion.e2e.mjs` 9/9. Companion: `pnpm install --frozen-lockfile`, `pnpm test` (65/65),
+  `pnpm type-check`, `pnpm build` (produces `dist/nex-brain.mjs`), manual `node dist/nex-brain.mjs status`.
+  Site: `pnpm typecheck`, `pnpm build` (OG images regenerated), `scripts/verify.mjs` in Brave (no stop-ship
+  conditions; screenshots read).
+- `grep -rn "Avi Copilot\|Avi Brain"` (excluding `node_modules`, `.claude`, `companion/spike`) leaves only the
+  internal identifiers listed above, plus the `install.sh`/`install.ps1` comments naming the old env var and
+  marker for backward compatibility.
 
 ## 5. Risks, in order
 

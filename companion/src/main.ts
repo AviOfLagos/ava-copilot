@@ -6,15 +6,16 @@ import { probeDocker } from './sandbox/docker';
 import { hostToolEnv, runProcess } from './sandbox/process';
 
 /**
- * avi-brain start          serve on 127.0.0.1 (the LaunchAgent runs this)
- * avi-brain pair           print a one-time code to type into Avi Copilot › Settings › Avi Brain
- * avi-brain unpair         forget the paired browser
- * avi-brain status         pairing and Docker, in a few lines
- * avi-brain sandbox-build  build the sandbox image (needs Docker running and the network, once)
+ * nex-brain start          serve on 127.0.0.1 (the LaunchAgent runs this)
+ * nex-brain pair           print a one-time code to type into Nex Copilot › Settings › Nex Brain
+ * nex-brain unpair         forget the paired browser
+ * nex-brain status         pairing and Docker, in a few lines
+ * nex-brain sandbox-build  build the sandbox image (needs Docker running and the network, once)
+ * (the old `avi-brain` command still works as an alias)
  */
 
 async function main(): Promise<void> {
-  // Everything Avi Brain writes (its store, eve's store, artifacts) is readable by this user only
+  // Everything Nex Brain writes (its store, eve's store, artifacts) is readable by this user only
   process.umask(0o077);
   const config = loadConfig();
   const command = process.argv[2] ?? 'start';
@@ -26,7 +27,7 @@ async function main(): Promise<void> {
       const status = await brain.pairing.status();
       if (!status.paired) {
         process.stdout.write(
-          'Not paired yet. Run `avi-brain pair` in a terminal and type the code into Avi Copilot.\n',
+          'Not paired yet. Run `nex-brain pair` in a terminal and type the code into Nex Copilot.\n',
         );
       }
       const stop = async () => {
@@ -40,21 +41,21 @@ async function main(): Promise<void> {
     case 'pair': {
       const code = await new PairingStore(config.dataDir).createCode();
       process.stdout.write(
-        `\nAvi Brain pairing code:  ${code}\n\nType it into Avi Copilot › Settings › Avi Brain within 10 minutes (port ${config.port}).\n` +
+        `\nNex Brain pairing code:  ${code}\n\nType it into Nex Copilot › Settings › Nex Brain within 10 minutes (port ${config.port}).\n` +
           'It works once; pairing again replaces the browser paired before.\n\n',
       );
       return;
     }
     case 'unpair': {
       await new PairingStore(config.dataDir).revoke();
-      process.stdout.write('Avi Brain forgot the paired browser.\n');
+      process.stdout.write('Nex Brain forgot the paired browser.\n');
       return;
     }
     case 'status': {
       const pairing = await new PairingStore(config.dataDir).status();
       const docker = await probeDocker(runProcess, config.sandboxImage);
       process.stdout.write(
-        `Avi Brain ${config.version} on http://${config.host}:${config.port}\n` +
+        `Nex Brain ${config.version} on http://${config.host}:${config.port}\n` +
           `Paired: ${pairing.paired ? `yes (${pairing.client})` : 'no'}\n` +
           `Docker: ${docker.message}\nData: ${config.dataDir}\n`,
       );
@@ -87,6 +88,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-  process.stderr.write(`Avi Brain stopped: ${(error as Error).message}\n`);
+  process.stderr.write(`Nex Brain stopped: ${(error as Error).message}\n`);
   process.exit(1);
 });

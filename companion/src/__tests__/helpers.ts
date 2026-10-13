@@ -80,7 +80,7 @@ export function testConfig(dataDir: string): BrainConfig {
   };
 }
 
-/** A started Avi Brain on a free port, with stand-ins, and a fetch that speaks as the extension. */
+/** A started Nex Brain on a free port, with stand-ins, and a fetch that speaks as the extension. */
 export async function startTestBrain(deps: BrainDeps = {}) {
   const dir = tempDir();
   const log = memoryLogger();

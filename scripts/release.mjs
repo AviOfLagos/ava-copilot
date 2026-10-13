@@ -10,7 +10,7 @@
  *
  * Writes, next to this checkout (uncommitted — see the ignore rule added for this in .gitignore):
  *
- *   site/public/download/avi-copilot-<version>.zip   the built, unpacked extension, zipped
+ *   site/public/download/nex-copilot-<version>.zip   the built, unpacked extension, zipped
  *   site/public/download/latest.json                 version, file, sha256, size, date, min browsers
  *   site/public/download/wake-word-setup.mjs          copies of the two setup scripts (with their own
  *   site/public/download/voice-models-setup.mjs       pinned sources' SHA-256s unchanged), so
@@ -102,7 +102,7 @@ async function main() {
   }
 
   const sha = git(['rev-parse', 'HEAD']);
-  const worktree = fs.mkdtempSync(path.join(os.tmpdir(), 'avi-copilot-release-'));
+  const worktree = fs.mkdtempSync(path.join(os.tmpdir(), 'nex-copilot-release-'));
   fs.rmdirSync(worktree); // `git worktree add` creates the directory itself
 
   console.log(`Building ${sha.slice(0, 12)} in a clean worktree (no git-ignored files): ${worktree}`);
@@ -130,9 +130,9 @@ async function main() {
     assertNoBundledModels(distDir);
 
     fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
-    const zipName = `avi-copilot-${version}.zip`;
+    const zipName = `nex-copilot-${version}.zip`;
     // The site links a manual install to a name that never changes (written below, beside the versioned one)
-    const latestZipName = 'avi-copilot-latest.zip';
+    const latestZipName = 'nex-copilot-latest.zip';
     const zipPath = path.join(DOWNLOAD_DIR, zipName);
     console.log(`Zipping dist/ -> site/public/download/${zipName}`);
     fs.writeFileSync(zipPath, zipDirectory(distDir));

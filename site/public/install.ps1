@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Avi Copilot installer for Windows.
+  Nex Copilot installer for Windows.
 
 .DESCRIPTION
   *** UNTESTED. *** Written without a Windows machine available in the environment that built it
@@ -22,7 +22,7 @@
   app's own in-app download instead.
 
 .PARAMETER Dir
-  Install into this folder instead of the default, "$env:LOCALAPPDATA\Avi Copilot\extension".
+  Install into this folder instead of the default, "$env:LOCALAPPDATA\Nex Copilot\extension".
 
 .PARAMETER Browser
   brave, chrome, edge or chromium - which browser's extensions page to try to open and whose name
@@ -38,14 +38,15 @@
   Don't ask for confirmation (used by -Uninstall).
 
 .EXAMPLE
-  irm https://avi-copilot.vercel.app/install.ps1 | iex
+  irm https://nex-copilot.vercel.app/install.ps1 | iex
 
 .EXAMPLE
-  .\install.ps1 -Dir C:\Users\me\AviCopilot -Browser edge
+  .\install.ps1 -Dir C:\Users\me\NexCopilot -Browser edge
 
 .NOTES
-  $env:AVI_COPILOT_BASE_URL overrides the download host, e.g. for testing against a local server:
-    $env:AVI_COPILOT_BASE_URL = 'http://127.0.0.1:8080'; .\install.ps1 -Dir C:\Temp\test-install
+  $env:NEX_COPILOT_BASE_URL overrides the download host, e.g. for testing against a local server:
+    $env:NEX_COPILOT_BASE_URL = 'http://127.0.0.1:8080'; .\install.ps1 -Dir C:\Temp\test-install
+  $env:AVI_COPILOT_BASE_URL is the old name, still accepted if NEX_COPILOT_BASE_URL is not set.
 #>
 [CmdletBinding()]
 param(
@@ -59,19 +60,25 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$BaseUrl = if ($env:AVI_COPILOT_BASE_URL) { $env:AVI_COPILOT_BASE_URL.TrimEnd('/') } else { 'https://avi-copilot.vercel.app' }
+$BaseUrl = if ($env:NEX_COPILOT_BASE_URL) { $env:NEX_COPILOT_BASE_URL.TrimEnd('/') }
+  elseif ($env:AVI_COPILOT_BASE_URL) { $env:AVI_COPILOT_BASE_URL.TrimEnd('/') }
+  else { 'https://nex-copilot.vercel.app' }
 
 function Write-Info($Message) { Write-Host $Message }
 function Write-Ok($Message) { Write-Host "OK $Message" -ForegroundColor Green }
 function Write-Warn($Message) { Write-Warning $Message }
 # A file the installer puts in every folder it makes. An update or -Uninstall only ever replaces or removes a
 # folder that is missing, empty, or has this file: never a folder of the user's own.
-$Marker = 'avi-copilot-install.txt'
+$Marker = 'nex-copilot-install.txt'
+# The old marker name, from before the Avi Copilot -> Nex Copilot rename: still recognized, so an
+# existing install made by the old installer can still be updated or uninstalled by this one.
+$OldMarker = 'avi-copilot-install.txt'
 
 function Test-Ours($Path) {
   if (-not (Test-Path $Path)) { return $true }
   if (-not (Test-Path $Path -PathType Container)) { return $false }
   if (Test-Path (Join-Path $Path $Marker)) { return $true }
+  if (Test-Path (Join-Path $Path $OldMarker)) { return $true }
   return -not (Get-ChildItem -Force -Path $Path | Select-Object -First 1)
 }
 
@@ -93,7 +100,7 @@ function Fail($Message) {
 
 function Get-DefaultTargetDir {
   if (-not $env:LOCALAPPDATA) { Fail 'LOCALAPPDATA is not set; pass -Dir explicitly.' }
-  Join-Path $env:LOCALAPPDATA 'Avi Copilot\extension'
+  Join-Path $env:LOCALAPPDATA 'Nex Copilot\extension'
 }
 
 function Get-Sha256([string]$Path) {
@@ -160,7 +167,7 @@ function Get-LatestRelease {
   try {
     Invoke-RestMethod -Uri $url -UseBasicParsing
   } catch {
-    Fail "Could not reach $url. Check your connection, or that AVI_COPILOT_BASE_URL/`$BaseUrl is right, and try again."
+    Fail "Could not reach $url. Check your connection, or that NEX_COPILOT_BASE_URL/`$BaseUrl is right, and try again."
   }
 }
 
@@ -193,15 +200,15 @@ if (-not $latest.version -or -not $latest.file -or -not $latest.sha256) {
 
 $installedVersion = Get-InstalledVersion $Dir
 if ($installedVersion) {
-  Write-Info "Avi Copilot $installedVersion is installed at $Dir; updating to $($latest.version)..."
+  Write-Info "Nex Copilot $installedVersion is installed at $Dir; updating to $($latest.version)..."
 } else {
-  Write-Info "Installing Avi Copilot $($latest.version) to $Dir..."
+  Write-Info "Installing Nex Copilot $($latest.version) to $Dir..."
 }
 
-$work = Join-Path ([System.IO.Path]::GetTempPath()) ("avi-copilot-install-" + [System.Guid]::NewGuid().ToString('N'))
+$work = Join-Path ([System.IO.Path]::GetTempPath()) ("nex-copilot-install-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work -Force | Out-Null
 try {
-  $zipPath = Join-Path $work 'avi-copilot.zip'
+  $zipPath = Join-Path $work 'nex-copilot.zip'
   $zipUrl = "$BaseUrl/$($latest.file)"
   try {
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
@@ -225,13 +232,13 @@ try {
     Fail "The downloaded release doesn't look like an extension (no manifest.json) - please report this."
   }
 
-  Set-Content -Path (Join-Path $extractDir $Marker) -Value 'Installed by the Avi Copilot installer. Remove the folder with: install.ps1 -Uninstall'
+  Set-Content -Path (Join-Path $extractDir $Marker) -Value 'Installed by the Nex Copilot installer. Remove the folder with: install.ps1 -Uninstall'
   Assert-Target $Dir
   $parent = Split-Path -Parent $Dir
   if ($parent -and -not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
   if (Test-Path $Dir) { Remove-Item -Path $Dir -Recurse -Force }
   Move-Item -Path $extractDir -Destination $Dir
-  Write-Ok "Installed Avi Copilot $($latest.version) to $Dir"
+  Write-Ok "Installed Nex Copilot $($latest.version) to $Dir"
 } finally {
   Remove-Item -Path $work -Recurse -Force -ErrorAction SilentlyContinue
 }

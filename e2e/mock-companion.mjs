@@ -1,4 +1,4 @@
-// A mock Avi Brain that speaks the real protocol (src/shared/lib/protocol/companion.ts, loaded by Node as
+// A mock Nex Brain that speaks the real protocol (src/shared/lib/protocol/companion.ts, loaded by Node as
 // TypeScript): pairing with a known code, health, sandbox runs that echo their command, and one artifact
 // served through the real Avi Studio page and artifact CSP. It enforces what the real companion enforces
 // (the extension's Origin, the bearer token) and records every request, so tests can check both.
@@ -117,7 +117,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
     if (!url.pathname.startsWith('/v1/')) return fail(404, 'not_found', 'There is nothing here.');
     // As the real companion: no GET in the API (the browser sends no Origin on an extension's GET)
     if (req.method === 'GET') return fail(404, 'not_found', 'There is nothing here.');
-    if (origin !== COMPANION_EXTENSION_ORIGIN) return fail(403, 'forbidden', 'Only Avi Copilot may use Avi Brain.');
+    if (origin !== COMPANION_EXTENSION_ORIGIN) return fail(403, 'forbidden', 'Only Nex Copilot may use Nex Brain.');
 
     if (req.method === 'POST' && url.pathname === '/v1/pair') {
       const parsed = pairRequestSchema.safeParse(JSON.parse(body || '{}'));
@@ -134,7 +134,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
       });
     }
     if (!token || req.headers.authorization !== `Bearer ${token}`) {
-      return fail(401, 'auth', 'Avi Brain does not know this browser. Pair again in Avi Copilot settings.');
+      return fail(401, 'auth', 'Nex Brain does not know this browser. Pair again in Nex Copilot settings.');
     }
 
     if (req.method === 'POST' && url.pathname === '/v1/health') {

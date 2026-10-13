@@ -1,6 +1,6 @@
-# Brief — the Avi Copilot website
+# Brief — the Nex Copilot website
 
-**Product.** Avi Copilot is an AI copilot that lives in the browser's side panel (Brave, Chrome, Edge). It does
+**Product.** Nex Copilot is an AI copilot that lives in the browser's side panel (Brave, Chrome, Edge). It does
 tasks on real pages, takes meeting notes, talks (with an on-device "Hey Ava" wake word and free local voices),
 remembers what you saw, runs routines and helper agents, and works with any model (local Ollama or LM Studio,
 OpenRouter, NVIDIA, OpenAI, Anthropic, Gemini). Its one rule: nothing is sent, posted, bought or deleted without

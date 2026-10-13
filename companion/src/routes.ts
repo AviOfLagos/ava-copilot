@@ -415,7 +415,7 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body, params }) {
         const request = parse(studioSessionRequestSchema, body);
         const viewKey = deps.studio.redeem(params.id, request.token);
-        if (!viewKey) fail('forbidden', 'This link has expired. Open the artifact again from Avi Copilot.');
+        if (!viewKey) fail('forbidden', 'This link has expired. Open the artifact again from Nex Copilot.');
         return json({ ok: true, viewKey });
       },
     },

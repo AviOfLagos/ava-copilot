@@ -37,7 +37,7 @@ export interface BrainDeps {
 
 export type Brain = Awaited<ReturnType<typeof createBrain>>;
 
-/** Puts Avi Brain together. Nothing listens or starts until start(). */
+/** Puts Nex Brain together. Nothing listens or starts until start(). */
 export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   privateDir(config.dataDir);
   const log = deps.log ?? createLogger({ app: 'avi-brain' });
@@ -115,7 +115,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
       void engine
         ?.start()
         .catch(error => log.warn('The agent engine did not start', { error: (error as Error).message }));
-      log.info('Avi Brain listening', { url: server.selfOrigin });
+      log.info('Nex Brain listening', { url: server.selfOrigin });
       return port;
     },
     async stop(): Promise<void> {

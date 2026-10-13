@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Descrição da extensão",
-    "message": "Automatize tarefas da web com IA! Avi Copilot é uma extensão de código aberto para o navegador que permite extrair dados, preencher formulários e muito mais."
+    "message": "Automatize tarefas da web com IA! Nex Copilot é uma extensão de código aberto para o navegador que permite extrair dados, preencher formulários e muito mais."
   },
   "app_metadata_name": {
     "description": "Nome da extensão",
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "errors_unknown": {
     "message": "Ocorreu um erro desconhecido"
@@ -38,7 +38,7 @@
     "message": "Voltar para o chat"
   },
   "welcome_title": {
-    "message": "Bem-vindo ao Avi Copilot!"
+    "message": "Bem-vindo ao Nex Copilot!"
   },
   "welcome_instruction": {
     "message": "Para começar, por favor, configure suas chaves de API na página de configurações."
@@ -167,7 +167,7 @@
     "message": "Ativar Entrada de Voz"
   },
   "permissions_microphone_description": {
-    "message": "O Avi Copilot precisa de acesso ao microfone para converter sua fala em texto."
+    "message": "O Nex Copilot precisa de acesso ao microfone para converter sua fala em texto."
   },
   "permissions_microphone_grantButton": {
     "message": "Conceder Permissão ao Microfone"
@@ -1204,7 +1204,7 @@
     "message": "A meeting is already being recorded. Stop it first."
   },
   "meeting_needsInvoke": {
-    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Avi Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Nex Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
   },
   "meeting_untitled": {
     "message": "Meeting"
@@ -1315,7 +1315,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Avi Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -1786,7 +1786,7 @@
     "message": "What should I take off your plate?"
   },
   "home_orb": {
-    "message": "Avi Copilot"
+    "message": "Nex Copilot"
   },
   "home_suggestions": {
     "message": "Suggestions for this page"
@@ -2608,7 +2608,7 @@
     "message": "Conectar seu cofre do Obsidian"
   },
   "vault_connect_hint": {
-    "message": "Sua memória é escrita numa pasta “Avi Copilot” dentro dele, com links para o grafo do Obsidian, e suas notas entram na base. Nada sai deste computador."
+    "message": "Sua memória é escrita numa pasta “Nex Copilot” dentro dele, com links para o grafo do Obsidian, e suas notas entram na base. Nada sai deste computador."
   },
   "vault_connect": {
     "message": "Escolher cofre"
@@ -2632,7 +2632,7 @@
     "message": "Ler minhas notas para a memória"
   },
   "vault_readNotes_hint": {
-    "message": "Notas fora da pasta Avi Copilot. A pasta principal ou uma linha “workspace:” define o espaço."
+    "message": "Notas fora da pasta Nex Copilot. A pasta principal ou uma linha “workspace:” define o espaço."
   },
   "vault_disconnect": {
     "message": "Desconectar cofre"
@@ -3654,7 +3654,7 @@
     "message": "não"
   },
   "flow_page_title": {
-    "message": "Fluxos · Avi Copilot"
+    "message": "Fluxos · Nex Copilot"
   },
   "shell_profile_open": {
     "message": "Menu da conta"
@@ -4439,7 +4439,7 @@
     "message": "Em breve"
   },
   "conn_mac_hint": {
-    "message": "Servidores MCP locais e ferramentas de linha de comando vão rodar pelo Avi Brain no seu Mac, na área isolada dele."
+    "message": "Servidores MCP locais e ferramentas de linha de comando vão rodar pelo Nex Brain no seu Mac, na área isolada dele."
   },
   "conn_add_titleNamed": {
     "message": "Adicionar $1"
@@ -5098,7 +5098,7 @@
     "message": "Instalado"
   },
   "brain_settings_title": {
-    "message": "Avi Brain (Mac)"
+    "message": "Nex Brain (Mac)"
   },
   "brain_state_unpaired": {
     "message": "Não pareado"

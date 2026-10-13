@@ -10,7 +10,7 @@ import { AGENT_ROLES, DEFAULT_AGENT_BUDGET, validateProfile } from './profile';
  */
 
 // The first words of the instructions; tests' scripted models recognise the call by them
-export const AGENT_AUTHORING_MARKER = 'You design agents for Avi Copilot';
+export const AGENT_AUTHORING_MARKER = 'You design agents for Nex Copilot';
 
 export const authoredAgentSchema = z.object({
   name: z.string().describe('a short name, 2 to 4 words'),

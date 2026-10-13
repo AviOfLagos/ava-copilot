@@ -1,4 +1,4 @@
-// Bundles Avi Brain into one file, dist/avi-brain.mjs. Its own sources, the shared protocol and the
+// Bundles Nex Brain into one file, dist/nex-brain.mjs. Its own sources, the shared protocol and the
 // extension's workflow engine (engine, spec, templates, errors, retry) are compiled in; npm packages stay
 // external and load from companion/node_modules.
 import { chmodSync } from 'node:fs';
@@ -8,7 +8,7 @@ import { build } from 'esbuild';
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = resolve(here, '..');
-const outfile = resolve(here, 'dist/avi-brain.mjs');
+const outfile = resolve(here, 'dist/nex-brain.mjs');
 
 await build({
   absWorkingDir: here,

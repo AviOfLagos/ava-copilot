@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * The one protocol between the extension and Avi Brain, the companion on the Mac. Both sides import this
+ * The one protocol between the extension and Nex Brain, the companion on the Mac. Both sides import this
  * file: the extension's background (bridge client), the companion's server, and the E2E mock companion,
  * so a message either side sends is checked against the same schema on the other.
  *
@@ -611,7 +611,7 @@ export const STUDIO_SCRIPT = `(async () => {
   history.replaceState(null, '', location.pathname);
   const status = document.getElementById('status');
   const id = document.body.dataset.artifact;
-  if (!token) { status.textContent = 'This link was already used. Open the artifact again from Avi Copilot.'; return; }
+  if (!token) { status.textContent = 'This link was already used. Open the artifact again from Nex Copilot.'; return; }
   try {
     const response = await fetch('/studio/' + encodeURIComponent(id) + '/session', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
@@ -625,7 +625,7 @@ export const STUDIO_SCRIPT = `(async () => {
     document.getElementById('stage').replaceChildren(frame);
     status.textContent = '';
   } catch (error) {
-    status.textContent = 'This link has expired. Open the artifact again from Avi Copilot.';
+    status.textContent = 'This link has expired. Open the artifact again from Nex Copilot.';
   }
 })();`;
 

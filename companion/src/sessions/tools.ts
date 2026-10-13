@@ -11,7 +11,7 @@ import type { SandboxManager } from '../sandbox/manager';
 import type { ProfileRegistry } from './registry';
 
 /**
- * The tools an agent session may call, as Avi Brain runs them. The eve agent only forwards calls here
+ * The tools an agent session may call, as Nex Brain runs them. The eve agent only forwards calls here
  * (agent/tools/avi.ts), so every rule lives in one place and is checked again whatever the agent says:
  * the profile must list the tool; files stay in the profile's workspace; gh reads stay reads; a write
  * reaches here only after the user's click (eve's approval, relayed from the extension's Inbox); MCP
@@ -67,7 +67,7 @@ export async function runTool(
   { approved = false }: { approved?: boolean } = {},
 ): Promise<unknown> {
   const profile = deps.registry.profile(profileId);
-  if (!profile) fail('not_found', 'This agent is not known on the Mac; open Avi Copilot to send it again.');
+  if (!profile) fail('not_found', 'This agent is not known on the Mac; open Nex Copilot to send it again.');
   if (!profile.tools.includes(name)) fail('forbidden', `This agent may not use ${name}.`);
   const parsed = inputs[name].safeParse(rawInput);
   if (!parsed.success) fail('invalid', `The input for ${name} is not valid: ${parsed.error.issues[0]?.message ?? ''}`);
@@ -107,7 +107,7 @@ export async function runTool(
       const input = parsed.data as z.infer<typeof inputs.gh_write>;
       const check = classifyGh(input.args);
       if (check.ok && check.kind !== 'write') fail('invalid', 'That only reads; use gh.');
-      // eve holds this call until the user approves it in Avi Copilot (approval: always())
+      // eve holds this call until the user approves it in Nex Copilot (approval: always())
       if (!approved) fail('forbidden', 'Posting to GitHub needs the user’s click first; nothing was posted.');
       const result = await deps.gh.run(input.args, { approved, signal });
       return { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr };

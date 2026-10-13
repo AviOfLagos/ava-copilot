@@ -344,6 +344,6 @@ test('a tab that cannot be recorded and has no captions explains how to allow it
   await sleep(500);
 
   await press('Take meeting notes');
-  await waitForText('Click the Avi Copilot icon on the meeting tab');
+  await waitForText('Click the Nex Copilot icon on the meeting tab');
   await web.close();
 });

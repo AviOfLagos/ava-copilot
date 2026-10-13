@@ -1,4 +1,4 @@
-// End-to-end check of Avi Brain with the real eve engine, no Docker and no network: the built companion
+// End-to-end check of Nex Brain with the real eve engine, no Docker and no network: the built companion
 // (dist/), the built agent (.output/, `pnpm build:agent`), a stdio MCP server and a scripted
 // OpenAI-compatible model. Pairs, starts an agent session through the protocol, approves its MCP call,
 // and checks what the model saw and what was kept on disk. Run: node scripts/smoke-eve.mjs
@@ -141,9 +141,9 @@ async function main() {
   const port = await freePort();
   const env = { ...process.env, AVI_BRAIN_HOME: home, AVI_BRAIN_PORT: String(port), AVI_BRAIN_LOG_LEVEL: 'info' };
   const code = /([A-Z2-9]{4}-[A-Z2-9]{4})/.exec(
-    execFileSync(process.execPath, [join(here, 'dist/avi-brain.mjs'), 'pair'], { env, encoding: 'utf8' }),
+    execFileSync(process.execPath, [join(here, 'dist/nex-brain.mjs'), 'pair'], { env, encoding: 'utf8' }),
   )[1];
-  const brain = spawn(process.execPath, [join(here, 'dist/avi-brain.mjs'), 'start'], {
+  const brain = spawn(process.execPath, [join(here, 'dist/nex-brain.mjs'), 'start'], {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -257,7 +257,7 @@ async function main() {
       }
     };
     const leaks = files.filter(file => holds(file, apiKey) || holds(file, paired.token));
-    check('no key or token on disk (eve store, Avi Brain data)', leaks.length === 0, leaks.join(', '));
+    check('no key or token on disk (eve store, Nex Brain data)', leaks.length === 0, leaks.join(', '));
     check('eve store is private', (statSync(join(here, '.eve', '.workflow-data')).mode & 0o077) === 0);
     check('no secret in the logs', !log.includes(apiKey) && !log.includes(paired.token) && !log.includes(code));
   } finally {

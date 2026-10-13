@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMPANION_DEFAULT_PORT, COMPANION_HOST } from '@protocol';
 
-/** Where Avi Brain listens and keeps its files. Everything it writes stays under dataDir, mode 0700. */
+/** Where Nex Brain listens and keeps its files. Everything it writes stays under dataDir, mode 0700. */
 export interface BrainConfig {
   host: typeof COMPANION_HOST;
   port: number;

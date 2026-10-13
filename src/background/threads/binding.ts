@@ -97,7 +97,7 @@ export async function groupTabs(binding: TabBinding, title: string): Promise<num
       ...(binding.groupId !== null ? { groupId: binding.groupId } : {}),
     });
     if (binding.groupId === null) {
-      await chrome.tabGroups.update(groupId, { title: title.slice(0, 40) || 'Avi Copilot', color: 'blue' });
+      await chrome.tabGroups.update(groupId, { title: title.slice(0, 40) || 'Nex Copilot', color: 'blue' });
     }
     binding.groupId = groupId;
     return groupId;

@@ -169,7 +169,7 @@ export function llmExecutor(deps: MacExecutorDeps): StepExecutor {
       if (!model) {
         throw new AppError(
           'unavailable',
-          'This routine has no model on the Mac yet. Open Avi Copilot once so it can send one.',
+          'This routine has no model on the Mac yet. Open Nex Copilot once so it can send one.',
           {
             retryable: false,
           },
@@ -295,7 +295,7 @@ function outboxExecutors(deps: MacExecutorDeps): Partial<Record<NodeType, StepEx
           title: plain(node.title, 80) || workflow.name,
           message: plain(node.message, 300),
         });
-        return { kind: 'done', output: { notified: 'when Avi Copilot is open' } };
+        return { kind: 'done', output: { notified: 'when Nex Copilot is open' } };
       },
     },
   };

@@ -1,5 +1,5 @@
 
-# Avi Copilot — Build Spec (for a coding agent)
+# Nex Copilot — Build Spec (for a coding agent)
 
 A general-purpose Chrome extension (Manifest V3) that gives Avi a Gemini-powered assistant in the browser side panel. It works on **any website**, not tied to one app. It can (1) operate any web page (chat apps, Google Workspace, dashboards, admin consoles, CMSs, forms), (2) take notes during live meetings in any browser call (Google Meet, Zoom Web, Teams Web, Zedu, etc.), and (3) keep every conversation and meeting in a searchable, multi-thread history. It uses Avi's own Gemini API key, with optional local models through Ollama.
 

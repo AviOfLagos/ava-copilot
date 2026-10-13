@@ -1,4 +1,4 @@
-// The companion stream (Avi Brain) registers its commands, jobs, recovery and the step.sandbox executor
+// The companion stream (Nex Brain) registers its commands, jobs, recovery and the step.sandbox executor
 // here (see ../registry and ../jobs/runner).
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';
@@ -68,7 +68,7 @@ command(
     await brainSettingsStore.update({ paired: true, companionId: reply.companionId, pairedAt: Date.now() });
     await scheduleHealth();
     await refreshStatus(companionClient, { fresh: true, manual: true });
-    logger.info('Paired with Avi Brain');
+    logger.info('Paired with Nex Brain');
     return snapshot();
   },
 );
@@ -117,5 +117,5 @@ registerRecovery('companion', async () => {
   if ((await brainSettingsStore.getSettings()).paired) await scheduleHealth();
 });
 
-// Routines' step.sandbox runs in Avi Brain's sandbox
+// Routines' step.sandbox runs in Nex Brain's sandbox
 registerStepExecutor('step.sandbox', sandboxStepExecutor(companionClient));

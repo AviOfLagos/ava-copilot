@@ -386,7 +386,7 @@ export class AgentService {
       throw new AppError('invalid', `"${agent.name}" is still a draft: click Create first. Drafts never run.`);
     }
     if (agent.executor !== 'browser') {
-      throw new AppError('unavailable', `"${agent.name}" needs the Avi Brain companion, which is not set up yet.`);
+      throw new AppError('unavailable', `"${agent.name}" needs the Nex Brain companion, which is not set up yet.`);
     }
     if (!request.attended && !agent.enabled) throw new AppError('invalid', `"${agent.name}" is paused.`);
     if (request.firingKey) {
