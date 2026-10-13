@@ -37,6 +37,8 @@ import './registers';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
+import Onboarding from './onboarding/Onboarding';
+import { useAssistantName } from './hooks/useAssistant';
 import TodayView from './today/TodayView';
 import SettingsView from './settings/SettingsView';
 import ThreadBar from './threads/ThreadBar';
@@ -70,6 +72,7 @@ type PanelMessage =
 
 const SidePanel = () => {
   const { dark: isDarkMode } = useTheme();
+  const assistantName = useAssistantName();
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
   const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
   // Where the user is, and whether the menu (places and chat history) is open
@@ -681,6 +684,7 @@ const SidePanel = () => {
 
   return (
     <div className="aura text-foreground relative flex h-screen flex-col overflow-hidden font-sans">
+      <Onboarding hasModel={hasConfiguredModels} onOpenModels={() => go('models' as Place)} />
       {voiceStatus !== 'off' && !voiceHidden && (
         <VoiceView status={voiceStatus} onEnd={() => void toggleVoice()} onHide={() => setVoiceHidden(true)} />
       )}
@@ -828,7 +832,7 @@ const SidePanel = () => {
 
       {view === 'welcome' && (
         <div className="flex flex-1 flex-col items-center justify-center gap-5 p-8 text-center">
-          <LiveOrb size={132} label={t('home_orb')} />
+          <LiveOrb size={132} label={assistantName} />
           <div className="space-y-2">
             <h3 className="text-lg font-medium tracking-tight">{t('welcome_title')}</h3>
             <p className="text-muted-foreground text-sm">{t('welcome_instruction')}</p>

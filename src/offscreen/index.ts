@@ -108,7 +108,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { ok: true };
       case 'wake_start':
         try {
-          await wake.start();
+          const words = Array.isArray(message.words) ? message.words.map(String) : undefined;
+          // A new assistant name: listen again for its phrase
+          if (wake.running && words && words.join(' ') !== wake.words.join(' ')) wake.stop();
+          await wake.start(words);
           if (!voice) wake.resume();
           return { ok: true };
         } catch (error) {

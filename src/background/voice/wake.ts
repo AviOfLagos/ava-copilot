@@ -1,4 +1,10 @@
-import { meetingSettingsStore } from '@extension/storage';
+import {
+  assistantNameOf,
+  chooseWakePhrase,
+  generalSettingsStore,
+  loadWakeVocabulary,
+  meetingSettingsStore,
+} from '@extension/storage';
 import { createLogger } from '../log';
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
 import type { VoiceManager } from './manager';
@@ -11,15 +17,23 @@ export const WAKE_ALARM = 'wake-check';
 type StartResult = { ok?: boolean; error?: string; micDenied?: boolean };
 
 /** Asks the offscreen document to listen; a document opened a moment ago may not be taking messages yet. */
-async function startListening(): Promise<StartResult> {
+async function startListening(words: string[]): Promise<StartResult> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await toOffscreen<StartResult>({ type: 'wake_start' });
+      return await toOffscreen<StartResult>({ type: 'wake_start', words });
     } catch (error) {
       if (attempt >= 10 || !String(error).includes('Receiving end does not exist')) throw error;
       await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
+}
+
+/** The words after "hey" for the user's assistant name, or "ava" when the model does not know them all. */
+async function wakeWords(): Promise<string[]> {
+  const { assistantName } = await generalSettingsStore.getSettings();
+  const choice = chooseWakePhrase(assistantName, await loadWakeVocabulary());
+  if (!choice.followsName) logger.info('The wake phrase stays "hey ava"; the model does not know', choice.missing);
+  return choice.words;
 }
 
 /**
@@ -38,7 +52,15 @@ export class WakeWord {
     });
     chrome.runtime.onStartup.addListener(() => void this.sync());
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes['meeting-settings']) void this.sync();
+      if (area !== 'local') return;
+      // A new assistant name can change the phrase: the listener restarts with it
+      const general = changes['general-settings'] as
+        { oldValue?: { assistantName?: string }; newValue?: { assistantName?: string } } | undefined;
+      if (
+        changes['meeting-settings'] ||
+        (general && general.oldValue?.assistantName !== general.newValue?.assistantName)
+      )
+        void this.sync();
     });
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (sender.id !== chrome.runtime.id) return;
@@ -59,7 +81,7 @@ export class WakeWord {
     try {
       if (wakeWord) {
         await ensureOffscreen();
-        const result = await startListening();
+        const result = await startListening(await wakeWords());
         if (!result?.ok) logger.warning('The wake word listener did not start', result?.error);
         return { ok: !!result?.ok, error: result?.error, micDenied: result?.micDenied };
       }
@@ -89,7 +111,7 @@ export class WakeWord {
         .create('wake-failed', {
           type: 'basic',
           iconUrl: chrome.runtime.getURL('icon-128.png'),
-          title: 'Ava could not start',
+          title: `${assistantNameOf((await generalSettingsStore.getSettings()).assistantName)} could not start`,
           message: result.error ?? 'The voice conversation did not start.',
           priority: 1,
         })

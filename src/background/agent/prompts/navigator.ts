@@ -6,7 +6,7 @@ import { systemMessage } from '@src/background/llm/messages';
 import type { AgentContext } from '@src/background/agent/types';
 import { createLogger } from '@src/background/log';
 import { navigatorSystemPromptTemplate } from './templates/navigator';
-import { buildStyleSection } from './style';
+import { buildIdentitySection, buildStyleSection } from './style';
 import { navigatorGateSection } from '@src/background/gate/prompt';
 import { navigatorReaderSection } from '@src/background/reader/reader';
 import { navigatorKnowledgeSection } from '@src/background/kb/action';
@@ -19,6 +19,7 @@ export class NavigatorPrompt extends BasePrompt {
   constructor(
     private readonly maxActionsPerStep = 10,
     stylePrompt = '',
+    assistantName?: string,
   ) {
     super();
 
@@ -26,7 +27,7 @@ export class NavigatorPrompt extends BasePrompt {
     const promptTemplate = navigatorSystemPromptTemplate.replace(
       '</system_instructions>',
       () =>
-        `${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${registeredActionPrompts()}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
+        `${buildIdentitySection(assistantName)}${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${registeredActionPrompts()}${buildStyleSection(stylePrompt, 'the text of the done action')}</system_instructions>`,
     );
     // Format the template with the maxActionsPerStep
     const formattedPrompt = promptTemplate.replace('{{max_actions}}', this.maxActionsPerStep.toString()).trim();

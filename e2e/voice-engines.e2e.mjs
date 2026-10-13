@@ -286,7 +286,7 @@ test(
     await panel.goto(`${extension.origin}/sidepanel.html`);
     await panel.waitForSelector('textarea');
     await panel.bringToFront();
-    await session.click('Talk to the copilot');
+    await session.click('Talk to Ava');
 
     // The question is written down on the device and goes to the text model as words, with the voice tools
     await waitFor(() => textModel.requests.length >= 2, 'the text model to answer with a tool', 90_000);

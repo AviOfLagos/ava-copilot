@@ -7,7 +7,12 @@
  *   not run `new Function` either), using Emscripten's own non-eval forms of the three embind helpers.
  * - model.tar.gz: vosk-model-small-en-us-0.15 (Apache-2.0), repacked from zip to the tar.gz Vosk reads.
  *
+ * - words.txt: the model's vocabulary, one word per line, read from the symbol table inside its
+ *   graph/Gr.fst. The panel and background use it to tell whether "hey <assistant name>" can be the
+ *   wake phrase: Vosk silently drops grammar words it does not know.
+ *
  * Both downloads are checked against pinned SHA-256 sums. Run: node scripts/wake-word-setup.mjs
+ * (`--words` writes only words.txt, from a model.tar.gz already in place.)
  */
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -55,8 +60,47 @@ const NO_EVAL = {
   __emval_get_method_caller: `function __emval_get_method_caller(argCount,argTypes){var types=__emval_lookupTypes(argCount,argTypes);var retType=types[0];var invokerFunction=function(handle,name,destructors,args){var offset=0;var list=new Array(argCount-1);for(var i=0;i<argCount-1;++i){list[i]=types[i+1].readValueFromPointer(args+offset);offset+=types[i+1]["argPackAdvance"]}var rv=handle[name].apply(handle,list);for(var i=0;i<argCount-1;++i){if(types[i+1]["deleteObject"]){types[i+1].deleteObject(list[i])}}if(!retType.isVoid){return retType.toWireType(destructors,rv)}};return __emval_addMethodCaller(invokerFunction)}`,
 };
 
+const MODEL_DIR = 'vosk-model-small-en-us-0.15';
+// OpenFst's symbol table magic number, which starts the word list embedded in Gr.fst
+const SYMBOL_TABLE_MAGIC = 2125658996;
+
+/** The words in an OpenFst binary file's first embedded symbol table, without the special ones. */
+function readSymbolTable(bytes) {
+  const magic = Buffer.alloc(4);
+  magic.writeInt32LE(SYMBOL_TABLE_MAGIC);
+  let at = bytes.indexOf(magic);
+  if (at < 0) throw new Error('No word list in the model graph');
+  at += 4;
+  const nameLength = bytes.readInt32LE(at);
+  at += 4 + nameLength + 8; // name, then the next free key
+  const size = Number(bytes.readBigInt64LE(at));
+  at += 8;
+  const words = [];
+  for (let i = 0; i < size; i++) {
+    const length = bytes.readInt32LE(at);
+    at += 4;
+    words.push(bytes.toString('utf8', at, at + length));
+    at += length + 8; // the word, then its key
+  }
+  return words.filter(word => !/^(<.*>|#\d+|!SIL|\[unk\])$/.test(word));
+}
+
+/** Writes words.txt from the model archive. */
+function writeVocabulary() {
+  const graph = execFileSync('tar', ['xzOf', path.join(OUT, 'model.tar.gz'), `${MODEL_DIR}/graph/Gr.fst`], {
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const words = readSymbolTable(graph);
+  fs.writeFileSync(path.join(OUT, 'words.txt'), `${words.join('\n')}\n`);
+  console.log(`Vocabulary: ${words.length} words`);
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
+  if (process.argv.includes('--words')) {
+    writeVocabulary();
+    return;
+  }
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'wake-'));
   try {
     console.log('Downloading the recogniser…');
@@ -77,10 +121,11 @@ async function main() {
     await download(SOURCES.model, path.join(work, 'model.zip'));
     execFileSync('unzip', ['-q', 'model.zip'], { cwd: work });
     // Without macOS's ._ metadata files, which would be unpacked as model files
-    execFileSync('tar', ['czf', path.join(OUT, 'model.tar.gz'), 'vosk-model-small-en-us-0.15'], {
+    execFileSync('tar', ['czf', path.join(OUT, 'model.tar.gz'), MODEL_DIR], {
       cwd: work,
       env: { ...process.env, COPYFILE_DISABLE: '1' },
     });
+    writeVocabulary();
     console.log(`Done: ${OUT}`);
   } finally {
     fs.rmSync(work, { recursive: true, force: true });

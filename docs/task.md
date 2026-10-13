@@ -1002,6 +1002,37 @@ mixed up on the shared reply queue.
   `shell.e2e.mjs` 3/3, `workflows.e2e.mjs` 2/2 (incl. New workflow), `agents.e2e.mjs` 2/2 (incl. New agent),
   `integrations.e2e.mjs` 11/11 (incl. Add connector).
 
+### First-run setup and the assistant's name (2026-10-13)
+
+- **Setting:** `assistantName` in the general settings, default "Ava". `src/storage/lib/settings/assistant.ts` checks
+  it (trimmed, 1–24 characters, letters of any script, spaces, hyphens, apostrophes; an invalid stored value reads as
+  Ava) and holds `onboardingStore` (`onboarding.completedAt`, its own key, so installs from before it see the setup
+  once too). Changeable later in Settings › General › Assistant name.
+- **Setup** (`src/side-panel/onboarding`): an overlay on first open of the panel, three steps — name (prefilled Ava),
+  add a model (opens the Models & usage place, parking the setup behind a "Finish setup" pill), wake word (optional
+  switch, says what it listens for). Skip and Esc end it at any step; Enter goes on; Tab stays inside. Strings
+  `onboard_*` in all three locales.
+- **Where the name shows:** home (mono label above the greeting, the orb's label), the welcome screen's orb, the voice
+  screen's label, the header's "Talk to <name>", "<name> is thinking" in a run and in meeting Q&A, the read-aloud
+  tooltip, the click-to-allow notice ("<name> wants to …"), the wake-failure notification. Prompts: the navigator and
+  planner get a short "YOUR NAME" section (`buildIdentitySection`), and the voice instructions start "You are
+  <name>". Strings that said "Hey Ava" (`settings_wake*`, `help_*`) take the actual phrase as a placeholder.
+- **Wake phrase:** "hey <name>" only when every word of the name is in the Vosk model's vocabulary, else "hey ava"
+  with a note in setup and Settings. Vosk does not report unknown grammar words to the page: it logs
+  `Ignoring word missing in vocabulary: 'zorblax'` and drops the word (checked in Brave against `hey-ava.wav`:
+  `["hey zorblax","[unk]"]` decodes as `hey [unk] [unk]`), which would make plain "hey" wake it. So
+  `scripts/wake-word-setup.mjs` now also writes `public/wake/words.txt` (152,211 words, 1.3 MB, read from the
+  symbol table inside the model's `graph/Gr.fst`); `node scripts/wake-word-setup.mjs --words` writes only that file
+  from a model already in place. Without the file, any name other than Ava keeps "hey ava". The background passes
+  the words to the offscreen listener (`wake_start {words}`), restarts it when the name changes, and the
+  verification decode uses `["hey <name>", "hey", "<name>", "[unk]"]` and checks "hey" then every word. The
+  precision measurements above are for "hey ava" only; a custom name has not been measured.
+- **E2E:** the harness marks setup done by default; `launchExtension(mock, { onboarding: true })` opts out
+  (`e2e/onboarding.e2e.mjs`). The voice tests' "Talk to the copilot" is now "Talk to Ava".
+- Tests: `pnpm type-check`; full `vitest run` (new: `settings/__tests__/assistant.test.ts`, custom-phrase cases in
+  `offscreen/__tests__/wake.test.ts`, identity section in `prompts/__tests__/style.test.ts`); touched-file lint (0
+  errors); `check-locales` passes; full E2E in Brave 98/98, including `wake` and `wake-negative`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

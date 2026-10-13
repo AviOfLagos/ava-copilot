@@ -19,6 +19,8 @@ export interface GeneralSettingsConfig {
   dailyCostCapUsd: number;
   // How many threads may run at the same time
   maxConcurrentThreads: number;
+  // What the user calls the assistant (see ./assistant.ts); "Ava" unless they chose another name
+  assistantName: string;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -43,6 +45,7 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
     'Be short and direct. Give the answer first. End with action points when there is something for me to do.',
   dailyCostCapUsd: 5,
   maxConcurrentThreads: 3,
+  assistantName: 'Ava',
 };
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {

@@ -13,10 +13,15 @@
  * kept for the conversation, so a request said in the same breath ("Hey Ava, what's on my calendar") is
  * not lost while it connects. Nothing said before the phrase is kept, and a rejected candidate resumes
  * listening at once.
+ *
+ * The phrase follows the assistant's name when the model knows every word of it (the background
+ * decides, see `chooseWakePhrase` in the settings storage): "hey nova" uses the same two grammars, with
+ * "nova" in place of "ava". The default, and the phrase the measurements above are for, is "hey ava".
  */
 
 const RATE = 16000;
 export const WAKE_PHRASE = 'hey ava';
+const DEFAULT_WORDS = ['ava'];
 // Audio kept from before the phrase was recognised: only the phrase itself, which ends a moment
 // before the recogniser reports it; anything older is never sent
 const PHRASE_SECONDS = 1.2;
@@ -32,6 +37,13 @@ const COOLDOWN_MS = 4000;
 // manages it when the grammar can simply offer the word. There is no "eva"/"ever" entry to weigh:
 // those words are not in this grammar's vocabulary, so the verifier cannot land on them by mistake.
 const VERIFY_GRAMMAR = ['hey ava', 'hey', 'ava', '[unk]'];
+
+/** The listening grammar and the verifying grammar for the words after "hey". */
+export function wakeGrammars(words: string[]): { listen: string[]; verify: string[] } {
+  const name = words.join(' ');
+  if (name === DEFAULT_WORDS.join(' ')) return { listen: [WAKE_PHRASE, '[unk]'], verify: VERIFY_GRAMMAR };
+  return { listen: [`hey ${name}`, '[unk]'], verify: [`hey ${name}`, 'hey', name, '[unk]'] };
+}
 // Extra audio collected after a candidate before verifying, so a trailing "ava" is complete; a
 // verification window can run a little past it into the next word, which the verifier's grammar
 // then tags as trailing "[unk]" — heyAvaPrefix only looks at the first two words for that reason.
@@ -45,8 +57,8 @@ const VERIFY_RETRY_MS = 500;
 const VERIFY_TIMEOUT_MS = 3000;
 
 /** Whether a recogniser result contains the phrase. Grammar mode gives "hey ava" or "[unk]". */
-export function heardWake(text: string | undefined): boolean {
-  return !!text && text.toLowerCase().includes(WAKE_PHRASE);
+export function heardWake(text: string | undefined, phrase: string = WAKE_PHRASE): boolean {
+  return !!text && text.toLowerCase().includes(phrase);
 }
 
 /**
@@ -55,8 +67,14 @@ export function heardWake(text: string | undefined): boolean {
  * the grammar's own loop then renders as more words after it (see VERIFY_TAIL_SECONDS).
  */
 export function heyAvaPrefix(text: string | undefined): boolean {
+  return wakePrefix(text, DEFAULT_WORDS);
+}
+
+/** The same check for any name: "hey" then each word of it, before anything else. */
+export function wakePrefix(text: string | undefined, name: string[]): boolean {
   const words = (text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean);
-  return words[0] === 'hey' && words[1] === 'ava';
+  const expected = ['hey', ...name];
+  return expected.every((word, index) => words[index] === word);
 }
 
 /** The last seconds of audio, in arrival order. */
@@ -113,6 +131,8 @@ export class WakeListener {
   // message, in order), so each one resolves the next pending request.
   private readonly verifyWaiting: ((message: WorkerMessage) => void)[] = [];
   private retryNotBefore = 0;
+  // The words after "hey" this listener was started with
+  private wakeWords = DEFAULT_WORDS;
 
   constructor(private readonly onWake: () => void) {}
 
@@ -120,8 +140,14 @@ export class WakeListener {
     return this.worker !== null;
   }
 
-  async start(): Promise<void> {
+  /** The words after "hey" it listens for. */
+  get words(): string[] {
+    return this.wakeWords;
+  }
+
+  async start(words: string[] = DEFAULT_WORDS): Promise<void> {
     if (this.worker) return;
+    this.wakeWords = words.length ? words : DEFAULT_WORDS;
     const worker = new Worker(chrome.runtime.getURL('wake/vosk-worker.js'));
     this.worker = worker;
     try {
@@ -146,7 +172,7 @@ export class WakeListener {
         action: 'create',
         recognizerId: this.recognizerId,
         sampleRate: RATE,
-        grammar: JSON.stringify([WAKE_PHRASE, '[unk]']),
+        grammar: JSON.stringify(wakeGrammars(this.wakeWords).listen),
       });
       worker.addEventListener('message', event => this.handle(event.data as WorkerMessage));
 
@@ -273,7 +299,12 @@ export class WakeListener {
     if (message.recognizerId !== this.recognizerId || this.paused || this.capture || this.verifying) return;
     const result = message.result as { partial?: string; text?: string } | undefined;
     const text = message.event === 'partialresult' ? result?.partial : message.event === 'result' ? result?.text : '';
-    if (!heardWake(text) || Date.now() - this.lastWake < COOLDOWN_MS || Date.now() < this.retryNotBefore) return;
+    if (
+      !heardWake(text, ['hey', ...this.wakeWords].join(' ')) ||
+      Date.now() - this.lastWake < COOLDOWN_MS ||
+      Date.now() < this.retryNotBefore
+    )
+      return;
     // A candidate: hold off waking until a second, richer-grammar decode of the phrase window agrees.
     this.verifying = true;
     this.verifyRing = this.ring.take();
@@ -328,7 +359,7 @@ export class WakeListener {
       action: 'create',
       recognizerId: verifyId,
       sampleRate: RATE,
-      grammar: JSON.stringify(VERIFY_GRAMMAR),
+      grammar: JSON.stringify(wakeGrammars(this.wakeWords).verify),
     });
     const first = this.nextVerifyReply();
     worker.postMessage(
@@ -358,7 +389,7 @@ export class WakeListener {
         message.event === 'result' ? ((message.result as { text?: string } | undefined)?.text ?? '') : '',
       )
       .join(' ');
-    return heyAvaPrefix(text);
+    return wakePrefix(text, this.wakeWords);
   }
 
   private nextVerifyReply(): Promise<WorkerMessage> {

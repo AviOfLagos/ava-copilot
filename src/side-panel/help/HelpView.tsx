@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Search } from 'lucide-react';
 import { t } from '@extension/i18n';
 import type { Place } from '../layout/Sidebar';
+import { displayPhrase, useAssistantName, useWakeChoice } from '../hooks/useAssistant';
 
 // Everyday things to do, and where each lives; the words come from help_<id>_q and help_<id>_where
 const TASKS: { id: string; place: Place }[] = [
@@ -37,11 +38,14 @@ type Key = Parameters<typeof t>[0];
 /** "How do I…": every everyday task, searchable, with where it lives and a way straight there. */
 export default function HelpView({ onGo }: { onGo: (place: Place) => void }) {
   const [query, setQuery] = useState('');
+  const name = useAssistantName();
+  // "Hey Ava", or "Hey <name>" when the wake word follows the name
+  const phrase = [displayPhrase(useWakeChoice(name), name)];
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const tasks = TASKS.map(task => ({
     ...task,
-    q: t(`help_${task.id}_q` as Key),
-    where: t(`help_${task.id}_where` as Key),
+    q: t(`help_${task.id}_q` as Key, phrase),
+    where: t(`help_${task.id}_where` as Key, phrase),
   })).filter(task => words.every(word => `${task.q} ${task.where}`.toLowerCase().includes(word)));
 
   return (

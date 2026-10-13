@@ -7,6 +7,7 @@ import type { UpcomingEvent } from '@extension/storage';
 import { matchSkills } from '@src/background/skills/match';
 import { LiveOrb } from '../components/ui/live-orb';
 import { DayStrip, useToday } from '../today/TodayView';
+import { useAssistantName } from '../hooks/useAssistant';
 
 interface Starter {
   id: string;
@@ -110,6 +111,7 @@ export default function HomeView({
   const today = useToday();
   const next = useNextMeeting();
   const [skillId, setSkillId] = useState<string | null>(null);
+  const name = useAssistantName();
 
   useEffect(() => {
     if (!tab) return setSkillId(null);
@@ -169,8 +171,11 @@ export default function HomeView({
   return (
     <div className="flex flex-col gap-5 px-4 pb-4 pt-6">
       <div className="flex items-center gap-4">
-        <LiveOrb size={64} label={t('home_orb')} />
+        <LiveOrb size={64} label={name} />
         <h1 className="text-[24px] font-medium leading-tight tracking-[-0.03em]">
+          <span className="label-mono block pb-1" data-testid="assistant-name">
+            {name}
+          </span>
           {greeting()}
           <br />
           <span className="text-muted-foreground">{t('home_subtitle')}</span>

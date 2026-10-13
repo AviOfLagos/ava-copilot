@@ -34,9 +34,10 @@ function findChrome() {
 }
 
 /**
- * Starts a browser with the built extension loaded and its model pointed at the mock.
+ * Starts a browser with the built extension loaded and its model pointed at the mock. The first-run
+ * setup is marked done unless `{ onboarding: true }` asks to see it.
  */
-export async function launchExtension(mock) {
+export async function launchExtension(mock, { onboarding = false } = {}) {
   if (!fs.existsSync(path.join(dist, 'manifest.json'))) {
     throw new Error('dist/ is missing. Run `pnpm build` first.');
   }
@@ -84,26 +85,32 @@ export async function launchExtension(mock) {
   const origin = `chrome-extension://${extensionId}`;
   const options = await browser.newPage();
   await options.goto(`${origin}/options.html`);
-  await options.evaluate(async baseUrl => {
-    const model = { provider: 'mock', modelName: 'scripted' };
-    await chrome.storage.local.set({
-      // No morning brief of its own in the middle of a test; the brief test makes one
-      'brief-settings': { enabled: false },
-      'llm-api-keys': {
-        providers: {
-          mock: {
-            name: 'mock',
-            type: 'custom_openai',
-            apiKey: 'test',
-            baseUrl,
-            modelNames: ['scripted'],
-            createdAt: Date.now(),
+  await options.evaluate(
+    async (baseUrl, onboarding) => {
+      const model = { provider: 'mock', modelName: 'scripted' };
+      await chrome.storage.local.set({
+        // The first-run setup would cover the panel; only the onboarding test sees it
+        ...(onboarding ? {} : { onboarding: { completedAt: 1 } }),
+        // No morning brief of its own in the middle of a test; the brief test makes one
+        'brief-settings': { enabled: false },
+        'llm-api-keys': {
+          providers: {
+            mock: {
+              name: 'mock',
+              type: 'custom_openai',
+              apiKey: 'test',
+              baseUrl,
+              modelNames: ['scripted'],
+              createdAt: Date.now(),
+            },
           },
         },
-      },
-      'agent-models': { agents: { navigator: model, planner: model } },
-    });
-  }, mock.baseUrl);
+        'agent-models': { agents: { navigator: model, planner: model } },
+      });
+    },
+    mock.baseUrl,
+    onboarding,
+  );
 
   return {
     browser,

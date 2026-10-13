@@ -38,6 +38,7 @@ import { ThinkingOrb } from '../components/ui/thinking-orb';
 import { Button } from '../components/ui/button';
 import { duration, toTurns } from './turns';
 import type { StepKind, Turn } from './turns';
+import { useAssistantName } from '../hooks/useAssistant';
 
 const STEP_ICONS: Record<StepKind, LucideIcon> = {
   plan: Route,
@@ -115,6 +116,7 @@ function RunTrail({
   activity: string;
   open: boolean;
 }) {
+  const name = useAssistantName();
   const steps = turn.steps;
   const count = steps.length + (held ? 1 : 0);
   const working = turn.active && !held;
@@ -161,7 +163,7 @@ function RunTrail({
           <div className="flex items-center gap-2 pl-0.5 pt-1">
             <ThinkingOrb size={26} program={ACTIVITY_PROGRAM[activity] ?? 2} />
             <Shimmer as="span" className="text-[12.5px]">
-              {activity === 'planning' ? t('chat_run_planning') : t('chat_run_working')}
+              {activity === 'planning' ? t('chat_run_planning', [name]) : t('chat_run_working')}
             </Shimmer>
           </div>
         )}
@@ -187,6 +189,7 @@ export default function ChatView({
   const running = thread.status === 'running' || thread.status === 'waiting_confirm';
   const idle = thread.status === 'idle' || thread.status === 'error';
   const turns = useMemo(() => toTurns(messages, running), [messages, running]);
+  const name = useAssistantName();
 
   // Who is speaking right now, read live from storage the background writes to; null once nothing is
   useEffect(() => void ttsSpeakingStore.get(), []);
@@ -266,7 +269,7 @@ export default function ChatView({
                           variant="ghost"
                           size="icon-sm"
                           aria-label={t('speak_action')}
-                          title={t('speak_action')}
+                          title={t('onboard_readAloud_title', [name])}
                           onClick={() => onSpeak(thread.id, turn.answer!.id, turn.answer!.content)}>
                           <Volume2 className="size-3.5" />
                         </Button>

@@ -6,6 +6,7 @@ import { meetingStore, threadStore } from '@extension/storage';
 import type { MeetingRecord, MeetingWarning } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import { buttonClasses } from '../components/ui/button';
+import { useAssistantName } from '../hooks/useAssistant';
 
 type MeetingTab = 'summary' | 'live' | 'transcript' | 'ask';
 
@@ -99,6 +100,7 @@ export default function MeetingView({
   const [copied, setCopied] = useState(false);
   const [question, setQuestion] = useState('');
   const [asking, setAsking] = useState(false);
+  const assistantName = useAssistantName();
   // Live while recording, the summary once done, the transcript when a citation points into it
   const [tab, setTab] = useState<MeetingTab>(focusT !== null && focusT >= 0 ? 'transcript' : 'live');
   useEffect(() => {
@@ -386,7 +388,7 @@ export default function MeetingView({
                     className="bg-card text-foreground placeholder:text-muted-foreground focus:border-primary/50 min-w-0 flex-1 rounded-full border px-3 py-1.5 outline-none"
                   />
                   <button type="submit" disabled={asking} className={buttonClasses('default', 'sm')}>
-                    {asking ? t('meeting_asking') : t('meeting_ask_button')}
+                    {asking ? t('meeting_asking', [assistantName]) : t('meeting_ask_button')}
                   </button>
                 </form>
               </div>
