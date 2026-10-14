@@ -24,10 +24,16 @@ describe('heyAvaPrefix', () => {
 
   it('rejects everything a "hey"-only or unrelated utterance can decode to in that grammar', () => {
     expect(heyAvaPrefix('hey')).toBe(false);
-    expect(heyAvaPrefix('ava')).toBe(false);
+    expect(heyAvaPrefix('hey hey')).toBe(false);
     expect(heyAvaPrefix('[unk]')).toBe(false);
     expect(heyAvaPrefix('[unk] hey')).toBe(false);
-    expect(heyAvaPrefix('[unk] hey ava')).toBe(false); // "ava" must follow "hey" directly
+    expect(heyAvaPrefix('hey there ava')).toBe(false); // the name comes first or right after one word
+  });
+
+  it('forgives a real voice: an unclear or misheard "hey" before the name', () => {
+    expect(heyAvaPrefix('[unk] ava')).toBe(true);
+    expect(heyAvaPrefix('[unk] hey ava')).toBe(true);
+    expect(heyAvaPrefix('ava')).toBe(true);
     expect(heyAvaPrefix('')).toBe(false);
     expect(heyAvaPrefix(undefined)).toBe(false);
   });
@@ -48,7 +54,8 @@ describe('a wake phrase for another name', () => {
     expect(wakePrefix('hey mary jane', ['mary', 'jane'])).toBe(true);
     expect(wakePrefix('hey mary [unk]', ['mary', 'jane'])).toBe(false);
     expect(wakePrefix('hey ava', ['nova'])).toBe(false);
-    expect(wakePrefix('nova', ['nova'])).toBe(false);
+    expect(wakePrefix('nova', ['nova'])).toBe(true);
+    expect(wakePrefix('hey there nova', ['nova'])).toBe(false);
     expect(heardWake('hey nova', 'hey nova')).toBe(true);
     expect(heardWake('hey ava', 'hey nova')).toBe(false);
   });

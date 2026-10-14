@@ -70,11 +70,23 @@ export function heyAvaPrefix(text: string | undefined): boolean {
   return wakePrefix(text, DEFAULT_WORDS);
 }
 
-/** The same check for any name: "hey" then each word of it, before anything else. */
+/**
+ * The same check for any name. Real voices are messier than the test recordings: the second decode often hears
+ * "hey" as something unclear ([unk]) or a near word. So unclear pieces are ignored, and the name must come at
+ * the very start or right after one word ("hey", "hi", a misheard "hey"). Plain "hey…" without the name never
+ * passes, which is what keeps it from waking on its own.
+ */
 export function wakePrefix(text: string | undefined, name: string[]): boolean {
-  const words = (text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const expected = ['hey', ...name];
-  return expected.every((word, index) => words[index] === word);
+  const words = (text ?? '')
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(word => word && word !== '[unk]');
+  if (!name.length) return false;
+  for (let at = 0; at <= 1; at++) {
+    if (name.every((word, index) => words[at + index] === word)) return true;
+  }
+  return false;
 }
 
 /** The last seconds of audio, in arrival order. */
