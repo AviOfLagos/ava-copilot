@@ -1,4 +1,5 @@
 import { meetingStore } from '@extension/storage';
+import { requestMicStream } from '@extension/shared';
 import { ChunkCutter, encodeWav, rms, toBase64 } from './pcm';
 import type { ChunkPlan, PcmChunk } from './pcm';
 import { LiveCaptions } from './live';
@@ -17,6 +18,8 @@ export interface RecorderOptions {
   silenceWarnSeconds: number;
   // Live captions, when the user has them on and a Gemini key
   live?: LiveOptions;
+  // The chosen microphone (Settings › Voice devices), or null/undefined for the system default
+  micDeviceId?: string | null;
 }
 
 type Notify = (message: Record<string, unknown>) => void;
@@ -71,8 +74,9 @@ export class Recorder {
 
     if (this.options.withMic) {
       try {
-        const mic = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true },
+        const mic = await requestMicStream(navigator.mediaDevices, this.options.micDeviceId ?? null, {
+          echoCancellation: true,
+          noiseSuppression: true,
         });
         this.streams.push(mic);
         this.capture.createMediaStreamSource(mic).connect(mix);

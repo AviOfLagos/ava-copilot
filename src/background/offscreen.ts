@@ -1,3 +1,4 @@
+import { audioDeviceSettingsStore } from '@extension/storage';
 import { offscreenBusyAnywhere } from './registry';
 /**
  * The one offscreen document, shared by the meeting recorder and the voice session. It closes only
@@ -14,7 +15,21 @@ export async function ensureOffscreen(): Promise<void> {
       reasons: [chrome.offscreen.Reason.USER_MEDIA, chrome.offscreen.Reason.AUDIO_PLAYBACK],
       justification: 'Records meetings and holds the voice conversation with the copilot',
     });
+    // The chosen microphone/speaker (Settings › Voice devices): read here, not in the offscreen
+    // document itself, which must stay free of @extension/storage imports (see src/offscreen/index.ts
+    // for why) — pushed once right after creation, before anything else is asked to start.
+    void pushAudioDeviceSettings();
   }
+}
+
+/** Tells the offscreen document which microphone/speaker to use; a no-op if it never answers. */
+export async function pushAudioDeviceSettings(): Promise<void> {
+  const settings = await audioDeviceSettingsStore.getSettings();
+  await toOffscreen({
+    type: 'audio_devices_apply',
+    micDeviceId: settings.mic?.deviceId ?? null,
+    speakerDeviceId: settings.speaker?.deviceId ?? null,
+  }).catch(() => {});
 }
 
 export async function toOffscreen<T = Record<string, unknown>>(message: Record<string, unknown>): Promise<T> {

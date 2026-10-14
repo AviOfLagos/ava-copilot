@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import { t } from '@extension/i18n';
+import { audioDeviceSettingsStore } from '@extension/storage';
+import { requestMicStream } from '@extension/shared';
 
 // The longest recording, so a forgotten microphone does not run on
 const MAX_RECORDING_MS = 2 * 60 * 1000;
@@ -151,7 +153,8 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const micDeviceId = (await audioDeviceSettingsStore.getSettings()).mic?.deviceId ?? null;
+      const stream = await requestMicStream(navigator.mediaDevices, micDeviceId, {});
       // Stopped while the microphone was starting
       if (statusNow() !== 'starting') {
         stream.getTracks().forEach(track => track.stop());

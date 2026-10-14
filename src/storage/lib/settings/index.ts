@@ -13,3 +13,4 @@ export * from './briefSettings';
 export * from './ttsSettings';
 export * from './voiceEngineSettings';
 export * from './assistant';
+export * from './audioDeviceSettings';

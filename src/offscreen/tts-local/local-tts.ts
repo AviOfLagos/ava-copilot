@@ -80,6 +80,11 @@ export class LocalTts {
     return this.worker !== null && this.loads.size > 0;
   }
 
+  /** Switches the speaker local voices play through (Settings › Voice devices). */
+  setOutputDevice(deviceId: string | null): void {
+    this.player.setOutputDevice(deviceId);
+  }
+
   /** Loads a voice's model now, so the first answer does not wait for it. */
   warm(engine: LocalVoiceEngine): Promise<void> {
     this.touch();

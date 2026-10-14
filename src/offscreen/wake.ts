@@ -1,3 +1,5 @@
+import { requestMicStream } from '@extension/shared';
+
 /**
  * Listens for "Hey Ava" on the device, with the Vosk recogniser in a worker and a grammar of that one
  * phrase: nothing leaves the machine until it is heard. The worker and model come from
@@ -30,6 +32,14 @@ const CAPTURE_SECONDS = 12;
 const CAPTURE_EXPIRES_MS = 15_000;
 // One wake at a time, however long the phrase echoes in the partial results
 const COOLDOWN_MS = 4000;
+// Vosk/Kaldi's own log severity: negative suppresses the "LOG (VoskAPI:…)" startup chatter
+// (which the worker otherwise prints as console warnings) while keeping real warnings/errors.
+const WAKE_WORKER_LOG_LEVEL = -1;
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
 
 // Verification: a candidate still needs the device-only decode below to agree before it wakes.
 // "ava" is a plain grammar option here (not free-form dictation): the small model often fails to
@@ -115,6 +125,10 @@ type WorkerMessage = { event?: string; result?: unknown; recognizerId?: string; 
 export class WakeListener {
   private worker: Worker | null = null;
   private mic: MediaStream | null = null;
+  private micSource: MediaStreamAudioSourceNode | null = null;
+  private node: AudioWorkletNode | null = null;
+  // The microphone this is listening with, or null for the system default; see switchMic()
+  private micDeviceId: string | null = null;
   private input: AudioContext | null = null;
   private readonly recognizerId = crypto.randomUUID();
   private readonly ring = new AudioRing(RATE * PHRASE_SECONDS);
@@ -155,11 +169,16 @@ export class WakeListener {
     return this.wakeWords;
   }
 
-  async start(words: string[] = DEFAULT_WORDS): Promise<void> {
+  async start(words: string[] = DEFAULT_WORDS, micDeviceId: string | null = null): Promise<void> {
     if (this.worker) return;
     this.wakeWords = words.length ? words : DEFAULT_WORDS;
+    this.micDeviceId = micDeviceId;
     const worker = new Worker(chrome.runtime.getURL('wake/vosk-worker.js'));
     this.worker = worker;
+    // Quiet the model's own startup chatter (Kaldi "LOG (VoskAPI:…)" lines, printed as console
+    // warnings) before it loads: the worker defers its native SetLogLevel call to load time, so
+    // this only has to arrive before the 'load' message below, not before the worker exists.
+    worker.postMessage({ action: 'set', key: 'logLevel', value: WAKE_WORKER_LOG_LEVEL });
     try {
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('The wake word model did not load')), 60_000);
@@ -186,14 +205,14 @@ export class WakeListener {
       });
       worker.addEventListener('message', event => this.handle(event.data as WorkerMessage));
 
-      this.mic = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      this.mic = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
       this.input = new AudioContext({ sampleRate: RATE });
       await this.input.audioWorklet.addModule(chrome.runtime.getURL('pcm-worklet.js'));
       const node = new AudioWorkletNode(this.input, 'pcm-capture', { channelCount: 1, channelCountMode: 'explicit' });
       node.port.onmessage = event => this.feed(event.data as Float32Array);
-      this.input.createMediaStreamSource(this.mic).connect(node);
+      this.node = node;
+      this.micSource = this.input.createMediaStreamSource(this.mic);
+      this.micSource.connect(node);
       const mute = this.input.createGain();
       mute.gain.value = 0;
       node.connect(mute).connect(this.input.destination);
@@ -210,8 +229,27 @@ export class WakeListener {
     this.resetVerification();
     this.mic?.getTracks().forEach(track => track.stop());
     this.mic = null;
+    this.micSource = null;
+    this.node = null;
     void this.input?.close().catch(() => {});
     this.input = null;
+  }
+
+  /**
+   * Switches to a different microphone (or back to the system default, `null`) without ending
+   * whatever is listening: a fresh stream replaces the old one on the same worklet node, so the
+   * worker and its recognisers never notice. A no-op if this is already the device in use.
+   */
+  async switchMic(deviceId: string | null): Promise<void> {
+    if (deviceId === this.micDeviceId) return;
+    this.micDeviceId = deviceId;
+    if (!this.input || !this.node) return; // Not started yet; the new start() picks this up
+    const next = await requestMicStream(navigator.mediaDevices, deviceId, MIC_CONSTRAINTS);
+    this.micSource?.disconnect();
+    this.mic?.getTracks().forEach(track => track.stop());
+    this.mic = next;
+    this.micSource = this.input.createMediaStreamSource(next);
+    this.micSource.connect(this.node);
   }
 
   /** While the copilot is talking with the user, the phrase means nothing. */

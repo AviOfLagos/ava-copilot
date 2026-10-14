@@ -9,3 +9,4 @@ import './chat/register';
 import './voice-engines/register';
 import './companion/register';
 import './history/register';
+import './audio-devices/register';

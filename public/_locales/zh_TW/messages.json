@@ -6198,5 +6198,23 @@
   },
   "voice_notLive": {
     "message": "語音對話已結束。請再傳送一次，以一般對話執行。"
+  },
+  "audio_device_settings_title": {
+    "message": "音訊裝置"
+  },
+  "audio_device_mic_label": {
+    "message": "麥克風"
+  },
+  "audio_device_speaker_label": {
+    "message": "喇叭"
+  },
+  "audio_device_systemDefault": {
+    "message": "系統預設"
+  },
+  "audio_device_disconnected": {
+    "message": "（已中斷連線 — 使用預設）"
+  },
+  "audio_device_speaker_systemVoicesNote": {
+    "message": "系統語音會透過電腦的預設喇叭播放，無法使用所選擇的喇叭。"
   }
 }

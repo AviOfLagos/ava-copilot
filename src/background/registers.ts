@@ -11,3 +11,4 @@ import './voice/engines/register';
 import './history/register';
 import './whatsapp/register';
 import './chats/register';
+import './audio-devices/register';

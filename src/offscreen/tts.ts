@@ -1,3 +1,5 @@
+import { setAudioSinkId } from '@extension/shared';
+
 export interface TtsPlayerCallbacks {
   onEnded: () => void;
   onError: (message: string) => void;
@@ -20,6 +22,11 @@ export class TtsPlayer {
       if (this.stopping) return;
       this.callbacks.onError(this.audio.error?.message || 'Playback failed');
     });
+  }
+
+  /** Switches the speaker this plays through (Settings › Voice devices). */
+  setOutputDevice(deviceId: string | null): void {
+    void setAudioSinkId(this.audio, deviceId);
   }
 
   play(dataUrl: string): void {
