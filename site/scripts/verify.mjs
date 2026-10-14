@@ -372,6 +372,8 @@ for (const width of [1440, 390]) {
   const context = 'widgets';
   const page = await openPage(context, { width: 1440 });
   try {
+    // The widgets animate only while they are seen: a page in the background would stall them
+    await page.bringToFront();
     await page.goto(base + '/', { waitUntil: 'load' });
     await page.evaluate(() => document.querySelector('[data-trail-run]').scrollIntoView({ block: 'center', behavior: 'instant' }));
     await page.waitForFunction(() => document.querySelector('[data-trail-run]')?.dataset.state === 'handback', {

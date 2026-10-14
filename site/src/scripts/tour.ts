@@ -30,7 +30,9 @@ type Phase = 'off' | 'playing' | 'paused' | 'waiting';
 // The line the tour plays is the section crossing this height of the viewport (the globe's line, too)
 const LINE = 0.55;
 const SETTLE_MS = 420;
-const FADE_MS = 220;
+// Switching lines: the old one fades out and stops, then the new one fades in, so two never play at once
+const FADE_OUT_MS = 200;
+const FADE_IN_MS = 100;
 
 export function startTour(globe: Globe | null) {
   const data = document.getElementById('tour-data');
@@ -59,6 +61,12 @@ export function startTour(globe: Globe | null) {
   let activeId: string | null = null;
   let settle = 0;
   let textTimer = 0;
+  // Each line's own volume in the audio graph: an element's volume is ignored once Web Audio plays it
+  const gains = new WeakMap<HTMLAudioElement, GainNode>();
+  // Lines still fading out; a newer switch stops them at once
+  const fading = new Set<() => void>();
+  // Only the latest request to play wins: a fast scroll can ask for several lines in a row
+  let request = 0;
   let meter = 0;
   let level = 0;
   let autoPaused = false;
@@ -170,31 +178,73 @@ export function startTour(globe: Globe | null) {
     prefetched.set(next.id, early);
   };
 
-  const release = (fade: boolean) => {
+  /** Fades the playing line out and stops it; resolves once it is silent. Without `fade`, stops at once. */
+  const release = (fade: boolean): Promise<void> => {
     window.clearTimeout(textTimer);
+    // Anything still fading from an earlier switch stops now: never more than one voice
+    fading.forEach(stopNow => stopNow());
     const old = audio;
     const oldSource = source;
     audio = null;
     source = null;
-    if (!old) return;
+    if (!old) return Promise.resolve();
     old.onended = null;
     old.onerror = null;
+    const gain = gains.get(old);
+    let done = false;
     const finish = () => {
+      if (done) return;
+      done = true;
+      fading.delete(finish);
       old.pause();
+      gain?.disconnect();
       oldSource?.disconnect();
     };
     if (!fade || old.paused) {
       finish();
+      return Promise.resolve();
+    }
+    fading.add(finish);
+    if (gain && context) {
+      const now = context.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0, now + FADE_OUT_MS / 1000);
+    } else {
+      const start = performance.now();
+      const from = old.volume;
+      const step = (time: number) => {
+        if (done) return;
+        const progress = Math.min(1, (time - start) / FADE_OUT_MS);
+        old.volume = from * (1 - progress);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+    return new Promise(resolve =>
+      window.setTimeout(() => {
+        finish();
+        resolve();
+      }, FADE_OUT_MS),
+    );
+  };
+
+  /** Brings a line in from silence. */
+  const fadeIn = (element: HTMLAudioElement) => {
+    const gain = gains.get(element);
+    if (gain && context) {
+      const now = context.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(1, now + FADE_IN_MS / 1000);
       return;
     }
-    // A short fade, so a line cut by the next section doesn't click
+    element.volume = 0;
     const start = performance.now();
-    const from = old.volume;
-    const step = (now: number) => {
-      const progress = Math.min(1, (now - start) / FADE_MS);
-      old.volume = from * (1 - progress);
-      if (progress < 1) requestAnimationFrame(step);
-      else finish();
+    const step = (time: number) => {
+      const progress = Math.min(1, (time - start) / FADE_IN_MS);
+      element.volume = progress;
+      if (progress < 1 && audio === element) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   };
@@ -214,10 +264,13 @@ export function startTour(globe: Globe | null) {
     if (activeId && activeId !== line.id && !heard.has(activeId)) schedule(activeId);
   };
 
-  const play = (id: string) => {
+  const play = async (id: string) => {
     const line = byId.get(id);
     if (!line) return;
-    release(true);
+    const mine = ++request;
+    await release(true);
+    // A newer section asked while this one waited for the fade: it plays instead
+    if (mine !== request) return;
     current = line;
     showLine(line);
     mark(line.id);
@@ -233,7 +286,10 @@ export function startTour(globe: Globe | null) {
     if (context && analyser) {
       try {
         source = context.createMediaElementSource(next);
-        source.connect(analyser);
+        const gain = context.createGain();
+        gain.gain.value = 0;
+        source.connect(gain).connect(analyser);
+        gains.set(next, gain);
       } catch {
         source = null;
       }
@@ -247,6 +303,7 @@ export function startTour(globe: Globe | null) {
       textTimer = window.setTimeout(() => finished(line), Math.max(4000, line.seconds * 1000));
     };
     void context?.resume();
+    fadeIn(next);
     next.play().then(
       () => {
         if (audio === next && phase === 'playing') runMeter();
@@ -267,7 +324,7 @@ export function startTour(globe: Globe | null) {
     settle = window.setTimeout(() => {
       if (phase === 'off' || phase === 'paused') return;
       if (activeId !== id || heard.has(id) || current?.id === id) return;
-      play(id);
+      void play(id);
     }, SETTLE_MS);
   };
 
@@ -278,12 +335,14 @@ export function startTour(globe: Globe | null) {
     heard.clear();
     dock.hidden = false;
     // The section in view when the tour starts plays first; the hero if none is
-    play(activeId && byId.has(activeId) ? activeId : lines[0].id);
+    void play(activeId && byId.has(activeId) ? activeId : lines[0].id);
     say(copy.announce.started);
   };
 
   const pause = (auto = false) => {
     if (phase === 'off' || phase === 'paused') return;
+    // A line still waiting for the previous one to fade out doesn't start
+    request++;
     autoPaused = auto;
     window.clearTimeout(settle);
     window.clearTimeout(textTimer);
@@ -298,7 +357,7 @@ export function startTour(globe: Globe | null) {
     autoPaused = false;
     const moved = activeId && activeId !== current?.id && byId.has(activeId) && !heard.has(activeId);
     if (moved && activeId) {
-      play(activeId);
+      void play(activeId);
     } else if (audio && current && !heard.has(current.id)) {
       setPhase('playing');
       mark(current.id);
@@ -312,6 +371,7 @@ export function startTour(globe: Globe | null) {
 
   const stop = (announceIt = true) => {
     window.clearTimeout(settle);
+    request++;
     release(false);
     prefetched.clear();
     stopMeter();
@@ -340,7 +400,7 @@ export function startTour(globe: Globe | null) {
       else {
         // Pressed again while it plays: from this section
         heard.clear();
-        play(activeId && byId.has(activeId) ? activeId : lines[0].id);
+        void play(activeId && byId.has(activeId) ? activeId : lines[0].id);
       }
     }),
   );
