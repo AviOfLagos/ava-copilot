@@ -53,6 +53,8 @@ const MEETING_PROMPTS = [
 const KB_PROMPT = "You answer questions from the user's own knowledge base";
 const GRAPH_PROMPT = 'and list what it talks about, for a knowledge graph';
 const BRIEF_PROMPT = "From the morning brief's data, pick at most three things";
+// A workspace's "where we are", in src/background/history/summary-prompt.ts
+const SUMMARY_PROMPT = 'You keep a running "where we are" note';
 // The system prompt of teach mode, in src/background/skills/teach.ts
 const TEACH_PROMPT = 'You write a skill: a short page of tips';
 
@@ -191,6 +193,20 @@ export async function startMockLlm(scenarios) {
         return res.end(JSON.stringify(textCompletion(request, kb.briefPriorities)));
       }
 
+      // A workspace summary: written from the titles of the sources it was given, so tests can see its scope
+      if (system.includes(SUMMARY_PROMPT)) {
+        const prompt = textOf(request.messages[request.messages.length - 1]);
+        kb.summaries.push(prompt);
+        const titles = [...prompt.matchAll(/^\[(\d+)\] .*?"([^"]+)"/gm)].map(match => [match[1], match[2]]);
+        const reply = titles.length
+          ? `## Where we are\nWorking on ${titles.map(([n, title]) => `${title} [${n}]`).join(', ')}.\n## Next actions\n${titles
+              .map(([n, title]) => `- [ ] Follow up on ${title} (by 2026-10-20) [${n}]`)
+              .join('\n')}`
+          : '## Where we are\nNothing yet.';
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(textCompletion(request, reply)));
+      }
+
       // The knowledge graph's reading of an item
       if (system.includes(GRAPH_PROMPT)) {
         kb.graphReads.push(textOf(request.messages[request.messages.length - 1]));
@@ -287,6 +303,8 @@ export async function startMockLlm(scenarios) {
     graphReads: [],
     // The morning brief: the data it was given, and the priorities it answers with
     briefData: [],
+    // Workspace summaries: every prompt they were written from
+    summaries: [],
     briefPriorities: '- Reply to the waiting post, it blocks the launch\n- Prepare the sponsor sync',
     graphReading: { people: [], organizations: [], projects: [], decisions: [], actions: [] },
     // Teach mode: task logs received, and the draft returned

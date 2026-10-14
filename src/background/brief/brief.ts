@@ -16,6 +16,8 @@ export interface BriefData {
   workspaces: Workspace[];
   // Sections that workflows made today for the brief (e.g. "Tech news")
   sections?: WorkflowBriefSection[];
+  // Every workspace's latest activity and next actions, from the workspace summaries (already flattened)
+  rollup?: string;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -90,6 +92,8 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
 
   // What the user's workflows gathered for the brief, e.g. the morning's tech news
   for (const section of data.sections ?? []) sections.push(sectionMarkdown(section));
+
+  if (data.rollup?.trim()) sections.push(data.rollup.trim());
 
   const groups = new Map<string, { actions: string[]; decisions: string[] }>();
   const group = (workspaceId: string | null) => {

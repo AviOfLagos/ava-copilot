@@ -30,6 +30,7 @@ const FOLDERS: Record<GraphNode['type'], string> = {
   meeting: 'Meetings',
   page: 'Pages',
   note: 'Notes',
+  'ai-session': 'AI sessions',
   person: 'People',
   project: 'Projects',
   organization: 'Organizations',
@@ -98,7 +99,7 @@ export function vaultNotes(source: VaultSource): Map<string, string> {
   // Where each source and entity lives; a name already taken gets its date or id added
   const pathFor = (node: Pick<GraphNode, 'id' | 'type' | 'label' | 'date' | 'workspaceId'>) => {
     if (paths.has(node.id)) return paths.get(node.id)!;
-    const dated = ['thread', 'meeting'].includes(node.type)
+    const dated = ['thread', 'meeting', 'ai-session'].includes(node.type)
       ? `${day(node.date)} ${safeName(node.label)}`
       : safeName(node.label);
     let path = `${folderOf(node.workspaceId)}/${FOLDERS[node.type]}/${dated}`;
@@ -194,7 +195,8 @@ export function vaultNotes(source: VaultSource): Map<string, string> {
   for (const node of entities) {
     const links = linksOf(node.id);
     const sources = links.filter(
-      entry => ['thread', 'meeting', 'page', 'note'].includes(entry.other.type) && paths.has(entry.other.id),
+      entry =>
+        ['thread', 'meeting', 'page', 'note', 'ai-session'].includes(entry.other.type) && paths.has(entry.other.id),
     );
     const parts = links.filter(entry => entry.edge.kind === 'part_of').map(entry => entry.other);
     const assigned = links.filter(entry => entry.edge.kind === 'assigned_to').map(entry => entry.other);

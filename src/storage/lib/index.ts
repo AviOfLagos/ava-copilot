@@ -23,3 +23,4 @@ export * from './secrets';
 export * from './artifacts';
 export * from './jobs';
 export * from './observability';
+export * from './history';

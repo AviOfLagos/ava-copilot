@@ -1,5 +1,6 @@
 import type { KbAnswer, KbCitation } from '@extension/storage';
 import type { SearchHit } from './search';
+import { aiToolName } from '../history/tools';
 
 export type { KbAnswer, KbCitation };
 
@@ -34,6 +35,8 @@ export function describeSource(hit: Pick<SearchHit, 'item' | 'chunk'>): string {
       return `Note "${item.title}", saved ${day}`;
     case 'page':
       return `Saved page "${item.title}" (${item.url}), saved ${day}`;
+    case 'ai-session':
+      return `${item.origin?.tool ? `${aiToolName(item.origin.tool)} session` : 'AI session'} "${item.title}"${item.origin?.project ? ` in ${item.origin.project}` : ''}, ${day}`;
   }
 }
 

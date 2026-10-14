@@ -2293,7 +2293,7 @@
     "message": "對話"
   },
   "history_title": {
-    "message": "對話紀錄"
+    "message": "匯入你的 AI 紀錄"
   },
   "history_search": {
     "message": "搜尋對話"
@@ -5392,5 +5392,284 @@
         "example": "Ava"
       }
     }
+  },
+  "history_section": {
+    "message": "匯入你的 AI 紀錄"
+  },
+  "history_sneakPeek": {
+    "message": "搶先看"
+  },
+  "history_hint": {
+    "message": "Claude Code、Codex、Gemini CLI、VS Code 的工作階段，以及 ChatGPT 或 Claude.ai 的匯出資料，會加入你的知識庫，各自歸入對應的工作區。只在這台電腦上讀取，並先移除機密資訊。只有你自己的模型會看到它們，用來產生摘要。"
+  },
+  "history_add": {
+    "message": "新增資料夾"
+  },
+  "history_where_title": {
+    "message": "各工具的存放位置"
+  },
+  "history_where_claude": {
+    "message": "Claude Code：你的 .claude 資料夾（或 .claude/projects）"
+  },
+  "history_where_codex": {
+    "message": "Codex：你的 .codex 資料夾（sessions 與 archived_sessions）"
+  },
+  "history_where_gemini": {
+    "message": "Gemini CLI：你的 .gemini 資料夾"
+  },
+  "history_where_vscode": {
+    "message": "VS Code 聊天：Code/User/workspaceStorage 的副本（瀏覽器無法直接開啟 Library 資料夾）"
+  },
+  "history_where_exports": {
+    "message": "ChatGPT 或 Claude.ai：含有匯出 zip 檔的資料夾，或解壓縮後的匯出資料"
+  },
+  "history_where_hidden": {
+    "message": "以點開頭的資料夾是隱藏的：在資料夾選擇器中按 Cmd+Shift+. 即可顯示。"
+  },
+  "history_never": {
+    "message": "從未"
+  },
+  "history_progress_scanning": {
+    "message": "正在尋找工作階段…"
+  },
+  "history_progress_reading": {
+    "message": "正在讀取 $TOTAL$ 個檔案中的第 $DONE$ 個 · $COUNT$ 則對話",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "80"
+      },
+      "count": {
+        "content": "$3",
+        "example": "40"
+      }
+    }
+  },
+  "history_progress_label": {
+    "message": "匯入進度"
+  },
+  "history_cancel": {
+    "message": "取消"
+  },
+  "history_result_done": {
+    "message": "已匯入 $ADDED$ 則新對話，更新 $UPDATED$ 則。",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_cancelled": {
+    "message": "已停止。已匯入 $ADDED$ 則新對話，更新 $UPDATED$ 則；按「更新」可繼續匯入其餘部分。",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_redacted": {
+    "message": "已移除的機密資訊：$COUNT$ 項。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "history_result_capped": {
+    "message": "資料很多，所以先匯入最新的；按「更新」可匯入更多。"
+  },
+  "history_import_label": {
+    "message": "來自 $NAME$ 的匯入",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_tools_none": {
+    "message": "尚未找到工作階段"
+  },
+  "history_import_count": {
+    "message": "$COUNT$ 則對話",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_last": {
+    "message": "上次 $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 14, 9:00"
+      }
+    }
+  },
+  "history_update": {
+    "message": "更新"
+  },
+  "history_reimport": {
+    "message": "重新匯入"
+  },
+  "history_reimport_label": {
+    "message": "從 $NAME$ 重新匯入全部",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_allow": {
+    "message": "再次允許"
+  },
+  "history_forget": {
+    "message": "忘記"
+  },
+  "history_forget_label": {
+    "message": "忘記來自 $NAME$ 的匯入",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_forget_confirm": {
+    "message": "要移除 $COUNT$ 則對話嗎？",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_forgotten": {
+    "message": "已忘記此匯入：$COUNT$ 則對話已從知識庫移除。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_byWorkspace": {
+    "message": "各工作區的對話"
+  },
+  "history_projects": {
+    "message": "專案資料夾"
+  },
+  "history_projects_hint": {
+    "message": "為資料夾選一次所屬工作區；它的工作階段（以及之後的新工作階段）都會跟著歸入。"
+  },
+  "history_project_map": {
+    "message": "$PROJECT$ 的工作區",
+    "placeholders": {
+      "project": {
+        "content": "$1",
+        "example": "/Users/me/code/app"
+      }
+    }
+  },
+  "history_projects_all": {
+    "message": "顯示全部 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
+  },
+  "history_projects_fewer": {
+    "message": "顯示較少"
+  },
+  "history_type_session": {
+    "message": "AI 工作階段"
+  },
+  "history_tab_summary": {
+    "message": "目前進度"
+  },
+  "history_summary_title": {
+    "message": "$NAME$ 的目前進度",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "history_summary_refresh": {
+    "message": "重新整理"
+  },
+  "history_summary_refreshing": {
+    "message": "撰寫中…"
+  },
+  "history_summary_none": {
+    "message": "尚無摘要。按「重新整理」會根據此工作區的聊天、會議、筆記與 AI 工作階段撰寫一份。"
+  },
+  "history_summary_empty": {
+    "message": "目前所有工作區都還沒有內容。"
+  },
+  "history_summary_meta": {
+    "message": "讀取來源：$COUNT$ · 撰寫於 $WHEN$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_title": {
+    "message": "你所有的工作區"
+  },
+  "history_rollup_week": {
+    "message": "本週 $COUNT$ 項",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "history_rollup_latest": {
+    "message": "最新：$TITLE$（$WHEN$）",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_actions": {
+    "message": "下一步行動"
+  },
+  "history_general": {
+    "message": "無工作區"
   }
 }

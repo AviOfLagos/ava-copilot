@@ -17,7 +17,7 @@ const logger = createLogger('Graph');
 
 // The most of a source that is read for the graph
 const MAX_READ_CHARS = 8000;
-const SOURCE_TYPES = new Set(['thread', 'meeting', 'page', 'note']);
+const SOURCE_TYPES = new Set(['thread', 'meeting', 'page', 'note', 'ai-session']);
 const EMPTY: Reading = { people: [], organizations: [], projects: [], decisions: [], actions: [] };
 
 export interface GraphDeps {
@@ -106,7 +106,8 @@ export class GraphBuilder {
       if (note) reading = readingFromNote(note);
     }
     // The user's own Obsidian notes join as they are, without a model call each: a vault can be large
-    const fromVault = item.sourceId.startsWith('vault:');
+    // Imported AI sessions too: there can be thousands, and the workspace summaries read them instead
+    const fromVault = item.sourceId.startsWith('vault:') || item.sourceType === 'ai-session';
     if (text.trim() && !fromVault && !(await this.deps.overCap())) {
       try {
         const { output } = await generateStructured({

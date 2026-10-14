@@ -40,6 +40,7 @@ const TYPE_STYLE: Record<GraphNodeType, { color: string; label: Key }> = {
   meeting: { color: 'rgba(120, 128, 142, 0.85)', label: 'graph_type_meeting' },
   page: { color: 'rgba(120, 128, 142, 0.85)', label: 'graph_type_page' },
   note: { color: 'rgba(120, 128, 142, 0.85)', label: 'graph_type_note' },
+  'ai-session': { color: 'rgba(120, 128, 142, 0.85)', label: 'history_type_session' },
 };
 
 // How solid each neutral type reads against the foreground token; project/person use the accent hues instead
@@ -51,6 +52,7 @@ const NEUTRAL_ALPHA: Partial<Record<GraphNodeType, number>> = {
   thread: 0.52,
   page: 0.52,
   note: 0.52,
+  'ai-session': 0.52,
 };
 
 const EDGE_LABELS: Record<GraphEdge['kind'], { out: Key; in: Key }> = {
@@ -62,7 +64,7 @@ const EDGE_LABELS: Record<GraphEdge['kind'], { out: Key; in: Key }> = {
   part_of: { out: 'graph_edge_partOf', in: 'graph_edge_parts' },
 };
 
-const SOURCES = new Set<GraphNodeType>(['thread', 'meeting', 'page', 'note']);
+const SOURCES = new Set<GraphNodeType>(['thread', 'meeting', 'page', 'note', 'ai-session']);
 const TIME_CHIPS: { value: TimeRange; label: Key }[] = [
   { value: '7d', label: 'graph_time_7d' },
   { value: '30d', label: 'graph_time_30d' },
@@ -126,7 +128,7 @@ export default function GraphView({
 
   const [trail, setTrail] = useState<string[]>([]);
   const [query, setQuery] = useState('');
-  const [hidden, setHidden] = useState<Set<GraphNodeType>>(new Set(['thread', 'page', 'note']));
+  const [hidden, setHidden] = useState<Set<GraphNodeType>>(new Set(['thread', 'page', 'note', 'ai-session']));
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [hoverId, setHoverId] = useState<string | null>(null);
   const focusId = trail.at(-1) ?? null;

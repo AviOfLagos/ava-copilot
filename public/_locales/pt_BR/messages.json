@@ -2293,7 +2293,7 @@
     "message": "Chats"
   },
   "history_title": {
-    "message": "Histórico de chats"
+    "message": "Traga seu histórico de IA"
   },
   "history_search": {
     "message": "Pesquisar chats"
@@ -5392,5 +5392,284 @@
         "example": "Ava"
       }
     }
+  },
+  "history_section": {
+    "message": "Traga seu histórico de IA"
+  },
+  "history_sneakPeek": {
+    "message": "Prévia"
+  },
+  "history_hint": {
+    "message": "Sessões do Claude Code, Codex, Gemini CLI, VS Code e exportações do ChatGPT ou Claude.ai entram na sua base de conhecimento, cada uma no seu espaço de trabalho. Lidas neste computador; segredos são removidos antes. Só o seu próprio modelo as vê, para resumir."
+  },
+  "history_add": {
+    "message": "Adicionar pasta"
+  },
+  "history_where_title": {
+    "message": "Onde cada ferramenta guarda"
+  },
+  "history_where_claude": {
+    "message": "Claude Code: sua pasta .claude (ou .claude/projects)"
+  },
+  "history_where_codex": {
+    "message": "Codex: sua pasta .codex (sessions e archived_sessions)"
+  },
+  "history_where_gemini": {
+    "message": "Gemini CLI: sua pasta .gemini"
+  },
+  "history_where_vscode": {
+    "message": "Chats do VS Code: uma cópia de Code/User/workspaceStorage (o navegador não abre a própria pasta Library)"
+  },
+  "history_where_exports": {
+    "message": "ChatGPT ou Claude.ai: a pasta com o zip da exportação, ou a exportação descompactada"
+  },
+  "history_where_hidden": {
+    "message": "Pastas que começam com ponto ficam ocultas: pressione Cmd+Shift+. no seletor de pastas para vê-las."
+  },
+  "history_never": {
+    "message": "nunca"
+  },
+  "history_progress_scanning": {
+    "message": "Procurando sessões…"
+  },
+  "history_progress_reading": {
+    "message": "Lendo $DONE$ de $TOTAL$ arquivos · $COUNT$ conversas",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "80"
+      },
+      "count": {
+        "content": "$3",
+        "example": "40"
+      }
+    }
+  },
+  "history_progress_label": {
+    "message": "Progresso da importação"
+  },
+  "history_cancel": {
+    "message": "Cancelar"
+  },
+  "history_result_done": {
+    "message": "$ADDED$ conversas novas e $UPDATED$ atualizadas importadas.",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_cancelled": {
+    "message": "Parado. $ADDED$ conversas novas e $UPDATED$ atualizadas entraram; Atualizar traz o resto.",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_redacted": {
+    "message": "Segredos removidos: $COUNT$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "history_result_capped": {
+    "message": "É muita coisa, então as mais recentes entraram primeiro; Atualizar traz mais."
+  },
+  "history_import_label": {
+    "message": "Importação de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_tools_none": {
+    "message": "nenhuma sessão encontrada ainda"
+  },
+  "history_import_count": {
+    "message": "$COUNT$ conversas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_last": {
+    "message": "última vez $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 14, 9:00"
+      }
+    }
+  },
+  "history_update": {
+    "message": "Atualizar"
+  },
+  "history_reimport": {
+    "message": "Reimportar"
+  },
+  "history_reimport_label": {
+    "message": "Reimportar tudo de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_allow": {
+    "message": "Permitir de novo"
+  },
+  "history_forget": {
+    "message": "Esquecer"
+  },
+  "history_forget_label": {
+    "message": "Esquecer a importação de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_forget_confirm": {
+    "message": "Remover $COUNT$ conversas?",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_forgotten": {
+    "message": "Importação esquecida: $COUNT$ conversas saíram da base de conhecimento.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_byWorkspace": {
+    "message": "Conversas por espaço de trabalho"
+  },
+  "history_projects": {
+    "message": "Pastas de projeto"
+  },
+  "history_projects_hint": {
+    "message": "Escolha uma vez o espaço de trabalho de cada pasta; suas sessões, e as novas, vão junto."
+  },
+  "history_project_map": {
+    "message": "Espaço de trabalho de $PROJECT$",
+    "placeholders": {
+      "project": {
+        "content": "$1",
+        "example": "/Users/me/code/app"
+      }
+    }
+  },
+  "history_projects_all": {
+    "message": "Mostrar todas as $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
+  },
+  "history_projects_fewer": {
+    "message": "Mostrar menos"
+  },
+  "history_type_session": {
+    "message": "Sessão de IA"
+  },
+  "history_tab_summary": {
+    "message": "Onde estamos"
+  },
+  "history_summary_title": {
+    "message": "Onde $NAME$ está",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "history_summary_refresh": {
+    "message": "Atualizar"
+  },
+  "history_summary_refreshing": {
+    "message": "Escrevendo…"
+  },
+  "history_summary_none": {
+    "message": "Ainda sem resumo. Atualizar escreve um a partir dos chats, reuniões, notas e sessões de IA deste espaço."
+  },
+  "history_summary_empty": {
+    "message": "Ainda não há nada em nenhum espaço de trabalho."
+  },
+  "history_summary_meta": {
+    "message": "Fontes lidas: $COUNT$ · escrito em $WHEN$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_title": {
+    "message": "Em todos os seus espaços"
+  },
+  "history_rollup_week": {
+    "message": "$COUNT$ nesta semana",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "history_rollup_latest": {
+    "message": "Mais recente: $TITLE$ ($WHEN$)",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_actions": {
+    "message": "Próximas ações"
+  },
+  "history_general": {
+    "message": "Sem espaço de trabalho"
   }
 }
