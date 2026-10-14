@@ -113,7 +113,17 @@ export async function startMockLlm(scenarios) {
   // Each scenario keeps its own progress, so several threads can follow different scripts at once.
   // A call belongs to the scenario its task names: "Run the scripted scenario <name>".
   const runs = new Map();
-  const newRun = name => ({ name, step: 0, navigatorCalls: [], requests: [], images: [], errors: [], failures: [] });
+  const newRun = name => ({
+    name,
+    step: 0,
+    navigatorCalls: [],
+    requests: [],
+    images: [],
+    // Per navigator call: image parts in the messages before the page state (pictures the user attached)
+    attachedImages: [],
+    errors: [],
+    failures: [],
+  });
   let lastStarted = null;
   const runFor = request => {
     const text = request.messages.map(textOf).join('\n');
@@ -254,6 +264,12 @@ export async function startMockLlm(scenarios) {
           const state = textOf(last);
           run.navigatorCalls.push(state);
           run.images.push(Array.isArray(last.content) && last.content.some(part => part.type === 'image_url'));
+          run.attachedImages.push(
+            request.messages
+              .slice(0, -1)
+              .flatMap(message => (Array.isArray(message.content) ? message.content : []))
+              .filter(part => part.type === 'image_url').length,
+          );
           const step = steps[Math.min(run.step, steps.length - 1)];
           run.step += 1;
           payload = {
@@ -363,6 +379,8 @@ export async function startMockLlm(scenarios) {
     voiceRequest: 'Run the scripted scenario voice-task.',
     notices: [],
     toolResponses: [],
+    // Messages typed into the voice conversation's chat: their words and the types of any inline pictures
+    typed: [],
   };
   server.on('upgrade', (req, socket) => {
     if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
@@ -438,8 +456,19 @@ export async function startMockLlm(scenarios) {
           });
           send({ serverContent: { turnComplete: true } });
         } else if (session.voice && message.clientContent) {
-          live.notices.push(message.clientContent.turns[0].parts[0].text);
-          send({ serverContent: { outputTranscription: { text: 'Heads up.' }, turnComplete: true } });
+          const parts = message.clientContent.turns[0].parts;
+          const words = parts.find(part => part.text?.startsWith('The user typed'));
+          if (words) {
+            live.typed.push({
+              session: live.sessions.indexOf(session),
+              text: words.text,
+              mimeTypes: parts.filter(part => part.inlineData).map(part => part.inlineData.mimeType),
+            });
+            send({ serverContent: { outputTranscription: { text: 'Got your message.' }, turnComplete: true } });
+          } else {
+            live.notices.push(parts[0].text);
+            send({ serverContent: { outputTranscription: { text: 'Heads up.' }, turnComplete: true } });
+          }
         } else if (session.voice && message.realtimeInput?.audio) {
           session.audioBytes += Buffer.from(message.realtimeInput.audio.data, 'base64').length;
           // After a second of microphone audio, the user has asked for something

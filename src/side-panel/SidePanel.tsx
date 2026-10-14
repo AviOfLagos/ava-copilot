@@ -10,6 +10,7 @@ import {
   threadStore,
   type KbAnswer,
   type KbCitation,
+  type OutgoingAttachment,
   meetingStore,
   workspaceStore,
 } from '@extension/storage';
@@ -37,6 +38,7 @@ import './registers';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
+import VoiceThreadBar from './voice/VoiceThreadBar';
 import Onboarding from './onboarding/Onboarding';
 import { useAssistantName } from './hooks/useAssistant';
 import TodayView from './today/TodayView';
@@ -64,7 +66,16 @@ type PanelMessage =
   | ({ type: 'kb_answer'; clientId: string } & KbAnswer)
   | { type: 'kb_saved'; clientId: string; title: string }
   | { type: 'skill_draft'; clientId: string; markdown: string }
-  | { type: 'voice_started'; ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean }
+  | {
+      type: 'voice_started';
+      ok: boolean;
+      micDenied?: boolean;
+      error?: string;
+      cancelled?: boolean;
+      threadId?: string;
+    }
+  | { type: 'voice_state'; status: 'off' | 'connecting' | 'listening' | 'speaking'; threadId: string | null }
+  | { type: 'voice_text_sent'; clientId: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
   | { type: 'speech_to_text_error'; error: string }
@@ -104,6 +115,8 @@ const SidePanel = () => {
   const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
   // The spoken conversation, as the offscreen document reports it
   const [voiceStatus, setVoiceStatus] = useState<'off' | 'connecting' | 'listening' | 'speaking'>('off');
+  // The chat the conversation is kept in: the Keyboard button opens it, and typing there goes to the conversation
+  const [voiceThreadId, setVoiceThreadId] = useState<string | null>(null);
   // A problem to show above the input that belongs to no message, e.g. a send that was refused
   const [banner, setBanner] = useState<string | null>(null);
   // A short good-news line, e.g. a page saved
@@ -237,7 +250,17 @@ const SidePanel = () => {
           } else if (!message.ok) {
             setVoiceStatus('off');
             setBanner(message.error || t('errors_unknown'));
+          } else if (message.threadId) {
+            setVoiceThreadId(message.threadId);
           }
+          break;
+        case 'voice_state':
+          // The panel opened while a conversation was on
+          if (message.threadId) setVoiceThreadId(message.threadId);
+          if (message.status !== 'off') setVoiceStatus(message.status);
+          break;
+        case 'voice_text_sent':
+          setSending(false);
           break;
         case 'meeting_answer':
           pendingAsksRef.current.get(message.clientId)?.();
@@ -348,20 +371,35 @@ const SidePanel = () => {
 
   useEffect(() => {
     connect();
+    // Whether a conversation is on already, and in which chat
+    post({ type: 'voice_state' });
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       portRef.current?.disconnect();
       portRef.current = null;
     };
-  }, [connect]);
+  }, [connect, post]);
 
   const currentWindowId = async () => (await chrome.windows.getCurrent()).id;
 
-  const handleSend = async (text: string) => {
+  // The chat on screen holds the conversation that is on: what is typed there goes to it
+  const voiceLiveHere = voiceStatus !== 'off' && !!threadId && threadId === voiceThreadId;
+
+  const handleSend = async (text: string, attachments: OutgoingAttachment[] = []) => {
     const trimmed = text.trim();
-    if (!trimmed || isBusy || sending) return;
+    if ((!trimmed && attachments.length === 0) || isBusy || sending) return;
     setBanner(null);
     const clientId = crypto.randomUUID();
+    if (voiceLiveHere) {
+      setSending(true);
+      try {
+        post({ type: 'voice_text', clientId, threadId, text: trimmed, attachments });
+      } catch (error) {
+        setSending(false);
+        setBanner(error instanceof Error ? error.message : String(error));
+      }
+      return;
+    }
     if (!threadId) {
       // A new thread gets its id from the background; until then the input waits
       pendingSendsRef.current.add(clientId);
@@ -373,6 +411,7 @@ const SidePanel = () => {
         clientId,
         threadId,
         text: trimmed,
+        attachments,
         windowId: await currentWindowId(),
         // A new chat goes to the workspace picked on Home; otherwise its words choose one
         workspaceId: threadId ? null : nextWorkspace,
@@ -425,11 +464,17 @@ const SidePanel = () => {
 
   // The offscreen document tells every page how the conversation is going
   useEffect(() => {
-    const onStatus = (message: { type?: string; status?: typeof voiceStatus; error?: string }) => {
+    const onStatus = (message: {
+      type?: string;
+      status?: typeof voiceStatus;
+      error?: string;
+      threadId?: string | null;
+    }) => {
       if (message?.type !== 'voice_status' || !message.status) return;
       // Right after the user ended the conversation, a late "listening" must not bring the screen back
       if (message.status !== 'off' && Date.now() - endedAtRef.current < 4000) return;
       setVoiceStatus(message.status);
+      if (message.threadId) setVoiceThreadId(message.threadId);
       if (message.error) setBanner(message.error);
     };
     chrome.runtime.onMessage.addListener(onStatus);
@@ -592,7 +637,7 @@ const SidePanel = () => {
                   ? 'checking'
                   : hasConfiguredModels === false
                     ? 'welcome'
-                    : thread && threadMessages.length > 0
+                    : thread && (threadMessages.length > 0 || thread.id === voiceThreadId)
                       ? 'chat'
                       : 'home';
 
@@ -666,7 +711,8 @@ const SidePanel = () => {
       )}
       {alerts}
       <Composer
-        onSendMessage={text => void handleSend(text)}
+        onSendMessage={(text, attachments) => void handleSend(text, attachments)}
+        onAttachProblem={message => setBanner(message)}
         onStopTask={handleStop}
         speech={speech}
         setTranscriptSink={setTranscriptSink}
@@ -686,7 +732,15 @@ const SidePanel = () => {
     <div className="aura text-foreground relative flex h-screen flex-col overflow-hidden font-sans">
       <Onboarding hasModel={hasConfiguredModels} onOpenModels={() => go('models' as Place)} />
       {voiceStatus !== 'off' && !voiceHidden && (
-        <VoiceView status={voiceStatus} onEnd={() => void toggleVoice()} onHide={() => setVoiceHidden(true)} />
+        <VoiceView
+          status={voiceStatus}
+          onEnd={() => void toggleVoice()}
+          onHide={() => {
+            // The keyboard opens the conversation's own chat, not whatever was on screen; the voice stays on
+            setVoiceHidden(true);
+            if (voiceThreadId) handleSelect(voiceThreadId);
+          }}
+        />
       )}
       <Sidebar
         open={drawerOpen}
@@ -859,6 +913,14 @@ const SidePanel = () => {
             onRetry={async () => post({ type: 'thread_retry', threadId: thread.id, windowId: await currentWindowId() })}
             isDarkMode={isDarkMode}
           />
+          {thread.tags.includes('voice') && (
+            <VoiceThreadBar
+              threadId={thread.id}
+              live={voiceLiveHere}
+              onBackToVoice={() => setVoiceHidden(false)}
+              onOpenThread={handleSelect}
+            />
+          )}
           <ChatView
             thread={thread}
             messages={threadMessages}

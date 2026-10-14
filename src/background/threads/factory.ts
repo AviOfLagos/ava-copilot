@@ -10,6 +10,7 @@ import type { ModelConfig } from '@extension/storage';
 import BrowserContext from '../browser/context';
 import { isHostName, siteHost } from '../agents/patterns';
 import { Executor } from '../agent/executor';
+import type { TaskImages } from '../agent/messages/service';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
 import { meterModel } from '../usage/meter';
@@ -108,6 +109,7 @@ export async function createExecutor(options: {
   browserContext: BrowserContext;
   models: RunModels;
   messageContext?: string;
+  media?: TaskImages | null;
 }): Promise<Executor> {
   const settings = await generalSettingsStore.getSettings();
   return new Executor(options.task, options.threadId, options.browserContext, options.models.navigator, {
@@ -122,5 +124,6 @@ export async function createExecutor(options: {
     },
     generalSettings: settings,
     messageContext: options.messageContext,
+    media: options.media,
   });
 }

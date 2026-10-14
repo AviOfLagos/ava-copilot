@@ -1879,7 +1879,7 @@
     "message": "You"
   },
   "voice_hide": {
-    "message": "Hide, keep talking"
+    "message": "Digitar nesta conversa"
   },
   "voice_end": {
     "message": "End the conversation"
@@ -6116,5 +6116,87 @@
   },
   "inbox_wa_error_stillOpen": {
     "message": "Pare o lote antes de excluir."
+  },
+  "chat_attach_lookAt": {
+    "message": "O que tem aqui?"
+  },
+  "chat_attach_noVision": {
+    "message": "$MODEL$ não consegue ver imagens, então trabalhou só com o seu texto. Para usar as imagens, escolha um modelo que veja imagens para esta conversa ou em Configurações › Modelos.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "llama3.1:8b"
+      }
+    }
+  },
+  "chat_attach_type": {
+    "message": "Só é possível anexar imagens (PNG, JPG, WebP, GIF), vídeos curtos (MP4, WebM, MOV) e arquivos de texto."
+  },
+  "chat_attach_imageTooBig": {
+    "message": "As imagens podem ter até 10 MB."
+  },
+  "chat_attach_videoTooBig": {
+    "message": "Os vídeos podem ter até 50 MB."
+  },
+  "chat_attach_videoTooLong": {
+    "message": "Os vídeos podem ter até 60 segundos."
+  },
+  "chat_attach_tooMany": {
+    "message": "Até 6 imagens e vídeos por mensagem."
+  },
+  "chat_attach_unreadable": {
+    "message": "Não foi possível ler $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mov"
+      }
+    }
+  },
+  "chat_attach_reading": {
+    "message": "Lendo o anexo…"
+  },
+  "chat_attach_media": {
+    "message": "Imagens e vídeos anexados"
+  },
+  "chat_attach_video": {
+    "message": "Vídeo $NAME$, $SECONDS$ s",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mp4"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "chat_attach_open": {
+    "message": "Abrir $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "photo.png"
+      }
+    }
+  },
+  "voice_threadLive": {
+    "message": "$NAME$ está ouvindo. O que você digitar aqui vai para a mesma conversa.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "voice_backToVoice": {
+    "message": "Voltar à voz"
+  },
+  "voice_tasksStarted": {
+    "message": "Tarefas desta conversa"
+  },
+  "voice_notLive": {
+    "message": "A conversa por voz terminou. Envie de novo para executar como uma conversa normal."
   }
 }

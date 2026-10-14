@@ -1,6 +1,14 @@
 import { t } from '@extension/i18n';
-import { db, generalSettingsStore, routeWorkspace, threadStore, workspaceStore } from '@extension/storage';
-import type { ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
+import {
+  agentModelStore,
+  AgentNameEnum,
+  db,
+  generalSettingsStore,
+  routeWorkspace,
+  threadStore,
+  workspaceStore,
+} from '@extension/storage';
+import type { MessageAttachment, ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
 import type BrowserContext from '../browser/context';
 import type { Executor } from '../agent/executor';
 import { ExecutionState } from '../agent/event/types';
@@ -14,6 +22,8 @@ import { groupTabs, TabBinding, tabsToBind } from './binding';
 import { createBrowserContext, createExecutor, resolveModels } from './factory';
 import { buildRunContext, splitForSummary, SUMMARY_INSTRUCTIONS, transcriptOf } from './memory';
 import { effectOf } from './transcript';
+import { canSeeImages, mediaOf } from './attachments';
+import type { TaskMedia } from './attachments';
 
 const logger = createLogger('ThreadManager');
 
@@ -102,24 +112,48 @@ export class ThreadManager {
     // Who asked: typed in the panel, said by voice, or a routine or agent; set when the chat is new
     origin?: ThreadRecord['origin'];
     agentId?: string | null;
+    // Pictures and videos the user attached, already checked (see ./attachments.ts)
+    attachments?: MessageAttachment[];
+    // Fields set on a new thread, e.g. the voice conversation that started it
+    fields?: Partial<Pick<ThreadRecord, 'voiceThreadId'>>;
   }): Promise<string> {
-    const text = request.text.trim();
+    const attachments = request.attachments ?? [];
+    // Pictures alone are a question about them
+    const text = request.text.trim() || (attachments.length ? t('chat_attach_lookAt') : '');
     if (!text) {
       throw new Error(t('bg_cmd_newTask_noTask'));
     }
     const thread =
       (request.threadId && (await this.store.get(request.threadId))) ||
-      (await this.store.create({ origin: request.origin ?? 'user', agentId: request.agentId ?? null }));
+      (await this.store.create({
+        origin: request.origin ?? 'user',
+        agentId: request.agentId ?? null,
+        ...request.fields,
+      }));
     if (this.running.has(thread.id)) {
       throw new Error(t('threads_busy'));
     }
     await this.checkCapacity();
     const binding = await this.bindingFor(thread, request.windowId);
 
-    await this.store.addMessage(thread.id, 'user', text);
+    await this.store.addMessage(thread.id, 'user', text, { attachments });
     await this.placeInWorkspace(thread, text, request.workspaceId);
-    await this.start(thread.id, text, binding, false);
+    await this.start(thread.id, text, binding, false, await this.mediaFor(thread, attachments));
     return thread.id;
+  }
+
+  /**
+   * What the agent is shown of a message's attachments. A model that cannot look at images gets none, and the
+   * chat says so plainly, so the task still runs on the words.
+   */
+  private async mediaFor(thread: ThreadRecord, attachments: MessageAttachment[]): Promise<TaskMedia | null> {
+    if (!attachments.length) return null;
+    const config = thread.model ?? (await agentModelStore.getAgentModel(AgentNameEnum.Navigator));
+    if (config && !(await canSeeImages(config))) {
+      await this.store.addMessage(thread.id, 'system', t('chat_attach_noVision', [config.modelName]));
+      return null;
+    }
+    return mediaOf(attachments);
   }
 
   /**
@@ -203,8 +237,8 @@ export class ThreadManager {
   async retry(threadId: string, windowId?: number): Promise<void> {
     const thread = await this.store.get(threadId);
     if (!thread || this.running.has(threadId)) return;
-    const lastTask = (await this.store.messages(threadId)).filter(message => message.actor === 'user').at(-1)?.content;
-    const task = lastTask ?? thread.activeTask;
+    const lastRequest = (await this.store.messages(threadId)).filter(message => message.actor === 'user').at(-1);
+    const task = lastRequest?.content ?? thread.activeTask;
     if (!task) return;
     await this.checkCapacity();
     const tabIds = await existingTabs(thread.boundTabIds);
@@ -213,7 +247,7 @@ export class ThreadManager {
     // A parked agent would carry on from where it stopped; a retry starts over
     this.parked.delete(threadId);
     await this.store.addMessage(threadId, 'system', t('threads_retried'));
-    await this.start(threadId, task, binding, false);
+    await this.start(threadId, task, binding, false, await this.mediaFor(thread, lastRequest?.attachments ?? []));
   }
 
   /** Stops a thread's run. */
@@ -391,7 +425,13 @@ export class ThreadManager {
     return buildRunContext({ memory }, recent, resumed ? RESUME_NOTE : '');
   }
 
-  private async start(threadId: string, task: string, binding: TabBinding, resumed: boolean): Promise<void> {
+  private async start(
+    threadId: string,
+    task: string,
+    binding: TabBinding,
+    resumed: boolean,
+    media: TaskMedia | null = null,
+  ): Promise<void> {
     // The agent may move to any tab no other running thread is using
     binding.canAdopt = tabId => {
       const holder = this.holderOf(tabId);
@@ -412,14 +452,14 @@ export class ThreadManager {
       // The finished executor still holds the model's full history of this thread
       ({ executor, browserContext } = parked);
       browserContext.setBinding(binding);
-      executor.addFollowUpTask(task);
+      executor.addFollowUpTask(task, media);
     } else {
       const models = await resolveModels(thread.model, scope);
       const messageContext = await this.contextFor(thread, models.planner, resumed, task);
       // An agent's chat stays on the agent's sites
       const agent = thread.agentId ? await db.agents.get(thread.agentId).catch(() => undefined) : undefined;
       browserContext = await createBrowserContext(binding, { onlyDomains: agent?.domains });
-      executor = await createExecutor({ threadId, task, browserContext, models, messageContext });
+      executor = await createExecutor({ threadId, task, browserContext, models, messageContext, media });
       scope.notify = message => executor.notify(message);
     }
 

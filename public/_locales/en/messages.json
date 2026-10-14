@@ -1879,7 +1879,7 @@
     "message": "You"
   },
   "voice_hide": {
-    "message": "Hide, keep talking"
+    "message": "Type in this conversation"
   },
   "voice_end": {
     "message": "End the conversation"
@@ -6116,5 +6116,87 @@
   },
   "inbox_wa_error_stillOpen": {
     "message": "Stop the batch before deleting it."
+  },
+  "chat_attach_lookAt": {
+    "message": "What's in this?"
+  },
+  "chat_attach_noVision": {
+    "message": "$MODEL$ can't look at pictures, so it worked from your words only. To use the pictures, pick a model that can see images for this chat or in Settings › Models.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "llama3.1:8b"
+      }
+    }
+  },
+  "chat_attach_type": {
+    "message": "Only pictures (PNG, JPG, WebP, GIF), short videos (MP4, WebM, MOV) and text files can be attached."
+  },
+  "chat_attach_imageTooBig": {
+    "message": "Pictures can be up to 10 MB."
+  },
+  "chat_attach_videoTooBig": {
+    "message": "Videos can be up to 50 MB."
+  },
+  "chat_attach_videoTooLong": {
+    "message": "Videos can be up to 60 seconds long."
+  },
+  "chat_attach_tooMany": {
+    "message": "Up to 6 pictures and videos per message."
+  },
+  "chat_attach_unreadable": {
+    "message": "$NAME$ could not be read.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mov"
+      }
+    }
+  },
+  "chat_attach_reading": {
+    "message": "Reading the attachment…"
+  },
+  "chat_attach_media": {
+    "message": "Attached pictures and videos"
+  },
+  "chat_attach_video": {
+    "message": "Video $NAME$, $SECONDS$ s",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mp4"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "chat_attach_open": {
+    "message": "Open $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "photo.png"
+      }
+    }
+  },
+  "voice_threadLive": {
+    "message": "$NAME$ is listening. What you type here goes to the same conversation.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "voice_backToVoice": {
+    "message": "Back to voice"
+  },
+  "voice_tasksStarted": {
+    "message": "Tasks from this conversation"
+  },
+  "voice_notLive": {
+    "message": "The voice conversation has ended. Send it again to run it as a normal chat."
   }
 }

@@ -2,7 +2,7 @@ import { Dexie } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ConfirmRequest } from '../settings/gateSettings';
 import { db as defaultDb } from './db';
-import type { AviCopilotDb, MessageActor, ThreadMessage, ThreadRecord } from './db';
+import type { AviCopilotDb, MessageActor, MessageAttachment, ThreadMessage, ThreadRecord } from './db';
 
 const TITLE_LENGTH = 60;
 
@@ -127,7 +127,12 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
     },
 
     /** Adds a message at the end of a thread, and names the thread after its first user message. */
-    async addMessage(threadId: string, actor: MessageActor, content: string): Promise<ThreadMessage> {
+    async addMessage(
+      threadId: string,
+      actor: MessageActor,
+      content: string,
+      extra: { attachments?: MessageAttachment[] } = {},
+    ): Promise<ThreadMessage> {
       return db.transaction('rw', db.threads, db.messages, async () => {
         const last = await messagesOf(threadId).last();
         const message: ThreadMessage = {
@@ -137,12 +142,13 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
           actor,
           content,
           ts: Date.now(),
+          ...(extra.attachments?.length ? { attachments: extra.attachments } : {}),
         };
         await db.messages.add(message);
         const thread = await db.threads.get(threadId);
         const changes: Partial<ThreadRecord> = { updatedAt: message.ts };
         if (thread && !thread.title && actor === 'user') {
-          changes.title = titleFrom(content);
+          changes.title = titleFrom(content || extra.attachments?.map(item => item.name).join(', ') || '');
         }
         await db.threads.update(threadId, changes);
         return message;

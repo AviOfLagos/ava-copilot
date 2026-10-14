@@ -1879,7 +1879,7 @@
     "message": "You"
   },
   "voice_hide": {
-    "message": "Hide, keep talking"
+    "message": "在這段對話中輸入"
   },
   "voice_end": {
     "message": "End the conversation"
@@ -6116,5 +6116,87 @@
   },
   "inbox_wa_error_stillOpen": {
     "message": "請先停止批次再刪除。"
+  },
+  "chat_attach_lookAt": {
+    "message": "這裡面有什麼？"
+  },
+  "chat_attach_noVision": {
+    "message": "$MODEL$ 無法查看圖片，所以只依據你的文字處理。若要使用圖片，請為這個對話或在「設定 › 模型」中選擇能看圖片的模型。",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "llama3.1:8b"
+      }
+    }
+  },
+  "chat_attach_type": {
+    "message": "只能附加圖片（PNG、JPG、WebP、GIF）、短影片（MP4、WebM、MOV）和文字檔。"
+  },
+  "chat_attach_imageTooBig": {
+    "message": "圖片最大 10 MB。"
+  },
+  "chat_attach_videoTooBig": {
+    "message": "影片最大 50 MB。"
+  },
+  "chat_attach_videoTooLong": {
+    "message": "影片最長 60 秒。"
+  },
+  "chat_attach_tooMany": {
+    "message": "每則訊息最多 6 張圖片和影片。"
+  },
+  "chat_attach_unreadable": {
+    "message": "無法讀取 $NAME$。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mov"
+      }
+    }
+  },
+  "chat_attach_reading": {
+    "message": "正在讀取附件…"
+  },
+  "chat_attach_media": {
+    "message": "附加的圖片和影片"
+  },
+  "chat_attach_video": {
+    "message": "影片 $NAME$，$SECONDS$ 秒",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "clip.mp4"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "chat_attach_open": {
+    "message": "開啟 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "photo.png"
+      }
+    }
+  },
+  "voice_threadLive": {
+    "message": "$NAME$ 正在聆聽。你在這裡輸入的內容會進入同一段對話。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "voice_backToVoice": {
+    "message": "回到語音"
+  },
+  "voice_tasksStarted": {
+    "message": "這段對話啟動的任務"
+  },
+  "voice_notLive": {
+    "message": "語音對話已結束。請再傳送一次，以一般對話執行。"
   }
 }

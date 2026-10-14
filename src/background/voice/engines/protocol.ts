@@ -31,6 +31,13 @@ export const economyTurnRequest = z
     type: z.literal('voice_engine_turn'),
     heard: z.string().max(4000).optional(),
     notice: z.string().max(4000).optional(),
+    // `heard` was typed in the conversation's chat, with these pictures (a video as its frames)
+    typed: z.boolean().optional(),
+    images: z
+      .array(z.object({ mediaType: z.string().max(40), data: z.string().max(14_000_000) }))
+      .max(40)
+      .optional(),
+    note: z.string().max(20_000).optional(),
     history: z.array(economyHistoryItem).max(40),
     instructions: z.string().max(60_000),
     tools: z.array(declaration).max(80),

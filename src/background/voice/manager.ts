@@ -10,7 +10,7 @@ import {
   threadStore,
   usageStore,
 } from '@extension/storage';
-import type { ThreadRecord } from '@extension/storage';
+import type { MessageAttachment, ThreadRecord } from '@extension/storage';
 import { createLogger } from '../log';
 import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE, LIVE_AUDIO_OUT_USD_PER_MINUTE } from '../usage/pricing';
@@ -35,6 +35,7 @@ import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { resolveModels } from '../threads/factory';
 import { economyVoiceOptions } from './engines/options';
+import { mediaOf } from '../threads/attachments';
 
 const logger = createLogger('Voice');
 
@@ -97,6 +98,11 @@ export class VoiceManager {
     return this.threadId !== null;
   }
 
+  /** The thread the conversation is kept in while it is on, so the panel can open it. */
+  get currentThreadId(): string | null {
+    return this.threadId;
+  }
+
   // Bumped by every stop: a start still under way when the user ended it knows to undo itself
   private generation = 0;
 
@@ -108,8 +114,8 @@ export class VoiceManager {
   async start(
     windowId?: number,
     { wake = false, guarded = false }: { wake?: boolean; guarded?: boolean } = {},
-  ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean }> {
-    if (this.running) return { ok: true };
+  ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean; threadId?: string }> {
+    if (this.running) return { ok: true, threadId: this.threadId ?? undefined };
     const generation = ++this.generation;
     // Economy mode (Settings › Voice engines): speech is recognised and spoken on the device, no Gemini key needed
     const economy = await economyVoiceOptions();
@@ -148,6 +154,8 @@ export class VoiceManager {
           .filter(Boolean)
           .join('\n\n'),
         tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
+        // Echoed in every status, so a panel knows which chat holds the conversation
+        threadId: thread.id,
       },
     });
     if (!response?.ok) {
@@ -173,7 +181,28 @@ export class VoiceManager {
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
     this.watchTimer = setInterval(() => void this.watch(), WATCH_MS);
     this.keepAlive = setInterval(() => void chrome.runtime.getPlatformInfo(), KEEP_ALIVE_MS);
-    return { ok: true };
+    return { ok: true, threadId: thread.id };
+  }
+
+  /**
+   * A message the user typed in the conversation's chat, with any pictures or videos: kept in the thread and
+   * sent to the live conversation as the user's turn, so the answer is spoken and written down there too.
+   */
+  async sendText(text: string, attachments: MessageAttachment[] = []): Promise<void> {
+    const threadId = this.threadId;
+    if (!threadId) throw new Error(t('voice_notLive'));
+    const typed = text.trim() || (attachments.length ? t('chat_attach_lookAt') : '');
+    if (!typed) return;
+    this.lastActivity = Date.now();
+    await threadStore.addMessage(threadId, 'user', typed, { attachments });
+    const media = await mediaOf(attachments);
+    const response = await toOffscreen<{ ok?: boolean }>({
+      type: 'voice_text',
+      text: typed,
+      images: media?.images ?? [],
+      note: media?.note ?? '',
+    }).catch(() => null);
+    if (!response?.ok) throw new Error(t('voice_notLive'));
   }
 
   async stop(): Promise<void> {
@@ -241,6 +270,8 @@ export class VoiceManager {
           text: task,
           windowId: this.windowId,
           origin: 'voice',
+          // The conversation's chat lists the tasks started from it
+          fields: { voiceThreadId: this.threadId },
         });
         this.lastTaskThreadId = threadId;
         this.announced.set(threadId, 'running');

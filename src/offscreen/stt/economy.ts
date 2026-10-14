@@ -2,7 +2,7 @@ import type { EconomyHistoryItem, EconomyTurnReply, EconomyTurnRequest } from '.
 import type { EconomyEngines } from '../../background/voice/engines/wire';
 import { localTts } from '../tts-local/shared';
 import { VoiceSession } from '../voice';
-import type { VoiceEvents, VoiceOptions, VoiceStatus, VoiceTool } from '../voice';
+import type { TurnImage, VoiceEvents, VoiceOptions, VoiceStatus, VoiceTool } from '../voice';
 import type { SttEngine } from './engines';
 import { recordHeard } from './listen';
 import { acquireStt, releaseStt } from './pool';
@@ -55,6 +55,8 @@ export class EconomySession {
   private utterances: Float32Array[] = [];
   private heardQueue: string[] = [];
   private notices: string[] = [];
+  // Messages typed in the conversation's chat, with their pictures
+  private typedQueue: { text: string; images: TurnImage[]; note: string }[] = [];
   private transcribing = false;
   private thinking = false;
   private speaking = false;
@@ -102,6 +104,15 @@ export class EconomySession {
   say(notice: string): void {
     if (!notice.trim()) return;
     this.notices.push(notice);
+    this.pump();
+  }
+
+  /** A message the user typed in the conversation's chat: the next turn, before anything heard after it. */
+  sendText(text: string, images: TurnImage[] = [], note = ''): void {
+    if (!text.trim() && images.length === 0) return;
+    // Typing over the answer stops it, as talking over it does
+    if (this.speaking) this.interrupt();
+    this.typedQueue.push({ text: text.slice(0, 4000), images, note });
     this.pump();
   }
 
@@ -153,6 +164,11 @@ export class EconomySession {
   /** Starts the next turn when nothing else is going on: the user's words first, then notices. */
   private pump(): void {
     if (this.stopped || !this.ready || this.thinking || this.speaking) return;
+    const typed = this.typedQueue.shift();
+    if (typed) {
+      void this.turn({ heard: typed.text, typed: true, images: typed.images, note: typed.note });
+      return;
+    }
     if (this.heardQueue.length) {
       // Words that came while the copilot was busy are one turn together
       const heard = this.heardQueue.splice(0).join(' ');
@@ -164,7 +180,13 @@ export class EconomySession {
     }
   }
 
-  private async turn(input: { heard?: string; notice?: string }): Promise<void> {
+  private async turn(input: {
+    heard?: string;
+    notice?: string;
+    typed?: boolean;
+    images?: TurnImage[];
+    note?: string;
+  }): Promise<void> {
     this.thinking = true;
     const interruptions = this.interruptions;
     let reply: EconomyTurnReply;
@@ -172,6 +194,7 @@ export class EconomySession {
       reply = await this.deps.ask({
         type: 'voice_engine_turn',
         ...input,
+        ...(input.images?.length ? {} : { images: undefined, note: undefined }),
         history: this.history.slice(-HISTORY_TURNS),
         instructions: this.options.instructions,
         tools: this.options.tools,
@@ -190,9 +213,16 @@ export class EconomySession {
         ? { heard: input.notice.slice(0, 4000), said: said.slice(0, 4000), notice: true }
         : { heard: heard.slice(0, 4000), said: said.slice(0, 4000) },
     );
-    if (heard || said) this.events.onTurn(heard, said);
+    // A typed message is in the chat already: only the answer is added
+    if (input.typed) {
+      if (said) this.events.onTurn('', said);
+    } else if (heard || said) this.events.onTurn(heard, said);
     // The user went on talking while this was being answered: their newer words come first
-    const overtaken = this.heardQueue.length > 0 || this.interruptions !== interruptions || this.collector.speaking;
+    const overtaken =
+      this.heardQueue.length > 0 ||
+      this.typedQueue.length > 0 ||
+      this.interruptions !== interruptions ||
+      this.collector.speaking;
     if (said && !reply.ended && !overtaken) {
       this.speaking = true;
       this.status('speaking');
