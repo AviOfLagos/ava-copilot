@@ -71,22 +71,20 @@ export function heyAvaPrefix(text: string | undefined): boolean {
 }
 
 /**
- * The same check for any name. Real voices are messier than the test recordings: the second decode often hears
- * "hey" as something unclear ([unk]) or a near word. So unclear pieces are ignored, and the name must come at
- * the very start or right after one word ("hey", "hi", a misheard "hey"). Plain "hey…" without the name never
- * passes, which is what keeps it from waking on its own.
+ * The same check for any name. Real voices are messier than the test recordings: the second decode can hear
+ * "hey" as something unclear ([unk]). So the name must come right after "hey" or right after one unclear
+ * piece (a "hey" it didn't catch), with any unclear pieces before that "hey" ignored. A bare name, "tell <name>"
+ * or "hey there <name>" never passes: waking starts a conversation that sends audio out, so it stays strict.
  */
 export function wakePrefix(text: string | undefined, name: string[]): boolean {
-  const words = (text ?? '')
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .filter(word => word && word !== '[unk]');
+  const words = (text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean);
   if (!name.length) return false;
-  for (let at = 0; at <= 1; at++) {
-    if (name.every((word, index) => words[at + index] === word)) return true;
-  }
-  return false;
+  // Unclear pieces are skipped only when a heard "hey" follows them: noise before the phrase
+  const firstClear = words.findIndex(word => word !== '[unk]');
+  const at = firstClear > 0 && words[firstClear] === 'hey' ? firstClear : 0;
+  // "hey" or one unclear piece, then the whole name
+  if (words[at] !== 'hey' && words[at] !== '[unk]') return false;
+  return name.every((word, index) => words[at + 1 + index] === word);
 }
 
 /** The last seconds of audio, in arrival order. */
