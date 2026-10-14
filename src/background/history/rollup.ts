@@ -51,7 +51,7 @@ export function flat(text: string, max = 160): string {
     .replace(/\s+/g, ' ')
     .trim()
     // No markup survives: links and images need brackets, HTML needs angle brackets, emphasis needs its marks
-    .replace(/[`<>!\[\]*_#|~]/g, '');
+    .replace(/[`<>![\]*_#|~]/g, '');
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
