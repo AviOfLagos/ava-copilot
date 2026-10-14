@@ -106,6 +106,8 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       // Ava looks through the user's other chats
       'search_chats',
       'read_chat',
+      // "Switch to the accountant"
+      'set_personality',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
@@ -238,6 +240,27 @@ test('"end the call" ends it for everyone, but only on the user\'s own words', a
     'End call',
   ]);
   await meet.close();
+});
+
+test('"switch to the accountant" switches the personality, with no click, and the next conversation talks like it', async () => {
+  const response = await speakTool('Switch to the accountant', {
+    name: 'set_personality',
+    args: { name: 'accountant' },
+  });
+  assert.match(response, /Switched to \\"Accountant\\"/);
+  assert.equal((await extension.getStorage('personalities')).activeId, 'accountant');
+
+  await speakTool('What is going on?', { name: 'get_status', args: {} });
+  const latest = mock.live.sessions.filter(s => s.voice).pop();
+  const instructions = latest.setups[0].systemInstruction.parts[0].text;
+  assert.match(instructions, /Personality: Accountant/);
+  assert.match(instructions, /Numbers first/);
+  // The personality comes after the rules, which it cannot override
+  assert.ok(instructions.indexOf('Personality: Accountant') > instructions.indexOf('You cannot confirm for them'));
+
+  const unknown = await speakTool('Be a pirate', { name: 'set_personality', args: { name: 'pirate' } });
+  assert.match(unknown, /No personality matches/);
+  await extension.setStorage({ personalities: { custom: [], activeId: 'default', workspaceDefaults: {} } });
 });
 
 test('ending the conversation while it connects closes it for good', async () => {

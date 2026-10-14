@@ -6,6 +6,7 @@ import { ThinkingOrb } from '../components/ui/thinking-orb';
 import Breadcrumbs from './Breadcrumbs';
 import type { Crumb } from './Breadcrumbs';
 import { useAssistantName } from '../hooks/useAssistant';
+import PersonalityPicker from '../personalities/PersonalityPicker';
 
 export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking';
 
@@ -28,6 +29,9 @@ interface HeaderProps {
   onNewThread: () => void;
   activeCount: number;
   onStopAll: () => void;
+  // The workspace of the chat in front, for the personality picker
+  workspaceId: string | null;
+  onPersonalities: () => void;
 }
 
 const iconButton =
@@ -44,6 +48,7 @@ export default function Header(props: HeaderProps) {
       <div className="flex size-7 items-center justify-center" aria-hidden="true">
         {props.busy ? <ThinkingOrb size={30} /> : <LiveOrb size={24} />}
       </div>
+      <PersonalityPicker workspaceId={props.workspaceId} onManage={props.onPersonalities} />
       <button
         type="button"
         onClick={props.onMenu}

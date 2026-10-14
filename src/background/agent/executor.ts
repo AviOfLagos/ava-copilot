@@ -23,7 +23,7 @@ import {
 import { URLNotAllowedError } from '../browser/views';
 import { chatHistoryStore } from '@extension/storage/lib/chat';
 import type { AgentStepHistory } from './history';
-import type { GeneralSettingsConfig } from '@extension/storage';
+import type { GeneralSettingsConfig, Personality } from '@extension/storage';
 
 import { ensureBudget } from '../usage/budget';
 import { compactIfNeeded } from '../threads/compaction';
@@ -39,6 +39,8 @@ export interface ExecutorExtraArgs {
   messageContext?: string;
   // Pictures the user attached to the task
   media?: TaskImages | null;
+  // The personality in force for the thread's workspace
+  personality?: Personality | null;
 }
 
 export class Executor {
@@ -76,8 +78,14 @@ export class Executor {
     context.tasks = this.tasks;
     const stylePrompt = this.generalSettings?.stylePrompt;
     const assistantName = this.generalSettings?.assistantName;
-    this.navigatorPrompt = new NavigatorPrompt(context.options.maxActionsPerStep, stylePrompt, assistantName);
-    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName);
+    const personality = extraArgs?.personality;
+    this.navigatorPrompt = new NavigatorPrompt(
+      context.options.maxActionsPerStep,
+      stylePrompt,
+      assistantName,
+      personality,
+    );
+    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName, personality);
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
     const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());

@@ -2,11 +2,13 @@ import {
   economyTts,
   localSttChoice,
   localVoice,
+  personalityRateOf,
+  personalityVoiceFor,
   ttsSettingsStore,
   voiceEngineSettingsStore,
   voiceTtsEngine,
 } from '@extension/storage';
-import type { InstalledVoiceModels, TtsSettingsConfig, VoiceEngineSettings } from '@extension/storage';
+import type { InstalledVoiceModels, Personality, TtsSettingsConfig, VoiceEngineSettings } from '@extension/storage';
 import { AppError } from '@extension/shared';
 import { installedVoiceModels } from './models';
 import type { EconomyEngines } from './wire';
@@ -52,10 +54,28 @@ export function chooseEconomyEngines(
  *
  * @throws AppError when economy mode is chosen but no local speech model is installed
  */
-export async function economyVoiceOptions(): Promise<{ mode: 'economy'; economy: EconomyEngines } | null> {
-  const settings = await voiceEngineSettingsStore.getSettings();
-  if (settings.mode !== 'economy') return null;
-  const choice = chooseEconomyEngines(settings, await ttsSettingsStore.getSettings(), await installedVoiceModels());
+export async function economyVoiceOptions(
+  // The conversation's personality: its voice and pace, when set, replace the voice settings
+  personality?: Pick<Personality, 'voice' | 'rate'> | null,
+): Promise<{ mode: 'economy'; economy: EconomyEngines } | null> {
+  const stored = await voiceEngineSettingsStore.getSettings();
+  if (stored.mode !== 'economy') return null;
+  const tts = await ttsSettingsStore.getSettings();
+  const voice = personality?.voice?.trim() ?? '';
+  const settings = {
+    ...stored,
+    ...(personalityVoiceFor('kitten', personality) ? { kittenVoice: voice } : {}),
+    ...(personalityVoiceFor('kokoro', personality) ? { kokoroVoice: voice } : {}),
+  };
+  const choice = chooseEconomyEngines(
+    settings,
+    {
+      ...tts,
+      voice: personalityVoiceFor('system', personality) ?? tts.voice,
+      rate: personalityRateOf(personality) ?? tts.rate,
+    },
+    await installedVoiceModels(),
+  );
   if ('error' in choice) throw new AppError('not_found', choice.error);
   return { mode: 'economy', economy: choice.engines };
 }

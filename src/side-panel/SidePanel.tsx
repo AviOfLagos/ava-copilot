@@ -767,6 +767,8 @@ const SidePanel = () => {
         onNewThread={handleNewThread}
         activeCount={activeCount}
         onStopAll={() => post({ type: 'thread_cancel_all' })}
+        workspaceId={view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace}
+        onPersonalities={() => go('settings')}
       />
 
       {elsewhere?.pendingRequest && (
@@ -969,6 +971,7 @@ const SidePanel = () => {
         <>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <HomeView
+              workspaceId={nextWorkspace}
               onPrompt={text => setInputTextRef.current?.(text)}
               onOpenKb={() => go('memory')}
               onTakeNotes={() => void handleTakeNotes()}

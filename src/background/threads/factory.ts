@@ -5,6 +5,8 @@ import {
   firewallStore,
   generalSettingsStore,
   llmProviderStore,
+  personalityStore,
+  threadStore,
 } from '@extension/storage';
 import type { ModelConfig } from '@extension/storage';
 import BrowserContext from '../browser/context';
@@ -112,6 +114,9 @@ export async function createExecutor(options: {
   media?: TaskImages | null;
 }): Promise<Executor> {
   const settings = await generalSettingsStore.getSettings();
+  // The personality of the thread's workspace (or the active one); a failure to read it keeps the default
+  const thread = await threadStore.get(options.threadId).catch(() => undefined);
+  const personality = await personalityStore.resolve(thread?.workspaceId).catch(() => null);
   return new Executor(options.task, options.threadId, options.browserContext, options.models.navigator, {
     plannerLLM: options.models.planner,
     agentOptions: {
@@ -125,5 +130,6 @@ export async function createExecutor(options: {
     generalSettings: settings,
     messageContext: options.messageContext,
     media: options.media,
+    personality,
   });
 }

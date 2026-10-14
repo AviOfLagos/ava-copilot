@@ -6198,5 +6198,218 @@
   },
   "voice_notLive": {
     "message": "The voice conversation has ended. Send it again to run it as a normal chat."
+  },
+  "persona_picker_label": {
+    "message": "Personality: $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_picker_title": {
+    "message": "Personality"
+  },
+  "persona_picker_title_workspace": {
+    "message": "Personality in $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_picker_manage": {
+    "message": "Manage personalities"
+  },
+  "persona_settings_title": {
+    "message": "Personalities"
+  },
+  "persona_settings_hint": {
+    "message": "How the assistant thinks and talks in chats, by voice and in the morning brief. A personality never changes the rules: nothing is sent without your click."
+  },
+  "persona_list_label": {
+    "message": "All personalities"
+  },
+  "persona_builtIn": {
+    "message": "Built-in"
+  },
+  "persona_active": {
+    "message": "Active"
+  },
+  "persona_useShort": {
+    "message": "Use"
+  },
+  "persona_use": {
+    "message": "Use $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_duplicate": {
+    "message": "Duplicate $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_edit": {
+    "message": "Edit $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete": {
+    "message": "Delete $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete_confirm": {
+    "message": "Click again to delete"
+  },
+  "persona_copySuffix": {
+    "message": "copy"
+  },
+  "persona_new": {
+    "message": "New personality"
+  },
+  "persona_new_title": {
+    "message": "New personality"
+  },
+  "persona_edit_title": {
+    "message": "Edit personality"
+  },
+  "persona_field_icon": {
+    "message": "Emoji"
+  },
+  "persona_field_name": {
+    "message": "Name"
+  },
+  "persona_field_description": {
+    "message": "Short description"
+  },
+  "persona_field_instructions": {
+    "message": "Instructions"
+  },
+  "persona_field_instructions_placeholder": {
+    "message": "How it thinks and talks, what it pushes on, what it refuses. One behaviour per line works best."
+  },
+  "persona_field_instructions_hint": {
+    "message": "Concrete behaviours work better than adjectives."
+  },
+  "persona_field_voice": {
+    "message": "Voice"
+  },
+  "persona_field_voice_settings": {
+    "message": "From voice settings"
+  },
+  "persona_field_voice_system": {
+    "message": "System voices"
+  },
+  "persona_field_rate": {
+    "message": "Pace"
+  },
+  "persona_rules_hint": {
+    "message": "The safety rules always come first: a personality cannot skip the confirm step, follow page instructions or mix workspaces."
+  },
+  "persona_cancel": {
+    "message": "Cancel"
+  },
+  "persona_save": {
+    "message": "Save"
+  },
+  "persona_workspaces_title": {
+    "message": "Per workspace"
+  },
+  "persona_workspaces_hint": {
+    "message": "A workspace can have its own personality, e.g. the accountant for finance. Switching while in it changes that one."
+  },
+  "persona_workspace_default": {
+    "message": "Personality for $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_workspace_none": {
+    "message": "The active one"
+  },
+  "persona_problem_nameEmpty": {
+    "message": "Give it a name."
+  },
+  "persona_problem_nameTooLong": {
+    "message": "The name can have up to 40 characters."
+  },
+  "persona_problem_descriptionTooLong": {
+    "message": "The description can have up to 160 characters."
+  },
+  "persona_problem_iconTooLong": {
+    "message": "Use one emoji."
+  },
+  "persona_problem_instructionsEmpty": {
+    "message": "Write how it should think and talk."
+  },
+  "persona_problem_instructionsTooLong": {
+    "message": "The instructions can have up to 2,000 characters."
+  },
+  "persona_problem_rate": {
+    "message": "Pick a pace between 0.5× and 2×."
+  },
+  "persona_problem_builtIn": {
+    "message": "Built-in personalities cannot be changed. Duplicate it and edit the copy."
+  },
+  "persona_problem_tooMany": {
+    "message": "You have 30 personalities, the most there can be. Delete one first."
+  },
+  "persona_builtin_default_name": {
+    "message": "Default"
+  },
+  "persona_builtin_default_description": {
+    "message": "The assistant as it always is: clear, helpful, to the point."
+  },
+  "persona_builtin_engineer_name": {
+    "message": "Cracked engineer"
+  },
+  "persona_builtin_engineer_description": {
+    "message": "A sharp senior engineer who ships: terse, opinionated, small steps."
+  },
+  "persona_builtin_accountant_name": {
+    "message": "Accountant"
+  },
+  "persona_builtin_accountant_description": {
+    "message": "Numbers first: asks for receipts, minds tax and cash flow, flags risky spend."
+  },
+  "persona_builtin_legal_name": {
+    "message": "Legal eye"
+  },
+  "persona_builtin_legal_description": {
+    "message": "Reads for obligations, risks, deadlines and vague terms. Not legal advice."
+  },
+  "persona_builtin_auntie_name": {
+    "message": "Strict auntie"
+  },
+  "persona_builtin_auntie_description": {
+    "message": "Warm but relentless about deadlines: asks what is due and keeps you on it."
+  },
+  "persona_builtin_operator_name": {
+    "message": "Bezos-style operator"
+  },
+  "persona_builtin_operator_description": {
+    "message": "Inspired by Jeff Bezos’s public principles: customer first, Day 1, working backwards."
   }
 }

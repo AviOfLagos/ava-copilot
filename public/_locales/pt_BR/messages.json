@@ -6198,5 +6198,218 @@
   },
   "voice_notLive": {
     "message": "A conversa por voz terminou. Envie de novo para executar como uma conversa normal."
+  },
+  "persona_picker_label": {
+    "message": "Personalidade: $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_picker_title": {
+    "message": "Personalidade"
+  },
+  "persona_picker_title_workspace": {
+    "message": "Personalidade em $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_picker_manage": {
+    "message": "Gerenciar personalidades"
+  },
+  "persona_settings_title": {
+    "message": "Personalidades"
+  },
+  "persona_settings_hint": {
+    "message": "Como o assistente pensa e fala nos chats, por voz e no resumo da manhã. Uma personalidade nunca muda as regras: nada é enviado sem o seu clique."
+  },
+  "persona_list_label": {
+    "message": "Todas as personalidades"
+  },
+  "persona_builtIn": {
+    "message": "Incluída"
+  },
+  "persona_active": {
+    "message": "Ativa"
+  },
+  "persona_useShort": {
+    "message": "Usar"
+  },
+  "persona_use": {
+    "message": "Usar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_duplicate": {
+    "message": "Duplicar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_edit": {
+    "message": "Editar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete": {
+    "message": "Excluir $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete_confirm": {
+    "message": "Clique de novo para excluir"
+  },
+  "persona_copySuffix": {
+    "message": "cópia"
+  },
+  "persona_new": {
+    "message": "Nova personalidade"
+  },
+  "persona_new_title": {
+    "message": "Nova personalidade"
+  },
+  "persona_edit_title": {
+    "message": "Editar personalidade"
+  },
+  "persona_field_icon": {
+    "message": "Emoji"
+  },
+  "persona_field_name": {
+    "message": "Nome"
+  },
+  "persona_field_description": {
+    "message": "Descrição curta"
+  },
+  "persona_field_instructions": {
+    "message": "Instruções"
+  },
+  "persona_field_instructions_placeholder": {
+    "message": "Como pensa e fala, no que insiste, o que recusa. Um comportamento por linha funciona melhor."
+  },
+  "persona_field_instructions_hint": {
+    "message": "Comportamentos concretos funcionam melhor que adjetivos."
+  },
+  "persona_field_voice": {
+    "message": "Voz"
+  },
+  "persona_field_voice_settings": {
+    "message": "Das configurações de voz"
+  },
+  "persona_field_voice_system": {
+    "message": "Vozes do sistema"
+  },
+  "persona_field_rate": {
+    "message": "Ritmo"
+  },
+  "persona_rules_hint": {
+    "message": "As regras de segurança vêm sempre primeiro: uma personalidade não pode pular a confirmação, seguir instruções de páginas nem misturar espaços de trabalho."
+  },
+  "persona_cancel": {
+    "message": "Cancelar"
+  },
+  "persona_save": {
+    "message": "Salvar"
+  },
+  "persona_workspaces_title": {
+    "message": "Por espaço de trabalho"
+  },
+  "persona_workspaces_hint": {
+    "message": "Um espaço de trabalho pode ter a sua própria personalidade, por exemplo o contador para finanças. Trocar dentro dele muda essa."
+  },
+  "persona_workspace_default": {
+    "message": "Personalidade de $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_workspace_none": {
+    "message": "A ativa"
+  },
+  "persona_problem_nameEmpty": {
+    "message": "Dê um nome."
+  },
+  "persona_problem_nameTooLong": {
+    "message": "O nome pode ter até 40 caracteres."
+  },
+  "persona_problem_descriptionTooLong": {
+    "message": "A descrição pode ter até 160 caracteres."
+  },
+  "persona_problem_iconTooLong": {
+    "message": "Use um emoji."
+  },
+  "persona_problem_instructionsEmpty": {
+    "message": "Escreva como ela deve pensar e falar."
+  },
+  "persona_problem_instructionsTooLong": {
+    "message": "As instruções podem ter até 2.000 caracteres."
+  },
+  "persona_problem_rate": {
+    "message": "Escolha um ritmo entre 0,5× e 2×."
+  },
+  "persona_problem_builtIn": {
+    "message": "Personalidades incluídas não podem ser alteradas. Duplique e edite a cópia."
+  },
+  "persona_problem_tooMany": {
+    "message": "Você tem 30 personalidades, o máximo. Exclua uma primeiro."
+  },
+  "persona_builtin_default_name": {
+    "message": "Padrão"
+  },
+  "persona_builtin_default_description": {
+    "message": "O assistente de sempre: claro, prestativo e direto."
+  },
+  "persona_builtin_engineer_name": {
+    "message": "Engenheira afiada"
+  },
+  "persona_builtin_engineer_description": {
+    "message": "Uma engenheira sênior afiada que entrega: concisa, opinativa, passos pequenos."
+  },
+  "persona_builtin_accountant_name": {
+    "message": "Contadora"
+  },
+  "persona_builtin_accountant_description": {
+    "message": "Números primeiro: pede comprovantes, cuida de impostos e fluxo de caixa, aponta gastos arriscados."
+  },
+  "persona_builtin_legal_name": {
+    "message": "Olhar jurídico"
+  },
+  "persona_builtin_legal_description": {
+    "message": "Lê buscando obrigações, riscos, prazos e termos vagos. Não é aconselhamento jurídico."
+  },
+  "persona_builtin_auntie_name": {
+    "message": "Tia exigente"
+  },
+  "persona_builtin_auntie_description": {
+    "message": "Carinhosa mas implacável com prazos: pergunta o que vence e não deixa você esquecer."
+  },
+  "persona_builtin_operator_name": {
+    "message": "Operador estilo Bezos"
+  },
+  "persona_builtin_operator_description": {
+    "message": "Inspirado nos princípios públicos de Jeff Bezos: cliente primeiro, Day 1, trabalhar de trás para frente."
   }
 }
