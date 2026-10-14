@@ -6411,5 +6411,23 @@
   },
   "persona_builtin_operator_description": {
     "message": "Inspired by Jeff Bezos’s public principles: customer first, Day 1, working backwards."
+  },
+  "audio_device_settings_title": {
+    "message": "Audio devices"
+  },
+  "audio_device_mic_label": {
+    "message": "Microphone"
+  },
+  "audio_device_speaker_label": {
+    "message": "Speaker"
+  },
+  "audio_device_systemDefault": {
+    "message": "System default"
+  },
+  "audio_device_disconnected": {
+    "message": "(disconnected — using default)"
+  },
+  "audio_device_speaker_systemVoicesNote": {
+    "message": "System voices play through the computer's default speaker; they cannot use a chosen one."
   }
 }

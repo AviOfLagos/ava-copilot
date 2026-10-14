@@ -2,6 +2,7 @@ import { pcm16Base64 } from './live';
 import { SpeechGate } from './vad';
 import { liveSocketUrl } from './liveAuth';
 import type { LiveOptions } from './live';
+import { requestMicStream, setAudioSinkId } from '@extension/shared';
 
 /**
  * A spoken conversation with the copilot over the Gemini Live API: the microphone goes up, the
@@ -31,6 +32,9 @@ export interface VoiceOptions extends LiveOptions {
   // Audio from just before the session, when "Hey Ava" started it: sent first, so the request said
   // in the same breath is heard
   preroll?: Float32Array[];
+  // The chosen microphone/speaker (Settings › Voice devices), or null for the system default
+  micDeviceId?: string | null;
+  speakerDeviceId?: string | null;
 }
 
 export interface VoiceEvents {
@@ -98,6 +102,9 @@ export class VoiceSession {
   private readonly gate = new SpeechGate({ sampleRate: INPUT_RATE });
   private handle: string | null = null;
   private mic: MediaStream | null = null;
+  private micSource: MediaStreamAudioSourceNode | null = null;
+  private node: AudioWorkletNode | null = null;
+  private micDeviceId: string | null = null;
   private input: AudioContext | null = null;
   private output: AudioContext | null = null;
   private playing: AudioBufferSourceNode[] = [];
@@ -119,20 +126,48 @@ export class VoiceSession {
   ) {}
 
   async start(): Promise<void> {
-    this.mic = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    this.micDeviceId = this.options.micDeviceId ?? null;
+    this.mic = await requestMicStream(navigator.mediaDevices, this.micDeviceId, {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
     });
     this.output = new AudioContext({ sampleRate: OUTPUT_RATE });
+    void setAudioSinkId(this.output, this.options.speakerDeviceId ?? null);
     this.input = new AudioContext({ sampleRate: INPUT_RATE });
     await this.input.audioWorklet.addModule(chrome.runtime.getURL('pcm-worklet.js'));
     const node = new AudioWorkletNode(this.input, 'pcm-capture', { channelCount: 1, channelCountMode: 'explicit' });
     node.port.onmessage = event => this.fromMic(event.data as Float32Array);
-    this.input.createMediaStreamSource(this.mic).connect(node);
+    this.node = node;
+    this.micSource = this.input.createMediaStreamSource(this.mic);
+    this.micSource.connect(node);
     const mute = this.input.createGain();
     mute.gain.value = 0;
     node.connect(mute).connect(this.input.destination);
     this.usageTimer = setInterval(() => this.reportUsage(), 60_000);
     this.connect();
+  }
+
+  /** Switches microphones mid-conversation without ending it: see WakeListener.switchMic. */
+  async switchMic(deviceId: string | null): Promise<void> {
+    if (deviceId === this.micDeviceId) return;
+    this.micDeviceId = deviceId;
+    if (!this.input || !this.node) return;
+    const next = await requestMicStream(navigator.mediaDevices, deviceId, {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    });
+    this.micSource?.disconnect();
+    this.mic?.getTracks().forEach(track => track.stop());
+    this.mic = next;
+    this.micSource = this.input.createMediaStreamSource(next);
+    this.micSource.connect(this.node);
+  }
+
+  /** Switches the speaker this conversation plays through, without ending it. */
+  switchSpeaker(deviceId: string | null): void {
+    if (this.output) void setAudioSinkId(this.output, deviceId);
   }
 
   stop(): void {

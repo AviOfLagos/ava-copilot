@@ -1,3 +1,4 @@
+import { requestMicStream } from '@extension/shared';
 import type { EconomyHistoryItem, EconomyTurnReply, EconomyTurnRequest } from '../../background/voice/engines/protocol';
 import type { EconomyEngines } from '../../background/voice/engines/wire';
 import { localTts } from '../tts-local/shared';
@@ -29,11 +30,14 @@ export interface EconomyOptions {
   // What followed "Hey Ava", when the wake word started this: the start of the first utterance
   preroll?: Float32Array[];
   economy: EconomyEngines;
+  // The chosen microphone/speaker (Settings › Voice devices), or null for the system default
+  micDeviceId?: string | null;
+  speakerDeviceId?: string | null;
 }
 
 export interface EconomyDeps {
-  // Starts the microphone at 16 kHz; returns how to stop it
-  openMic: (onChunk: (samples: Float32Array) => void) => Promise<() => void>;
+  // Starts the microphone at 16 kHz, on the chosen device (null for the system default); returns how to stop it
+  openMic: (onChunk: (samples: Float32Array) => void, deviceId: string | null) => Promise<() => void>;
   loadStt: (config: EconomyEngines['stt']) => Promise<SttEngine>;
   releaseStt: () => void;
   // Speaks and resolves once heard, or stopped
@@ -81,7 +85,7 @@ export class EconomySession {
       return;
     }
     this.stt = stt;
-    this.closeMic = await this.deps.openMic(samples => this.fromMic(samples));
+    this.closeMic = await this.deps.openMic(samples => this.fromMic(samples), this.options.micDeviceId ?? null);
     if (this.stopped) this.closeMic();
     this.ready = true;
     this.collector.seed(this.options.preroll?.splice(0) ?? []);
@@ -249,9 +253,11 @@ export class EconomySession {
 /** The real microphone, recogniser, voices and background. */
 function browserDeps(): EconomyDeps {
   return {
-    openMic: async onChunk => {
-      const mic = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    openMic: async (onChunk, deviceId) => {
+      const mic = await requestMicStream(navigator.mediaDevices, deviceId, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
       });
       const input = new AudioContext({ sampleRate: INPUT_RATE });
       try {

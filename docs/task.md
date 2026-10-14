@@ -1214,6 +1214,54 @@ the Cloud API) is `docs/whatsapp-plan-b.md`.
   `e2e/personalities.e2e.mjs` (header switch → next request carries it, below the gate; custom one from Settings),
   `voice.e2e.mjs` (`set_personality` with no click; next session's instructions carry it).
 
+### Quiet extension errors, and choosing a mic/speaker (2026-10-14)
+
+- **Quiet `brave://extensions` errors.** `injectBuildDomTreeScripts`/`scriptInjectedFrames`
+  (`background/browser/dom/service.ts`) now recognise the four chrome.scripting race messages for a tab or frame
+  that is already gone (`No tab with id`, `No frame with id`, `Frame with ID … was removed`, `The tab was closed`) and
+  log those at `debug` (silent in production) instead of `console.error`; anything else still logs as a real error, and
+  nothing is retried into a gone target. The wake word's Vosk worker (`src/offscreen/wake.ts`, and the plain-dictation
+  recogniser in `src/offscreen/stt/vosk.ts`, same worker/model) now sends `{action:'set', key:'logLevel', value:-1}`
+  right after creating the worker, before `'load'`: the worker defers its native `SetLogLevel` call to load time, so
+  this silences the "LOG (VoskAPI:…)" startup chatter (otherwise printed as console warnings) without touching the
+  generated `public/wake/vosk-worker.js`.
+- **Choose the microphone and the speaker.** New Settings › Audio devices section (`side-panel/audio-devices`,
+  registered right after Voice engines) lists `navigator.mediaDevices.enumerateDevices()` audioinput/audiooutput
+  devices with labels, plus "System default"; the list updates live on the panel's own `devicechange` event. A
+  choice is kept by deviceId **and** label (`storage/lib/settings/audioDeviceSettings.ts`): matched by id first,
+  falling back to the label when the id was reassigned between sessions (deviceIds are not stable; labels are) —
+  the matching/fallback/disconnect logic lives in `src/shared/lib/audio-devices` (`resolveAudioDevice`,
+  `requestMicStream`, `setAudioSinkId`), framework-free and unit-tested. Only the offscreen document has microphone
+  permission, so it is the one place that can read device labels (`src/offscreen/devices.ts`); the panel has no
+  storage access to it either way, so it asks over the usual command channel
+  (`background/audio-devices/register.ts` → `audio_devices_list`, opening the offscreen document only for the ask).
+  **The offscreen document itself does not import `@extension/storage`** — doing so changed its Vite chunk graph
+  (a new shared `base-*.js` chunk split out) in a way that silently broke `chrome.runtime.onMessage` delivery to it
+  in testing (every offscreen-backed feature — wake, voice, recorder — timed out with "Receiving end does not
+  exist", found by bisecting the regression against a clean worktree). Instead, the background reads
+  `audioDeviceSettingsStore` and pushes the choice over as a plain message, `audio_devices_apply`: once right after
+  `ensureOffscreen()` creates a fresh document (`background/offscreen.ts`), and again on every later change, but only
+  to a document that is already open (`background/audio-devices/register.ts` subscribes to the store). The offscreen
+  document keeps the pushed values in two module-level variables and applies them to whatever is running
+  (`WakeListener.switchMic`, `VoiceSession.switchMic`/`switchSpeaker`, `LocalTts.setOutputDevice`,
+  `TtsPlayer.setOutputDevice`) and to anything it starts afterwards (wake, Live/economy voice, meeting recorder,
+  cloud TTS playback) — `getUserMedia({ deviceId: { exact } })` with a fallback to the system default on
+  OverconstrainedError/NotFoundError, `setSinkId` for playback where supported. Dictation
+  (`side-panel/hooks/useSpeechInput.ts`) reads the store directly (the panel has no such chunking issue) and applies
+  the same fallback. `chrome.tts` (system voices) cannot choose an output device, so the speaker select says so next
+  to it when the TTS engine is `system`.
+- Tests: unit (`src/shared/lib/audio-devices`: id/label/disconnect resolution, mic constraints, getUserMedia
+  fallback, setSinkId; `storage/lib/settings/audioDeviceSettings`; `background/browser/dom/service` for the gone-tab
+  race classifier). E2E: confirmed with Chrome's fake devices (`E2E_FAKE_MIC`) that the selects list all fake
+  devices with labels, a choice persists and is applied (checked via the background's raw command reply and the
+  rendered `<select>`), and re-ran `wake`, `voice`, `voice-engines`, `dictation`, `meeting` and `threads` E2E (all
+  green) after the chunking regression above was found and fixed.
+- Known gaps: mid-session mic/speaker switching is wired for wake listening and the Live/economy voice session, but
+  not for an in-progress meeting recording (a new recording picks up the current choice; changing it mid-recording
+  does not restart the mic track) or for a dictation recording already in progress (same: applies to the next one).
+  No dedicated E2E for the live-switch path (`audio_devices_apply` arriving mid-conversation) or for the
+  disconnect→reconnect UI text, though both are covered at the unit level.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

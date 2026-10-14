@@ -6411,5 +6411,23 @@
   },
   "persona_builtin_operator_description": {
     "message": "Inspirado nos princípios públicos de Jeff Bezos: cliente primeiro, Day 1, trabalhar de trás para frente."
+  },
+  "audio_device_settings_title": {
+    "message": "Dispositivos de áudio"
+  },
+  "audio_device_mic_label": {
+    "message": "Microfone"
+  },
+  "audio_device_speaker_label": {
+    "message": "Alto-falante"
+  },
+  "audio_device_systemDefault": {
+    "message": "Padrão do sistema"
+  },
+  "audio_device_disconnected": {
+    "message": "(desconectado — usando o padrão)"
+  },
+  "audio_device_speaker_systemVoicesNote": {
+    "message": "As vozes do sistema tocam pelo alto-falante padrão do computador; não podem usar um escolhido."
   }
 }

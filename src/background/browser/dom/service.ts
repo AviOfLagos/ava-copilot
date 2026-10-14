@@ -10,6 +10,21 @@ function isNotNull<T>(item: T | null | undefined): item is T {
   return item != null;
 }
 
+// A tab or frame that closed/navigated out from under an in-flight injection check is an expected
+// race, not a real failure: chrome.scripting rejects with one of these messages. Log those quietly
+// (debug, so they are silent in production) and keep anything else as a real error.
+const EXPECTED_GONE_TARGET_PATTERNS = [
+  /No tab with id/i,
+  /No frame with id/i,
+  /Frame with ID .* was removed/i,
+  /The tab was closed/i,
+];
+
+export function isExpectedGoneTargetError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return EXPECTED_GONE_TARGET_PATTERNS.some(pattern => pattern.test(message));
+}
+
 export interface ReadabilityResult {
   title: string;
   content: string;
@@ -587,7 +602,11 @@ async function scriptInjectedFrames(tabId: number): Promise<Map<number, boolean>
     });
     return new Map(results.map(result => [result.frameId, result.result || false]));
   } catch (err) {
-    console.error('Failed to check script injection status:', err);
+    if (isExpectedGoneTargetError(err)) {
+      logger.debug('Skipped script injection status check: tab or frame is gone', err);
+    } else {
+      logger.error('Failed to check script injection status:', err);
+    }
     return new Map();
   }
 }
@@ -629,6 +648,10 @@ export async function injectBuildDomTreeScripts(tabId: number) {
       });
     }
   } catch (err) {
-    console.error('Failed to inject scripts:', err);
+    if (isExpectedGoneTargetError(err)) {
+      logger.debug('Skipped script injection: tab or frame is gone', err);
+    } else {
+      logger.error('Failed to inject scripts:', err);
+    }
   }
 }

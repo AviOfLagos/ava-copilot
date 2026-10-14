@@ -12,3 +12,4 @@ import './history/register';
 import './whatsapp/register';
 import './chats/register';
 import './personalities/register';
+import './audio-devices/register';

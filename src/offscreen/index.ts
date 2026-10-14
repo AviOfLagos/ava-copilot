@@ -5,6 +5,8 @@ import { WakeListener } from './wake';
 import { TtsPlayer } from './tts';
 import { createVoiceSession } from './stt/economy';
 import type { AnyVoiceSession, EconomyOptions } from './stt/economy';
+import { enumerateAudioDevices } from './devices';
+import { localTts } from './tts-local/shared';
 import './tts-local/register';
 
 /**
@@ -19,6 +21,26 @@ const wake = new WakeListener(() => {
   chime();
   notify({ type: 'wake_word' });
 });
+
+// The chosen microphone/speaker (Settings › Voice devices), kept here rather than read from
+// @extension/storage directly: importing a settings store from this entrypoint changes its chunk
+// graph in a way that has broken message delivery in testing, so the background reads the store
+// instead and pushes the values over with 'audio_devices_apply' (see src/background/offscreen.ts,
+// which pushes once right after creating this document, and src/background/audio-devices/register.ts,
+// which pushes again on every later change). Applied immediately to whatever is running, and used
+// as the default for anything this document starts afterwards.
+let currentMicId: string | null = null;
+let currentSpeakerId: string | null = null;
+
+function applyAudioDeviceSettings(micId: string | null, speakerId: string | null): void {
+  currentMicId = micId;
+  currentSpeakerId = speakerId;
+  void wake.switchMic(micId);
+  if (voice && 'switchMic' in voice) void voice.switchMic(micId);
+  if (voice && 'switchSpeaker' in voice) voice.switchSpeaker(speakerId);
+  localTts().setOutputDevice(speakerId);
+  tts?.setOutputDevice(speakerId);
+}
 
 /** A short rising tone: the copilot heard its name. */
 function chime(): void {
@@ -52,7 +74,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (recorder) {
           return { ok: false, error: 'Already recording' };
         }
-        const next = new Recorder(message.options as RecorderOptions, notify);
+        const next = new Recorder({ ...(message.options as RecorderOptions), micDeviceId: currentMicId }, notify);
         try {
           await next.start();
         } catch (error) {
@@ -81,7 +103,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // The chat that keeps this conversation, told with every status so any panel can open it
         const threadId = typeof message.options?.threadId === 'string' ? message.options.threadId : null;
         const next = createVoiceSession(
-          { ...(message.options as VoiceOptions | EconomyOptions), preroll: fresh },
+          {
+            ...(message.options as VoiceOptions | EconomyOptions),
+            preroll: fresh,
+            micDeviceId: currentMicId,
+            speakerDeviceId: currentSpeakerId,
+          },
           {
             onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
             onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
@@ -113,7 +140,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const words = Array.isArray(message.words) ? message.words.map(String) : undefined;
           // A new assistant name: listen again for its phrase
           if (wake.running && words && words.join(' ') !== wake.words.join(' ')) wake.stop();
-          await wake.start(words);
+          await wake.start(words, currentMicId);
           if (!voice) wake.resume();
           return { ok: true };
         } catch (error) {
@@ -146,10 +173,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { ok: true };
       }
       case 'tts_play': {
-        tts ??= new TtsPlayer({
-          onEnded: () => notify({ type: 'tts_ended' }),
-          onError: error => notify({ type: 'tts_error', error: String(error) }),
-        });
+        if (!tts) {
+          tts = new TtsPlayer({
+            onEnded: () => notify({ type: 'tts_ended' }),
+            onError: error => notify({ type: 'tts_error', error: String(error) }),
+          });
+          tts.setOutputDevice(currentSpeakerId);
+        }
         tts.play(String(message.audio ?? ''));
         return { ok: true };
       }
@@ -162,6 +192,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { running: voice !== null };
       case 'recorder_status':
         return { recording: recorder !== null, meetingId: recorder?.options.meetingId ?? null };
+      case 'audio_devices_list':
+        return { devices: await enumerateAudioDevices() };
+      case 'audio_devices_apply': {
+        const micId = typeof message.micDeviceId === 'string' ? message.micDeviceId : null;
+        const speakerId = typeof message.speakerDeviceId === 'string' ? message.speakerDeviceId : null;
+        applyAudioDeviceSettings(micId, speakerId);
+        return { ok: true };
+      }
       default:
         return { ok: false, error: `Unknown command ${message.type}` };
     }

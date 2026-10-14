@@ -6411,5 +6411,23 @@
   },
   "persona_builtin_operator_description": {
     "message": "靈感來自 Jeff Bezos 公開的原則：顧客至上、Day 1、逆向工作法。"
+  },
+  "audio_device_settings_title": {
+    "message": "音訊裝置"
+  },
+  "audio_device_mic_label": {
+    "message": "麥克風"
+  },
+  "audio_device_speaker_label": {
+    "message": "喇叭"
+  },
+  "audio_device_systemDefault": {
+    "message": "系統預設"
+  },
+  "audio_device_disconnected": {
+    "message": "（已中斷連線 — 使用預設）"
+  },
+  "audio_device_speaker_systemVoicesNote": {
+    "message": "系統語音會透過電腦的預設喇叭播放，無法使用所選擇的喇叭。"
   }
 }

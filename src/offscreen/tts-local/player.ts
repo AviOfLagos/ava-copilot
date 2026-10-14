@@ -1,3 +1,5 @@
+import { setAudioSinkId } from '@extension/shared';
+
 /**
  * Plays the local voices' speech: clips scheduled back to back on one AudioContext, stopped at once when the user
  * talks over it. An AnalyserNode measures how loud the output really was, so a test (and the settings' "Say
@@ -10,12 +12,21 @@ export class PcmPlayer {
   private playAt = 0;
   private meter: ReturnType<typeof setInterval> | null = null;
   private drained: (() => void)[] = [];
+  // The chosen speaker (Settings › Voice devices), or null for the system default; applied to a
+  // context as soon as one exists, and to any later one `ensureContext` creates
+  private sinkDeviceId: string | null = null;
   // The loudest output measured since the last reset, as root mean square
   peakRms = 0;
   // Seconds of speech played since the last reset
   playedSeconds = 0;
 
   constructor(private readonly sampleRate = 24_000) {}
+
+  /** Switches the speaker this plays through, immediately if it is already playing. */
+  setOutputDevice(deviceId: string | null): void {
+    this.sinkDeviceId = deviceId;
+    if (this.context) void setAudioSinkId(this.context, deviceId);
+  }
 
   get playing(): boolean {
     return this.sources.length > 0;
@@ -82,6 +93,7 @@ export class PcmPlayer {
       this.analyser = this.context.createAnalyser();
       this.analyser.fftSize = 2048;
       this.analyser.connect(this.context.destination);
+      if (this.sinkDeviceId) void setAudioSinkId(this.context, this.sinkDeviceId);
     }
     void this.context.resume().catch(() => {});
     return this.context;

@@ -6,6 +6,9 @@
  */
 
 const RATE = 16_000;
+// Same rationale as the wake word listener (src/offscreen/wake.ts): suppresses the "LOG
+// (VoskAPI:…)" startup chatter this worker otherwise prints as console warnings.
+const VOSK_WORKER_LOG_LEVEL = -1;
 
 type VoskMessage = {
   event?: string;
@@ -67,6 +70,7 @@ export class VoskDictation {
   private async start(): Promise<void> {
     const worker = new Worker(this.workerUrl);
     this.worker = worker;
+    worker.postMessage({ action: 'set', key: 'logLevel', value: VOSK_WORKER_LOG_LEVEL });
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('The Vosk model did not load')), 60_000);
       worker.addEventListener('message', function loaded(event: MessageEvent<VoskMessage>) {

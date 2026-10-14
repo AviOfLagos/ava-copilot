@@ -10,3 +10,4 @@ import './voice-engines/register';
 import './companion/register';
 import './history/register';
 import './personalities/register';
+import './audio-devices/register';
