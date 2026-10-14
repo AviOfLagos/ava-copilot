@@ -9,6 +9,7 @@ import { resolveModels } from '../threads/factory';
 import { isOverDailyBudget } from '../usage/budget';
 import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
+import { rollupMarkdown, workspaceSummaries } from '../history/summaries';
 import { briefDue, briefMarkdown, localDate, PRIORITIES_INSTRUCTIONS, priorityLines, todaysEvents } from './brief';
 import type { BriefData } from './brief';
 
@@ -110,6 +111,13 @@ export class MorningBrief {
       workspaces: await workspaceStore.list(),
       // What workflows gathered for the brief today
       sections: await todaysBriefSections(db, now).catch(() => []),
+      // Where each workspace is at, from its summary (imported AI sessions, chats, meetings, notes)
+      rollup: await workspaceSummaries
+        .refresh()
+        .catch(() => [])
+        .then(() => workspaceSummaries.rollup(now))
+        .then(rollupMarkdown)
+        .catch(() => ''),
     };
 
     let priorities: string[] = [];

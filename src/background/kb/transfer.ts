@@ -11,7 +11,7 @@ const anchor = z.discriminatedUnion('kind', [
 
 const item = z.object({
   id: z.string().min(1),
-  sourceType: z.enum(['thread', 'meeting', 'page', 'note']),
+  sourceType: z.enum(['thread', 'meeting', 'page', 'note', 'ai-session']),
   sourceId: z.string(),
   title: z.string(),
   url: z.string().default(''),
@@ -21,6 +21,11 @@ const item = z.object({
   updatedAt: z.number(),
   chunkCount: z.number().default(0),
   unembedded: z.number().default(0),
+  workspaceId: z.string().nullable().optional(),
+  origin: z
+    .object({ tool: z.string().max(40), project: z.string().max(1000).nullable(), importId: z.string().max(100) })
+    .nullable()
+    .optional(),
 });
 
 const chunk = z.object({

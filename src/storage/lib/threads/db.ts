@@ -160,7 +160,8 @@ export interface TranscriptSegment {
   chunkIndex: number;
 }
 
-export type KnowledgeSourceType = 'thread' | 'meeting' | 'page' | 'note';
+// 'ai-session': a conversation brought in from another AI tool's history (Claude Code, Codex, ChatGPT…)
+export type KnowledgeSourceType = 'thread' | 'meeting' | 'page' | 'note' | 'ai-session';
 
 // Where a passage came from, precise enough to open it again
 export type KnowledgeAnchor =
@@ -191,6 +192,8 @@ export interface KnowledgeItem {
   workspaceId?: string | null;
   // The agent whose work it came from, for knowledge filtered by agent
   agentId?: string | null;
+  // An imported AI session: which tool, which project folder, and which import brought it in
+  origin?: { tool: string; project: string | null; importId: string } | null;
 }
 
 export interface KnowledgeChunk {
@@ -210,7 +213,7 @@ export interface KnowledgeChunk {
 
 // What the knowledge graph holds: the sources themselves, and what they talk about
 export type GraphNodeType =
-  'thread' | 'meeting' | 'page' | 'note' | 'person' | 'organization' | 'project' | 'decision' | 'action';
+  'thread' | 'meeting' | 'page' | 'note' | 'ai-session' | 'person' | 'organization' | 'project' | 'decision' | 'action';
 
 export interface GraphNode {
   // A source's node has its knowledge item's id; an entity's id comes from its type, workspace and name,

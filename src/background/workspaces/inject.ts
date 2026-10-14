@@ -24,6 +24,7 @@ export function workspaceSection(workspace: Workspace): string {
     `[Workspace: ${workspace.name}]`,
     "This task belongs to this workspace. Use only its context and its accounts; never bring in another workspace's people, facts or accounts.",
     workspace.about.trim() && `What the user says about it:\n${workspace.about.trim()}`,
+    'Where this workspace is at (recent work, decisions, open threads, next actions) is one workspace_context call away: use it for "summarize", "where are we at" or the status, and before a task that builds on earlier work, instead of asking the user again.',
     accounts.length
       ? `Act as these accounts:\n${accounts.join('\n')}\nBefore acting on one of these sites, check which account is signed in. If it is another one, switch to this workspace's account first (the account-switching skill says how). If the account has no session, stop and ask the user to sign in.`
       : 'No accounts are set for this workspace: before posting, sending or creating anything, say which account is signed in and ask the user if it is the right one.',

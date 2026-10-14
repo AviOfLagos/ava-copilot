@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookmarkPlus, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Bot, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
 import AgentPicker from './AgentPicker';
 import GraphView from './GraphView';
+import WorkspaceSummaryView from '../history/WorkspaceSummaryView';
 import { kbStore } from '@extension/storage';
 import type { GraphNode } from '@extension/storage';
 import type { KbAnswer, KbCitation, KnowledgeItem, KnowledgeSourceType } from '@extension/storage';
@@ -31,6 +32,7 @@ const TYPE_ICONS: Record<KnowledgeSourceType, LucideIcon> = {
   meeting: FileText,
   page: Globe,
   note: StickyNote,
+  'ai-session': Bot,
 };
 
 const TYPE_LABELS = {
@@ -38,6 +40,7 @@ const TYPE_LABELS = {
   meeting: 'kb_type_meeting',
   page: 'kb_type_page',
   note: 'kb_type_note',
+  'ai-session': 'history_type_session',
 } as const;
 
 function shortDate(ms: number): string {
@@ -50,7 +53,7 @@ export function citationText(citation: KbCitation): string {
   return [
     t(TYPE_LABELS[citation.sourceType]),
     shortDate(citation.date),
-    citation.sourceType === 'page' || citation.sourceType === 'note' ? '' : place,
+    ['page', 'note', 'ai-session'].includes(citation.sourceType) ? '' : place,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -69,7 +72,7 @@ function itemCitation(item: KnowledgeItem): KbCitation {
         ? { kind: 'thread', threadId: item.sourceId, seq: 0 }
         : item.sourceType === 'meeting'
           ? { kind: 'meeting', meetingId: item.sourceId, t: -1 }
-          : item.sourceType === 'note'
+          : item.sourceType === 'note' || item.sourceType === 'ai-session'
             ? { kind: 'note', itemId: item.id }
             : { kind: 'page', url: item.url },
   };
@@ -105,7 +108,7 @@ export default function KnowledgeView({
   const items = allItems.filter(
     item => (!workspace || !item.workspaceId || item.workspaceId === workspace) && (!agent || item.agentId === agent),
   );
-  const [tab, setTab] = useState<'ask' | 'items' | 'graph'>('ask');
+  const [tab, setTab] = useState<'ask' | 'summary' | 'items' | 'graph'>('ask');
   const [phase, setPhase] = useState<MorphOrbPhase>('idle');
   const [citations, setCitations] = useState<KbCitation[]>([]);
   const [saving, setSaving] = useState(false);
@@ -136,7 +139,7 @@ export default function KnowledgeView({
     }
   };
 
-  const tabButton = (id: 'ask' | 'items' | 'graph', label: string) => (
+  const tabButton = (id: 'ask' | 'summary' | 'items' | 'graph', label: string) => (
     <button
       type="button"
       role="tab"
@@ -155,12 +158,20 @@ export default function KnowledgeView({
       <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
         <div role="tablist" aria-label={t('kb_title')} className="glass flex gap-0.5 rounded-xl p-0.5">
           {tabButton('ask', t('kb_tab_ask'))}
+          {tabButton('summary', t('history_tab_summary'))}
           {tabButton('items', t('kb_items', [String(items.length)]))}
           {tabButton('graph', t('graph_tab'))}
         </div>
-        <Button variant="glass" size="sm" onClick={() => void save()} disabled={saving}>
-          <BookmarkPlus className="size-3.5" />
-          {saving ? t('kb_saving') : t('kb_savePage')}
+        {/* An icon, so four tabs and it fit the narrow panel; the name says what it does */}
+        <Button
+          variant="glass"
+          size="icon"
+          className="shrink-0"
+          onClick={() => void save()}
+          disabled={saving}
+          aria-label={saving ? t('kb_saving') : t('kb_savePage')}
+          title={saving ? t('kb_saving') : t('kb_savePage')}>
+          <BookmarkPlus className="size-4" />
         </Button>
       </div>
 
@@ -185,7 +196,9 @@ export default function KnowledgeView({
         </p>
       )}
 
-      {tab === 'graph' ? (
+      {tab === 'summary' ? (
+        <WorkspaceSummaryView workspaceId={workspace} onPick={setWorkspace} />
+      ) : tab === 'graph' ? (
         <GraphView workspaceId={workspace} agentId={agent} onOpenSource={onOpenSource} isDarkMode={isDarkMode} />
       ) : tab === 'ask' ? (
         <div className="relative flex min-h-0 flex-1 flex-col">

@@ -120,7 +120,15 @@ export class KnowledgeBase {
   private async write(
     fields: Pick<
       KnowledgeItem,
-      'sourceType' | 'sourceId' | 'title' | 'url' | 'sourceDate' | 'sourceUpdatedAt' | 'workspaceId' | 'agentId'
+      | 'sourceType'
+      | 'sourceId'
+      | 'title'
+      | 'url'
+      | 'sourceDate'
+      | 'sourceUpdatedAt'
+      | 'workspaceId'
+      | 'agentId'
+      | 'origin'
     >,
     drafts: DraftChunk[],
   ): Promise<KnowledgeItem | null> {
@@ -295,6 +303,49 @@ export class KnowledgeBase {
     }
     void this.embedPending();
     return saved;
+  }
+
+  /**
+   * Keeps or refreshes conversations brought in from other AI tools (`src/background/history`), already
+   * redacted and routed. Returns the items written.
+   */
+  async saveSessions(
+    sessions: {
+      sourceId: string;
+      title: string;
+      sourceDate: number;
+      sourceUpdatedAt: number;
+      workspaceId: string | null;
+      origin: NonNullable<KnowledgeItem['origin']>;
+      chunks: DraftChunk[];
+    }[],
+  ): Promise<KnowledgeItem[]> {
+    const saved: KnowledgeItem[] = [];
+    for (const session of sessions) {
+      const { chunks, ...fields } = session;
+      const item = await this.serial(() =>
+        this.write({ ...fields, sourceType: 'ai-session', url: '', agentId: null }, chunks),
+      );
+      if (item) saved.push(item);
+    }
+    void this.embedPending();
+    return saved;
+  }
+
+  /** Moves items to another workspace (or none), e.g. when the user maps an imported project folder. */
+  setWorkspace(itemIds: string[], workspaceId: string | null): Promise<number> {
+    return this.serial(async () => {
+      const now = Date.now();
+      let moved = 0;
+      for (const id of itemIds) {
+        const item = await this.deps.store.item(id);
+        if (!item || (item.workspaceId ?? null) === workspaceId) continue;
+        await this.deps.store.db.kbItems.update(id, { workspaceId, updatedAt: now });
+        this.changed({ type: 'put', itemId: id });
+        moved++;
+      }
+      return moved;
+    });
   }
 
   /** Lets go of vault notes the user deleted or moved. */

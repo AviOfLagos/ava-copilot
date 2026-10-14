@@ -2293,7 +2293,7 @@
     "message": "Chats"
   },
   "history_title": {
-    "message": "Chat history"
+    "message": "Bring in your AI history"
   },
   "history_search": {
     "message": "Search chats"
@@ -5392,5 +5392,284 @@
         "example": "Ava"
       }
     }
+  },
+  "history_section": {
+    "message": "Bring in your AI history"
+  },
+  "history_sneakPeek": {
+    "message": "Sneak peek"
+  },
+  "history_hint": {
+    "message": "Sessions from Claude Code, Codex, Gemini CLI, VS Code and ChatGPT or Claude.ai exports join your knowledge base, each in its workspace. Read on this computer; secrets are taken out first. Only your own model sees them, to summarise."
+  },
+  "history_add": {
+    "message": "Add a folder"
+  },
+  "history_where_title": {
+    "message": "Where each tool keeps them"
+  },
+  "history_where_claude": {
+    "message": "Claude Code: your .claude folder (or .claude/projects)"
+  },
+  "history_where_codex": {
+    "message": "Codex: your .codex folder (sessions and archived_sessions)"
+  },
+  "history_where_gemini": {
+    "message": "Gemini CLI: your .gemini folder"
+  },
+  "history_where_vscode": {
+    "message": "VS Code chats: a copy of Code/User/workspaceStorage (the browser will not open the Library folder itself)"
+  },
+  "history_where_exports": {
+    "message": "ChatGPT or Claude.ai: the folder with the export zip, or the unzipped export"
+  },
+  "history_where_hidden": {
+    "message": "Folders starting with a dot are hidden: press Cmd+Shift+. in the folder picker to see them."
+  },
+  "history_never": {
+    "message": "never"
+  },
+  "history_progress_scanning": {
+    "message": "Looking for sessions…"
+  },
+  "history_progress_reading": {
+    "message": "Reading $DONE$ of $TOTAL$ files · $COUNT$ conversations",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "80"
+      },
+      "count": {
+        "content": "$3",
+        "example": "40"
+      }
+    }
+  },
+  "history_progress_label": {
+    "message": "Import progress"
+  },
+  "history_cancel": {
+    "message": "Cancel"
+  },
+  "history_result_done": {
+    "message": "Brought in $ADDED$ new and $UPDATED$ updated conversations.",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_cancelled": {
+    "message": "Stopped. $ADDED$ new and $UPDATED$ updated conversations came in; Update picks up the rest.",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "12"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "history_result_redacted": {
+    "message": "Secrets taken out: $COUNT$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "history_result_capped": {
+    "message": "It is a lot, so the newest came in first; Update brings in more."
+  },
+  "history_import_label": {
+    "message": "Import from $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_tools_none": {
+    "message": "no sessions found yet"
+  },
+  "history_import_count": {
+    "message": "$COUNT$ conversations",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_last": {
+    "message": "last $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 14, 9:00"
+      }
+    }
+  },
+  "history_update": {
+    "message": "Update"
+  },
+  "history_reimport": {
+    "message": "Re-import"
+  },
+  "history_reimport_label": {
+    "message": "Re-import everything from $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_allow": {
+    "message": "Allow again"
+  },
+  "history_forget": {
+    "message": "Forget"
+  },
+  "history_forget_label": {
+    "message": "Forget the import from $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": ".claude"
+      }
+    }
+  },
+  "history_forget_confirm": {
+    "message": "Remove $COUNT$ conversations?",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_forgotten": {
+    "message": "Forgot the import: $COUNT$ conversations left the knowledge base.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "history_byWorkspace": {
+    "message": "Conversations by workspace"
+  },
+  "history_projects": {
+    "message": "Project folders"
+  },
+  "history_projects_hint": {
+    "message": "Pick the workspace a folder belongs to once; its sessions, and new ones, follow."
+  },
+  "history_project_map": {
+    "message": "Workspace for $PROJECT$",
+    "placeholders": {
+      "project": {
+        "content": "$1",
+        "example": "/Users/me/code/app"
+      }
+    }
+  },
+  "history_projects_all": {
+    "message": "Show all $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
+  },
+  "history_projects_fewer": {
+    "message": "Show fewer"
+  },
+  "history_type_session": {
+    "message": "AI session"
+  },
+  "history_tab_summary": {
+    "message": "Where we are"
+  },
+  "history_summary_title": {
+    "message": "Where $NAME$ is at",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "history_summary_refresh": {
+    "message": "Refresh"
+  },
+  "history_summary_refreshing": {
+    "message": "Writing…"
+  },
+  "history_summary_none": {
+    "message": "No summary yet. Refresh writes one from this workspace's chats, meetings, notes and AI sessions."
+  },
+  "history_summary_empty": {
+    "message": "Nothing in any workspace yet."
+  },
+  "history_summary_meta": {
+    "message": "Sources read: $COUNT$ · written $WHEN$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_title": {
+    "message": "Across your workspaces"
+  },
+  "history_rollup_week": {
+    "message": "$COUNT$ this week",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "history_rollup_latest": {
+    "message": "Latest: $TITLE$ ($WHEN$)",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login"
+      },
+      "when": {
+        "content": "$2",
+        "example": "Oct 14"
+      }
+    }
+  },
+  "history_rollup_actions": {
+    "message": "Next actions"
+  },
+  "history_general": {
+    "message": "No workspace"
   }
 }

@@ -1083,6 +1083,43 @@ mixed up on the shared reply queue.
   `offscreen/__tests__/wake.test.ts`, identity section in `prompts/__tests__/style.test.ts`); touched-file lint (0
   errors); `check-locales` passes; full E2E in Brave 98/98, including `wake` and `wake-negative`.
 
+### Bring in your AI history (sneak peek, 2026-10-14)
+
+- **Import** (`src/side-panel/history/reader.ts`, Settings › Bring in your AI history): the user picks a folder
+  (File System Access, read only, kept in IndexedDB `avi-history`; "Allow again" after a restart). Files are recognised
+  by path (`background/history/parse/detect.ts`): Claude Code `projects/*/<uuid>.jsonl`, Codex `rollout-*.jsonl`,
+  Gemini CLI `tmp/*/chats/session-*.json`, `logs.json`, checkpoints, VS Code `chatSessions/*.json(l)` (+
+  `workspace.json` for the project), and ChatGPT / Claude.ai `conversations.json`, loose or inside an export zip
+  (read with `DecompressionStream`, no library). Only user and assistant text is kept (no tool calls, results,
+  thinking, meta or reminder wrappers); turns are capped at 4,000 characters and conversations at 40,000 (opening and
+  latest turns). JSONL is streamed line by line. Incremental: per file path + size + mtime in the panel, per
+  conversation `sourceUpdatedAt` in the background. Caps per pass: 20,000 files, 5,000 conversations, 2 GB (newest
+  first). Progress and Cancel. Checked against the real Claude Code, Codex and VS Code files on the owner's Mac
+  (shape only); Gemini CLI and the exports follow the published formats (none on this Mac). Cursor and Windsurf keep
+  chats in SQLite: not supported. Chrome will not open `~/Library`, so VS Code history needs a copy.
+- **Safety**: `history/redact.ts` (the companion's secret rules, widened: PEM blocks, bearer tokens, URL passwords,
+  `NAME=value` secrets) runs in the panel before sending and again in the background (`history/importer.ts`, zod
+  schema per batch). Summaries and the agent see imported text only through `wrapUntrustedContent`. The graph builder
+  makes no model call for `ai-session` items. No new permissions or hosts.
+- **Storage and routing**: `ai-session` knowledge items (`sourceId` `<tool>:<id>`, `origin {tool, project,
+  importId}`), so search, citations, the graph and the Obsidian export (`AI sessions/`) see them. `history/route.ts`:
+  the user's project-folder mapping (or a parent's) → a workspace named by the folder path (home folder name ignored)
+  → `routeWorkspace` on title + first request → none. Mapping a folder moves its sessions
+  (`KnowledgeBase.setWorkspace`). Bookkeeping, mappings and summaries in `storage.local` `ai-history`.
+- **Summaries** (`history/summaries.ts`, prompt in `summary-prompt.ts`, pure parts in `rollup.ts`): per workspace a
+  "where we are" (recent work, decisions, open threads, next actions with dates, cited) from that workspace's items
+  only, rebuilt when their fingerprint changes; job `workspace_summaries` after each import and daily at 07:30; plain
+  list when no model. Knowledge base › Where we are shows one workspace's summary, or with "All workspaces" the
+  roll-up (latest activity, this week's count, next actions). The morning brief adds the roll-up.
+- **Agent**: `workspace_context` (registered action) returns the task's workspace summary plus matching passages from
+  that workspace only, or the roll-up outside a workspace; the workspace section tells the agent to use it for
+  "summarize" / "where are we at".
+- Also: Knowledge base's "Save this page" is an icon button now, so four tabs fit at 400 px; kb export/import keeps
+  `workspaceId` (it was dropped before).
+- Tests: `history/__tests__` (parsers on synthetic fixtures, zip, caps, redaction, routing, workspace-scoped prompt,
+  roll-up, incremental import); `e2e/history.e2e.mjs` (5: import + routing + redaction + re-read, scoped summaries +
+  roll-up UI, agent action, brief, forget); `kb` and `graph` E2E still pass.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
