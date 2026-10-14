@@ -6198,5 +6198,218 @@
   },
   "voice_notLive": {
     "message": "語音對話已結束。請再傳送一次，以一般對話執行。"
+  },
+  "persona_picker_label": {
+    "message": "個性：$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_picker_title": {
+    "message": "個性"
+  },
+  "persona_picker_title_workspace": {
+    "message": "$WORKSPACE$ 的個性",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_picker_manage": {
+    "message": "管理個性"
+  },
+  "persona_settings_title": {
+    "message": "個性"
+  },
+  "persona_settings_hint": {
+    "message": "助理在聊天、語音和晨間簡報中的思考與說話方式。個性不會改變規則：沒有你的點擊，什麼都不會送出。"
+  },
+  "persona_list_label": {
+    "message": "所有個性"
+  },
+  "persona_builtIn": {
+    "message": "內建"
+  },
+  "persona_active": {
+    "message": "使用中"
+  },
+  "persona_useShort": {
+    "message": "使用"
+  },
+  "persona_use": {
+    "message": "使用 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_duplicate": {
+    "message": "複製 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Accountant"
+      }
+    }
+  },
+  "persona_edit": {
+    "message": "編輯 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete": {
+    "message": "刪除 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Sales coach"
+      }
+    }
+  },
+  "persona_delete_confirm": {
+    "message": "再按一次即可刪除"
+  },
+  "persona_copySuffix": {
+    "message": "副本"
+  },
+  "persona_new": {
+    "message": "新增個性"
+  },
+  "persona_new_title": {
+    "message": "新增個性"
+  },
+  "persona_edit_title": {
+    "message": "編輯個性"
+  },
+  "persona_field_icon": {
+    "message": "表情符號"
+  },
+  "persona_field_name": {
+    "message": "名稱"
+  },
+  "persona_field_description": {
+    "message": "簡短說明"
+  },
+  "persona_field_instructions": {
+    "message": "指示"
+  },
+  "persona_field_instructions_placeholder": {
+    "message": "它如何思考與說話、堅持什麼、拒絕什麼。每行寫一種行為效果最好。"
+  },
+  "persona_field_instructions_hint": {
+    "message": "具體的行為比形容詞更有效。"
+  },
+  "persona_field_voice": {
+    "message": "語音"
+  },
+  "persona_field_voice_settings": {
+    "message": "依語音設定"
+  },
+  "persona_field_voice_system": {
+    "message": "系統語音"
+  },
+  "persona_field_rate": {
+    "message": "語速"
+  },
+  "persona_rules_hint": {
+    "message": "安全規則永遠優先：個性無法略過確認步驟、聽從網頁指示或混用工作區。"
+  },
+  "persona_cancel": {
+    "message": "取消"
+  },
+  "persona_save": {
+    "message": "儲存"
+  },
+  "persona_workspaces_title": {
+    "message": "各工作區"
+  },
+  "persona_workspaces_hint": {
+    "message": "工作區可以有自己的個性，例如財務用會計師。在該工作區中切換會改變它的設定。"
+  },
+  "persona_workspace_default": {
+    "message": "$WORKSPACE$ 的個性",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Finance"
+      }
+    }
+  },
+  "persona_workspace_none": {
+    "message": "使用中的個性"
+  },
+  "persona_problem_nameEmpty": {
+    "message": "請輸入名稱。"
+  },
+  "persona_problem_nameTooLong": {
+    "message": "名稱最多 40 個字元。"
+  },
+  "persona_problem_descriptionTooLong": {
+    "message": "說明最多 160 個字元。"
+  },
+  "persona_problem_iconTooLong": {
+    "message": "請使用一個表情符號。"
+  },
+  "persona_problem_instructionsEmpty": {
+    "message": "請寫下它應如何思考與說話。"
+  },
+  "persona_problem_instructionsTooLong": {
+    "message": "指示最多 2,000 個字元。"
+  },
+  "persona_problem_rate": {
+    "message": "請選擇 0.5× 到 2× 之間的語速。"
+  },
+  "persona_problem_builtIn": {
+    "message": "內建個性無法修改。請複製後編輯副本。"
+  },
+  "persona_problem_tooMany": {
+    "message": "你已有 30 個個性，已達上限。請先刪除一個。"
+  },
+  "persona_builtin_default_name": {
+    "message": "預設"
+  },
+  "persona_builtin_default_description": {
+    "message": "一如往常的助理：清楚、有幫助、直截了當。"
+  },
+  "persona_builtin_engineer_name": {
+    "message": "頂尖工程師"
+  },
+  "persona_builtin_engineer_description": {
+    "message": "能交付成果的資深工程師：簡潔、有主見、小步前進。"
+  },
+  "persona_builtin_accountant_name": {
+    "message": "會計師"
+  },
+  "persona_builtin_accountant_description": {
+    "message": "數字優先：要求收據、留意稅務與現金流、標出高風險支出。"
+  },
+  "persona_builtin_legal_name": {
+    "message": "法律觀點"
+  },
+  "persona_builtin_legal_description": {
+    "message": "找出義務、風險、期限與模糊條款。並非法律意見。"
+  },
+  "persona_builtin_auntie_name": {
+    "message": "嚴格阿姨"
+  },
+  "persona_builtin_auntie_description": {
+    "message": "溫暖但對期限毫不放鬆：問你什麼該交，並盯著你完成。"
+  },
+  "persona_builtin_operator_name": {
+    "message": "Bezos 風格營運者"
+  },
+  "persona_builtin_operator_description": {
+    "message": "靈感來自 Jeff Bezos 公開的原則：顧客至上、Day 1、逆向工作法。"
   }
 }

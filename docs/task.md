@@ -1192,6 +1192,28 @@ the Cloud API) is `docs/whatsapp-plan-b.md`.
 - Known gaps: pictures from earlier turns are not re-sent to a new executor (only the turn they came with); a tool
   that needs spoken words (leave/end call) still refuses a typed request; video is not E2E-tested.
 
+### Personalities (2026-10-14)
+
+- A personality is a name, description, emoji, instructions (≤2,000 chars), and an optional voice and pace
+  (`src/storage/lib/personalities`, key `personalities` in storage.local). Six built-ins, read-only: Default, Cracked
+  engineer, Accountant, Legal eye (always "Not legal advice…"), Strict auntie (never insulting), Bezos-style operator
+  ("inspired by" his public principles; never claims to be him). Users create, duplicate, edit and delete their own
+  (≤30).
+- Which one applies: a workspace's own default for its chats, otherwise the active one. Switching inside a workspace
+  that has a default changes that default; anywhere else it changes the active one (`withActive`).
+- Where it reaches the models: planner and navigator (`buildPersonalitySection`, after the gate/reader/knowledge/style
+  sections, inside `<system_instructions>`), the voice conversation (`voiceSessionInstructions`, after the rules,
+  before history), the morning brief's priorities (tone line only). Every section says it cannot override the rules.
+  The executor gets it from `threads/factory.ts` (the thread's workspace); a switch applies from the next run.
+- Voice and pace: read-aloud (`tts/speak.ts`) and economy voice use the personality's voice (a system voice for the
+  system engine, a Kitten/Kokoro id for its own engine) and pace; Gemini Live keeps its own voice.
+- Switching: header picker next to the orb (Radix menu), Settings › Personalities (list, use, duplicate, edit,
+  delete, per-workspace default), voice tool `set_personality` (free, like `end_conversation`), agent action
+  `set_personality` (refused in agent/routine/brief runs). Home shows "Ava · 🧾 Accountant".
+- Tests: unit (validation, resolution, switching, matching, voice/pace, prompt order in planner/navigator/voice);
+  `e2e/personalities.e2e.mjs` (header switch → next request carries it, below the gate; custom one from Settings),
+  `voice.e2e.mjs` (`set_personality` with no click; next session's instructions carry it).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -7,6 +7,7 @@ import {
   localDay,
   meetingSettingsStore,
   meetingStore,
+  personalityStore,
   threadStore,
   usageStore,
 } from '@extension/storage';
@@ -26,7 +27,7 @@ import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { registeredVoiceTool, registeredVoiceTools } from '../registry';
 import { usesLiveTokens } from '../models/liveToken';
 import { wrapUntrustedContent } from '../agent/messages/utils';
-import { noticeFor, voiceInstructions, VOICE_TOOLS, voiceHistory } from './prompt';
+import { noticeFor, voiceSessionInstructions, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, switchTab } from './browser-tools';
 import { describeNote, hangUp, meetJoin, spokeEnd, spokeJoin, spokeLeave, waitForNote } from '../meetings/call-control';
 import type { CallMode } from '../meetings/call-control';
@@ -74,6 +75,8 @@ export class VoiceManager {
   private lastActivity = 0;
   // What the user calls the assistant, read when the conversation starts
   private assistantName = 'Ava';
+  // The workspace of the conversation's chat, where "switch to the accountant" applies
+  private personalityWorkspaceId: string | null = null;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
   status: VoiceStatus = 'off';
@@ -103,6 +106,11 @@ export class VoiceManager {
     return this.threadId;
   }
 
+  /** The workspace a personality switch in this conversation applies to; null outside one. */
+  get workspaceId(): string | null {
+    return this.personalityWorkspaceId;
+  }
+
   // Bumped by every stop: a start still under way when the user ended it knows to undo itself
   private generation = 0;
 
@@ -117,8 +125,15 @@ export class VoiceManager {
   ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean; threadId?: string }> {
     if (this.running) return { ok: true, threadId: this.threadId ?? undefined };
     const generation = ++this.generation;
+    // A conversation from the last hours goes on where it stopped; an older one starts fresh
+    const previous = (await db.threads.orderBy('updatedAt').reverse().toArray()).find(
+      item => item.tags.includes('voice') && Date.now() - item.updatedAt < CONTINUE_WITHIN_MS,
+    );
+    // The personality of the conversation's workspace (or the active one): how it talks, and its voice and pace
+    const personality = await personalityStore.resolve(previous?.workspaceId).catch(() => null);
+    this.personalityWorkspaceId = previous?.workspaceId ?? null;
     // Economy mode (Settings › Voice engines): speech is recognised and spoken on the device, no Gemini key needed
-    const economy = await economyVoiceOptions();
+    const economy = await economyVoiceOptions(personality);
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
     if (!gemini && !economy) throw new Error(t('voice_needsGemini'));
@@ -127,10 +142,6 @@ export class VoiceManager {
     const settings = await meetingSettingsStore.getSettings();
     const { stylePrompt, assistantName } = await generalSettingsStore.getSettings();
     this.assistantName = assistantNameOf(assistantName);
-    // A conversation from the last hours goes on where it stopped; an older one starts fresh
-    const previous = (await db.threads.orderBy('updatedAt').reverse().toArray()).find(
-      item => item.tags.includes('voice') && Date.now() - item.updatedAt < CONTINUE_WITHIN_MS,
-    );
     const thread = previous ?? (await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] }));
     const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';
 
@@ -146,13 +157,7 @@ export class VoiceManager {
             : { apiKey: gemini?.[1].apiKey ?? '' }),
           model: settings.liveModel,
         }),
-        instructions: [
-          voiceInstructions(this.assistantName),
-          stylePrompt && `How the user likes answers: ${stylePrompt}`,
-          history,
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
+        instructions: voiceSessionInstructions(this.assistantName, stylePrompt, personality, history),
         tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
         // Echoed in every status, so a panel knows which chat holds the conversation
         threadId: thread.id,

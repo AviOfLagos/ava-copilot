@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { BookOpen, BookmarkPlus, CalendarClock, Disc, FileText, Sparkles, Sunrise } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { skillStore, upcomingEventsStore, briefSettingsStore } from '@extension/storage';
+import { skillStore, upcomingEventsStore, briefSettingsStore, DEFAULT_PERSONALITY_ID } from '@extension/storage';
 import type { UpcomingEvent } from '@extension/storage';
 import { matchSkills } from '@src/background/skills/match';
 import { LiveOrb } from '../components/ui/live-orb';
 import { DayStrip, useToday } from '../today/TodayView';
 import { useAssistantName } from '../hooks/useAssistant';
+import { useActivePersonality, personalityName } from '../personalities/usePersonalities';
 
 interface Starter {
   id: string;
@@ -25,6 +26,8 @@ interface HomeViewProps {
   onOpenToday: () => void;
   // Opens a chat by id: today's morning brief
   onOpenThread: (threadId: string) => void;
+  // The workspace the next chat goes to, whose personality shows by the name
+  workspaceId?: string | null;
   children?: React.ReactNode;
 }
 
@@ -104,6 +107,7 @@ export default function HomeView({
   onSavePage,
   onOpenToday,
   onOpenThread,
+  workspaceId = null,
   children,
 }: HomeViewProps) {
   const briefId = useTodaysBrief();
@@ -112,6 +116,7 @@ export default function HomeView({
   const next = useNextMeeting();
   const [skillId, setSkillId] = useState<string | null>(null);
   const name = useAssistantName();
+  const personality = useActivePersonality(workspaceId);
 
   useEffect(() => {
     if (!tab) return setSkillId(null);
@@ -173,8 +178,14 @@ export default function HomeView({
       <div className="flex items-center gap-4">
         <LiveOrb size={64} label={name} />
         <h1 className="text-[24px] font-medium leading-tight tracking-[-0.03em]">
-          <span className="label-mono block pb-1" data-testid="assistant-name">
-            {name}
+          <span className="label-mono block pb-1">
+            <span data-testid="assistant-name">{name}</span>
+            {personality.id !== DEFAULT_PERSONALITY_ID && (
+              <span data-testid="assistant-personality" className="text-primary">
+                {' · '}
+                <span aria-hidden="true">{personality.icon}</span> {personalityName(personality)}
+              </span>
+            )}
           </span>
           {greeting()}
           <br />

@@ -1,4 +1,11 @@
-import { ttsSettingsStore, ttsSpeakingStore } from '@extension/storage';
+import {
+  personalityRateOf,
+  personalityStore,
+  personalityVoiceFor,
+  threadStore,
+  ttsSettingsStore,
+  ttsSpeakingStore,
+} from '@extension/storage';
 import { services } from '../registry/services';
 import * as chromeEngine from './chromeEngine';
 import * as geminiEngine from './geminiEngine';
@@ -39,11 +46,14 @@ export async function speak(
   await stopSpeaking();
   if (!spoken) return;
 
+  // The chat's personality may ask for its own voice and pace
+  const thread = await threadStore.get(context.threadId).catch(() => undefined);
+  const personality = await personalityStore.resolve(thread?.workspaceId).catch(() => null);
   await ttsSpeakingStore.set({ threadId: context.threadId, messageId: context.messageId });
   try {
     await engineFor(settings.engine).speak(spoken, {
-      voice: settings.voice || undefined,
-      rate: settings.rate,
+      voice: personalityVoiceFor(settings.engine, personality) ?? (settings.voice || undefined),
+      rate: personalityRateOf(personality) ?? settings.rate,
       ...options,
     });
   } finally {
