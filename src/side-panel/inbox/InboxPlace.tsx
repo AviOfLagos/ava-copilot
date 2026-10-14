@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db, workspaceStore } from '@extension/storage';
 import type { AgentProfile, InboxItem, Workspace } from '@extension/storage';
@@ -7,6 +8,8 @@ import type { PanelApi } from '../registry';
 import InboxDetail from './InboxDetail';
 import InboxRow from './InboxRow';
 import { sourceLabel, sourcesOf } from './meta';
+import WhatsAppView, { SneakPeek } from './whatsapp/WhatsAppView';
+import { Button } from '../components/ui/button';
 
 /** The user's workspaces, kept current as settings change them. Local to this place: see meta.ts. */
 function useWorkspaceNames(): Workspace[] {
@@ -90,6 +93,7 @@ export default function InboxPlace({ api }: { api: PanelApi }) {
   const [agent, setAgent] = useState(ALL);
   const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState<'catchup' | 'bulk' | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -122,11 +126,19 @@ export default function InboxPlace({ api }: { api: PanelApi }) {
     if (item.status === 'unread') markRead(item);
   };
 
+  if (whatsapp) {
+    return <WhatsAppView api={api} initialTab={whatsapp} onBack={() => setWhatsapp(null)} />;
+  }
+
   if (openItem) {
     return (
       <InboxDetail
         item={openItem}
         api={api}
+        onOpenWhatsapp={tab => {
+          setOpenId(null);
+          setWhatsapp(tab);
+        }}
         onBack={() => setOpenId(null)}
         onAnswer={approved => answer(openItem, approved)}
         onMarkDone={() => markDone(openItem)}
@@ -139,7 +151,14 @@ export default function InboxPlace({ api }: { api: PanelApi }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
       <header className="px-1">
-        <h1 className="text-[15px] font-semibold tracking-[-0.01em]">{t('inbox_title')}</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-[15px] font-semibold tracking-[-0.01em]">{t('inbox_title')}</h1>
+          <Button size="sm" variant="glass" onClick={() => setWhatsapp('catchup')}>
+            <MessageCircle className="size-3.5" aria-hidden />
+            {t('inbox_wa_title')}
+            <SneakPeek />
+          </Button>
+        </div>
         <p className="text-muted-foreground mt-1 text-[12.5px] leading-relaxed">
           {unreadTotal > 0 ? t('inbox_intro_unread', [String(unreadTotal)]) : t('inbox_intro_clear')}
         </p>

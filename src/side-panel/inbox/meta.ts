@@ -21,7 +21,7 @@ export function relativeTime(at: number, now: number = Date.now()): string {
 
 /** A short, human label for a source id. */
 export function sourceLabel(source: string): string {
-  if (source === 'whatsapp-web') return 'WhatsApp';
+  if (source === 'whatsapp-web' || source === 'whatsapp-bulk') return 'WhatsApp';
   if (source === 'slack-web') return 'Slack';
   if (source === 'gmail-web') return 'Gmail';
   if (source.startsWith('workflow:')) return 'Workflow';
@@ -31,7 +31,7 @@ export function sourceLabel(source: string): string {
 }
 
 export function sourceIcon(source: string): LucideIcon {
-  if (source === 'whatsapp-web') return MessageCircle;
+  if (source === 'whatsapp-web' || source === 'whatsapp-bulk') return MessageCircle;
   if (source === 'slack-web') return Hash;
   if (source === 'gmail-web') return Mail;
   if (source.startsWith('workflow:')) return Workflow;

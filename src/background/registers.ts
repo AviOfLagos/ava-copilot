@@ -8,3 +8,4 @@ import './models/register';
 import './tts/register';
 import './companion/register';
 import './voice/engines/register';
+import './whatsapp/register';

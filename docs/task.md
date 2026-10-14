@@ -1083,6 +1083,46 @@ mixed up on the shared reply queue.
   `offscreen/__tests__/wake.test.ts`, identity section in `prompts/__tests__/style.test.ts`); touched-file lint (0
   errors); `check-locales` passes; full E2E in Brave 98/98, including `wake` and `wake-negative`.
 
+### Ava in WhatsApp Web, plan A (sneak peek, 2026-10-14)
+
+Ava works inside the user's own signed-in WhatsApp Web tab. No unofficial libraries, no API. Plan B (her own number on
+the Cloud API) is `docs/whatsapp-plan-b.md`.
+
+- **Site knowledge in a skill:** built-in `whatsapp-web.md` holds the tips for the agent and a ```` ```selectors ````
+  block (`key: css || css`). `src/background/whatsapp/selectors.ts` reads it (the user's edited copy over the
+  built-in, key by key), so a WhatsApp redesign is fixed by editing the skill. The page functions in
+  `whatsapp/page.ts` are self-contained and take the selectors as an argument.
+- **Catch-up and drafts** (`whatsapp/actions.ts`, registered agent actions): `whatsapp_unread` reads unread chats
+  from the chat list without opening them; `whatsapp_read_chat` opens one by search; `whatsapp_draft_reply` opens the
+  chat, types the reply into the message box and then goes through `reviewAction` as Enter in the box (kind `send`),
+  so the card shows the exact text and nothing goes out before the click. Declining leaves the draft in the box.
+  Everything read is `wrapUntrustedContent`. Inbox › WhatsApp › Catch up ("What did I miss?", "Draft a reply" on each
+  WhatsApp item, and on an item's detail) hands a prompt to a new chat.
+- **Bulk message** (Inbox › WhatsApp › Bulk message, marked "Sneak peek"): paste or import a CSV (quotes, commas,
+  BOM, `;`/tab), a template with `{{name}}`/`{{column}}`, one optional attachment (≤ 5 MB, pasted into the chat with
+  the message as caption), numbers not in the contacts via `web.whatsapp.com/send?phone=`. Pure parts in
+  `src/storage/lib/whatsapp/` (`csv.ts`, `bulk.ts`: render, phone normalisation, dedupe, opt-out column, pacing,
+  daily cap). The review lists every recipient with its rendered message or why it is skipped, plus the ban warning;
+  approval is one HoldButton (hold or click twice) answered with the batch's `approvalId` from the panel only
+  (`wa_bulk_answer`): no agent action, routine or timer can start a batch, and the gate settings cannot turn it off.
+  Limits: random 8–20 s between messages, a 2–5 min cooldown every 10, daily cap 50 (user-set, clamped to 1–200 on
+  every read), at most 500 rows and one open batch at a time.
+- **Run** (`whatsapp/bulk/`): runs live in `storage.local` (`whatsapp-bulk-runs`; no new Dexie table), changed one at
+  a time (`state.ts`). `runner.ts#advanceRun` sends one message at a time, waits up to 20 s inline and schedules a job
+  (`whatsapp_bulk`, one key per continuation) for anything longer. A message is marked `sending` before the click; if
+  the background stops mid-send, it becomes `failed / unknown_outcome` with an Inbox alert and is never sent again. A
+  closed or signed-out tab pauses the run (`waiting_tab`) with an Inbox note; the daily cap pauses it until the next
+  local day. Pause/resume/stop at any time; the report (sent/failed/skipped with reasons) exports as CSV.
+- **Tests:** unit `storage/lib/whatsapp/__tests__/bulk.test.ts` (CSV, template, phones, dedupe/opt-out, pacing with
+  a fake random source, cap, clamping), `background/whatsapp/__tests__/runner.test.ts` (fake clock: inline gap vs.
+  job cooldown, no early send, daily cap and next-day resume, pause, closed tab, a rejected number, no resend after
+  an interrupted send), `selectors.test.ts`. E2E `e2e/whatsapp.e2e.mjs` against `e2e/fixtures/whatsapp/web.html`
+  served by interception: catch-up, a draft that waits for the click, a 3-recipient batch that sends only after the
+  approval (dedupe and opt-out skipped), pause/resume with an invalid number skipped, and stop.
+- **Not done:** the agent's own skill section includes the selectors block (about 1.5 k characters per step on
+  WhatsApp pages); a resume after a closed tab is manual; attachments are only covered by code, not by E2E;
+  real-WhatsApp behaviour (Lexical composer, `/send` reload times) is untested here by design.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

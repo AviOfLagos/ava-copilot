@@ -5392,5 +5392,450 @@
         "example": "Ava"
       }
     }
+  },
+  "inbox_wa_title": {
+    "message": "WhatsApp"
+  },
+  "inbox_wa_sneakPeek": {
+    "message": "Sneak peek"
+  },
+  "inbox_wa_tab_catchup": {
+    "message": "Catch up"
+  },
+  "inbox_wa_tab_bulk": {
+    "message": "Bulk message"
+  },
+  "inbox_wa_catchup_intro": {
+    "message": "Ava reads your open WhatsApp Web tab: what is unread, and replies you ask for. A reply is typed into the chat and only goes when you click."
+  },
+  "inbox_wa_catchup_ask": {
+    "message": "What did I miss?"
+  },
+  "inbox_wa_catchup_check": {
+    "message": "Check now"
+  },
+  "inbox_wa_catchup_checked": {
+    "message": "$P1$ new chats in the Inbox.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_catchup_watchOff": {
+    "message": "To see unread chats here as they arrive, turn on \"Watch WhatsApp Web\" in Settings › Inbox."
+  },
+  "inbox_wa_catchup_list": {
+    "message": "Unread WhatsApp chats"
+  },
+  "inbox_wa_action_draft": {
+    "message": "Draft a reply"
+  },
+  "inbox_wa_action_openBulk": {
+    "message": "Open bulk message"
+  },
+  "inbox_wa_prompt_catchUp": {
+    "message": "What did I miss on WhatsApp?"
+  },
+  "inbox_wa_prompt_reply": {
+    "message": "Reply to $P1$ on WhatsApp saying ",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_warning": {
+    "message": "Bulk messages from a personal number can get it restricted or banned by WhatsApp, especially to people who do not have your number saved. Send only to people who expect to hear from you, keep the pauses long, and respect opt-outs."
+  },
+  "inbox_wa_bulk_list_label": {
+    "message": "Recipients (CSV)"
+  },
+  "inbox_wa_bulk_import": {
+    "message": "Import CSV"
+  },
+  "inbox_wa_bulk_list_hint": {
+    "message": "A header row with a phone column (with the country code), plus name or any columns. A column named opt_out marks people who asked not to be messaged."
+  },
+  "inbox_wa_bulk_template_label": {
+    "message": "Message"
+  },
+  "inbox_wa_bulk_templateDefault": {
+    "message": "Hi {{name}}, "
+  },
+  "inbox_wa_bulk_insert": {
+    "message": "Insert:"
+  },
+  "inbox_wa_bulk_unknownPlaceholders": {
+    "message": "No column for $P1$: it will be left blank.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_attachment_add": {
+    "message": "Attach a file"
+  },
+  "inbox_wa_bulk_attachment_remove": {
+    "message": "Remove the attachment"
+  },
+  "inbox_wa_bulk_attachment_hint": {
+    "message": "Optional, one file up to 5 MB; the message becomes its caption."
+  },
+  "inbox_wa_bulk_preview_title": {
+    "message": "Preview"
+  },
+  "inbox_wa_bulk_preview_counts": {
+    "message": "$P1$ to send, $P2$ skipped.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_pacing_title": {
+    "message": "Pacing and limits"
+  },
+  "inbox_wa_bulk_delayMin": {
+    "message": "Pause, min (s)"
+  },
+  "inbox_wa_bulk_delayMax": {
+    "message": "Pause, max (s)"
+  },
+  "inbox_wa_bulk_cooldownEvery": {
+    "message": "Cooldown every (messages)"
+  },
+  "inbox_wa_bulk_dailyCap": {
+    "message": "Daily cap (max 200)"
+  },
+  "inbox_wa_bulk_cooldownMin": {
+    "message": "Cooldown, min (s)"
+  },
+  "inbox_wa_bulk_cooldownMax": {
+    "message": "Cooldown, max (s)"
+  },
+  "inbox_wa_bulk_pacing_hint": {
+    "message": "Each pause is random between min and max. Defaults: 8–20 s, and 2–5 minutes after every 10 messages."
+  },
+  "inbox_wa_bulk_remainingToday": {
+    "message": "$P1$ of $P2$ bulk messages left today.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_review": {
+    "message": "Review $P1$ messages",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_title": {
+    "message": "Approve $P1$ messages?",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_body": {
+    "message": "Every recipient and the exact message each one gets. Nothing is sent until you approve, and you can pause or stop at any time."
+  },
+  "inbox_wa_review_pacing": {
+    "message": "Pauses of $P1$–$P2$ s, and $P4$–$P5$ s after every $P3$ messages.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      },
+      "p4": {
+        "content": "$4",
+        "example": "3"
+      },
+      "p5": {
+        "content": "$5",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_overCap": {
+    "message": "Only $P1$ more can go today (cap $P2$); the rest wait until tomorrow.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_attachment": {
+    "message": "Attachment: $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_list": {
+    "message": "Recipients"
+  },
+  "inbox_wa_review_approve": {
+    "message": "Approve and send $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_confirm": {
+    "message": "Click again to send"
+  },
+  "inbox_wa_review_cancel": {
+    "message": "Cancel"
+  },
+  "inbox_wa_count_sent": {
+    "message": "Sent $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_failed": {
+    "message": "Failed $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_skipped": {
+    "message": "Skipped $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_left": {
+    "message": "Left $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_next": {
+    "message": "Next message in $P1$ s.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_sending": {
+    "message": "Sending…"
+  },
+  "inbox_wa_run_paused": {
+    "message": "Paused."
+  },
+  "inbox_wa_run_pausedCap": {
+    "message": "Paused: the daily cap is reached. It goes on tomorrow."
+  },
+  "inbox_wa_run_done": {
+    "message": "Finished."
+  },
+  "inbox_wa_run_stopped": {
+    "message": "Stopped."
+  },
+  "inbox_wa_run_declined": {
+    "message": "Cancelled before sending."
+  },
+  "inbox_wa_run_pause": {
+    "message": "Pause"
+  },
+  "inbox_wa_run_resume": {
+    "message": "Resume"
+  },
+  "inbox_wa_run_stop": {
+    "message": "Stop"
+  },
+  "inbox_wa_run_export": {
+    "message": "Export CSV"
+  },
+  "inbox_wa_run_delete": {
+    "message": "Delete"
+  },
+  "inbox_wa_run_new": {
+    "message": "New batch"
+  },
+  "inbox_wa_reports_title": {
+    "message": "Earlier batches"
+  },
+  "inbox_wa_reports_line": {
+    "message": "$P1$ sent · $P2$ failed · $P3$ skipped",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_status_sent": {
+    "message": "Sent"
+  },
+  "inbox_wa_status_failed": {
+    "message": "Failed"
+  },
+  "inbox_wa_status_skipped": {
+    "message": "Skipped"
+  },
+  "inbox_wa_status_sending": {
+    "message": "Sending"
+  },
+  "inbox_wa_status_pending": {
+    "message": "Waiting"
+  },
+  "inbox_wa_reason_duplicate": {
+    "message": "Same number earlier in the list."
+  },
+  "inbox_wa_reason_optedOut": {
+    "message": "Asked not to be messaged (opt-out)."
+  },
+  "inbox_wa_reason_invalidNumber": {
+    "message": "Not a full phone number with the country code."
+  },
+  "inbox_wa_reason_emptyMessage": {
+    "message": "The message is empty for this row."
+  },
+  "inbox_wa_reason_tooLong": {
+    "message": "The message is too long."
+  },
+  "inbox_wa_reason_notOnWhatsapp": {
+    "message": "WhatsApp says this number is not on WhatsApp."
+  },
+  "inbox_wa_reason_stopped": {
+    "message": "The batch was stopped."
+  },
+  "inbox_wa_reason_unknownOutcome": {
+    "message": "It may or may not have gone out: check the chat in WhatsApp. It is not sent again."
+  },
+  "inbox_wa_reason_notLoaded": {
+    "message": "The chat did not open in time. Nothing was sent."
+  },
+  "inbox_wa_reason_sendFailed": {
+    "message": "Could not send. Nothing was sent."
+  },
+  "inbox_wa_note_tabClosed_title": {
+    "message": "WhatsApp bulk message paused"
+  },
+  "inbox_wa_note_tabClosed_body": {
+    "message": "The WhatsApp Web tab is closed. Open web.whatsapp.com, then press Resume in Inbox › WhatsApp › Bulk message."
+  },
+  "inbox_wa_note_loggedOut_title": {
+    "message": "WhatsApp Web is signed out"
+  },
+  "inbox_wa_note_loggedOut_body": {
+    "message": "The bulk message paused because WhatsApp Web shows a QR code. Sign in with your phone, then press Resume."
+  },
+  "inbox_wa_note_dailyCap_title": {
+    "message": "Daily WhatsApp cap reached"
+  },
+  "inbox_wa_note_dailyCap_body": {
+    "message": "$P1$ bulk messages went out today. The rest of the batch goes on tomorrow.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_done_title": {
+    "message": "WhatsApp bulk message finished"
+  },
+  "inbox_wa_note_done_body": {
+    "message": "$P1$ of $P2$ messages sent. The report is in Inbox › WhatsApp › Bulk message.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_unknown_title": {
+    "message": "A WhatsApp message may not have gone out"
+  },
+  "inbox_wa_note_unknown_body": {
+    "message": "A bulk message was cut off while sending. It is not sent again: check that chat in WhatsApp."
+  },
+  "inbox_wa_error_batchOpen": {
+    "message": "Another batch is still open. Finish, stop or cancel it first."
+  },
+  "inbox_wa_error_noTemplate": {
+    "message": "Write the message first."
+  },
+  "inbox_wa_error_noPhoneColumn": {
+    "message": "The list needs a header row with a phone column (phone, number, mobile or whatsapp)."
+  },
+  "inbox_wa_error_noRecipients": {
+    "message": "No one in the list can get this message."
+  },
+  "inbox_wa_error_attachmentTooBig": {
+    "message": "The attachment is larger than 5 MB."
+  },
+  "inbox_wa_error_notWaiting": {
+    "message": "This batch is no longer waiting for approval."
+  },
+  "inbox_wa_error_stillOpen": {
+    "message": "Stop the batch before deleting it."
   }
 }

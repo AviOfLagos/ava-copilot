@@ -92,9 +92,15 @@ describe('parseSkill', () => {
 });
 
 describe('builtin skills', () => {
-  it('ship account-switching, gmail, google-forms and chat-apps, each with URL rules', () => {
+  it('ship account-switching, gmail, google-forms, chat-apps and whatsapp-web, each with URL rules', () => {
     const skills = builtinSkills();
-    expect(skills.map(skill => skill.id).sort()).toEqual(['account-switching', 'chat-apps', 'gmail', 'google-forms']);
+    expect(skills.map(skill => skill.id).sort()).toEqual([
+      'account-switching',
+      'chat-apps',
+      'gmail',
+      'google-forms',
+      'whatsapp-web',
+    ]);
     for (const skill of skills) {
       expect(skill.urls.length).toBeGreaterThan(0);
       expect(skill.body).toMatch(/confirmation/);
