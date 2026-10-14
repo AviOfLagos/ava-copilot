@@ -364,3 +364,21 @@ async function makeZip(files: { name: string; data: string }[], deflate: boolean
   end.setUint32(16, offset, true);
   return new Blob([...parts, ...central, new Uint8Array(end.buffer)] as BlobPart[]);
 }
+
+describe('replaying a VS Code edit log from an untrusted file', () => {
+  it('never reaches the object machinery through __proto__, prototype or constructor', () => {
+    const lines = [
+      { kind: 0, v: { requests: [] } },
+      { kind: 1, k: ['__proto__', 'polluted'], v: 'yes' },
+      { kind: 1, k: ['constructor', 'prototype', 'polluted'], v: 'yes' },
+      { kind: 2, k: ['__proto__', 'list'], v: ['yes'] },
+      { kind: 1, k: ['requests', '__proto__'], v: { polluted: 'yes' } },
+    ]
+      .map(line => JSON.stringify(line))
+      .join('\n');
+    expect(() => parseVscode('ws/chatSessions/evil.jsonl', lines, null, T0)).not.toThrow();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(({} as Record<string, unknown>).list).toBeUndefined();
+    expect(([] as unknown as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});

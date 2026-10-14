@@ -12,6 +12,16 @@ const str = (value: unknown): string | null => (typeof value === 'string' && val
  * `checkpoint-*.json` (the model's history as `role` / `parts`). The folder is named by a hash of the
  * project path, so the project is not known.
  */
+
+// Keys that would reach the object machinery instead of the file's own data
+const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function safeKey(key: unknown): boolean {
+  return (
+    (typeof key === 'number' && Number.isInteger(key) && key >= 0) || (typeof key === 'string' && !UNSAFE_KEYS.has(key))
+  );
+}
+
 export function parseGemini(path: string, text: string, fallbackTime: number): ImportedConversation[] {
   const data: unknown = JSON.parse(text);
   const name = path.split('/').pop() ?? '';
@@ -119,8 +129,15 @@ function replayVscode(text: string): Json | null {
       continue;
     }
     if (!root || !Array.isArray(op.k) || op.k.length === 0) continue;
+    // A path from the file only ever names plain keys or indexes, and only walks what the file itself built
+    if (!op.k.every(safeKey)) continue;
     let target: unknown = root;
-    for (const key of op.k.slice(0, -1)) target = (target as Json | unknown[] | undefined)?.[key as never];
+    for (const key of op.k.slice(0, -1)) {
+      target =
+        target && typeof target === 'object' && Object.prototype.hasOwnProperty.call(target, key)
+          ? (target as Record<string | number, unknown>)[key as string | number]
+          : undefined;
+    }
     const last = op.k.at(-1)!;
     if (!target || typeof target !== 'object') continue;
     const holder = target as Record<string | number, unknown>;
