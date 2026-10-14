@@ -78,12 +78,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (voice) return { ok: true };
         // The phrase and what followed it, when "Hey Ava" started this; listening pauses either way
         const fresh = wake.takeCapture();
+        // The chat that keeps this conversation, told with every status so any panel can open it
+        const threadId = typeof message.options?.threadId === 'string' ? message.options.threadId : null;
         const next = createVoiceSession(
           { ...(message.options as VoiceOptions | EconomyOptions), preroll: fresh },
           {
             onTurn: (heard, said) => notify({ type: 'voice_turn', heard, said }),
             onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
-            onStatus: (status, error) => notify({ type: 'voice_status', status, error }),
+            onStatus: (status, error) => notify({ type: 'voice_status', status, error, threadId }),
             onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
           },
         );
@@ -129,6 +131,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'voice_say':
         voice?.say(String(message.text ?? ''));
         return { ok: voice !== null };
+      case 'voice_text': {
+        // Typed in the conversation's chat, with any pictures: the user's next turn
+        const images = Array.isArray(message.images)
+          ? message.images
+              .filter(
+                (image: { mediaType?: unknown; data?: unknown }) =>
+                  typeof image?.mediaType === 'string' && typeof image?.data === 'string',
+              )
+              .map((image: { mediaType: string; data: string }) => ({ mediaType: image.mediaType, data: image.data }))
+          : [];
+        if (!voice) return { ok: false };
+        voice.sendText(String(message.text ?? ''), images, String(message.note ?? ''));
+        return { ok: true };
+      }
       case 'tts_play': {
         tts ??= new TtsPlayer({
           onEnded: () => notify({ type: 'tts_ended' }),

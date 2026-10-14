@@ -59,6 +59,25 @@ export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
   };
 }
 
+/** A picture for the model: base64 data and its type. */
+export interface TurnImage {
+  mediaType: string;
+  data: string;
+}
+
+/**
+ * A message the user typed into the conversation's chat, as one user turn of the Live session: the note about
+ * any attached pictures, the pictures as inline data, then the words.
+ */
+export function typedTurn(text: string, images: TurnImage[] = [], note = '') {
+  const parts = [
+    ...(images.length && note ? [{ text: note }] : []),
+    ...images.map(image => ({ inlineData: { mimeType: image.mediaType, data: image.data } })),
+    { text: images.length ? `The user typed (with the pictures above): ${text}` : `The user typed: ${text}` },
+  ];
+  return { clientContent: { turns: [{ role: 'user', parts }], turnComplete: true } };
+}
+
 /**
  * Turns the model's 16-bit little-endian PCM into float samples for playback.
  */
@@ -87,6 +106,8 @@ export class VoiceSession {
   private said = '';
   // Things to say, held until the copilot is not speaking
   private notices: string[] = [];
+  // Messages typed in the chat, held until the session is ready
+  private typed: ReturnType<typeof typedTurn>[] = [];
   private speaking = false;
   private inputSeconds = 0;
   private outputSeconds = 0;
@@ -129,6 +150,19 @@ export class VoiceSession {
   say(notice: string): void {
     this.notices.push(notice);
     this.flushNotices();
+  }
+
+  /** A message the user typed, with any pictures: their turn now, cutting off what the copilot was saying. */
+  sendText(text: string, images: TurnImage[] = [], note = ''): void {
+    if (!text.trim() && images.length === 0) return;
+    this.typed.push(typedTurn(text, images, note));
+    this.flushTyped();
+  }
+
+  private flushTyped(): void {
+    if (!this.ready || this.socket?.readyState !== WebSocket.OPEN || this.typed.length === 0) return;
+    if (this.speaking) this.silence();
+    for (const turn of this.typed.splice(0)) this.socket.send(JSON.stringify(turn));
   }
 
   /**
@@ -252,6 +286,7 @@ export class VoiceSession {
         const preroll = this.options.preroll?.splice(0) ?? [];
         for (const chunk of preroll) this.send(chunk);
         if (preroll.length) this.gate.force();
+        this.flushTyped();
         this.flushNotices();
       }
       const content = message.serverContent;

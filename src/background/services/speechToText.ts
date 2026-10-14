@@ -39,7 +39,7 @@ export class SpeechToTextService {
     }
   }
 
-  async transcribeAudio(base64Audio: string): Promise<string> {
+  async transcribeAudio(base64Audio: string, mediaType = 'audio/webm'): Promise<string> {
     try {
       logger.info('Starting audio transcription...');
 
@@ -48,7 +48,7 @@ export class SpeechToTextService {
         textPart(
           'Transcribe this audio. Return only the transcribed text without any additional formatting or explanations.',
         ),
-        { type: 'file', mediaType: 'audio/webm', data: base64Audio },
+        { type: 'file', mediaType, data: base64Audio },
       ]);
 
       // Get transcription from Gemini

@@ -14,6 +14,7 @@ import { MorningBrief } from './brief/manager';
 import { GraphBuilder } from './graph/builder';
 import { WakeWord } from './voice/wake';
 import { VoiceManager } from './voice/manager';
+import { prepareAttachments } from './threads/attachments';
 import { KnowledgeBase } from './kb/manager';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
@@ -288,11 +289,11 @@ async function teach(threadId: string): Promise<string> {
   return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
 }
 
-async function transcribe(audio: string): Promise<string> {
+async function transcribe(audio: string, mediaType?: string): Promise<string> {
   const providers = await llmProviderStore.getAllProviders();
   const speechToTextService = await SpeechToTextService.create(providers);
   // Remove the data URL prefix if present
-  return speechToTextService.transcribeAudio(audio.startsWith('data:') ? audio.split(',')[1] : audio);
+  return speechToTextService.transcribeAudio(audio.startsWith('data:') ? audio.split(',')[1] : audio, mediaType);
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -318,6 +319,7 @@ chrome.runtime.onConnect.addListener(port => {
             text: String(message.text ?? ''),
             windowId: message.windowId,
             workspaceId: typeof message.workspaceId === 'string' ? message.workspaceId : null,
+            attachments: await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
           });
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
@@ -383,6 +385,22 @@ chrome.runtime.onConnect.addListener(port => {
 
         case 'voice_stop':
           return voice.stop();
+
+        // Typed in the voice conversation's chat while it is on: the user's next turn in the same conversation
+        case 'voice_text':
+          await voice.sendText(
+            String(message.text ?? '').slice(0, 20_000),
+            await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
+          );
+          return port.postMessage({ type: 'voice_text_sent', clientId: message.clientId });
+
+        // A panel that opened while a conversation is on asks which chat holds it
+        case 'voice_state':
+          return port.postMessage({
+            type: 'voice_state',
+            status: voice.running ? voice.status : 'off',
+            threadId: voice.currentThreadId,
+          });
 
         case 'meeting_retry':
           if (typeof message.meetingId === 'string') await meetings.retry(message.meetingId);

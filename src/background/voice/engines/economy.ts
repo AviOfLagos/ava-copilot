@@ -51,8 +51,24 @@ export function turnMessages(request: EconomyTurnRequest): ModelMessage[] {
   }
   // A conversation starts with the user
   while (merged[0]?.role === 'assistant') merged.shift();
-  return merged.map(message => ({ role: message.role, content: message.text }));
+  const messages: ModelMessage[] = merged.map(message => ({ role: message.role, content: message.text }));
+  // Pictures typed into the chat go with this turn, after the note that they are content only
+  const last = messages[messages.length - 1];
+  if (request.images?.length && last?.role === 'user' && typeof last.content === 'string') {
+    messages[messages.length - 1] = {
+      role: 'user',
+      content: [
+        ...(request.note ? [{ type: 'text' as const, text: request.note }] : []),
+        ...request.images.map(image => ({ type: 'file' as const, mediaType: image.mediaType, data: image.data })),
+        { type: 'text' as const, text: last.content },
+      ],
+    };
+  }
+  return messages;
 }
+
+const CANNOT_SEE =
+  '(The user attached pictures, but this voice model cannot look at pictures. Say so in one short sentence.)';
 
 /** Whether a provider refused because the model cannot use tools (some local models). */
 function toolsRefused(error: unknown): boolean {
@@ -72,11 +88,13 @@ export async function runEconomyTurn(request: EconomyTurnRequest, deps: EconomyB
       if (name === END_CONVERSATION) ended = true;
       return deps.runTool(name, args, heard);
     });
+    // A model that cannot see answers the words, and says it cannot see the pictures
+    let turn = request;
     const call = (withTools: boolean) =>
       generateText({
         model: chatModel.model,
         instructions: [ECONOMY_INSTRUCTIONS, request.instructions].filter(Boolean).join('\n\n'),
-        messages: turnMessages(request),
+        messages: turnMessages(turn),
         ...(withTools ? { tools, stopWhen: [stepCountIs(MAX_STEPS), hasToolCall(END_CONVERSATION)] } : {}),
         maxRetries: 1,
         ...chatModel.settings,
@@ -84,7 +102,13 @@ export async function runEconomyTurn(request: EconomyTurnRequest, deps: EconomyB
       });
     let result: Awaited<ReturnType<typeof call>>;
     try {
-      result = await call(true);
+      try {
+        result = await call(true);
+      } catch (error) {
+        if (!request.images?.length || toolRuns > 0) throw error;
+        turn = { ...request, images: undefined, note: undefined, heard: `${request.heard ?? ''}\n${CANNOT_SEE}` };
+        result = await call(true);
+      }
     } catch (error) {
       // A model that cannot use tools still answers; it just cannot act. Never after a tool ran: no answer
       // without its result

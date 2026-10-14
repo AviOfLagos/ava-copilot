@@ -25,6 +25,7 @@ import { t } from '@extension/i18n';
 import { ttsSpeakingStore } from '@extension/storage';
 import type { ConfirmRequest, ThreadMessage, ThreadRecord } from '@extension/storage';
 import { Conversation, ConversationContent, ConversationScrollButton } from '../components/ai/conversation';
+import AttachmentStrip from '../attachments/AttachmentStrip';
 import { Message, MessageActions, MessageContent, MessageResponse } from '../components/ai/message';
 import {
   ChainOfThought,
@@ -212,6 +213,7 @@ export default function ChatView({
                   <MessageContent>
                     <p className="whitespace-pre-wrap break-words">{turn.request.content}</p>
                   </MessageContent>
+                  {turn.request.attachments?.length ? <AttachmentStrip attachments={turn.request.attachments} /> : null}
                   {(onBranch || (onRetryFrom && idle)) && (
                     <MessageActions>
                       {onBranch && (

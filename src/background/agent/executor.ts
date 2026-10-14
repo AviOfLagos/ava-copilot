@@ -7,6 +7,7 @@ import { NavigatorPrompt } from './prompts/navigator';
 import { PlannerPrompt } from './prompts/planner';
 import { createLogger } from '@src/background/log';
 import MessageManager from './messages/service';
+import type { TaskImages } from './messages/service';
 import type BrowserContext from '../browser/context';
 import { ActionBuilder } from './actions/builder';
 import { EventManager } from './event/manager';
@@ -36,6 +37,8 @@ export interface ExecutorExtraArgs {
   generalSettings?: GeneralSettingsConfig;
   // Earlier conversation the task starts with, e.g. the thread it belongs to
   messageContext?: string;
+  // Pictures the user attached to the task
+  media?: TaskImages | null;
 }
 
 export class Executor {
@@ -98,6 +101,7 @@ export class Executor {
       this.navigatorPrompt.getSystemMessage(),
       task,
       extraArgs?.messageContext,
+      extraArgs?.media,
     );
     this.summarizer = plannerLLM;
   }
@@ -132,9 +136,9 @@ export class Executor {
     void this.context.emitEvent(Actors.SYSTEM, ExecutionState.ACT_NOTICE, message);
   }
 
-  addFollowUpTask(task: string): void {
+  addFollowUpTask(task: string, media?: TaskImages | null): void {
     this.tasks.push(task);
-    this.context.messageManager.addNewTask(task);
+    this.context.messageManager.addNewTask(task, media);
 
     // need to reset previous action results that are not included in memory
     this.context.actionResults = this.context.actionResults.filter(result => result.includeInMemory);

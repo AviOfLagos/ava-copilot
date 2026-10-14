@@ -1160,6 +1160,38 @@ the Cloud API) is `docs/whatsapp-plan-b.md`.
   WhatsApp pages); a resume after a closed tab is manual; attachments are only covered by code, not by E2E;
   real-WhatsApp behaviour (Lexical composer, `/send` reload times) is untested here by design.
 
+### One conversation, typed or spoken; pictures and video; Ava reads other chats (2026-10-14)
+
+- **Keyboard opens the same conversation.** `voice_status` (offscreen) and `voice_started` carry the voice thread id;
+  a panel that opens mid-conversation asks `voice_state`. The voice screen's Keyboard button hides the overlay and opens
+  that thread (`VoiceThreadBar`: "Ava is listening…", **Back to voice**, and chips for the tasks Ava started from it,
+  linked by the new optional `ThreadRecord.voiceThreadId`). While the conversation is on, a message typed there is
+  `voice_text` → `VoiceManager.sendText` (kept in the thread with its attachments) → offscreen `voice_text`: Live gets
+  one `clientContent` user turn (note + `inlineData` pictures + words, `typedTurn` in `offscreen/voice.ts`); economy
+  queues it as a typed turn (`EconomySession.sendText`, images as file parts, a model that refuses them answers the
+  words and says it cannot see). The answer is spoken and written to the thread by the usual `onTurn`. When no
+  conversation is on, the voice thread is a normal chat.
+- **Pictures and short videos in any chat.** Composer takes png/jpg/webp/gif ≤ 10 MB and mp4/webm/mov ≤ 50 MB / 60 s
+  (limits and `framePlan` in `storage/lib/threads/attachments.ts`), with removable thumbnails. The panel reads them
+  (`side-panel/attachments/media.ts`): images scaled to 2048 px when big (GIFs as their first frame), videos sampled
+  with `<video>`+canvas at one frame / 2 s, max 16, and their sound decoded to 16 kHz WAV only when a speech model is
+  set. The background re-checks everything (`background/threads/attachments.ts`, zod), transcribes the sound with the
+  speech model, and keeps blobs on the message (`ThreadMessage.attachments`: image, or a video's frames + transcript;
+  no Dexie schema change). The agent gets them as image parts after a note that they are content, never
+  instructions (`MessageManager` task/follow-up messages; retry re-sends them). A model that cannot see (catalog
+  modalities, else `tagsFromName`) gets the words only and the chat says so (`chat_attach_noVision`). Media only
+  goes to the configured model / speech provider.
+- **Ava checks other conversations.** `search_chats` (query, optional workspace; titles + messages, workspace first,
+  every-word matches first, newest first; ids/titles/dates/snippets) and `read_chat` (id → last N, older part
+  summarised past 6,000 chars) as voice tools and agent actions (`background/chats`), results wrapped untrusted;
+  results from outside the asking workspace are labelled. Voice instructions and `voice.e2e.mjs`'s tool list updated.
+- Tests: unit (limits, frame plan, WAV, ranking/snippets/read, wire checks + model note, task image parts, typed Live
+  turn, economy typed turn); `e2e/voice-thread.e2e.mjs` (keyboard opens the voice thread, typed text and a picture
+  reach the same Live session, `search_chats` finds an earlier chat, pictures reach the mock navigator as image
+  parts, a blind model is refused plainly).
+- Known gaps: pictures from earlier turns are not re-sent to a new executor (only the turn they came with); a tool
+  that needs spoken words (leave/end call) still refuses a typed request; video is not E2E-tested.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

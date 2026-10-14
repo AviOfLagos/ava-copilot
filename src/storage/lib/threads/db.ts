@@ -55,6 +55,8 @@ export interface ThreadRecord {
   agentId?: string | null;
   // Who started it: the user typing or talking, an agent, a routine, the morning brief
   origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief';
+  // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
+  voiceThreadId?: string | null;
 }
 
 export interface ThreadMessage {
@@ -65,6 +67,30 @@ export interface ThreadMessage {
   actor: MessageActor;
   content: string;
   ts: number;
+  // Images and videos the user attached to this message (see ./attachments.ts)
+  attachments?: MessageAttachment[];
+}
+
+/**
+ * A picture or a short video attached to a message, kept with it in IndexedDB. An image is kept whole (it is at
+ * most 10 MB); a video keeps only what was sent to the model: its sampled frames and what its audio said.
+ */
+export interface MessageAttachment {
+  id: string;
+  kind: 'image' | 'video';
+  name: string;
+  mediaType: string;
+  // Size of the file the user picked, in bytes
+  size: number;
+  // A small JPEG for the thread
+  thumb: Blob;
+  // The image itself
+  blob?: Blob;
+  // A video's frames, as JPEGs, each with its time in seconds
+  frames?: { t: number; blob: Blob }[];
+  durationSec?: number;
+  // What a video's audio said, when a speech model wrote it down
+  transcript?: string;
 }
 
 export type MeetingStatus = 'recording' | 'finishing' | 'done' | 'failed';

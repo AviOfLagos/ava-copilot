@@ -103,6 +103,9 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'run_agent',
       'read_inbox',
       'end_conversation',
+      // Ava looks through the user's other chats
+      'search_chats',
+      'read_chat',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
@@ -124,6 +127,9 @@ test('a spoken request runs a browser task, and the copilot says when it is done
   // The conversation is kept in its own thread
   const voiceThread = (await readThreads(session.panel)).find(t => t.tags.includes('voice'));
   assert.ok(voiceThread);
+  // The task it started stays linked to that conversation's chat
+  const task = (await readThreads(session.panel)).find(t => t.title.includes('voice-task'));
+  assert.equal(task.voiceThreadId, voiceThread.id);
   await session.click('Stop talking');
   await session.close();
 });

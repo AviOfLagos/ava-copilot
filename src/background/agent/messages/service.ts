@@ -2,8 +2,10 @@ import type { ModelMessage, SystemModelMessage, UserModelMessage } from '@src/ba
 import {
   assistantMessage,
   getToolCalls,
+  imagePart,
   isImagePart,
   isTextPart,
+  textPart,
   toolCallMessage,
   toolResultMessage,
   userMessage,
@@ -53,11 +55,27 @@ export class MessageManagerSettings {
 
 const HISTORY_START_MARKER = '[Your task history memory starts here]';
 
+/** Pictures the user attached to a task (a video as its frames), and the note saying what they are. */
+export interface TaskImages {
+  images: { mediaType: string; data: string }[];
+  note: string;
+}
+
 // A message that carries a task from the user, wrapped by wrapUserRequest
 function isTaskMessage(message: ModelMessage): boolean {
-  return (
-    message.role === 'user' && typeof message.content === 'string' && message.content.includes(USER_REQUEST_TAG_START)
-  );
+  if (message.role !== 'user') return false;
+  const first = typeof message.content === 'string' ? message.content : message.content.find(isTextPart)?.text;
+  return first?.includes(USER_REQUEST_TAG_START) ?? false;
+}
+
+/** The task's words, then the attached pictures as image parts after a note that they are content only. */
+function withImages(text: string, media?: TaskImages | null): UserModelMessage {
+  if (!media?.images.length) return userMessage(text);
+  return userMessage([
+    textPart(text),
+    textPart(media.note),
+    ...media.images.map(image => imagePart(image.data, image.mediaType)),
+  ]);
 }
 
 export default class MessageManager {
@@ -71,7 +89,12 @@ export default class MessageManager {
     this.toolId = 1;
   }
 
-  public initTaskMessages(systemMessage: SystemModelMessage, task: string, messageContext?: string): void {
+  public initTaskMessages(
+    systemMessage: SystemModelMessage,
+    task: string,
+    messageContext?: string,
+    media?: TaskImages | null,
+  ): void {
     // Add system message
     this.addMessageWithTokens(systemMessage, 'init');
 
@@ -82,7 +105,7 @@ export default class MessageManager {
     }
 
     // Add task instructions
-    const taskMessage = MessageManager.taskInstructions(task);
+    const taskMessage = MessageManager.taskInstructions(task, media);
     this.addMessageWithTokens(taskMessage, 'init');
 
     // Add sensitive data info if sensitive data is provided
@@ -143,7 +166,7 @@ export default class MessageManager {
    * @param task - The raw description of the task
    * @returns A user message containing the task instructions
    */
-  private static taskInstructions(task: string): UserModelMessage {
+  private static taskInstructions(task: string, media?: TaskImages | null): UserModelMessage {
     const { userText, attachmentsInner } = splitUserTextAndAttachments(task);
 
     // Filter and wrap user text
@@ -154,10 +177,10 @@ export default class MessageManager {
     // Filter and wrap attachments as untrusted content
     if (attachmentsInner && attachmentsInner.length > 0) {
       const wrappedFiles = wrapAttachments(attachmentsInner);
-      return userMessage(`${wrappedUser}\n\n${wrappedFiles}`);
+      return withImages(`${wrappedUser}\n\n${wrappedFiles}`, media);
     }
 
-    return userMessage(wrappedUser);
+    return withImages(wrappedUser, media);
   }
 
   /**
@@ -225,7 +248,7 @@ export default class MessageManager {
    * Adds a new task to execute, it will be executed based on the history
    * @param newTask - The raw description of the new task
    */
-  public addNewTask(newTask: string): void {
+  public addNewTask(newTask: string, media?: TaskImages | null): void {
     const { userText, attachmentsInner } = splitUserTextAndAttachments(newTask);
 
     // Filter and wrap user text
@@ -240,7 +263,7 @@ export default class MessageManager {
       finalContent = `${wrappedUser}\n\n${wrappedFiles}`;
     }
 
-    const msg = userMessage(finalContent);
+    const msg = withImages(finalContent, media);
     this.addMessageWithTokens(msg);
   }
 
