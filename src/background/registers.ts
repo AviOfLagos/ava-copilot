@@ -9,3 +9,4 @@ import './tts/register';
 import './companion/register';
 import './voice/engines/register';
 import './history/register';
+import './whatsapp/register';

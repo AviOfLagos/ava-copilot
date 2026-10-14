@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import type { PanelApi } from '../registry';
 import { HOUR_MS, tomorrowMorning } from './InboxRow';
 import { openThreadId, relativeTime, sourceLabel } from './meta';
+import { draftPrompt } from './whatsapp/WhatsAppView';
 
 export interface InboxDetailProps {
   item: InboxItem;
@@ -16,6 +17,8 @@ export interface InboxDetailProps {
   onMarkDone: () => void;
   onMarkUnread: () => void;
   onSnooze: (until: number) => void;
+  // Opens the WhatsApp view, for items from WhatsApp
+  onOpenWhatsapp?: (tab: 'catchup' | 'bulk') => void;
 }
 
 /** A link in an item's body: shown as plain text with a safe, explicit "open" action, never auto-opened. */
@@ -42,6 +45,7 @@ export default function InboxDetail({
   onMarkDone,
   onMarkUnread,
   onSnooze,
+  onOpenWhatsapp,
 }: InboxDetailProps) {
   const [busy, setBusy] = useState(false);
   const needsApproval = item.kind === 'approval' && item.status !== 'done' && item.approval;
@@ -123,6 +127,16 @@ export default function InboxDetail({
         {threadId && (
           <Button size="sm" variant="glass" onClick={() => api.openThread(threadId)}>
             {t('inbox_action_openChat')}
+          </Button>
+        )}
+        {item.source === 'whatsapp-web' && (
+          <Button size="sm" variant="glass" onClick={() => api.startThread(draftPrompt(item.title))}>
+            {t('inbox_wa_action_draft')}
+          </Button>
+        )}
+        {item.source === 'whatsapp-bulk' && onOpenWhatsapp && (
+          <Button size="sm" variant="glass" onClick={() => onOpenWhatsapp('bulk')}>
+            {t('inbox_wa_action_openBulk')}
           </Button>
         )}
         {!threadId && item.source.startsWith('workflow:') && (

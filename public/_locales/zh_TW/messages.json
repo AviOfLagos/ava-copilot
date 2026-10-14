@@ -5671,5 +5671,450 @@
   },
   "history_general": {
     "message": "無工作區"
+  },
+  "inbox_wa_title": {
+    "message": "WhatsApp"
+  },
+  "inbox_wa_sneakPeek": {
+    "message": "搶先體驗"
+  },
+  "inbox_wa_tab_catchup": {
+    "message": "快速掌握"
+  },
+  "inbox_wa_tab_bulk": {
+    "message": "群發訊息"
+  },
+  "inbox_wa_catchup_intro": {
+    "message": "Ava 會讀取你已開啟的 WhatsApp Web 分頁：未讀訊息，以及你要她寫的回覆。回覆會輸入到聊天中，只有在你點擊後才會送出。"
+  },
+  "inbox_wa_catchup_ask": {
+    "message": "我錯過了什麼？"
+  },
+  "inbox_wa_catchup_check": {
+    "message": "立即檢查"
+  },
+  "inbox_wa_catchup_checked": {
+    "message": "收件匣新增 $P1$ 則對話。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_catchup_watchOff": {
+    "message": "若要在此即時看到未讀對話，請在「設定 › 收件匣」中開啟「監看 WhatsApp Web」。"
+  },
+  "inbox_wa_catchup_list": {
+    "message": "未讀的 WhatsApp 對話"
+  },
+  "inbox_wa_action_draft": {
+    "message": "草擬回覆"
+  },
+  "inbox_wa_action_openBulk": {
+    "message": "開啟群發訊息"
+  },
+  "inbox_wa_prompt_catchUp": {
+    "message": "我在 WhatsApp 上錯過了什麼？"
+  },
+  "inbox_wa_prompt_reply": {
+    "message": "在 WhatsApp 回覆 $P1$，內容是 ",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_warning": {
+    "message": "從個人號碼群發訊息，可能導致 WhatsApp 限制或封鎖該號碼，尤其是發給沒有儲存你號碼的人。只發給預期會收到你訊息的人，保持較長的間隔，並尊重退訂。"
+  },
+  "inbox_wa_bulk_list_label": {
+    "message": "收件人（CSV）"
+  },
+  "inbox_wa_bulk_import": {
+    "message": "匯入 CSV"
+  },
+  "inbox_wa_bulk_list_hint": {
+    "message": "第一列為標題，需有電話欄（含國碼），另可加姓名或任何欄位。名為 opt_out 的欄位用來標記要求不要收到訊息的人。"
+  },
+  "inbox_wa_bulk_template_label": {
+    "message": "訊息"
+  },
+  "inbox_wa_bulk_templateDefault": {
+    "message": "{{name}} 你好，"
+  },
+  "inbox_wa_bulk_insert": {
+    "message": "插入："
+  },
+  "inbox_wa_bulk_unknownPlaceholders": {
+    "message": "沒有 $P1$ 欄位：將留空。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_attachment_add": {
+    "message": "附加檔案"
+  },
+  "inbox_wa_bulk_attachment_remove": {
+    "message": "移除附件"
+  },
+  "inbox_wa_bulk_attachment_hint": {
+    "message": "選填，一個最多 5 MB 的檔案；訊息會成為說明文字。"
+  },
+  "inbox_wa_bulk_preview_title": {
+    "message": "預覽"
+  },
+  "inbox_wa_bulk_preview_counts": {
+    "message": "將傳送 $P1$ 則，略過 $P2$ 則。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_pacing_title": {
+    "message": "節奏與限制"
+  },
+  "inbox_wa_bulk_delayMin": {
+    "message": "最短間隔（秒）"
+  },
+  "inbox_wa_bulk_delayMax": {
+    "message": "最長間隔（秒）"
+  },
+  "inbox_wa_bulk_cooldownEvery": {
+    "message": "每幾則休息一次"
+  },
+  "inbox_wa_bulk_dailyCap": {
+    "message": "每日上限（最多 200）"
+  },
+  "inbox_wa_bulk_cooldownMin": {
+    "message": "最短休息（秒）"
+  },
+  "inbox_wa_bulk_cooldownMax": {
+    "message": "最長休息（秒）"
+  },
+  "inbox_wa_bulk_pacing_hint": {
+    "message": "每次間隔在最短與最長之間隨機。預設：8–20 秒，每 10 則休息 2–5 分鐘。"
+  },
+  "inbox_wa_bulk_remainingToday": {
+    "message": "今天還可群發 $P1$ 則（上限 $P2$ 則）。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_review": {
+    "message": "檢閱 $P1$ 則訊息",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_title": {
+    "message": "要核准 $P1$ 則訊息嗎？",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_body": {
+    "message": "每位收件人與其將收到的確切訊息。在你核准前不會送出任何訊息，你也可以隨時暫停或停止。"
+  },
+  "inbox_wa_review_pacing": {
+    "message": "間隔 $P1$–$P2$ 秒，每 $P3$ 則休息 $P4$–$P5$ 秒。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      },
+      "p4": {
+        "content": "$4",
+        "example": "3"
+      },
+      "p5": {
+        "content": "$5",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_overCap": {
+    "message": "今天只能再送 $P1$ 則（上限 $P2$）；其餘會等到明天。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_attachment": {
+    "message": "附件：$P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_list": {
+    "message": "收件人"
+  },
+  "inbox_wa_review_approve": {
+    "message": "核准並傳送 $P1$ 則",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_confirm": {
+    "message": "再點一次以傳送"
+  },
+  "inbox_wa_review_cancel": {
+    "message": "取消"
+  },
+  "inbox_wa_count_sent": {
+    "message": "已傳送 $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_failed": {
+    "message": "失敗 $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_skipped": {
+    "message": "略過 $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_left": {
+    "message": "剩餘 $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_next": {
+    "message": "$P1$ 秒後傳送下一則。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_sending": {
+    "message": "傳送中…"
+  },
+  "inbox_wa_run_paused": {
+    "message": "已暫停。"
+  },
+  "inbox_wa_run_pausedCap": {
+    "message": "已暫停：已達每日上限，明天繼續。"
+  },
+  "inbox_wa_run_done": {
+    "message": "已完成。"
+  },
+  "inbox_wa_run_stopped": {
+    "message": "已停止。"
+  },
+  "inbox_wa_run_declined": {
+    "message": "在傳送前已取消。"
+  },
+  "inbox_wa_run_pause": {
+    "message": "暫停"
+  },
+  "inbox_wa_run_resume": {
+    "message": "繼續"
+  },
+  "inbox_wa_run_stop": {
+    "message": "停止"
+  },
+  "inbox_wa_run_export": {
+    "message": "匯出 CSV"
+  },
+  "inbox_wa_run_delete": {
+    "message": "刪除"
+  },
+  "inbox_wa_run_new": {
+    "message": "新批次"
+  },
+  "inbox_wa_reports_title": {
+    "message": "先前的批次"
+  },
+  "inbox_wa_reports_line": {
+    "message": "已傳送 $P1$ · 失敗 $P2$ · 略過 $P3$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_status_sent": {
+    "message": "已傳送"
+  },
+  "inbox_wa_status_failed": {
+    "message": "失敗"
+  },
+  "inbox_wa_status_skipped": {
+    "message": "已略過"
+  },
+  "inbox_wa_status_sending": {
+    "message": "傳送中"
+  },
+  "inbox_wa_status_pending": {
+    "message": "等待中"
+  },
+  "inbox_wa_reason_duplicate": {
+    "message": "清單前面已有相同號碼。"
+  },
+  "inbox_wa_reason_optedOut": {
+    "message": "已要求不要收到訊息（退訂）。"
+  },
+  "inbox_wa_reason_invalidNumber": {
+    "message": "不是含國碼的完整電話號碼。"
+  },
+  "inbox_wa_reason_emptyMessage": {
+    "message": "此列的訊息是空的。"
+  },
+  "inbox_wa_reason_tooLong": {
+    "message": "訊息太長。"
+  },
+  "inbox_wa_reason_notOnWhatsapp": {
+    "message": "WhatsApp 表示此號碼未使用 WhatsApp。"
+  },
+  "inbox_wa_reason_stopped": {
+    "message": "批次已停止。"
+  },
+  "inbox_wa_reason_unknownOutcome": {
+    "message": "可能已送出也可能沒有：請到 WhatsApp 查看該對話。不會再次傳送。"
+  },
+  "inbox_wa_reason_notLoaded": {
+    "message": "對話未能及時開啟，沒有送出任何訊息。"
+  },
+  "inbox_wa_reason_sendFailed": {
+    "message": "無法傳送，沒有送出任何訊息。"
+  },
+  "inbox_wa_note_tabClosed_title": {
+    "message": "WhatsApp 群發已暫停"
+  },
+  "inbox_wa_note_tabClosed_body": {
+    "message": "WhatsApp Web 分頁已關閉。請開啟 web.whatsapp.com，然後在「收件匣 › WhatsApp › 群發訊息」按「繼續」。"
+  },
+  "inbox_wa_note_loggedOut_title": {
+    "message": "WhatsApp Web 已登出"
+  },
+  "inbox_wa_note_loggedOut_body": {
+    "message": "因 WhatsApp Web 顯示 QR 碼，群發已暫停。請用手機登入後按「繼續」。"
+  },
+  "inbox_wa_note_dailyCap_title": {
+    "message": "已達 WhatsApp 每日上限"
+  },
+  "inbox_wa_note_dailyCap_body": {
+    "message": "今天已群發 $P1$ 則，批次其餘部分將於明天繼續。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_done_title": {
+    "message": "WhatsApp 群發已完成"
+  },
+  "inbox_wa_note_done_body": {
+    "message": "已傳送 $P1$／$P2$ 則。報告位於「收件匣 › WhatsApp › 群發訊息」。",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_unknown_title": {
+    "message": "有一則 WhatsApp 訊息可能未送出"
+  },
+  "inbox_wa_note_unknown_body": {
+    "message": "一則群發訊息在傳送途中中斷，不會再次傳送：請到 WhatsApp 查看該對話。"
+  },
+  "inbox_wa_error_batchOpen": {
+    "message": "還有另一個批次未結束，請先完成、停止或取消。"
+  },
+  "inbox_wa_error_noTemplate": {
+    "message": "請先撰寫訊息。"
+  },
+  "inbox_wa_error_noPhoneColumn": {
+    "message": "清單需要標題列和電話欄（phone、number、mobile 或 whatsapp）。"
+  },
+  "inbox_wa_error_noRecipients": {
+    "message": "清單中沒有人能收到此訊息。"
+  },
+  "inbox_wa_error_attachmentTooBig": {
+    "message": "附件超過 5 MB。"
+  },
+  "inbox_wa_error_notWaiting": {
+    "message": "此批次已不再等待核准。"
+  },
+  "inbox_wa_error_stillOpen": {
+    "message": "請先停止批次再刪除。"
   }
 }

@@ -1,0 +1,227 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WhatsApp</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        display: flex;
+        gap: 16px;
+        margin: 0;
+      }
+      #side {
+        width: 320px;
+        border-right: 1px solid #ccc;
+        padding: 8px;
+      }
+      #main {
+        flex: 1;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+      }
+      [data-testid='cell-frame-container'] {
+        padding: 6px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+      }
+      [contenteditable] {
+        border: 1px solid #999;
+        min-height: 24px;
+        padding: 4px;
+      }
+      .message-in {
+        align-self: flex-start;
+        background: #eee;
+        margin: 2px;
+        padding: 4px;
+      }
+      .message-out {
+        align-self: flex-end;
+        background: #dcf8c6;
+        margin: 2px;
+        padding: 4px;
+      }
+      .messages {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      [role='dialog'] {
+        border: 2px solid red;
+        padding: 12px;
+        margin: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      A stand-in for WhatsApp Web, for e2e/whatsapp.e2e.mjs. It is built to the selectors in
+      src/storage/lib/skills/builtin/whatsapp-web.md (the real page's structure is not guaranteed to match).
+      State lives in localStorage so it survives the /send?phone=… reloads a bulk run makes; what was sent is
+      in localStorage "fixture-wa" (.sent), for the test to read. A number starting with 999 is "not on
+      WhatsApp". localStorage "fixture-wa-logged-out" = "1" shows only a QR code.
+    -->
+    <script>
+      const KEY = 'fixture-wa';
+      const seed = () => ({
+        chats: [
+          {
+            id: 'chat-1',
+            name: 'Priya Patel',
+            unread: 2,
+            messages: [
+              { dir: 'in', text: 'Are we still on for today?' },
+              { dir: 'in', text: 'See you at 3pm?' },
+            ],
+          },
+          { id: 'chat-2', name: 'Tomi', unread: 1, messages: [{ dir: 'in', text: 'Can you call me later?' }] },
+          { id: 'chat-3', name: 'Mom', unread: 0, messages: [{ dir: 'in', text: 'Call me when free' }] },
+        ],
+        sent: [],
+      });
+      const state = JSON.parse(localStorage.getItem(KEY) || 'null') || seed();
+      const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+      save();
+      let open = null;
+      let filter = '';
+
+      const el = (tag, attrs = {}, text) => {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+        if (text !== undefined) node.textContent = text;
+        return node;
+      };
+
+      if (localStorage.getItem('fixture-wa-logged-out') === '1') {
+        document.body.append(el('canvas', { 'aria-label': 'Scan this QR code to link a device!' }));
+      } else {
+        const side = el('div', { id: 'side' });
+        const search = el('div', { contenteditable: 'true', role: 'textbox', 'aria-label': 'Search input textbox' });
+        const list = el('div', { 'aria-label': 'Chat list' });
+        side.append(search, list);
+        const main = el('div', { id: 'main' });
+        document.body.append(side, main);
+
+        const renderList = () => {
+          list.replaceChildren();
+          for (const chat of state.chats) {
+            if (filter && !chat.name.toLowerCase().includes(filter.toLowerCase())) continue;
+            const last = chat.messages[chat.messages.length - 1]?.text ?? '';
+            const row = el('div', { 'data-testid': 'cell-frame-container', 'data-id': chat.id, role: 'listitem' });
+            const title = el('div', { 'data-testid': 'cell-frame-title' });
+            title.append(el('span', { title: chat.name, dir: 'auto' }, chat.name));
+            const secondary = el('div', { 'data-testid': 'cell-frame-secondary' });
+            secondary.append(el('span', { title: last, dir: 'ltr' }, last));
+            row.append(title, secondary);
+            if (chat.unread) {
+              const label = `${chat.unread} unread message${chat.unread > 1 ? 's' : ''}`;
+              row.append(el('span', { 'aria-label': label }, String(chat.unread)));
+            }
+            row.addEventListener('mousedown', () => openChat(chat));
+            list.append(row);
+          }
+        };
+
+        const renderMessages = box => {
+          box.replaceChildren();
+          for (const message of open.messages) {
+            const bubble = el('div', { class: message.dir === 'out' ? 'message-out' : 'message-in' });
+            const text = el('span', { class: 'selectable-text' });
+            text.append(el('span', {}, message.text));
+            bubble.append(text);
+            box.append(bubble);
+          }
+        };
+
+        const send = (text, attachment = null) => {
+          const clean = text.replace(/\u00a0/g, ' ').trim();
+          if (!clean && !attachment) return;
+          open.messages.push({ dir: 'out', text: attachment ? `[${attachment}] ${clean}` : clean });
+          state.sent.push({ to: open.name, text: clean, attachment });
+          save();
+          renderMessages(main.querySelector('.messages'));
+          renderList();
+        };
+
+        const openChat = (chat, prefill = '') => {
+          open = chat;
+          chat.unread = 0;
+          save();
+          main.replaceChildren();
+          const header = el('header');
+          header.append(el('span', { title: chat.name, dir: 'auto' }, chat.name));
+          const box = el('div', { class: 'messages' });
+          const footer = el('footer');
+          const composer = el('div', { contenteditable: 'true', role: 'textbox', 'aria-label': 'Type a message' });
+          composer.textContent = prefill;
+          const button = el('button', { 'aria-label': 'Send', type: 'button' }, 'Send');
+          composer.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              send(composer.innerText);
+              composer.textContent = '';
+            }
+          });
+          button.addEventListener('click', () => {
+            send(composer.innerText);
+            composer.textContent = '';
+          });
+          composer.addEventListener('paste', event => {
+            const file = event.clipboardData?.files?.[0];
+            if (!file) return;
+            event.preventDefault();
+            const editor = el('div', { 'data-testid': 'media-editor' });
+            editor.append(el('span', {}, file.name));
+            const captionBox = el('div', { 'data-testid': 'media-caption-input-container' });
+            const caption = el('div', { contenteditable: 'true', role: 'textbox', 'aria-label': 'Add a caption' });
+            captionBox.append(caption);
+            const mediaSend = el(
+              'div',
+              { role: 'button', 'aria-label': 'Send', 'data-testid': 'media-editor-send' },
+              'Send',
+            );
+            mediaSend.addEventListener('click', () => {
+              send(caption.innerText, file.name);
+              editor.remove();
+            });
+            editor.append(captionBox, mediaSend);
+            main.append(editor);
+          });
+          footer.append(composer, button);
+          main.append(header, box, footer);
+          renderMessages(box);
+          renderList();
+        };
+
+        search.addEventListener('input', () => {
+          filter = search.innerText.trim();
+          renderList();
+        });
+
+        renderList();
+        if (location.pathname === '/send') {
+          const params = new URLSearchParams(location.search);
+          const phone = params.get('phone') || '';
+          if (phone.startsWith('999')) {
+            const dialog = el('div', { role: 'dialog', 'data-testid': 'popup-contents' });
+            dialog.textContent = 'Phone number shared via url is invalid.';
+            document.body.append(dialog);
+          } else {
+            // A real WhatsApp takes a moment to open a chat from a link
+            setTimeout(() => {
+              let chat = state.chats.find(candidate => candidate.id === `p${phone}`);
+              if (!chat) {
+                chat = { id: `p${phone}`, name: `+${phone}`, unread: 0, messages: [] };
+                state.chats.push(chat);
+              }
+              openChat(chat, params.get('text') || '');
+            }, 300);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

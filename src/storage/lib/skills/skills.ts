@@ -7,6 +7,7 @@ import accountSwitching from './builtin/account-switching.md?raw';
 import chatApps from './builtin/chat-apps.md?raw';
 import gmail from './builtin/gmail.md?raw';
 import googleForms from './builtin/google-forms.md?raw';
+import whatsappWeb from './builtin/whatsapp-web.md?raw';
 
 // The skills that ship with the extension: generic tips, never needed for the agent to work
 export const BUILTIN_SKILL_FILES: Record<string, string> = {
@@ -14,6 +15,7 @@ export const BUILTIN_SKILL_FILES: Record<string, string> = {
   'account-switching.md': accountSwitching,
   'gmail.md': gmail,
   'google-forms.md': googleForms,
+  'whatsapp-web.md': whatsappWeb,
 };
 
 export function builtinSkills(): SkillRecord[] {

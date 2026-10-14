@@ -5671,5 +5671,450 @@
   },
   "history_general": {
     "message": "Sem espaço de trabalho"
+  },
+  "inbox_wa_title": {
+    "message": "WhatsApp"
+  },
+  "inbox_wa_sneakPeek": {
+    "message": "Prévia"
+  },
+  "inbox_wa_tab_catchup": {
+    "message": "Em dia"
+  },
+  "inbox_wa_tab_bulk": {
+    "message": "Mensagem em massa"
+  },
+  "inbox_wa_catchup_intro": {
+    "message": "A Ava lê sua aba aberta do WhatsApp Web: o que não foi lido e as respostas que você pedir. A resposta é digitada no chat e só é enviada quando você clicar."
+  },
+  "inbox_wa_catchup_ask": {
+    "message": "O que eu perdi?"
+  },
+  "inbox_wa_catchup_check": {
+    "message": "Verificar agora"
+  },
+  "inbox_wa_catchup_checked": {
+    "message": "$P1$ novas conversas na Caixa de entrada.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_catchup_watchOff": {
+    "message": "Para ver aqui as conversas não lidas assim que chegarem, ative \"Acompanhar o WhatsApp Web\" em Configurações › Caixa de entrada."
+  },
+  "inbox_wa_catchup_list": {
+    "message": "Conversas não lidas do WhatsApp"
+  },
+  "inbox_wa_action_draft": {
+    "message": "Rascunhar resposta"
+  },
+  "inbox_wa_action_openBulk": {
+    "message": "Abrir mensagem em massa"
+  },
+  "inbox_wa_prompt_catchUp": {
+    "message": "O que eu perdi no WhatsApp?"
+  },
+  "inbox_wa_prompt_reply": {
+    "message": "Responda $P1$ no WhatsApp dizendo ",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_warning": {
+    "message": "Mensagens em massa de um número pessoal podem fazer o WhatsApp restringir ou banir o número, principalmente para quem não tem seu número salvo. Envie só para quem espera falar com você, mantenha pausas longas e respeite quem pediu para sair."
+  },
+  "inbox_wa_bulk_list_label": {
+    "message": "Destinatários (CSV)"
+  },
+  "inbox_wa_bulk_import": {
+    "message": "Importar CSV"
+  },
+  "inbox_wa_bulk_list_hint": {
+    "message": "Uma linha de cabeçalho com a coluna de telefone (com o código do país), mais nome ou outras colunas. Uma coluna opt_out marca quem pediu para não receber mensagens."
+  },
+  "inbox_wa_bulk_template_label": {
+    "message": "Mensagem"
+  },
+  "inbox_wa_bulk_templateDefault": {
+    "message": "Oi {{name}}, "
+  },
+  "inbox_wa_bulk_insert": {
+    "message": "Inserir:"
+  },
+  "inbox_wa_bulk_unknownPlaceholders": {
+    "message": "Nenhuma coluna para $P1$: ficará em branco.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_attachment_add": {
+    "message": "Anexar arquivo"
+  },
+  "inbox_wa_bulk_attachment_remove": {
+    "message": "Remover o anexo"
+  },
+  "inbox_wa_bulk_attachment_hint": {
+    "message": "Opcional, um arquivo de até 5 MB; a mensagem vira a legenda."
+  },
+  "inbox_wa_bulk_preview_title": {
+    "message": "Prévia"
+  },
+  "inbox_wa_bulk_preview_counts": {
+    "message": "$P1$ para enviar, $P2$ ignorados.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_pacing_title": {
+    "message": "Ritmo e limites"
+  },
+  "inbox_wa_bulk_delayMin": {
+    "message": "Pausa mín. (s)"
+  },
+  "inbox_wa_bulk_delayMax": {
+    "message": "Pausa máx. (s)"
+  },
+  "inbox_wa_bulk_cooldownEvery": {
+    "message": "Descanso a cada (mensagens)"
+  },
+  "inbox_wa_bulk_dailyCap": {
+    "message": "Limite diário (máx. 200)"
+  },
+  "inbox_wa_bulk_cooldownMin": {
+    "message": "Descanso mín. (s)"
+  },
+  "inbox_wa_bulk_cooldownMax": {
+    "message": "Descanso máx. (s)"
+  },
+  "inbox_wa_bulk_pacing_hint": {
+    "message": "Cada pausa é aleatória entre o mínimo e o máximo. Padrão: 8–20 s, e 2–5 minutos a cada 10 mensagens."
+  },
+  "inbox_wa_bulk_remainingToday": {
+    "message": "Restam $P1$ de $P2$ mensagens em massa hoje.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_bulk_review": {
+    "message": "Revisar $P1$ mensagens",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_title": {
+    "message": "Aprovar $P1$ mensagens?",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_body": {
+    "message": "Cada destinatário e a mensagem exata que cada um recebe. Nada é enviado antes da sua aprovação, e você pode pausar ou parar a qualquer momento."
+  },
+  "inbox_wa_review_pacing": {
+    "message": "Pausas de $P1$–$P2$ s, e $P4$–$P5$ s a cada $P3$ mensagens.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      },
+      "p4": {
+        "content": "$4",
+        "example": "3"
+      },
+      "p5": {
+        "content": "$5",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_overCap": {
+    "message": "Só mais $P1$ podem ir hoje (limite $P2$); o resto espera até amanhã.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_attachment": {
+    "message": "Anexo: $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_list": {
+    "message": "Destinatários"
+  },
+  "inbox_wa_review_approve": {
+    "message": "Aprovar e enviar $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_review_confirm": {
+    "message": "Clique de novo para enviar"
+  },
+  "inbox_wa_review_cancel": {
+    "message": "Cancelar"
+  },
+  "inbox_wa_count_sent": {
+    "message": "Enviadas $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_failed": {
+    "message": "Falharam $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_skipped": {
+    "message": "Ignoradas $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_count_left": {
+    "message": "Restam $P1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_next": {
+    "message": "Próxima mensagem em $P1$ s.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_run_sending": {
+    "message": "Enviando…"
+  },
+  "inbox_wa_run_paused": {
+    "message": "Pausado."
+  },
+  "inbox_wa_run_pausedCap": {
+    "message": "Pausado: o limite diário foi atingido. Continua amanhã."
+  },
+  "inbox_wa_run_done": {
+    "message": "Concluído."
+  },
+  "inbox_wa_run_stopped": {
+    "message": "Interrompido."
+  },
+  "inbox_wa_run_declined": {
+    "message": "Cancelado antes de enviar."
+  },
+  "inbox_wa_run_pause": {
+    "message": "Pausar"
+  },
+  "inbox_wa_run_resume": {
+    "message": "Retomar"
+  },
+  "inbox_wa_run_stop": {
+    "message": "Parar"
+  },
+  "inbox_wa_run_export": {
+    "message": "Exportar CSV"
+  },
+  "inbox_wa_run_delete": {
+    "message": "Excluir"
+  },
+  "inbox_wa_run_new": {
+    "message": "Novo lote"
+  },
+  "inbox_wa_reports_title": {
+    "message": "Lotes anteriores"
+  },
+  "inbox_wa_reports_line": {
+    "message": "$P1$ enviadas · $P2$ falharam · $P3$ ignoradas",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      },
+      "p3": {
+        "content": "$3",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_status_sent": {
+    "message": "Enviada"
+  },
+  "inbox_wa_status_failed": {
+    "message": "Falhou"
+  },
+  "inbox_wa_status_skipped": {
+    "message": "Ignorada"
+  },
+  "inbox_wa_status_sending": {
+    "message": "Enviando"
+  },
+  "inbox_wa_status_pending": {
+    "message": "Aguardando"
+  },
+  "inbox_wa_reason_duplicate": {
+    "message": "Mesmo número antes na lista."
+  },
+  "inbox_wa_reason_optedOut": {
+    "message": "Pediu para não receber mensagens (opt-out)."
+  },
+  "inbox_wa_reason_invalidNumber": {
+    "message": "Não é um telefone completo com código do país."
+  },
+  "inbox_wa_reason_emptyMessage": {
+    "message": "A mensagem fica vazia para esta linha."
+  },
+  "inbox_wa_reason_tooLong": {
+    "message": "A mensagem é longa demais."
+  },
+  "inbox_wa_reason_notOnWhatsapp": {
+    "message": "O WhatsApp diz que este número não está no WhatsApp."
+  },
+  "inbox_wa_reason_stopped": {
+    "message": "O lote foi interrompido."
+  },
+  "inbox_wa_reason_unknownOutcome": {
+    "message": "Pode ou não ter sido enviada: confira a conversa no WhatsApp. Não é enviada de novo."
+  },
+  "inbox_wa_reason_notLoaded": {
+    "message": "A conversa não abriu a tempo. Nada foi enviado."
+  },
+  "inbox_wa_reason_sendFailed": {
+    "message": "Não foi possível enviar. Nada foi enviado."
+  },
+  "inbox_wa_note_tabClosed_title": {
+    "message": "Mensagem em massa do WhatsApp pausada"
+  },
+  "inbox_wa_note_tabClosed_body": {
+    "message": "A aba do WhatsApp Web está fechada. Abra web.whatsapp.com e toque em Retomar em Caixa de entrada › WhatsApp › Mensagem em massa."
+  },
+  "inbox_wa_note_loggedOut_title": {
+    "message": "O WhatsApp Web está desconectado"
+  },
+  "inbox_wa_note_loggedOut_body": {
+    "message": "A mensagem em massa pausou porque o WhatsApp Web mostra um QR code. Entre com o celular e toque em Retomar."
+  },
+  "inbox_wa_note_dailyCap_title": {
+    "message": "Limite diário do WhatsApp atingido"
+  },
+  "inbox_wa_note_dailyCap_body": {
+    "message": "$P1$ mensagens em massa saíram hoje. O resto do lote continua amanhã.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_done_title": {
+    "message": "Mensagem em massa do WhatsApp concluída"
+  },
+  "inbox_wa_note_done_body": {
+    "message": "$P1$ de $P2$ mensagens enviadas. O relatório está em Caixa de entrada › WhatsApp › Mensagem em massa.",
+    "placeholders": {
+      "p1": {
+        "content": "$1",
+        "example": "3"
+      },
+      "p2": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "inbox_wa_note_unknown_title": {
+    "message": "Uma mensagem do WhatsApp pode não ter saído"
+  },
+  "inbox_wa_note_unknown_body": {
+    "message": "Uma mensagem em massa foi interrompida durante o envio. Ela não é enviada de novo: confira a conversa no WhatsApp."
+  },
+  "inbox_wa_error_batchOpen": {
+    "message": "Outro lote ainda está aberto. Conclua, pare ou cancele primeiro."
+  },
+  "inbox_wa_error_noTemplate": {
+    "message": "Escreva a mensagem primeiro."
+  },
+  "inbox_wa_error_noPhoneColumn": {
+    "message": "A lista precisa de um cabeçalho com uma coluna de telefone (phone, number, mobile ou whatsapp)."
+  },
+  "inbox_wa_error_noRecipients": {
+    "message": "Ninguém na lista pode receber esta mensagem."
+  },
+  "inbox_wa_error_attachmentTooBig": {
+    "message": "O anexo tem mais de 5 MB."
+  },
+  "inbox_wa_error_notWaiting": {
+    "message": "Este lote não está mais aguardando aprovação."
+  },
+  "inbox_wa_error_stillOpen": {
+    "message": "Pare o lote antes de excluir."
   }
 }
