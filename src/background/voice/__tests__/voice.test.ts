@@ -65,6 +65,9 @@ describe('VOICE_TOOLS', () => {
   it('offers no tool that could approve or send on its own', () => {
     expect(VOICE_TOOLS.map(tool => tool.name)).toEqual([
       'run_browser_task',
+      // Reads the screen (a picture goes to the model); hands anything else to the agent, whose sends wait for a click
+      'read_screen',
+      'do_task',
       'list_tabs',
       'read_page',
       'open_tab',

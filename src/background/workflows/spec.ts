@@ -33,6 +33,7 @@ export const NODE_TYPES = [
   'step.agent',
   'step.tool',
   'step.sandbox',
+  'step.meeting_join',
   'out.inbox',
   'out.brief_section',
   'out.notify',
@@ -155,6 +156,8 @@ export const nodeSchema = z.discriminatedUnion('type', [
     readOnly: z.boolean().default(false),
   }),
   z.object({ ...base, type: z.literal('step.sandbox'), command: instruction }),
+  // Joins the meeting the tab trigger saw (its tab and address come from the run's trigger) and takes notes
+  z.object({ ...base, type: z.literal('step.meeting_join') }),
   z.object({
     ...base,
     type: z.literal('out.inbox'),
@@ -257,8 +260,10 @@ export function isSideEffect(node: WorkflowNode): boolean {
   switch (node.type) {
     case 'step.tool':
       return !node.readOnly;
+    // Joining a meeting (step.meeting_join) puts the user in front of others: only on their click
     case 'step.agent':
     case 'step.sandbox':
+    case 'step.meeting_join':
       return true;
     default:
       return false;

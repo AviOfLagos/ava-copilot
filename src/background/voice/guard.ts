@@ -13,6 +13,8 @@ export const TOOL_ACTIONS: Record<string, string> = {
   end_call_for_everyone: 'end the call for everyone',
   remember_this: 'save to your knowledge base',
   read_page: 'read a page aloud',
+  read_screen: 'look at your screen',
+  do_task: 'run a task for you',
   list_tabs: 'list your open tabs',
   list_frequent_sites: 'list the sites you visit',
   get_schedule: 'read your calendar',

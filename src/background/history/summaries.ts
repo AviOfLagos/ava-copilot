@@ -12,6 +12,9 @@ import { isOverDailyBudget } from '../usage/budget';
 
 const logger = createLogger('WorkspaceSummaries');
 
+import { loadIdentityContext } from '../identity/context';
+import { summaryContext } from '../identity/prompt';
+
 export const SUMMARY_SESSION = 'workspace-summaries';
 
 export interface SummaryDeps {
@@ -19,6 +22,8 @@ export interface SummaryDeps {
   model: () => Promise<ChatModel>;
   overCap: () => Promise<boolean>;
   workspaces: () => Promise<Workspace[]>;
+  // A few lines on the user for the summary's instructions (identity/prompt.ts#summaryContext); '' for none
+  aboutUser: (workspaceId: string | null) => Promise<string>;
 }
 
 const defaultDeps: SummaryDeps = {
@@ -26,6 +31,7 @@ const defaultDeps: SummaryDeps = {
   model: async () => (await resolveModels(null, { sessionId: SUMMARY_SESSION, notify: () => {} })).planner,
   overCap: () => isOverDailyBudget(),
   workspaces: () => workspaceStore.list(),
+  aboutUser: async workspaceId => summaryContext(await loadIdentityContext(workspaceId)),
 };
 
 /** Keeps every workspace's "where we are" current: one at a time, and only when its items changed. */
@@ -95,7 +101,10 @@ export class WorkspaceSummaries {
         text = (
           await generatePlainText({
             chatModel: await this.deps.model(),
-            messages: [systemMessage(SUMMARY_INSTRUCTIONS), userMessage(input.prompt)],
+            messages: [
+              systemMessage(SUMMARY_INSTRUCTIONS + (await this.deps.aboutUser(group.id).catch(() => ''))),
+              userMessage(input.prompt),
+            ],
           })
         ).trim();
         plain = !text;

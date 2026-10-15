@@ -75,11 +75,17 @@ test('a spoken request runs a browser task, and the copilot says when it is done
   // The session is set up as a conversation with tools, and hears the microphone
   await waitFor(() => mock.live.sessions.some(s => s.voice), 'a voice session');
   const voiceSession = mock.live.sessions.find(s => s.voice);
-  assert.deepEqual(voiceSession.setups[0].generationConfig, { responseModalities: ['AUDIO'] });
+  // The voice is fixed (Settings › Voice and language); this model chooses its language itself, so no languageCode
+  assert.deepEqual(voiceSession.setups[0].generationConfig, {
+    responseModalities: ['AUDIO'],
+    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
+  });
   assert.deepEqual(
     voiceSession.setups[0].tools[0].functionDeclarations.map(f => f.name),
     [
       'run_browser_task',
+      'read_screen',
+      'do_task',
       'list_tabs',
       'read_page',
       'open_tab',
@@ -98,6 +104,8 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'stop_tasks',
       // Registered by features (routines, agents, the Inbox, voice engines), in registration order
       'run_workflow',
+      'create_workflow',
+      'update_workflow',
       'list_workflows',
       'list_agents',
       'run_agent',
@@ -108,6 +116,11 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'read_chat',
       // "Switch to the accountant"
       'set_personality',
+      // Memory about the user, where a workspace is at, and settings she may change on a spoken yes
+      'remember',
+      'update_memory',
+      'where_are_we',
+      'change_setting',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);

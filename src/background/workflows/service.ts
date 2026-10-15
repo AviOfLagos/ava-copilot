@@ -15,6 +15,7 @@ import { checkSchedule, parseSpec, validateSpec } from './spec';
 import type { NodeType, WorkflowNode, WorkflowSpec } from './spec';
 import { createEngineStore, deleteWorkflow, newWorkflowRecord, pruneRuns, runsOf } from './store';
 import { templateSpec } from './templates';
+import { matchesUrlPattern, parseTabDetail, tabDetail } from './tab-trigger';
 import type { TemplateId } from './templates';
 
 /**
@@ -26,6 +27,8 @@ import type { TemplateId } from './templates';
 const logger = createLogger('Workflows');
 
 export const SCHEDULE_JOB = 'workflow';
+// A tab trigger fires at most once per workflow and address in this time
+export const TAB_REPEAT_MS = 30 * 60_000;
 export const RUN_JOB = 'workflow-run';
 // A missed time is still run if the browser starts within this; later, it waits for the next time
 const CATCH_UP_MS = 2 * 60 * 60_000;
@@ -69,6 +72,8 @@ export class WorkflowService {
   readonly engine: WorkflowEngine;
   private readonly executing = new Map<string, AbortController>();
   private readonly firing = new Set<string>();
+  // When each workflow last fired for an address, so reloading a page does not ask again
+  private readonly tabFired = new Map<string, number>();
   private keepAlive: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -341,6 +346,44 @@ export class WorkflowService {
       });
       await this.jobs.schedule({ kind: RUN_JOB, key: runKey(run.id), runAt: Date.now(), payload: { runId: run.id } });
       started += 1;
+    }
+    return started;
+  }
+
+  /**
+   * A tab opened (or moved to) an address: each active workflow with a matching tab trigger starts a run, at most
+   * once per workflow and address in TAB_REPEAT_MS. The address is the page's, so the run is tainted, and it is
+   * unattended: anything it does for the user waits for their click.
+   *
+   * @returns the workflows that started a run
+   */
+  async fireTab(tabId: number, url: string, now = Date.now()): Promise<WorkflowRecord[]> {
+    const started: WorkflowRecord[] = [];
+    for (const workflow of await this.database.workflows.where('status').equals('active').toArray()) {
+      const listens = parseSpec(workflow.spec)?.nodes.some(
+        node => node.type === 'trigger.tab' && matchesUrlPattern(node.urlPattern, url),
+      );
+      if (!listens) continue;
+      const key = `${workflow.id}@${url}`;
+      if ((this.tabFired.get(key) ?? 0) > now - TAB_REPEAT_MS) continue;
+      this.tabFired.set(key, now);
+      if (await this.openRunOf(workflow.id)) continue;
+      // Also after a restart: the same address shortly after does not fire again
+      const recent = (await runsOf(this.database, workflow.id)).some(
+        run =>
+          run.trigger.type === 'tab' &&
+          run.startedAt > now - TAB_REPEAT_MS &&
+          parseTabDetail(run.trigger.detail)?.url === url,
+      );
+      if (recent) continue;
+      const run = await this.engine.createRun(workflow, {
+        trigger: { type: 'tab', detail: tabDetail(tabId, url) },
+        attended: false,
+        tainted: true,
+      });
+      // At once, not on the next job tick: the user is on that page now (recover() picks it up after a restart)
+      void this.execute(run.id);
+      started.push(workflow);
     }
     return started;
   }

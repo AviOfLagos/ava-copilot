@@ -1262,6 +1262,33 @@ the Cloud API) is `docs/whatsapp-plan-b.md`.
   No dedicated E2E for the live-switch path (`audio_devices_apply` arriving mid-conversation) or for the
   disconnect→reconnect UI text, though both are covered at the unit level.
 
+### Ava's identity, memory, and voice as the hub (2026-10-15)
+
+Design and sources (Letta, Generative Agents, Mem0/Zep): `docs/ava-identity.md`.
+
+- **Core identity** (`background/identity/prompt.ts`, store `ava-core`): character, values, purpose/ambitions, the
+  name rule (corrects another name lightly once, never takes one on) and banned generic openers, in the planner,
+  navigator (after the gate/reader/knowledge sections, before style and personality), voice (after its rules),
+  brief and workspace summaries. Settings › Personalities › "Ava's core" edits it; reset to default.
+- **About you** (store `about-you`, `src/storage/lib/identity`): dated facts with source and earlier wordings, goals,
+  insights. `remember` / `update_memory` as voice tools and chat actions; only the user's own words make a fact
+  active, anything else is "proposed" until confirmed in Settings › About you; agent/routine/brief runs write none.
+- **Reflection**: job `identity_reflect` daily 07:45 and after a 12+ turn voice conversation; insights and per-workspace
+  goals from recent chats, voice, meetings and summaries (untrusted), never facts. The brief shows "Your goals".
+- **Voice hub**: `read_screen` (text + `captureVisibleTab` JPEG as a Live video frame), `do_task`, `create_workflow`,
+  `update_workflow`, `where_are_we`, `change_setting` (spoken yes required); instructions say never "I can't see
+  your screen".
+- **Meeting links**: template + `step.meeting_join` (side effect, waits for Allow); tab triggers now fire
+  (`WorkflowService.fireTab`); Meet pattern narrowed to `meet.google.com/*-*-*`.
+- **Fixed voice/language**: Settings › Voice and language (store `voice-identity`); `speechConfig.voiceName` always,
+  `languageCode` only for half-cascade models (native-audio models do not support it) plus a firm language line.
+- Tests: unit (`identity/__tests__`, `storage/lib/identity/__tests__`, `workflows/__tests__/tab-trigger.test.ts`,
+  `offscreen/__tests__/speech.test.ts`); E2E `e2e/identity.e2e.mjs` (5) in Brave; `voice`, `voice-thread`,
+  `personalities`, `workflows`, `meeting`, `history`, `agent` E2E green.
+- Known gaps: economy voice cannot look at the screenshot (text only); chat threads do not trigger a reflection on
+  their own (daily and voice only); Zoom/Teams joining relies on their web clients and auto-notes, untested on the
+  real sites; the language code list for half-cascade models is by name, not checked against the API.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

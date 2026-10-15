@@ -16,6 +16,8 @@ export class PlannerPrompt extends BasePrompt {
     private readonly assistantName?: string,
     // The user's chosen personality, added last: below the rules, which it cannot override
     private readonly personality?: Personality | null,
+    // Who the assistant is and what she knows about the user (identity/prompt.ts), after the rules
+    private readonly identitySection?: string,
   ) {
     super();
   }
@@ -23,9 +25,10 @@ export class PlannerPrompt extends BasePrompt {
   getSystemMessage(): SystemModelMessage {
     return systemMessage(
       plannerSystemPromptTemplate +
-        buildIdentitySection(this.assistantName) +
+        (this.identitySection ? '' : buildIdentitySection(this.assistantName)) +
         plannerGateSection +
         plannerKnowledgeSection +
+        (this.identitySection ?? '') +
         buildStyleSection(this.stylePrompt, 'the "final_answer" field') +
         buildPersonalitySection(this.personality, 'the "final_answer" field'),
     );

@@ -41,6 +41,8 @@ export interface ExecutorExtraArgs {
   media?: TaskImages | null;
   // The personality in force for the thread's workspace
   personality?: Personality | null;
+  // Ava's core, what she knows about the user and their goals (identity/prompt.ts#buildCoreSection)
+  identitySection?: string;
 }
 
 export class Executor {
@@ -84,8 +86,9 @@ export class Executor {
       stylePrompt,
       assistantName,
       personality,
+      extraArgs?.identitySection,
     );
-    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName, personality);
+    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName, personality, extraArgs?.identitySection);
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
     const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());

@@ -381,6 +381,8 @@ export async function startMockLlm(scenarios) {
     toolResponses: [],
     // Messages typed into the voice conversation's chat: their words and the types of any inline pictures
     typed: [],
+    // Screen pictures sent as video frames
+    frames: [],
   };
   server.on('upgrade', (req, socket) => {
     if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
@@ -469,6 +471,13 @@ export async function startMockLlm(scenarios) {
             live.notices.push(parts[0].text);
             send({ serverContent: { outputTranscription: { text: 'Heads up.' }, turnComplete: true } });
           }
+        } else if (session.voice && message.realtimeInput?.video) {
+          // A picture of the screen (read_screen): its type and size
+          live.frames.push({
+            session: live.sessions.indexOf(session),
+            mimeType: message.realtimeInput.video.mimeType,
+            bytes: Buffer.from(message.realtimeInput.video.data, 'base64').length,
+          });
         } else if (session.voice && message.realtimeInput?.audio) {
           session.audioBytes += Buffer.from(message.realtimeInput.audio.data, 'base64').length;
           // After a second of microphone audio, the user has asked for something

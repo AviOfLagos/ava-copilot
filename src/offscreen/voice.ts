@@ -35,6 +35,8 @@ export interface VoiceOptions extends LiveOptions {
   // The chosen microphone/speaker (Settings › Voice devices), or null for the system default
   micDeviceId?: string | null;
   speakerDeviceId?: string | null;
+  // The fixed voice (and, for models that take it, language) of the conversation, built by the background
+  speechConfig?: { voiceConfig: { prebuiltVoiceConfig: { voiceName: string } }; languageCode?: string };
 }
 
 export interface VoiceEvents {
@@ -52,7 +54,11 @@ export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
   return {
     setup: {
       model: `models/${options.model}`,
-      generationConfig: { responseModalities: ['AUDIO'] },
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        // Without it Gemini picks a voice per session, and the voice (and language) drift between conversations
+        ...(options.speechConfig ? { speechConfig: options.speechConfig } : {}),
+      },
       systemInstruction: { parts: [{ text: options.instructions }] },
       inputAudioTranscription: {},
       outputAudioTranscription: {},
@@ -80,6 +86,11 @@ export function typedTurn(text: string, images: TurnImage[] = [], note = '') {
     { text: images.length ? `The user typed (with the pictures above): ${text}` : `The user typed: ${text}` },
   ];
   return { clientContent: { turns: [{ role: 'user', parts }], turnComplete: true } };
+}
+
+/** A screenshot as a Live video frame: realtime input, so it is context for the turn under way, not a new turn. */
+export function screenFrame(image: TurnImage) {
+  return { realtimeInput: { video: { mimeType: image.mediaType, data: image.data } } };
 }
 
 /**
@@ -192,6 +203,16 @@ export class VoiceSession {
     if (!text.trim() && images.length === 0) return;
     this.typed.push(typedTurn(text, images, note));
     this.flushTyped();
+  }
+
+  /**
+   * A picture of the screen for the model to look at (read_screen), sent as a video frame so it does not start a
+   * turn of its own: the tool's answer that follows says what it is. False when the session is not ready.
+   */
+  sendImage(image: TurnImage): boolean {
+    if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(screenFrame(image)));
+    return true;
   }
 
   private flushTyped(): void {

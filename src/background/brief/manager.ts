@@ -13,6 +13,8 @@ import { rollupMarkdown, workspaceSummaries } from '../history/summaries';
 import { briefDue, briefMarkdown, localDate, PRIORITIES_INSTRUCTIONS, priorityLines, todaysEvents } from './brief';
 import type { BriefData } from './brief';
 import { toneLine } from '../personalities/prompt';
+import { loadIdentityContext } from '../identity/context';
+import { briefContext, goalLines } from '../identity/prompt';
 
 const logger = createLogger('MorningBrief');
 
@@ -99,6 +101,8 @@ export class MorningBrief {
   private async build(notify: boolean): Promise<string> {
     const now = Date.now();
     const nodes = await graphStore.nodes();
+    // Who the brief is for and what they are working towards (all workspaces: the brief covers every one)
+    const identity = await loadIdentityContext(null);
     const threads = await db.threads.toArray();
     const data: BriefData = {
       now,
@@ -119,6 +123,7 @@ export class MorningBrief {
         .then(() => workspaceSummaries.rollup(now))
         .then(rollupMarkdown)
         .catch(() => ''),
+      goals: goalLines(identity),
     };
 
     let priorities: string[] = [];
@@ -129,7 +134,11 @@ export class MorningBrief {
           chatModel: planner,
           messages: [
             // The active personality sets only the tone of the lines
-            systemMessage(PRIORITIES_INSTRUCTIONS + toneLine(await personalityStore.resolve(null).catch(() => null))),
+            systemMessage(
+              PRIORITIES_INSTRUCTIONS +
+                briefContext(identity) +
+                toneLine(await personalityStore.resolve(null).catch(() => null)),
+            ),
             // Invite titles, chats and pages say what they like: data, never instructions
             userMessage(wrapUntrustedContent(briefMarkdown(data))),
           ],

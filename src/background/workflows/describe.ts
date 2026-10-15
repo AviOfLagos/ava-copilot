@@ -135,6 +135,8 @@ export function nodeDetail(node: WorkflowNode): string {
       return `${node.connector} · ${node.tool}`;
     case 'step.sandbox':
       return cut(node.command);
+    case 'step.meeting_join':
+      return 'join + notes';
     case 'out.inbox':
     case 'out.brief_section':
     case 'out.notify':

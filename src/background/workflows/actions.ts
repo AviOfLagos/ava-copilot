@@ -22,6 +22,7 @@ import type { WorkflowService } from './service';
 import { userTimezone } from './service';
 import { groupOf, parseSpec } from './spec';
 import type { WorkflowSpec } from './spec';
+import { isMeetingLinksRequest, meetingLinks } from './templates';
 
 /**
  * What the browser agent can do with workflows from a chat: draft one from the user's words, change one,
@@ -185,7 +186,10 @@ export function registerWorkflowActions(service: WorkflowService): void {
         const allowed = await attendedThread(context);
         if ('refused' in allowed) return fail(context, allowed.refused);
         try {
-          const result = await authorFor(context, input.request, null);
+          // The meeting-links routine is a template: no model call needed for it
+          const result = isMeetingLinksRequest(input.request)
+            ? { ok: true as const, spec: meetingLinks() }
+            : await authorFor(context, input.request, null);
           if (!result.ok) return fail(context, result.error);
           const workflow = await service.saveDraft({
             spec: result.spec,
