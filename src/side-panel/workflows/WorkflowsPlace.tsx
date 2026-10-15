@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Newspaper, Plus } from 'lucide-react';
+import { ChevronRight, Newspaper, Plus, Video } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db } from '@extension/storage';
 import type { JobRecord, WorkflowRecord } from '@extension/storage';
@@ -71,11 +71,11 @@ function WorkflowList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => 
     .sort((a, b) => (b.draft?.createdAt ?? 0) - (a.draft?.createdAt ?? 0));
   const others = workflows.filter(workflow => !workflow.draft).sort((a, b) => b.updatedAt - a.updatedAt);
 
-  const fromTemplate = async () => {
+  const fromTemplate = async (template: 'morning_tech_news' | 'meeting_links') => {
     setBusy(true);
     setError(null);
     try {
-      const reply = await api.request<{ id: string }>({ type: 'workflow_template', template: 'morning_tech_news' });
+      const reply = await api.request<{ id: string }>({ type: 'workflow_template', template });
       onOpen(reply.id);
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : String(problem));
@@ -166,9 +166,27 @@ function WorkflowList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => 
           <Button
             size="sm"
             variant="glass"
-            onClick={() => void fromTemplate()}
+            onClick={() => void fromTemplate('morning_tech_news')}
             disabled={busy}
             aria-label={t('flow_template_use_a11y')}>
+            <Plus className="size-3.5" aria-hidden />
+            {t('flow_template_use')}
+          </Button>
+        </div>
+        <div className="glass flex items-center gap-3 rounded-xl px-3 py-2.5">
+          <span className="bg-primary/15 flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <Video className="size-4" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-medium">{t('flow_template_meetings')}</span>
+            <span className="text-muted-foreground block text-[11.5px]">{t('flow_template_meetings_hint')}</span>
+          </span>
+          <Button
+            size="sm"
+            variant="glass"
+            onClick={() => void fromTemplate('meeting_links')}
+            disabled={busy}
+            aria-label={t('flow_template_meetings_a11y')}>
             <Plus className="size-3.5" aria-hidden />
             {t('flow_template_use')}
           </Button>

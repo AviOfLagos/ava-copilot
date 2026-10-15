@@ -232,3 +232,35 @@ export async function switchTab(tabId: number, windowId?: number): Promise<strin
   if (tab.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
   return `Switched to tab ${tab.id}: ${tab.title}.`;
 }
+
+/** A picture of the screen for the voice model: base64 JPEG, without the data: prefix. */
+export interface ScreenImage {
+  mediaType: string;
+  data: string;
+}
+
+/**
+ * The screen as the user sees it, for read_screen: the page in front's title, address and text (as read_page reads
+ * it, marked untrusted), plus a JPEG of the visible part of the tab. No picture of a private, blocked, browser-owned
+ * or task-held tab: the same rules as reading it.
+ */
+export async function readScreen(
+  windowId?: number,
+  heldByThread: (tabId: number) => boolean = () => false,
+): Promise<{ text: string; image: ScreenImage | null }> {
+  const id = await windowOf(windowId);
+  const [tab] = await chrome.tabs.query(id !== undefined ? { windowId: id, active: true } : { active: true });
+  if (!tab?.id) return { text: 'No tab is in front.', image: null };
+  const text = await readPage(id, tab.id, heldByThread);
+  const readable =
+    !tab.incognito &&
+    !heldByThread(tab.id) &&
+    !!tab.url &&
+    /^https?:/.test(tab.url) &&
+    (await allowedByFirewall(tab.url));
+  if (!readable) return { text, image: null };
+  const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 }).catch(() => null);
+  const match = dataUrl ? /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl) : null;
+  const where = `The tab in front: "${tab.title ?? ''}" at ${hostOf(tab.url)}.`;
+  return { text: `${where}\n${text}`, image: match ? { mediaType: match[1], data: match[2] } : null };
+}

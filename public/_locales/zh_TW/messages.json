@@ -6429,5 +6429,269 @@
   },
   "audio_device_speaker_systemVoicesNote": {
     "message": "系統語音會透過電腦的預設喇叭播放，無法使用所選擇的喇叭。"
+  },
+  "ava_about_title": {
+    "message": "關於你"
+  },
+  "ava_about_hint": {
+    "message": "$NAME$ 對你的了解。當你告訴她長期有效的事，她會記下；你可以在這裡修改或刪除。只會使用你說過或確認過的內容。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_empty": {
+    "message": "目前還沒有。告訴 $NAME$ 一些關於你的事，或在這裡新增。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_list_label": {
+    "message": "$NAME$ 對你的了解",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_proposed_title": {
+    "message": "等待你確認"
+  },
+  "ava_about_proposed_hint": {
+    "message": "這些不是你親口說的，是 $NAME$ 從別處得知的。你確認之前不會使用。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_confirm": {
+    "message": "確認"
+  },
+  "ava_about_confirm_a11y": {
+    "message": "確認「$FACT$」",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_edit_a11y": {
+    "message": "編輯「$FACT$」",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_delete_a11y": {
+    "message": "刪除「$FACT$」",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_add": {
+    "message": "新增一項"
+  },
+  "ava_about_edit_title": {
+    "message": "編輯"
+  },
+  "ava_about_fact_label": {
+    "message": "內容"
+  },
+  "ava_about_fact_placeholder": {
+    "message": "例如：與兩位共同創辦人經營 Nexprove"
+  },
+  "ava_about_category_label": {
+    "message": "類別"
+  },
+  "ava_about_workspace_label": {
+    "message": "工作區"
+  },
+  "ava_about_workspace_none": {
+    "message": "全部"
+  },
+  "ava_cat_name": {
+    "message": "名字"
+  },
+  "ava_cat_role": {
+    "message": "角色"
+  },
+  "ava_cat_company": {
+    "message": "公司"
+  },
+  "ava_cat_person": {
+    "message": "人物"
+  },
+  "ava_cat_preference": {
+    "message": "偏好"
+  },
+  "ava_cat_goal": {
+    "message": "目標"
+  },
+  "ava_cat_other": {
+    "message": "其他"
+  },
+  "ava_source_said": {
+    "message": "你說過"
+  },
+  "ava_source_confirmed": {
+    "message": "你確認過"
+  },
+  "ava_source_settings": {
+    "message": "在此新增"
+  },
+  "ava_source_proposed": {
+    "message": "未確認"
+  },
+  "ava_save": {
+    "message": "儲存"
+  },
+  "ava_cancel": {
+    "message": "取消"
+  },
+  "ava_delete_confirm": {
+    "message": "再按一次以刪除"
+  },
+  "ava_goals_title": {
+    "message": "目前目標"
+  },
+  "ava_goals_empty": {
+    "message": "還沒有目標。每天早上會從你最近的工作整理出來，你也可以自行新增。"
+  },
+  "ava_goals_add": {
+    "message": "新增目標"
+  },
+  "ava_goal_placeholder": {
+    "message": "例如：上線網站"
+  },
+  "ava_goal_yours": {
+    "message": "你的"
+  },
+  "ava_goal_fromReflection": {
+    "message": "來自最近的工作"
+  },
+  "ava_goal_delete_a11y": {
+    "message": "刪除目標「$GOAL$」",
+    "placeholders": {
+      "goal": {
+        "content": "$1",
+        "example": "Ship the website"
+      }
+    }
+  },
+  "ava_insights_title": {
+    "message": "最近"
+  },
+  "ava_reflect_now": {
+    "message": "立即整理"
+  },
+  "ava_reflect_running": {
+    "message": "整理中…"
+  },
+  "ava_reflect_last": {
+    "message": "上次整理：$WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "15/10/2026 07:45"
+      }
+    }
+  },
+  "ava_reflect_never": {
+    "message": "尚未整理"
+  },
+  "ava_reflect_skipped": {
+    "message": "沒有新的內容可整理。"
+  },
+  "ava_core_title": {
+    "message": "$NAME$ 的核心",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_core_hint": {
+    "message": "無論哪種個性，$NAME$ 都是她自己：性格、價值觀與目標。個性只改變語氣，這些不變。安全規則永遠優先。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_core_character": {
+    "message": "性格"
+  },
+  "ava_core_values": {
+    "message": "價值觀"
+  },
+  "ava_core_purpose": {
+    "message": "目標與抱負"
+  },
+  "ava_core_edit": {
+    "message": "編輯"
+  },
+  "ava_core_reset": {
+    "message": "恢復預設"
+  },
+  "ava_core_edited": {
+    "message": "已編輯"
+  },
+  "ava_core_default": {
+    "message": "預設"
+  },
+  "ava_core_nameNote": {
+    "message": "她的名字在「設定 › 一般」中設定。"
+  },
+  "ava_voice_section": {
+    "message": "語音與語言"
+  },
+  "ava_voice_live_label": {
+    "message": "即時語音"
+  },
+  "ava_voice_live_hint": {
+    "message": "語音對話使用的 Gemini 聲音，每次都相同；個性的聲音只影響朗讀，且僅在你設定時。"
+  },
+  "ava_voice_language_label": {
+    "message": "語言"
+  },
+  "ava_voice_language_hint": {
+    "message": "$NAME$ 一律說這個語言，除非你在某次對話中要求切換。下次對話起生效。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "flow_type_meetingJoin": {
+    "message": "加入會議"
+  },
+  "flow_meetingJoin_detail": {
+    "message": "加入並做筆記"
+  },
+  "flow_template_meetings": {
+    "message": "會議連結"
+  },
+  "flow_template_meetings_hint": {
+    "message": "開啟 Zoom、Meet、Teams 或日曆連結 → 詢問是否加入並做筆記"
+  },
+  "flow_template_meetings_a11y": {
+    "message": "從範本建立「會議連結」草稿"
   }
 }

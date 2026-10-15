@@ -172,6 +172,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         voice.sendText(String(message.text ?? ''), images, String(message.note ?? ''));
         return { ok: true };
       }
+      case 'voice_image': {
+        // The screen, for read_screen: only a Gemini Live session can look at it
+        const image = message.image as { mediaType?: unknown; data?: unknown } | undefined;
+        if (
+          !voice ||
+          !('sendImage' in voice) ||
+          typeof image?.mediaType !== 'string' ||
+          typeof image.data !== 'string'
+        ) {
+          return { ok: false };
+        }
+        return { ok: voice.sendImage({ mediaType: image.mediaType, data: image.data }) };
+      }
       case 'tts_play': {
         if (!tts) {
           tts = new TtsPlayer({

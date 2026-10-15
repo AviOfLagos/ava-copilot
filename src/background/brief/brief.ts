@@ -18,6 +18,8 @@ export interface BriefData {
   sections?: WorkflowBriefSection[];
   // Every workspace's latest activity and next actions, from the workspace summaries (already flattened)
   rollup?: string;
+  // The user's current goals (identity/prompt.ts#goalLines), already "- " lines
+  goals?: string[];
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -70,6 +72,7 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
   const sections: string[] = [];
   if (priorities.length)
     sections.push(`**First, today**\n${priorities.map(line => `- ${plain(line, 200)}`).join('\n')}`);
+  if (data.goals?.length) sections.push(`**Your goals**\n${data.goals.join('\n')}`);
 
   const events = todaysEvents(data.events, data.now);
   sections.push(

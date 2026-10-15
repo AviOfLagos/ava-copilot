@@ -3,7 +3,7 @@ import type { WorkflowSpec } from './spec';
 
 /** Ready-made workflows the user can start from. */
 
-export const TEMPLATE_IDS = ['morning_tech_news'] as const;
+export const TEMPLATE_IDS = ['morning_tech_news', 'meeting_links'] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export const HN_FRONT_PAGE_URL = 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30';
@@ -63,9 +63,52 @@ export function morningTechNews(timezone: string): WorkflowSpec {
   };
 }
 
+// The pages that mean a meeting: a call link (Zoom, Google Meet, Teams) or a calendar event. A Meet address is
+// only a call with its code (abc-defg-hij), so the Meet home page and lobby links do not count.
+export const MEETING_LINK_PATTERNS = [
+  'zoom.us/j/*',
+  '*.zoom.us/j/*',
+  'meet.google.com/*-*-*',
+  'teams.microsoft.com/l/meetup-join/*',
+  'calendar.google.com/calendar/*event*',
+] as const;
+
+/**
+ * Whenever a meeting link or a calendar event opens in a tab: offer to join it and take notes. The offer waits for
+ * the user's click (Inbox, Workflows, and Ava says so when a conversation is on); notes then start on their own.
+ */
+export function meetingLinks(): WorkflowSpec {
+  const triggers = MEETING_LINK_PATTERNS.map((urlPattern, index) => ({
+    id: `link_${index + 1}`,
+    type: 'trigger.tab' as const,
+    label: ['Zoom link', 'Zoom link (company)', 'Google Meet link', 'Teams meeting link', 'Calendar event'][index],
+    urlPattern,
+  }));
+  return {
+    v: SPEC_VERSION,
+    name: 'Meeting links',
+    description:
+      'Whenever a Zoom, Google Meet or Teams link or a calendar event opens in a tab, offer to join and take notes.',
+    nodes: [...triggers, { id: 'join', type: 'step.meeting_join', label: 'Join and take notes' }],
+    edges: triggers.map(trigger => ({ from: trigger.id, to: 'join' })),
+    allowHosts: [],
+    budget: { ...DEFAULT_BUDGET, maxModelCalls: 0 },
+  };
+}
+
+/** Whether a spoken or typed request is for the meeting-links routine, so it is drafted without a model call. */
+export function isMeetingLinksRequest(request: string): boolean {
+  const text = request.toLowerCase();
+  const meeting = /\b(zoom|google meet|meet link|teams|calendar link|calendar event|meeting link)/.test(text);
+  const always = /\b(always|whenever|every time|each time|any time|hook|automatic|watch|capture|detect)\b/.test(text);
+  return meeting && always;
+}
+
 export function templateSpec(id: TemplateId, timezone: string): WorkflowSpec {
   switch (id) {
     case 'morning_tech_news':
       return morningTechNews(timezone);
+    case 'meeting_links':
+      return meetingLinks();
   }
 }

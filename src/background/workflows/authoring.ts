@@ -74,6 +74,7 @@ Steps:
 - step.agent: agent (one of the user's agents, by name), task (what it does this time). Hands the work to that agent; it runs in its own window.
 - step.tool: connector (its name), tool (its exact name), args (a JSON object as text, e.g. {"channel": "general", "text": "{{steps.digest.output}}"}; places go only inside its string values), readOnly (true only for a tool listed as running freely). Only the connector tools listed with the request exist; with none listed, there is no step.tool.
 - step.sandbox: command (one shell command line, run in Nex Brain's sandbox on the user's Mac: no network, no secrets; it waits for the user's click). Only when the user asks to run code, a script or a build.
+- step.meeting_join: no params. Only after trigger.tab on meeting or calendar pages: offers to join the meeting that page is for and take notes; it waits for the user's click.
 - step.condition: left (usually data from an earlier step), op = contains | not_contains | equals | not_equals | greater_than | less_than | is_empty | is_not_empty, right. The edges leaving it say when = "true" or "false".
 
 Outputs:

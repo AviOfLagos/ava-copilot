@@ -18,6 +18,8 @@ import type { ChatModel } from '../llm/types';
 import { meterModel } from '../usage/meter';
 import type { UsageScope } from '../usage/meter';
 import type { TabBinding } from './binding';
+import { buildCoreSection } from '../identity/prompt';
+import { loadIdentityContext } from '../identity/context';
 
 export interface RunModels {
   navigator: ChatModel;
@@ -131,5 +133,6 @@ export async function createExecutor(options: {
     messageContext: options.messageContext,
     media: options.media,
     personality,
+    identitySection: buildCoreSection(await loadIdentityContext(thread?.workspaceId)),
   });
 }

@@ -24,6 +24,8 @@ export class NavigatorPrompt extends BasePrompt {
     assistantName?: string,
     // The user's chosen personality, added last: below the rules, which it cannot override
     personality?: Personality | null,
+    // Who the assistant is and what she knows about the user (identity/prompt.ts), after the rules
+    identitySection?: string,
   ) {
     super();
 
@@ -31,7 +33,7 @@ export class NavigatorPrompt extends BasePrompt {
     const promptTemplate = navigatorSystemPromptTemplate.replace(
       '</system_instructions>',
       () =>
-        `${buildIdentitySection(assistantName)}${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${registeredActionPrompts()}${buildStyleSection(stylePrompt, 'the text of the done action')}${buildPersonalitySection(personality, 'the text of the done action')}</system_instructions>`,
+        `${identitySection ? '' : buildIdentitySection(assistantName)}${navigatorGateSection}${navigatorReaderSection}${navigatorKnowledgeSection}${registeredActionPrompts()}${identitySection ?? ''}${buildStyleSection(stylePrompt, 'the text of the done action')}${buildPersonalitySection(personality, 'the text of the done action')}</system_instructions>`,
     );
     // Format the template with the maxActionsPerStep
     const formattedPrompt = promptTemplate.replace('{{max_actions}}', this.maxActionsPerStep.toString()).trim();

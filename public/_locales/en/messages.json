@@ -6429,5 +6429,269 @@
   },
   "audio_device_speaker_systemVoicesNote": {
     "message": "System voices play through the computer's default speaker; they cannot use a chosen one."
+  },
+  "ava_about_title": {
+    "message": "About you"
+  },
+  "ava_about_hint": {
+    "message": "What $NAME$ knows about you. She adds to it when you tell her something lasting; change or delete anything here. Only what you said or confirmed is used.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_empty": {
+    "message": "Nothing yet. Tell $NAME$ about yourself, or add a fact here.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_list_label": {
+    "message": "What $NAME$ knows about you",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_proposed_title": {
+    "message": "Waiting for your OK"
+  },
+  "ava_about_proposed_hint": {
+    "message": "$NAME$ picked these up from somewhere other than your own words. They are not used until you confirm them.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_about_confirm": {
+    "message": "Confirm"
+  },
+  "ava_about_confirm_a11y": {
+    "message": "Confirm “$FACT$”",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_edit_a11y": {
+    "message": "Edit “$FACT$”",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_delete_a11y": {
+    "message": "Delete “$FACT$”",
+    "placeholders": {
+      "fact": {
+        "content": "$1",
+        "example": "Runs Nexprove"
+      }
+    }
+  },
+  "ava_about_add": {
+    "message": "Add a fact"
+  },
+  "ava_about_edit_title": {
+    "message": "Edit a fact"
+  },
+  "ava_about_fact_label": {
+    "message": "Fact"
+  },
+  "ava_about_fact_placeholder": {
+    "message": "e.g. Runs Nexprove with two co-founders"
+  },
+  "ava_about_category_label": {
+    "message": "Kind"
+  },
+  "ava_about_workspace_label": {
+    "message": "Workspace"
+  },
+  "ava_about_workspace_none": {
+    "message": "Everywhere"
+  },
+  "ava_cat_name": {
+    "message": "Name"
+  },
+  "ava_cat_role": {
+    "message": "Role"
+  },
+  "ava_cat_company": {
+    "message": "Company"
+  },
+  "ava_cat_person": {
+    "message": "Person"
+  },
+  "ava_cat_preference": {
+    "message": "Preference"
+  },
+  "ava_cat_goal": {
+    "message": "Goal"
+  },
+  "ava_cat_other": {
+    "message": "Other"
+  },
+  "ava_source_said": {
+    "message": "you said it"
+  },
+  "ava_source_confirmed": {
+    "message": "you confirmed it"
+  },
+  "ava_source_settings": {
+    "message": "added here"
+  },
+  "ava_source_proposed": {
+    "message": "not confirmed"
+  },
+  "ava_save": {
+    "message": "Save"
+  },
+  "ava_cancel": {
+    "message": "Cancel"
+  },
+  "ava_delete_confirm": {
+    "message": "Click again to delete"
+  },
+  "ava_goals_title": {
+    "message": "Current goals"
+  },
+  "ava_goals_empty": {
+    "message": "No goals yet. They come from your recent work each morning, or add your own."
+  },
+  "ava_goals_add": {
+    "message": "Add a goal"
+  },
+  "ava_goal_placeholder": {
+    "message": "e.g. Ship the website"
+  },
+  "ava_goal_yours": {
+    "message": "yours"
+  },
+  "ava_goal_fromReflection": {
+    "message": "from your recent work"
+  },
+  "ava_goal_delete_a11y": {
+    "message": "Delete the goal “$GOAL$”",
+    "placeholders": {
+      "goal": {
+        "content": "$1",
+        "example": "Ship the website"
+      }
+    }
+  },
+  "ava_insights_title": {
+    "message": "Lately"
+  },
+  "ava_reflect_now": {
+    "message": "Reflect now"
+  },
+  "ava_reflect_running": {
+    "message": "Reflecting…"
+  },
+  "ava_reflect_last": {
+    "message": "Last reflection: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "15/10/2026 07:45"
+      }
+    }
+  },
+  "ava_reflect_never": {
+    "message": "No reflection yet"
+  },
+  "ava_reflect_skipped": {
+    "message": "Nothing new to reflect on."
+  },
+  "ava_core_title": {
+    "message": "$NAME$'s core",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_core_hint": {
+    "message": "Who $NAME$ is, whatever the personality: her character, values and purpose. A personality changes her tone; this stays. The safety rules always come first.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "ava_core_character": {
+    "message": "Character"
+  },
+  "ava_core_values": {
+    "message": "Values"
+  },
+  "ava_core_purpose": {
+    "message": "Purpose and ambitions"
+  },
+  "ava_core_edit": {
+    "message": "Edit"
+  },
+  "ava_core_reset": {
+    "message": "Reset to default"
+  },
+  "ava_core_edited": {
+    "message": "Edited"
+  },
+  "ava_core_default": {
+    "message": "Default"
+  },
+  "ava_core_nameNote": {
+    "message": "Her name is set in Settings › General."
+  },
+  "ava_voice_section": {
+    "message": "Voice and language"
+  },
+  "ava_voice_live_label": {
+    "message": "Live voice"
+  },
+  "ava_voice_live_hint": {
+    "message": "The Gemini voice for spoken conversations. It stays the same every time; a personality's voice only changes read-aloud, and only if you set one."
+  },
+  "ava_voice_language_label": {
+    "message": "Language"
+  },
+  "ava_voice_language_hint": {
+    "message": "$NAME$ always speaks this, unless you ask her to switch for one conversation. Applies from the next conversation.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "flow_type_meetingJoin": {
+    "message": "Join meeting"
+  },
+  "flow_meetingJoin_detail": {
+    "message": "join and take notes"
+  },
+  "flow_template_meetings": {
+    "message": "Meeting links"
+  },
+  "flow_template_meetings_hint": {
+    "message": "Zoom, Meet, Teams or calendar link opens → offer to join + notes"
+  },
+  "flow_template_meetings_a11y": {
+    "message": "Draft Meeting links from the template"
   }
 }

@@ -26,3 +26,4 @@ export * from './observability';
 export * from './history';
 export * from './whatsapp';
 export * from './personalities';
+export * from './identity';

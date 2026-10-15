@@ -11,3 +11,4 @@ import './companion/register';
 import './history/register';
 import './personalities/register';
 import './audio-devices/register';
+import './identity/register';

@@ -11,6 +11,10 @@ import { workflowService } from './instance';
 import { RUN_JOB, SCHEDULE_JOB } from './service';
 import { TEMPLATE_IDS } from './templates';
 import { registerWorkflowVoiceTools } from './voice';
+import { registerStepExecutor } from './executors';
+import { meetingJoinExecutor } from './meeting-join';
+import { parseSpec } from './spec';
+import { services } from '../registry/services';
 
 const logger = createLogger('Workflows');
 const service = workflowService;
@@ -91,6 +95,36 @@ db.meetings.hook('updating', (changes: Partial<{ status: string }>, meetingId: s
     });
   }
 });
+
+// The meeting-links routine's step: joins on the user's click
+registerStepExecutor('step.meeting_join', meetingJoinExecutor());
+
+/**
+ * Tab triggers: a page opening at an address a routine listens for starts it. Private windows never do. When a
+ * conversation is on and the routine offers to join a meeting, Ava says so (the offer itself waits in the Inbox).
+ */
+const lastSeen = new Map<number, string>();
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  const url = change.url ?? (change.status === 'complete' ? tab.url : undefined);
+  if (!url || tab.incognito || !/^https?:/.test(url) || lastSeen.get(tabId) === url) return;
+  lastSeen.set(tabId, url);
+  void service
+    .fireTab(tabId, url)
+    .then(async started => {
+      const offers = started.filter(workflow =>
+        parseSpec(workflow.spec)?.nodes.some(node => node.type === 'step.meeting_join'),
+      );
+      if (!offers.length) return;
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      await services()
+        .voice.announce(
+          `A meeting page opened (${host}). Joining and taking notes waits for their click on Allow in the Inbox.`,
+        )
+        .catch(() => {});
+    })
+    .catch(error => logger.warning('Tab trigger failed', error));
+});
+chrome.tabs.onRemoved.addListener(tabId => lastSeen.delete(tabId));
 
 // The full-tab workflow editor talks to the background with one-off messages, through the same commands
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

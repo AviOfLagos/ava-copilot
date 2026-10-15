@@ -18,6 +18,7 @@ import {
   Wrench,
   Zap,
   AppWindow,
+  Video,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { t } from '@extension/i18n';
@@ -45,6 +46,7 @@ export const NODE_META: Record<NodeType, { icon: LucideIcon; label: MessageKey }
   'step.agent': { icon: Bot, label: 'flow_type_agent' },
   'step.tool': { icon: Wrench, label: 'flow_type_tool' },
   'step.sandbox': { icon: SquareTerminal, label: 'flow_type_sandbox' },
+  'step.meeting_join': { icon: Video, label: 'flow_type_meetingJoin' },
   'out.inbox': { icon: Inbox, label: 'flow_type_inbox' },
   'out.brief_section': { icon: Newspaper, label: 'flow_type_brief' },
   'out.notify': { icon: Bell, label: 'flow_type_notify' },
@@ -147,6 +149,8 @@ export function nodeSubtitle(node: WorkflowNode): string {
       return `${node.connector} · ${node.tool}`;
     case 'step.sandbox':
       return node.command;
+    case 'step.meeting_join':
+      return t('flow_meetingJoin_detail');
     case 'out.speak':
       return node.text;
   }

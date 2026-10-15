@@ -13,6 +13,8 @@ import type { Personality, PersonalityProblem } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { useWorkspaces } from '../workspaces/WorkspacePicker';
 import { personalityDescription, personalityName, usePersonalities } from './usePersonalities';
+import CoreIdentitySection from '../identity/CoreIdentitySection';
+import type { PanelApi } from '../registry';
 
 type MessageKey = Parameters<typeof t>[0];
 
@@ -221,7 +223,7 @@ function Editor({ initial, onDone }: { initial: Personality; onDone: () => void 
  * Settings › Personalities: pick the one in force, make your own (or copy a built-in to change it), and give a
  * workspace its own default.
  */
-export default function PersonalitiesSettings() {
+export default function PersonalitiesSettings({ api }: { api: PanelApi }) {
   const state = usePersonalities();
   const workspaces = useWorkspaces();
   const [editing, setEditing] = useState<Personality | null>(null);
@@ -232,6 +234,7 @@ export default function PersonalitiesSettings() {
 
   return (
     <>
+      <CoreIdentitySection api={api} />
       <p className={cn(HINT, 'px-3 py-2.5')}>{t('persona_settings_hint')}</p>
       <ul aria-label={t('persona_list_label')} className="divide-border/60 divide-y">
         {all.map(personality => {
