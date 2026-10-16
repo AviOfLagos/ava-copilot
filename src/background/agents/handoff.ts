@@ -8,6 +8,7 @@ import type {
   RunRecord,
   ThreadRecord,
 } from '@extension/storage';
+import { ownWords } from '../identity/facts';
 import type { JobRunner } from '../jobs/runner';
 import { createLogger } from '../log';
 import { handoffState } from './handoff-state';
@@ -99,21 +100,26 @@ export function resolveHandoff(
   };
 }
 
-const TOKEN = /[\p{L}\p{N}][\p{L}\p{N}'-]*/gu;
-const tokens = (text: string) => (text.toLowerCase().match(TOKEN) ?? []).filter(word => word.length >= 3);
+// Case, spacing, quotes and end punctuation do not change what was asked
+const plain = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[“”"'‘’]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[\s.,;:!?]+$/, '')
+    .trim();
 
 /**
- * The task an agent may trust: Ava's wording when the user's own words cover it (nearly every word of it was
- * said), else the user's words themselves, with Ava's wording passed on as data (it may carry what a page said).
+ * The task an agent may trust: Ava's wording only when the user said or typed exactly it (in their own words, not
+ * an attachment or quoted content), else the user's words themselves, with Ava's wording passed on as data (it may
+ * carry what a page said). Close is not enough: one changed address or verb is the whole attack.
  */
 export function trustedTask(task: string, userWords: string): { task: string; note: string | null } {
   const asked = task.trim().slice(0, MAX_TASK);
-  const said = userWords.trim().slice(-MAX_TASK);
+  const said = ownWords(userWords).trim().slice(-MAX_TASK);
   if (!asked) return { task: said, note: null };
-  const heard = new Set(tokens(said));
-  const mine = tokens(asked);
-  const covered = mine.filter(word => heard.has(word)).length;
-  if (mine.length === 0 || covered / mine.length >= 0.8) return { task: asked, note: null };
+  const wanted = plain(asked);
+  if (wanted && plain(said).includes(wanted)) return { task: asked, note: null };
   return { task: said, note: asked };
 }
 
