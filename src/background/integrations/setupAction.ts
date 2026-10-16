@@ -46,12 +46,30 @@ export function describeStep(step: SetupStep): string {
   return lines.join('\n');
 }
 
-/** Whether the user typed this address themselves in the chat, not a page, a file or a tool result. */
-export async function userTyped(threadId: string, url: string): Promise<boolean> {
-  const wanted = url.trim().toLowerCase().replace(/\/+$/, '');
-  if (!wanted) return false;
+/** An address in one form, so the one checked is the one used: "https://host/path", no trailing slash. */
+export function normalAddress(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password) return null;
+    return parsed.href.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The address, in its one form, when the user typed exactly it in the chat themselves (not a page, a file or a
+ * tool result); else null.
+ */
+export async function userTyped(threadId: string, url: string): Promise<string | null> {
+  const wanted = normalAddress(url);
+  if (!wanted) return null;
   const messages = await threadStore.messages(threadId).catch(() => []);
-  return messages.some(message => message.actor === 'user' && ownWords(message.content).toLowerCase().includes(wanted));
+  const typed = messages
+    .filter(message => message.actor === 'user')
+    .flatMap(message => ownWords(message.content).match(/https?:\/\/[^\s"'<>()]+/gi) ?? [])
+    .map(address => normalAddress(address.replace(/[.,;:!?]+$/, '')));
+  return typed.includes(wanted) ? wanted : null;
 }
 
 export async function runSetUpConnection(
@@ -71,12 +89,11 @@ export async function runSetUpConnection(
     const { scope, attended } = await callerOf(context);
     // Adding a connector and opening its sign-in is for the user's own chats, on their own words
     if (!attended) throw new Error(t('conn_setup_unattended'));
-    if (target === 'custom' && !(await userTyped(context.taskId, input.url))) {
-      throw new Error(t('conn_setup_urlNotTyped'));
-    }
+    const url = target === 'custom' ? await userTyped(context.taskId, input.url) : undefined;
+    if (url === null) throw new Error(t('conn_setup_urlNotTyped'));
     const step = await setup.advance({
       target,
-      url: input.url.trim() || undefined,
+      url,
       provider: input.provider.trim().toLowerCase() || undefined,
       workspaceId: scope.workspaceId,
       threadId: context.taskId,

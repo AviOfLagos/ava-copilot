@@ -34,9 +34,14 @@ const input = (service: string, url = '') => ({ intent: '', service, url, provid
 
 describe('setting up a connection from a chat', () => {
   it('takes a custom address only when the user typed it', async () => {
-    expect(await userTyped('mine', 'https://mcp.mine.example/mcp')).toBe(true);
-    expect(await userTyped('mine', 'https://evil.example/mcp')).toBe(false);
-    expect(await userTyped('mine', 'https://other.example/mcp')).toBe(false);
+    expect(await userTyped('mine', 'https://mcp.mine.example/mcp')).toBe('https://mcp.mine.example/mcp');
+    expect(await userTyped('mine', 'HTTPS://MCP.mine.example/mcp/')).toBe('https://mcp.mine.example/mcp');
+    expect(await userTyped('mine', 'https://evil.example/mcp')).toBeNull();
+    expect(await userTyped('mine', 'https://other.example/mcp')).toBeNull();
+    // Part of what the user typed is not what they typed
+    expect(await userTyped('mine', 'https://mcp.mine.example')).toBeNull();
+    expect(await userTyped('mine', 'https://mcp.mine')).toBeNull();
+    expect(await userTyped('mine', 'https://me@mcp.mine.example/mcp')).toBeNull();
   });
 
   it('refuses an address that came from a page, and any setup in a routine', async () => {
