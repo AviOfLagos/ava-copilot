@@ -35,6 +35,31 @@ async function save(pending: Pending): Promise<void> {
   await chrome.storage.session.set({ [KEY]: pending });
 }
 
+/** Addresses in an error can carry a sign-in code or token: only their site is kept. */
+export function redactAddresses(text: string): string {
+  return text.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, address => {
+    try {
+      return `${new URL(address).origin}/…`;
+    } catch {
+      return '…';
+    }
+  });
+}
+
+/**
+ * Outside text (a server's name or error) as a short quoted phrase on one line: the chat's system lines reach the
+ * model, so it must read as data, not as another line of instructions.
+ */
+export function quoted(text: string, max = 160): string {
+  const flat = redactAddresses(text)
+    // eslint-disable-next-line no-control-regex -- control characters are what is removed
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/["“”<>`]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `"${flat.length > max ? `${flat.slice(0, max)}…` : flat}"`;
+}
+
 /** Tells the chat that asked how the sign-in went. */
 async function tell(threadId: string | null, text: string): Promise<void> {
   if (threadId) await threadStore.addMessage(threadId, 'system', text).catch(() => {});
@@ -91,20 +116,20 @@ async function onAddress(service: ConnectorService, tabId: number, url: string |
     await save(pending);
     await chrome.tabs.remove(tabId).catch(() => {});
     const connector = await service.get(entry.connectorId);
-    const name = connector?.name ?? '';
+    const name = quoted(connector?.name ?? '', 60);
     try {
       const finished = await service.finishSignIn(url);
       await tell(
         entry.threadId,
         finished.summary
           ? t('conn_setup_signedIn', [name, String(finished.summary.tools)])
-          : t('conn_signIn_doneNoTools', [finished.error ?? '']),
+          : t('conn_signIn_doneNoTools', [quoted(finished.error ?? '')]),
       );
     } catch (error) {
-      const message = toAppError(error).message;
+      const message = redactAddresses(toAppError(error).message);
       logger.warning(`Sign-in in a tab did not finish (${toAppError(error).kind})`);
       await service.noteSignInFailure(entry.connectorId, message).catch(() => {});
-      await tell(entry.threadId, t('conn_setup_signInFailed', [name, message]));
+      await tell(entry.threadId, t('conn_setup_signInFailed', [name, quoted(message)]));
     }
   } finally {
     finishing.delete(tabId);

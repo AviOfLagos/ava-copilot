@@ -6976,5 +6976,11 @@
         "example": "Nexprove"
       }
     }
+  },
+  "conn_setup_unattended": {
+    "message": "Configurar uma conexão só é feito num chat que você mesmo iniciou."
+  },
+  "conn_setup_urlNotTyped": {
+    "message": "Digite você mesmo o endereço do servidor no chat e peça de novo: um endereço vindo de uma página ou de um arquivo não é usado."
   }
 }

@@ -86,7 +86,7 @@ describe('setting up a connector with Ava', () => {
     const step = await setup().advance({ target: 'linear', workspaceId: 'w1', threadId: 't1' });
     expect(added).toEqual([expect.objectContaining({ catalogId: 'linear', workspaceIds: ['w1'] })]);
     expect(signIns).toEqual([{ connectorId: 'new-1', threadId: 't1' }]);
-    expect(step).toMatchObject({ stage: 'signing_in', done: false, opened: ['https://auth.example/authorize'] });
+    expect(step).toMatchObject({ stage: 'signing_in', done: false, opened: ['https://auth.example'] });
     // The agent is told to leave the page to the user and to come back
     const words = describeStep(step);
     expect(words).toContain('Leave those tabs to them');

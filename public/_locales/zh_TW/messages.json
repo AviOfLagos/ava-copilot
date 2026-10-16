@@ -6976,5 +6976,11 @@
         "example": "Nexprove"
       }
     }
+  },
+  "conn_setup_unattended": {
+    "message": "只有在你自己開始的聊天中才能設定連線。"
+  },
+  "conn_setup_urlNotTyped": {
+    "message": "請在聊天中親自輸入伺服器位址後再試一次：來自網頁或檔案的位址不會被使用。"
   }
 }

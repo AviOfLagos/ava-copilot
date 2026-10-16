@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { t } from '@extension/i18n';
+import { threadStore } from '@extension/storage';
 import { toAppError } from '@extension/shared';
 import { Action } from '../agent/actions/builder';
 import type { ActionSchema } from '../agent/actions/schemas';
@@ -7,6 +8,7 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import type { RegisteredVoiceTool } from '../registry';
+import { ownWords } from '../identity/facts';
 import { callerOf } from './caller';
 import { isSetupTarget, setupTargetFrom } from './setup';
 import type { ConnectionSetup, SetupStep } from './setup';
@@ -44,6 +46,14 @@ export function describeStep(step: SetupStep): string {
   return lines.join('\n');
 }
 
+/** Whether the user typed this address themselves in the chat, not a page, a file or a tool result. */
+export async function userTyped(threadId: string, url: string): Promise<boolean> {
+  const wanted = url.trim().toLowerCase().replace(/\/+$/, '');
+  if (!wanted) return false;
+  const messages = await threadStore.messages(threadId).catch(() => []);
+  return messages.some(message => message.actor === 'user' && ownWords(message.content).toLowerCase().includes(wanted));
+}
+
 export async function runSetUpConnection(
   setup: ConnectionSetup,
   context: AgentContext,
@@ -58,7 +68,12 @@ export async function runSetUpConnection(
   }
   void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || t('conn_setup_act_start'));
   try {
-    const { scope } = await callerOf(context);
+    const { scope, attended } = await callerOf(context);
+    // Adding a connector and opening its sign-in is for the user's own chats, on their own words
+    if (!attended) throw new Error(t('conn_setup_unattended'));
+    if (target === 'custom' && !(await userTyped(context.taskId, input.url))) {
+      throw new Error(t('conn_setup_urlNotTyped'));
+    }
     const step = await setup.advance({
       target,
       url: input.url.trim() || undefined,

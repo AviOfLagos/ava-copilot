@@ -228,8 +228,9 @@ export class ConnectionSetup {
             return this.step(request, 'signing_in', t('conn_setup_signIn', [connector.name]), [], id);
           }
           try {
+            // Only the sign-in page's site: its address carries the sign-in's state, which is not the model's to see
             const url = await this.deps.openSignIn(id, request.threadId ?? null);
-            return this.step(request, 'signing_in', t('conn_setup_signIn', [connector.name]), [url], id);
+            return this.step(request, 'signing_in', t('conn_setup_signIn', [connector.name]), [siteOf(url)], id);
           } catch (error) {
             return this.step(request, 'not_working', toAppError(error).message, [], id);
           }
@@ -286,5 +287,14 @@ export class ConnectionSetup {
     }
     const opened = await this.open(request, [PROVIDER_KEY_PAGES[provider], this.deps.modelsPageUrl()]);
     return this.step(request, 'models_key', t('conn_setup_modelsKey', [provider]), opened);
+  }
+}
+
+/** "https://linear.app" for a sign-in page's full address. */
+export function siteOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
   }
 }
