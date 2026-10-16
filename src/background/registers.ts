@@ -16,3 +16,4 @@ import './audio-devices/register';
 import './identity/register';
 import './meetings/register';
 import './capabilities/register';
+import './skills/register';

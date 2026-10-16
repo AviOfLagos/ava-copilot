@@ -2,6 +2,7 @@ import { t } from '@extension/i18n';
 import { skillStore } from '@extension/storage';
 import type { AgentContext } from '../agent/types';
 import { Actors, ExecutionState } from '../agent/event/types';
+import { wrapUntrustedContent } from '../agent/messages/utils';
 import { createLogger } from '../log';
 import { matchSkills, skillsSection } from './match';
 
@@ -26,7 +27,7 @@ export async function skillSectionFor(context: AgentContext, url: string): Promi
       seen.add(skill.id);
       context.emitEvent(Actors.SYSTEM, ExecutionState.ACT_NOTICE, t('skills_using', [skill.id]));
     }
-    return skillsSection(matches);
+    return skillsSection(matches, text => wrapUntrustedContent(text));
   } catch (error) {
     logger.error('Could not load skills', error);
     return '';

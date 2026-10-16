@@ -1660,7 +1660,7 @@
     "message": "Save as skill"
   },
   "skills_teach_offer": {
-    "message": "That worked. Save what it learned as a skill for next time?"
+    "message": "That worked. Save how I did this as a skill?"
   },
   "skills_teach_button": {
     "message": "Save as skill"
@@ -7329,5 +7329,225 @@
   },
   "conn_setup_urlNotTyped": {
     "message": "Type the server's address in the chat yourself, then ask again: an address from a page or a file is not used."
+  },
+  "skills_teach_unattended": {
+    "message": "An agent or a routine ran this chat, so it is not saved as a skill."
+  },
+  "skills_install_act_start": {
+    "message": "Getting the skill"
+  },
+  "skills_install_unattended": {
+    "message": "Skills are installed only from your own chats, not from one an agent or routine started."
+  },
+  "skills_install_notTyped": {
+    "message": "Type the skill's link in the chat yourself, then ask again: a link from a page, a file or a tool is not used."
+  },
+  "skills_install_act_listing": {
+    "message": "That link holds several skills"
+  },
+  "skills_install_act_ok": {
+    "message": "/$ID$ is saved, turned off. Open Skills to read it and turn it on.",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "pdf"
+      }
+    }
+  },
+  "skills_voice_paste": {
+    "message": "I opened Skills: paste the skill's link under Install a skill, and read it before turning it on."
+  },
+  "skills_voice_listing": {
+    "message": "That link holds $COUNT$ skills. I opened Skills: paste the link there to pick one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "skills_update_none": {
+    "message": "This skill has no link to check."
+  },
+  "skills_update_fromFile": {
+    "message": "This skill came from a file. Drop the newer file to install it again."
+  },
+  "skills_install_title": {
+    "message": "Install a skill"
+  },
+  "skills_install_hint": {
+    "message": "A link to a .md file, a GitHub folder or repo with SKILL.md, or a gist. Or drop a .md or .zip here."
+  },
+  "skills_install_urlLabel": {
+    "message": "Skill link"
+  },
+  "skills_install_button": {
+    "message": "Get"
+  },
+  "skills_install_fetching": {
+    "message": "Getting the skill…"
+  },
+  "skills_install_file": {
+    "message": "Choose a .md or .zip"
+  },
+  "skills_install_dropHere": {
+    "message": "Drop it to read it"
+  },
+  "skills_listing_title": {
+    "message": "$COUNT$ skills at this link",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "skills_listing_review": {
+    "message": "Review"
+  },
+  "skills_starters_title": {
+    "message": "Find skills"
+  },
+  "skills_starters_hint": {
+    "message": "Collections others share. Nothing is fetched until you click."
+  },
+  "skills_starters_browse": {
+    "message": "Browse"
+  },
+  "skills_starter_anthropic": {
+    "message": "Anthropic's example skills: documents, design, writing and more."
+  },
+  "skills_review_title": {
+    "message": "Review skill"
+  },
+  "skills_review_pending": {
+    "message": "Waiting for your review"
+  },
+  "skills_review_from": {
+    "message": "From"
+  },
+  "skills_review_sites": {
+    "message": "Applies to"
+  },
+  "skills_review_sitesAny": {
+    "message": "Any page, when the task says: $WORDS$",
+    "placeholders": {
+      "words": {
+        "content": "$1",
+        "example": "pdf, forms"
+      }
+    }
+  },
+  "skills_review_slashOnly": {
+    "message": "Only when you call it with /$ID$",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "pdf"
+      }
+    }
+  },
+  "skills_review_size": {
+    "message": "$CHARS$ characters in $FILES$ files",
+    "placeholders": {
+      "chars": {
+        "content": "$1",
+        "example": "5200"
+      },
+      "files": {
+        "content": "$2",
+        "example": "3"
+      }
+    }
+  },
+  "skills_review_untrusted": {
+    "message": "Someone else wrote this. It only gives the agent hints and can never skip a confirmation. Read it before turning it on."
+  },
+  "skills_review_flagsTitle": {
+    "message": "Look at this twice"
+  },
+  "skills_flag_actions": {
+    "message": "It tells the agent to send, post, delete, buy or share something."
+  },
+  "skills_flag_credentials": {
+    "message": "It mentions passwords, tokens, keys or codes."
+  },
+  "skills_flag_outside_urls": {
+    "message": "It links to sites other than the ones it applies to."
+  },
+  "skills_flag_hidden": {
+    "message": "It holds hidden text or invisible characters."
+  },
+  "skills_flag_override": {
+    "message": "It tries to change the agent's rules, e.g. to skip asking you."
+  },
+  "skills_flag_long": {
+    "message": "It is very long."
+  },
+  "skills_review_droppedTitle": {
+    "message": "Not installed"
+  },
+  "skills_review_dropped_code": {
+    "message": "not installed: this copilot never runs a skill's code"
+  },
+  "skills_review_dropped_other": {
+    "message": "not installed: not a Markdown file"
+  },
+  "skills_review_dropped_too_long": {
+    "message": "not installed: too long"
+  },
+  "skills_review_text": {
+    "message": "Full text"
+  },
+  "skills_review_turnOn": {
+    "message": "Turn on"
+  },
+  "skills_review_discard": {
+    "message": "Discard"
+  },
+  "skills_review_later": {
+    "message": "Later"
+  },
+  "skills_review_on": {
+    "message": "/$ID$ is on. It loads on matching pages, or call it with /$ID$.",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "pdf"
+      }
+    }
+  },
+  "skills_update_check": {
+    "message": "Check for update"
+  },
+  "skills_update_checking": {
+    "message": "Checking…"
+  },
+  "skills_update_upToDate": {
+    "message": "Up to date."
+  },
+  "skills_update_changes": {
+    "message": "What changed at the link"
+  },
+  "skills_update_apply": {
+    "message": "Use this version"
+  },
+  "skills_update_keep": {
+    "message": "Keep mine"
+  },
+  "skills_badge_installed": {
+    "message": "installed"
+  },
+  "skills_list_review": {
+    "message": "Review"
+  },
+  "skills_list_details": {
+    "message": "Details of /$ID$",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "pdf"
+      }
+    }
   }
 }
