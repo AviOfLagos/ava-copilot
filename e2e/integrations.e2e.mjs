@@ -193,7 +193,7 @@ test('a remote MCP server is added, bound to a workspace, and its tools listed a
     () =>
       session.panel.evaluate(() => {
         const chip = [...document.querySelectorAll('[role="checkbox"]')].find(el => el.innerText.trim() === 'Nexprove');
-        chip?.click();
+        if (chip?.getAttribute('aria-checked') !== 'true') chip?.click();
         return Boolean(chip);
       }),
     'the Nexprove workspace chip',
@@ -341,18 +341,14 @@ test('signing in with OAuth: launchWebAuthFlow, PKCE, the code traded by the bac
     () =>
       session.panel.evaluate(() => {
         const chip = [...document.querySelectorAll('[role="checkbox"]')].find(el => el.innerText.trim() === 'Nexprove');
-        chip?.click();
+        if (chip?.getAttribute('aria-checked') !== 'true') chip?.click();
         return Boolean(chip);
       }),
     'the Nexprove workspace chip',
   );
   await clickByName('Add connector');
-  await session.panel.waitForSelector('[data-connector="Mock OAuth"] [data-connector-status="needs_auth"]', {
-    timeout: 20000,
-  });
-
-  // The panel opens the sign-in page with chrome.identity.launchWebAuthFlow; the shim sends it straight back
-  assert.ok(await clickByName('Sign in'));
+  // Right after adding, the panel opens the sign-in page itself with chrome.identity.launchWebAuthFlow (the
+  // click on "Add connector" asked for it); the shim sends it straight back
   await session.panel.waitForSelector('[data-connector="Mock OAuth"] [data-connector-status="connected"]', {
     timeout: 30000,
   });

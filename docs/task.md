@@ -1289,6 +1289,65 @@ Design and sources (Letta, Generative Agents, Mem0/Zep): `docs/ava-identity.md`.
   their own (daily and voice only); Zoom/Teams joining relies on their web clients and auto-notes, untested on the
   real sites; the language code list for half-cascade models is by name, not checked against the API.
 
+### Connections audit: Obsidian, connectors, workspaces, "Set it up with Ava" (2026-10-16)
+
+What was broken, and what was done:
+- **Obsidian's "Choose vault" did nothing in Brave.** Brave ships with the File System Access API off
+  (`window.showDirectoryPicker` is undefined in every page, extension pages included; checked in Brave 155), the
+  click threw a `TypeError`, and the not-yet-connected row never showed errors. Now `vaultSupport()` tells
+  `ok` / `brave_off` / `unsupported`: in Brave the row shows the three steps and an amber "Open Brave's setting"
+  (`brave://flags/#file-system-access-api`, which `chrome.tabs.create` may open); errors show in every state
+  (`SecurityError`/`NotAllowedError` as a plain sentence, closing the picker as nothing); "Allow access" after a
+  restart says when access was refused instead of "Wrote 0 notes"; the picker is called on `window`. Obsidian also
+  sits in Connectors ("On this computer: Obsidian"), and every vault view refreshes when another one changes it. The
+  page records a summary (`vault-state` in `storage.local`: support, folder name, access) for the background's guide.
+- **A custom server added with sign-in "None" that answers 401 was a dead end**: "Needs sign-in" with no sign-in
+  button, plus an Inbox "Sign in to X again" for a connector that never worked. Now `addAndConnect` switches it to
+  OAuth (and the panel signs in at once); custom connectors can change their sign-in method on their page
+  (`conn_update { authKind }`, secrets of the old method deleted); the Inbox alert only fires for a connector that
+  had read its tools before (`toolsCheckedAt`).
+- **Every sign-in failure read "Sign-in cancelled."** `signInProblem` now tells the user closing the window apart
+  from a page that would not load (wrong client ID / unregistered redirect), another sign-in window still open, and
+  anything else (with Chrome's reason).
+- **After adding an OAuth connector the user had to find "Sign in" themselves**; it now starts right away. The Add
+  form ticks the default workspace (a connector bound to none is unusable, silently).
+- **"Connected" with 0 tools**: `finishSignIn` marked a connector connected before its tools were read, so anything
+  watching saw an empty connector; "connected" now comes with the listing.
+- **Workspaces**: two workspaces could share a name (routing then matched neither); the editor now refuses it.
+  Create / rename (id kept) / keywords / Google account / default star / delete (default cleared) / routing of new
+  chats (words, else default, none after the default is deleted) all checked end to end.
+- Catalogue checked live (2026-10-16): GitHub, Linear, Notion and Slack answer 401 with RFC 9728 metadata; Linear
+  and Notion register a client and reach their authorize page with PKCE and `resource`; Google's three servers answer
+  `initialize` and even `tools/list` without a token (200), and publish metadata at the path-based well-known
+  (`accounts.google.com`), which the sign-in already falls back to.
+
+**"Set it up with Ava"** (`src/background/integrations/setup.ts`, `setupAction.ts`, `setupCommand.ts`,
+`tabSignIn.ts`; panel `src/side-panel/integrations/SetupGuide.tsx`): one guide, three ways in: the "Ava" button on
+each catalogue row, the custom-server row, Obsidian and a connector page that needs sign-in (`conn_setup`); the chat
+action `set_up_connection({service, url, provider})`; and the voice tool of the same name. Each call looks at where
+things stand and does the next thing it can: adds the connector (chat's workspace, else the default), opens the
+service's sign-in **in an ordinary tab**, the token page (GitHub), the developer console with the redirect address
+to register (Slack, Google), Brave's flag page (Obsidian), or the provider's key page plus the Models page (models:
+"just open it"). It says what is left in plain words; tokens and client secrets go into the guide's fields straight
+to the vault, never the chat; it never presses consent. The sign-in tab is not bound to any chat. When the service
+sends the tab to `https://<id>.chromiumapp.org/` (a host that does not resolve), `watchSignInTabs` (tabs.onUpdated /
+webNavigation, only for tabs it opened, recorded in `storage.session`) closes it and finishes the sign-in; the chat
+that asked gets a note ("X is signed in, with N tools"). The panel guide moves on by itself when the connector or the
+vault changes, and with "I'm done, carry on". Tools still start off until the user chooses ("Choose its tools").
+
+Tests: unit `integrations/__tests__/setup.test.ts` (10), `service.test.ts` (+4: switch to sign-in, no alert,
+change of method, fixed catalogue sign-in), `side-panel/integrations/__tests__/signIn.test.ts` (+1),
+`side-panel/vault/__tests__/support.test.ts` (3). E2E in Brave: `e2e/connections.e2e.mjs` (6: Brave steps and the
+flag page; picking the vault through the guide, synced, the user's note in memory, `vault-state` recorded; None →
+OAuth switch with sign-in at once and no Inbox alert; sign out and reconnect; the panel guide with the sign-in tab
+closed and finished by the background; the chat action with the note in the chat) and `e2e/workspaces.e2e.mjs`
+(4). `integrations`, `kb`, `shell`, `history` E2E green. Screens: `E2E_SHOTS=<dir>` with `connections.e2e.mjs`.
+
+For the lead (shared files, not changed): `SidePanel.tsx` could open a place from `?place=` so a guide (or a
+notification) can land on Connectors; `ThreadManager.placeInWorkspace` gives a chat no workspace when the picked
+one was deleted meanwhile (`picked` set, not found, so no fallback to the default) and the Home picker keeps the
+deleted id.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

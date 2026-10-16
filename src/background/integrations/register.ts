@@ -4,12 +4,15 @@ import { db } from '@extension/storage';
 import { toAppError } from '@extension/shared';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
-import { registerAgentAction, registerRecovery } from '../registry';
+import { registerAgentAction, registerRecovery, registerVoiceTool } from '../registry';
 import { registerStepExecutor } from '../workflows/executors';
 import { callToolAgentAction } from './action';
 import { registerConnectorCommands } from './commands';
-import { connectorService, connectorStore, oauthManager } from './instance';
+import { connectionSetup, connectorService, connectorStore, oauthManager } from './instance';
+import { registerSetupCommand } from './setupCommand';
+import { setUpConnectionAgentAction, setUpConnectionVoiceTool } from './setupAction';
 import { toolStepExecutor } from './step';
+import { watchSignInTabs } from './tabSignIn';
 
 const logger = createLogger('Connectors');
 
@@ -22,6 +25,12 @@ const TOOLS_REFRESH_CRON = '37 */6 * * *';
 registerConnectorCommands(connectorService);
 registerAgentAction(callToolAgentAction(connectorService));
 registerStepExecutor('step.tool', toolStepExecutor(connectorService));
+// "Set it up with Ava": the panel's guided setup, the chat action and the voice tool share one guide
+registerSetupCommand(connectionSetup);
+registerAgentAction(setUpConnectionAgentAction(connectionSetup));
+registerVoiceTool(setUpConnectionVoiceTool(connectionSetup));
+// Listeners in the first tick: a sign-in tab answering wakes the background
+watchSignInTabs(connectorService);
 
 registerJobHandler(TOOLS_REFRESH_JOB, async (_job, signal) => {
   for (const connector of await connectorStore.list()) {

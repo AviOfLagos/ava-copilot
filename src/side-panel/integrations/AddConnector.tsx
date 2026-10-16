@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ArrowLeft, Copy, ExternalLink } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { checkConnectorUrl, connectorCatalogEntry } from '@extension/storage';
+import { checkConnectorUrl, connectorCatalogEntry, workspaceStore } from '@extension/storage';
 import type { ConnectorCatalogId } from '@extension/storage';
 import { Button } from '../components/ui/button';
 import { inputClass, Segmented } from '../models/ui';
@@ -46,7 +46,8 @@ export default function AddConnector({
   api: PanelApi;
   catalogId: ConnectorCatalogId | null;
   onCancel: () => void;
-  onAdded: (id: string) => void;
+  // `signIn`: the connector waits for a sign-in the user can start at once
+  onAdded: (id: string, signIn: boolean) => void;
 }) {
   const entry = connectorCatalogEntry(catalogId);
   const [name, setName] = useState(entry?.name ?? '');
@@ -59,6 +60,16 @@ export default function AddConnector({
   const [scope, setScope] = useState('');
   const [timeoutSec, setTimeoutSec] = useState('');
   const [workspaceIds, setWorkspaceIds] = useState<string[]>([]);
+  // The default workspace is ticked to begin with: a connector no workspace may use does nothing
+  const touchedWorkspaces = useRef(false);
+  useEffect(() => {
+    void workspaceStore
+      .getDefaultWorkspaceId()
+      .then(id => {
+        if (id && !touchedWorkspaces.current) setWorkspaceIds([id]);
+      })
+      .catch(() => {});
+  }, []);
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +100,7 @@ export default function AddConnector({
     setError(null);
     try {
       const seconds = Number(timeoutSec);
-      const reply = await api.request<{ id: string }>(
+      const reply = await api.request<{ id: string; status: string; authKind?: string }>(
         {
           type: 'conn_add',
           name: name.trim() || entry?.name || '',
@@ -109,7 +120,8 @@ export default function AddConnector({
       // The fields that held secrets are emptied at once
       setToken('');
       setClientSecret('');
-      onAdded(reply.id);
+      // Signing in comes straight after adding (a server added with no sign-in may have asked for one)
+      onAdded(reply.id, reply.status === 'needs_auth' && reply.authKind === 'oauth');
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : String(problem));
     } finally {
@@ -237,7 +249,13 @@ export default function AddConnector({
 
       <div>
         <span className="text-muted-foreground mb-1 block text-[11px]">{t('conn_workspaces')}</span>
-        <WorkspaceChecks value={workspaceIds} onChange={setWorkspaceIds} />
+        <WorkspaceChecks
+          value={workspaceIds}
+          onChange={ids => {
+            touchedWorkspaces.current = true;
+            setWorkspaceIds(ids);
+          }}
+        />
         <p className="text-muted-foreground mt-1 text-[11px]">{t('conn_workspacesHint')}</p>
       </div>
 

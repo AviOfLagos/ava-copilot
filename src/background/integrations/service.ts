@@ -78,6 +78,8 @@ export interface ConnectorChanges {
   clientSecret?: string;
   scope?: string | null;
   timeoutMs?: number;
+  // How a custom server is signed in to; a well-known server's is fixed
+  authKind?: ConnectorRecord['authKind'];
 }
 
 export interface RefreshSummary {
@@ -129,6 +131,14 @@ export class ConnectorService {
 
   private now(): number {
     return this.deps.now?.() ?? Date.now();
+  }
+
+  get(id: string): Promise<ConnectorRecord | undefined> {
+    return this.deps.store.get(id);
+  }
+
+  list(): Promise<ConnectorRecord[]> {
+    return this.deps.store.list();
   }
 
   private async mustGet(id: string): Promise<ConnectorRecord> {
@@ -197,6 +207,29 @@ export class ConnectorService {
     return record;
   }
 
+  /**
+   * Adds a connector and, when nothing more is needed, reads its tools. A server added as needing no sign-in
+   * that asks for one anyway is switched to signing in, so the user gets a "Sign in" button and no dead end.
+   */
+  async addAndConnect(
+    input: NewConnector,
+  ): Promise<{ connector: ConnectorRecord; summary: RefreshSummary | null; refreshError: string | null }> {
+    let connector = await this.add(input);
+    if (connector.status !== 'connected') return { connector, summary: null, refreshError: null };
+    try {
+      const summary = await this.refresh(connector.id);
+      return { connector: (await this.get(connector.id)) ?? connector, summary, refreshError: null };
+    } catch (error) {
+      const refreshError = toAppError(error).message;
+      connector = (await this.get(connector.id)) ?? connector;
+      if (connector.authKind === 'none' && connector.status === 'needs_auth') {
+        connector = await this.update(connector.id, { authKind: 'oauth' });
+        return { connector, summary: null, refreshError: null };
+      }
+      return { connector, summary: null, refreshError };
+    }
+  }
+
   /** Changes a connector. A new address is another server: its tools and sign-in start over. */
   async update(id: string, changes: ConnectorChanges): Promise<ConnectorRecord> {
     const connector = await this.mustGet(id);
@@ -204,6 +237,25 @@ export class ConnectorService {
     if (changes.name !== undefined && changes.name.trim()) next.name = changes.name.trim();
     if (changes.workspaceIds) next.workspaceIds = [...new Set(changes.workspaceIds)];
     if (changes.timeoutMs !== undefined) next.timeoutMs = clampTimeout(changes.timeoutMs);
+    if (changes.authKind !== undefined && changes.authKind !== connector.authKind) {
+      if (connector.catalogId) throw new AppError('invalid', `${connector.name}'s sign-in is fixed.`);
+      // Another way in: whatever was saved for the old one goes, and the connector waits for the new one
+      for (const ref of allSecretRefs(id)) await this.deps.vault.delete(ref);
+      if (connector.authKind === 'oauth') await this.deps.oauth.signOut(id);
+      connector.authKind = changes.authKind;
+      next.authKind = changes.authKind;
+      next.secretRef =
+        changes.authKind === 'token' ? tokenRef(id) : changes.authKind === 'oauth' ? clientRef(id) : null;
+      next.tokenHeader = null;
+      next.oauth = changes.authKind === 'oauth' ? { clientId: null, hasClientSecret: false, scope: null } : null;
+      connector.oauth = next.oauth;
+      next.credential = null;
+      next.lastError = null;
+      next.lastErrorKind = null;
+      next.status =
+        connector.status === 'disabled' ? 'disabled' : changes.authKind === 'none' ? 'connected' : 'needs_auth';
+      connector.status = next.status;
+    }
     const checkedUrl = changes.url !== undefined ? checkConnectorUrl(changes.url) : null;
     if (checkedUrl && 'error' in checkedUrl) throw new AppError('invalid', urlProblem(checkedUrl.error));
     if (checkedUrl && 'url' in checkedUrl && checkedUrl.url.href !== connector.url) {
@@ -299,18 +351,29 @@ export class ConnectorService {
     redirectUrl: string,
   ): Promise<{ connectorId: string; summary: RefreshSummary | null; error?: string }> {
     const { connectorId, tokens } = await this.deps.oauth.finish(redirectUrl);
+    // "Connected" comes with the tools (reading them sets it), so nothing sees a connector with none yet
     await this.deps.store.update(connectorId, {
-      status: 'connected',
       lastError: null,
       lastErrorKind: null,
       credential: { last4: null, savedAt: tokens.saved_at, expiresAt: tokens.expires_at },
     });
     try {
       return { connectorId, summary: await this.refresh(connectorId) };
-    } catch (error) {
-      // Signed in all the same; the panel shows why the tools could not be read
-      return { connectorId, summary: null, error: toAppError(error).message };
+    } catch (thrown) {
+      const error = toAppError(thrown);
+      // Signed in all the same, unless the server refused the new token; the panel shows why the tools could not
+      // be read
+      const now = await this.get(connectorId);
+      if (now?.status === 'needs_auth' && error.kind !== 'auth') {
+        await this.deps.store.update(connectorId, { status: 'connected' });
+      }
+      return { connectorId, summary: null, error: error.message };
     }
+  }
+
+  /** A sign-in that came back refused or broken: the connector page says so until the next try. */
+  async noteSignInFailure(id: string, message: string): Promise<void> {
+    await this.deps.store.update(id, { lastError: message, lastErrorKind: null });
   }
 
   async signOut(id: string): Promise<void> {
@@ -393,7 +456,8 @@ export class ConnectorService {
    */
   private async recordFailure(connector: ConnectorRecord, error: AppError, during: 'listing' | 'call'): Promise<void> {
     if (error.kind === 'auth') {
-      const wasUsable = connector.status !== 'needs_auth';
+      // Only a connector that worked before is news: one refused from the start is shown where it was added
+      const wasUsable = connector.status !== 'needs_auth' && connector.toolsCheckedAt !== null;
       await this.deps.store.update(connector.id, {
         status: 'needs_auth',
         lastError: error.message,

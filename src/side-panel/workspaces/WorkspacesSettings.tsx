@@ -21,14 +21,26 @@ const field =
   'glass w-full rounded-xl px-2.5 py-1.5 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/50';
 
 /** One workspace being edited: its name, what it is, the words that mean it, and its accounts. */
-function Editor({ initial, taken, onDone }: { initial: Workspace; taken: string[]; onDone: () => void }) {
+function Editor({
+  initial,
+  others,
+  onDone,
+}: {
+  initial: Workspace;
+  // Every other workspace: their ids are taken, and their names too
+  others: Workspace[];
+  onDone: () => void;
+}) {
   const [draft, setDraft] = useState(initial);
   const [keywords, setKeywords] = useState(initial.keywords.join(', '));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const isNew = !initial.name;
+  const taken = others.map(item => item.id);
+  // Two workspaces of one name could not be told apart, by the user or by routing a chat's words
+  const clash = others.some(item => item.name.trim().toLowerCase() === draft.name.trim().toLowerCase());
 
   const save = async () => {
-    if (!draft.name.trim()) return;
+    if (!draft.name.trim() || clash) return;
     const id = isNew ? workspaceId(draft.name, taken) : draft.id;
     await workspaceStore.save({ ...draft, id, keywords: keywords.split(',') });
     onDone();
@@ -43,8 +55,14 @@ function Editor({ initial, taken, onDone }: { initial: Workspace; taken: string[
           autoFocus={isNew}
           value={draft.name}
           onChange={event => setDraft({ ...draft, name: event.target.value })}
+          aria-invalid={clash}
           className={field}
         />
+        {clash && (
+          <span role="alert" className="text-destructive text-[11.5px]">
+            {t('workspace_nameTaken', [draft.name.trim()])}
+          </span>
+        )}
       </label>
       <label className="flex flex-col gap-1 text-[12px]">
         <span className="text-muted-foreground">{t('workspace_about')}</span>
@@ -96,7 +114,7 @@ function Editor({ initial, taken, onDone }: { initial: Workspace; taken: string[
         <Button variant="ghost" size="sm" onClick={onDone}>
           {t('workspace_cancel')}
         </Button>
-        <Button size="sm" disabled={!draft.name.trim()} onClick={() => void save()}>
+        <Button size="sm" disabled={!draft.name.trim() || clash} onClick={() => void save()}>
           {t('workspace_save')}
         </Button>
       </div>
@@ -111,7 +129,13 @@ export default function WorkspacesSettings() {
   const [editing, setEditing] = useState<Workspace | null>(null);
 
   if (editing) {
-    return <Editor initial={editing} taken={workspaces.map(item => item.id)} onDone={() => setEditing(null)} />;
+    return (
+      <Editor
+        initial={editing}
+        others={workspaces.filter(item => item.id !== editing.id)}
+        onDone={() => setEditing(null)}
+      />
+    );
   }
 
   return (
