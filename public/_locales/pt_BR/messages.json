@@ -7730,5 +7730,77 @@
         "example": "Mail"
       }
     }
+  },
+  "drive_section_title": {
+    "message": "Google Drive"
+  },
+  "drive_name": {
+    "message": "Google Drive"
+  },
+  "drive_badge_noSetup": {
+    "message": "Sem configuração"
+  },
+  "drive_section_how": {
+    "message": "Funciona pelo seu navegador conectado — sem configuração. Peça num chat para encontrar, ler, salvar ou criar arquivos."
+  },
+  "drive_add_label": {
+    "message": "Adicionar do Drive: cole o link de um Doc, Planilha, Apresentação ou PDF"
+  },
+  "drive_add_button": {
+    "message": "Adicionar do Drive"
+  },
+  "drive_add_workspace": {
+    "message": "Na base de conhecimento de"
+  },
+  "drive_add_noWorkspace": {
+    "message": "Nenhum espaço de trabalho"
+  },
+  "drive_add_working": {
+    "message": "Lendo o arquivo numa aba do Google…"
+  },
+  "drive_add_signIn": {
+    "message": "Estou na página de login do Google, faça login. Depois toque em Adicionar do Drive de novo."
+  },
+  "drive_add_notLink": {
+    "message": "Isso não é um link do Google Drive, Docs, Planilhas ou Apresentações."
+  },
+  "drive_add_folder": {
+    "message": "Isso é uma pasta. Cole o link de um arquivo."
+  },
+  "drive_add_noAccess": {
+    "message": "Sua conta do Google não consegue abrir esse arquivo."
+  },
+  "drive_add_unreadable": {
+    "message": "O Drive não mostra texto para esse arquivo (imagem, digitalização ou arquivo binário)."
+  },
+  "drive_add_empty": {
+    "message": "Esse arquivo não tem texto."
+  },
+  "drive_add_blocked": {
+    "message": "Suas configurações de firewall bloqueiam o Google Drive."
+  },
+  "drive_add_failed": {
+    "message": "Não foi possível adicionar esse arquivo. Tente de novo."
+  },
+  "drive_catalog_advanced": {
+    "message": "Avançado: o servidor MCP do Google, com seu próprio cliente do Google Cloud (ID e segredo)"
+  },
+  "drive_add_saved": {
+    "message": "“$TITLE$” foi adicionado à base de conhecimento.",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
+  },
+  "drive_add_refreshed": {
+    "message": "“$TITLE$” foi atualizado na base de conhecimento.",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
   }
 }

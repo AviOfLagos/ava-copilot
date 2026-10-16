@@ -10,6 +10,7 @@ import './companion/register';
 import './voice/engines/register';
 import './history/register';
 import './whatsapp/register';
+import './drive/register';
 import './chats/register';
 import './personalities/register';
 import './audio-devices/register';

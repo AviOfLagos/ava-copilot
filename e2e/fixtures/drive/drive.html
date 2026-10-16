@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My Drive - Google Drive</title>
+    <style>
+      body {
+        font: 14px sans-serif;
+        margin: 0;
+      }
+      [role='row'] {
+        display: flex;
+        gap: 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A stand-in for drive.google.com's file list, built from the test's files (FILES is filled in by the test) -->
+    <main role="main" id="list"></main>
+    <script>
+      const files = /*FILES*/ [];
+      const params = new URLSearchParams(location.search);
+      const query = (params.get('q') || '').toLowerCase();
+      const folder = /\/folders\/([\w-]+)/.exec(location.pathname)?.[1] ?? null;
+      const shown = files.filter(file =>
+        query ? file.title.toLowerCase().includes(query) : folder ? file.parent === folder : !file.parent,
+      );
+      const list = document.getElementById('list');
+      if (!shown.length) {
+        const empty = document.createElement('div');
+        empty.setAttribute('data-drive-empty', '');
+        empty.textContent = 'No results';
+        list.append(empty);
+      }
+      for (const file of shown) {
+        const row = document.createElement('div');
+        row.setAttribute('role', 'row');
+        row.setAttribute('data-id', file.id);
+        row.setAttribute('aria-label', `${file.title} ${file.type}`);
+        const name = document.createElement('strong');
+        name.setAttribute('data-drive-name', '');
+        name.textContent = file.title;
+        const type = document.createElement('span');
+        type.setAttribute('data-drive-type', file.type);
+        type.textContent = file.type;
+        row.append(name, type);
+        list.append(row);
+      }
+    </script>
+  </body>
+</html>

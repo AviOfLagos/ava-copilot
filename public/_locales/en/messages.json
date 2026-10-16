@@ -7730,5 +7730,77 @@
         "example": "Mail"
       }
     }
+  },
+  "drive_section_title": {
+    "message": "Google Drive"
+  },
+  "drive_name": {
+    "message": "Google Drive"
+  },
+  "drive_badge_noSetup": {
+    "message": "No setup"
+  },
+  "drive_section_how": {
+    "message": "Works through your signed-in browser — no setup. Ask in a chat to find, read, save or create files."
+  },
+  "drive_add_label": {
+    "message": "Add from Drive: paste a link to a Doc, Sheet, Slides deck or PDF"
+  },
+  "drive_add_button": {
+    "message": "Add from Drive"
+  },
+  "drive_add_workspace": {
+    "message": "Into the knowledge base of"
+  },
+  "drive_add_noWorkspace": {
+    "message": "No workspace"
+  },
+  "drive_add_working": {
+    "message": "Reading the file in a Google tab…"
+  },
+  "drive_add_signIn": {
+    "message": "I'm on Google's sign-in page, please sign in. Then press Add from Drive again."
+  },
+  "drive_add_notLink": {
+    "message": "That is not a Google Drive, Docs, Sheets or Slides link."
+  },
+  "drive_add_folder": {
+    "message": "That is a folder. Paste a link to one file."
+  },
+  "drive_add_noAccess": {
+    "message": "Your Google account cannot open that file."
+  },
+  "drive_add_unreadable": {
+    "message": "Drive shows no text for that file (an image, a scan or a binary file)."
+  },
+  "drive_add_empty": {
+    "message": "That file has no text."
+  },
+  "drive_add_blocked": {
+    "message": "Your firewall settings block Google Drive."
+  },
+  "drive_add_failed": {
+    "message": "That file could not be added. Try again."
+  },
+  "drive_catalog_advanced": {
+    "message": "Advanced: Google's MCP server, with your own Google Cloud client (ID and secret)"
+  },
+  "drive_add_saved": {
+    "message": "Added “$TITLE$” to the knowledge base.",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
+  },
+  "drive_add_refreshed": {
+    "message": "Refreshed “$TITLE$” in the knowledge base.",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
   }
 }
