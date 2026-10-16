@@ -9,8 +9,10 @@ import { registerStepExecutor } from '../workflows/executors';
 import { registerAgentActions } from './actions';
 import { BUS_JOB } from './bus';
 import { registerAgentCommands } from './commands';
-import { agentService, agentWindow } from './instance';
+import { HANDOFF_POST_JOB } from './handoff';
+import { agentService, agentWindow, handoffService } from './instance';
 import { AGENT_RETENTION_JOB, AGENT_RUN_JOB, AGENT_SCHEDULE_JOB } from './service';
+import { registerHandoff } from './team';
 import { registerAgentVoiceTools } from './voice';
 import { agentStepExecutor } from './workflow-step';
 
@@ -19,6 +21,8 @@ const logger = createLogger('Agents');
 registerAgentCommands(agentService);
 registerAgentActions(agentService);
 registerAgentVoiceTools(agentService);
+// Ava hands work to the agent that owns it (hand_to_agent), and the answer comes back to the chat
+registerHandoff(handoffService);
 // A routine's step.agent runs one of the user's agents
 registerStepExecutor('step.agent', agentStepExecutor(agentService, db));
 
@@ -29,7 +33,13 @@ registerJobHandler(BUS_JOB, async job => {
   if (payload?.messageId) await agentService.bus.deliverPending(payload.messageId, payload.attempt ?? 0);
 });
 registerJobHandler(AGENT_RETENTION_JOB, () => agentService.retention());
+registerJobHandler(HANDOFF_POST_JOB, async job => {
+  const runId = (job.payload as { runId?: string } | null)?.runId;
+  if (runId) await handoffService.deliver(runId);
+});
 registerRecovery('agents', () => agentService.recover());
+// After the runs: answers of hand-offs that ended while the background was away go back to their chats
+registerRecovery('agents-handoff', () => handoffService.recover());
 
 // Pages the user opens wake the agents (and routines) watching them; never a private window or the agents' own
 chrome.tabs.onUpdated.addListener((_tabId, change, tab) => {
@@ -47,5 +57,16 @@ db.inbox.hook('creating', (_key: unknown, item: InboxItem) => {
       .get(copy.id)
       .then(stored => (stored ? agentService.onInboxItem(stored) : 0))
       .catch(error => logger.warning('Inbox trigger failed', error));
+  });
+});
+
+// A meeting the user took notes of ends: the agents listening for it (meeting follow-ups) get its notes as data
+db.meetings.hook('updating', (changes: Partial<{ status: string }>, meetingId: string) => {
+  if (changes.status !== 'done') return;
+  setTimeout(() => {
+    void db.meetings
+      .get(meetingId)
+      .then(meeting => (meeting?.status === 'done' ? agentService.onMeetingEnded(meeting) : 0))
+      .catch(error => logger.warning('Meeting trigger failed', error));
   });
 });

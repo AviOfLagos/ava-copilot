@@ -31,7 +31,7 @@ const list = (text: string) =>
     .map(item => item.trim())
     .filter(Boolean);
 
-const TRIGGER_TYPES: AgentTrigger['type'][] = ['schedule', 'tab', 'inbox', 'topic', 'manual'];
+const TRIGGER_TYPES: AgentTrigger['type'][] = ['schedule', 'tab', 'inbox', 'topic', 'meeting_ended', 'manual'];
 
 function makeTrigger(type: AgentTrigger['type'], value: string): AgentTrigger | null {
   const text = value.trim();
@@ -44,6 +44,7 @@ function makeTrigger(type: AgentTrigger['type'], value: string): AgentTrigger | 
       return text ? { type, source: text } : { type };
     case 'topic':
       return text ? { type, topic: text.toLowerCase() } : null;
+    case 'meeting_ended':
     case 'manual':
       return { type };
   }
@@ -54,6 +55,7 @@ const PLACEHOLDER: Record<AgentTrigger['type'], Parameters<typeof t>[0] | null> 
   tab: 'agents_edit_patternHint',
   inbox: 'agents_edit_sourceHint',
   topic: 'agents_edit_topicHint',
+  meeting_ended: null,
   manual: null,
 };
 
@@ -80,6 +82,8 @@ export default function AgentEditor({
   const [runsPerDay, setRunsPerDay] = useState(String(agent.budget.runsPerDay));
   const [publishes, setPublishes] = useState(agent.publishes.join(', '));
   const [inboxResults, setInboxResults] = useState(agent.inboxResults ?? true);
+  const [owns, setOwns] = useState((agent.owns ?? []).join(', '));
+  const [charter, setCharter] = useState(agent.charter ?? '');
   const [triggers, setTriggers] = useState<AgentTrigger[]>(agent.triggers);
   const [newType, setNewType] = useState<AgentTrigger['type']>('schedule');
   const [newValue, setNewValue] = useState('');
@@ -116,6 +120,8 @@ export default function AgentEditor({
           subscribes: triggers.flatMap(trigger => (trigger.type === 'topic' ? [trigger.topic] : [])),
           publishes: list(publishes).map(topic => topic.toLowerCase()),
           inboxResults,
+          owns: list(owns),
+          charter: charter.trim() || null,
           budget: {
             dailyUsd: daily !== null && Number.isFinite(daily) && daily > 0 ? daily : null,
             maxStepsPerRun: Math.round(Number(maxSteps)) || 1,
@@ -168,6 +174,18 @@ export default function AgentEditor({
           rows={5}
           onChange={e => setInstructions(e.target.value)}
           className={`${INPUT} resize-y`}
+        />
+      </Field>
+      <Field label={t('agents_edit_owns')} hint={t('agents_edit_ownsHint')} id={id('owns')}>
+        <input id={id('owns')} value={owns} onChange={e => setOwns(e.target.value)} className={INPUT} />
+      </Field>
+      <Field label={t('agents_edit_charter')} id={id('charter')}>
+        <input
+          id={id('charter')}
+          value={charter}
+          maxLength={200}
+          onChange={e => setCharter(e.target.value)}
+          className={INPUT}
         />
       </Field>
       <Field label={t('agents_edit_startUrl')} hint={t('agents_edit_startUrlHint')} id={id('start')}>

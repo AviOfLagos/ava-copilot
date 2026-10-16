@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { t } from '@extension/i18n';
+import type { ThreadRecord } from '@extension/storage';
 
 /**
  * Where Wave 2 features plug into the panel without editing SidePanel.tsx: places in the drawer (top
@@ -64,4 +65,23 @@ export function registerSettingsSection(section: SettingsSectionDefinition): voi
 
 export function registeredSettingsSections(): SettingsSectionDefinition[] {
   return [...sections.values()].sort((a, b) => a.order - b.order);
+}
+
+/** What a chat turn's add-on is given: the chat, the user's message that turn answers, and the panel. */
+export interface TurnAddonProps {
+  thread: ThreadRecord;
+  // The seq of the user's message the turn starts with; null for a turn that has none
+  requestSeq: number | null;
+  api?: PanelApi;
+}
+
+const turnAddons = new Map<string, ComponentType<TurnAddonProps>>();
+
+/** Something a feature shows under a chat turn's steps, before its answer (e.g. the agents' hand-off cards). */
+export function registerTurnAddon(id: string, Component: ComponentType<TurnAddonProps>): void {
+  turnAddons.set(id, Component);
+}
+
+export function registeredTurnAddons(): [string, ComponentType<TurnAddonProps>][] {
+  return [...turnAddons.entries()];
 }

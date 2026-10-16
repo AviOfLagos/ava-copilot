@@ -1,6 +1,7 @@
 import { AppError, toAppError } from '@extension/shared';
 import { createThreadStore } from '@extension/storage';
 import type {
+  AgentHandoff,
   AgentProfile,
   AgentProfileFields,
   AgentRunSpec,
@@ -9,6 +10,7 @@ import type {
   BusMessage,
   InboxItem,
   JobRecord,
+  MeetingRecord,
   ModelConfig,
   RunRecord,
   RunStatus,
@@ -23,10 +25,27 @@ import type { InboxDraft } from '../workflows/inbox';
 import { agentSpend, budgetBlock, runsToday, runUsage, spendBlock, stepBlock } from './budget';
 import { AgentBus, BUS_KEPT_MS } from './bus';
 import { urlInDomains } from './patterns';
-import { diffProfiles, fieldsOf, isDraftAgent, newAgentRecord, userTimezone, validateProfile } from './profile';
+import {
+  clashMessage,
+  diffProfiles,
+  fieldsOf,
+  isDraftAgent,
+  newAgentRecord,
+  ownershipClash,
+  userTimezone,
+  validateProfile,
+} from './profile';
 import { agentTemplate } from './templates';
 import type { AgentTemplateId } from './templates';
-import { agentsForInboxItem, agentsWatching, isAwake, TabCooldown, TabDebouncer } from './triggers';
+import {
+  agentsForInboxItem,
+  agentsForMeeting,
+  agentsWatching,
+  isAwake,
+  meetingData,
+  TabCooldown,
+  TabDebouncer,
+} from './triggers';
 import type { TabEvent } from './triggers';
 import type { AgentTab, AgentTabInfo } from './window';
 
@@ -80,7 +99,8 @@ const TERMINAL: ReadonlySet<RunStatus> = new Set<RunStatus>([
 ]);
 export const isTerminalRun = (status: RunStatus): boolean => TERMINAL.has(status);
 
-export type AgentTriggerType = 'manual' | 'schedule' | 'tab' | 'inbox' | 'topic' | 'workflow' | 'chat' | 'voice';
+export type AgentTriggerType =
+  'manual' | 'schedule' | 'tab' | 'inbox' | 'topic' | 'workflow' | 'chat' | 'voice' | 'meeting' | 'handoff';
 
 export interface RunRequest {
   trigger: { type: AgentTriggerType; detail: string };
@@ -99,6 +119,8 @@ export interface RunRequest {
   firingKey?: string | null;
   // Deliveries (bus, Inbox, routines) wait their turn behind a run of the same agent instead of being refused
   queueIfBusy?: boolean;
+  // Handed over from a chat: its answer goes back there
+  handoff?: AgentHandoff | null;
 }
 
 /** What the agent service needs from the thread manager. */
@@ -146,6 +168,8 @@ export interface AgentServiceDeps {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   // How long a page must be still before it wakes agents (tests shorten it)
   tabDebounceMs?: number;
+  // A run ended (any end): hand-offs post their answer back in the chat that handed them over
+  onRunEnded?: (runId: string) => Promise<void>;
 }
 
 const CANCELLED = { kind: 'cancelled', message: 'Stopped.' };
@@ -294,12 +318,28 @@ export class AgentService {
     return this.saveDraft({ profile, request: profile.instructions, template });
   }
 
+  /** "Set up my team": a draft for each template the user ticked. Nothing runs until each is created. */
+  async setUpTeam(templates: readonly AgentTemplateId[], workspaceId: string | null = null): Promise<AgentProfile[]> {
+    const made: AgentProfile[] = [];
+    for (const template of [...new Set(templates)]) made.push(await this.fromTemplate(template, workspaceId));
+    return made;
+  }
+
+  /** Refuses an area another switched-on agent a chat could see alongside this one already owns. */
+  private async checkOwnership(profile: Pick<AgentProfileFields, 'owns' | 'workspaceId'>, id: string): Promise<void> {
+    if (!profile.owns?.length) return;
+    const clash = ownershipClash(profile, id, await this.db.agents.toArray());
+    if (clash) throw new AppError('invalid', clashMessage(clash));
+  }
+
   /** The user's click on Create (or Apply): the draft becomes the agent. */
   async confirm(id: string): Promise<AgentProfile> {
     const agent = await this.require(id);
     if (!agent.draft) throw new AppError('invalid', 'There is no draft to confirm.');
     const check = validateProfile(agent.draft.profile, this.now());
     if (!check.ok) throw new AppError('invalid', check.issues[0]!);
+    // A new agent is switched on by Create; a change keeps the agent as on or off as it is
+    if (isDraftAgent(agent) || agent.enabled) await this.checkOwnership(check.profile, id);
     const changes: Partial<AgentProfile> = {
       ...check.profile,
       draft: null,
@@ -331,6 +371,7 @@ export class AgentService {
     const check = validateProfile({ ...fieldsOf(agent), ...fields }, this.now());
     if (!check.ok) throw new AppError('invalid', check.issues[0]!);
     if (diffProfiles(fieldsOf(agent), check.profile).length === 0) return agent;
+    if (agent.enabled) await this.checkOwnership(check.profile, id);
     const changes: Partial<AgentProfile> = {
       ...check.profile,
       version: (agent.version ?? 0) + 1,
@@ -346,6 +387,7 @@ export class AgentService {
   async setEnabled(id: string, enabled: boolean): Promise<AgentProfile> {
     const agent = await this.require(id);
     if (isDraftAgent(agent)) throw new AppError('invalid', 'Create the agent first.');
+    if (enabled && !agent.enabled) await this.checkOwnership(agent, id);
     const changes: Partial<AgentProfile> = {
       enabled,
       ...(enabled ? { failuresInRow: 0, pausedReason: null } : {}),
@@ -405,6 +447,7 @@ export class AgentService {
       startUrl: request.startUrl ?? null,
       hops: request.hops ?? 0,
       busMessageId: request.busMessageId ?? null,
+      ...(request.handoff ? { handoff: { ...request.handoff, postedAt: null } } : {}),
     };
     const run: RunRecord = {
       id: crypto.randomUUID(),
@@ -950,6 +993,7 @@ export class AgentService {
     await this.deps.window.trim(ended.id).catch(() => {});
     await this.pruneRuns(ended.id).catch(() => {});
     void this.startNext(ended.id);
+    await this.deps.onRunEnded?.(run.id).catch(problem => logger.warning('A run end was not passed on', problem));
   }
 
   /** Posts a successful run's answer to the agent's topics, one hop further than what set it off. */
@@ -1118,6 +1162,30 @@ export class AgentService {
         started += 1;
       } catch (error) {
         logger.info(`"${agent.name}" did not take an Inbox item: ${toAppError(error).message}`);
+      }
+    }
+    return started;
+  }
+
+  /**
+   * A meeting the user took notes of ended: the agents listening for it get a run, tainted, with its notes as
+   * data. Workspaces kept apart: an agent in a workspace only hears of that workspace's meetings.
+   */
+  async onMeetingEnded(meeting: MeetingRecord): Promise<number> {
+    let started = 0;
+    for (const agent of agentsForMeeting(await this.db.agents.toArray(), meeting)) {
+      try {
+        await this.requestRun(agent.id, {
+          trigger: { type: 'meeting', detail: meeting.note?.title || meeting.title },
+          attended: false,
+          tainted: true,
+          data: meetingData(meeting),
+          firingKey: `meeting:${meeting.id}:${agent.id}`,
+          queueIfBusy: true,
+        });
+        started += 1;
+      } catch (error) {
+        logger.info(`"${agent.name}" did not take a meeting: ${toAppError(error).message}`);
       }
     }
     return started;

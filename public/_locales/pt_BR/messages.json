@@ -7329,5 +7329,186 @@
   },
   "conn_setup_urlNotTyped": {
     "message": "Digite você mesmo o endereço do servidor no chat e peça de novo: um endereço vindo de uma página ou de um arquivo não é usado."
+  },
+  "agents_trigger_meeting": {
+    "message": "Quando termina uma reunião de que você fez notas"
+  },
+  "agents_triggerType_meeting": {
+    "message": "Fim de reunião"
+  },
+  "agents_by_meeting": {
+    "message": "depois de uma reunião"
+  },
+  "agents_by_handoff": {
+    "message": "entregue por um chat"
+  },
+  "agents_field_owns": {
+    "message": "Cuida de"
+  },
+  "agents_field_charter": {
+    "message": "Missão"
+  },
+  "agents_edit_owns": {
+    "message": "Áreas de que cuida"
+  },
+  "agents_edit_ownsHint": {
+    "message": "Separadas por vírgula, por ex. email, pesquisa. A Ava entrega o trabalho dessas áreas a ele; dois agentes ligados não podem cuidar da mesma área."
+  },
+  "agents_edit_charter": {
+    "message": "Para que serve, em uma linha"
+  },
+  "agents_team_title": {
+    "message": "Sua equipe"
+  },
+  "agents_team_intro": {
+    "message": "Agentes que cuidam de uma área de trabalho. Peça algo dessa área à Ava e ela entrega a eles."
+  },
+  "agents_team_owns": {
+    "message": "Cuida de $AREAS$",
+    "placeholders": {
+      "areas": {
+        "content": "$1",
+        "example": "email, research"
+      }
+    }
+  },
+  "agents_team_last": {
+    "message": "Último: $TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "Three emails need a reply"
+      }
+    }
+  },
+  "agents_team_noResult": {
+    "message": "Nenhum resultado ainda"
+  },
+  "agents_team_mail": {
+    "message": "Email"
+  },
+  "agents_team_mail_hint": {
+    "message": "Lê o Gmail na sua sessão, faz a triagem e rascunha respostas. Nunca envia."
+  },
+  "agents_team_social": {
+    "message": "Redes sociais"
+  },
+  "agents_team_social_hint": {
+    "message": "Rascunha e agenda posts no X e no LinkedIn. Publicar sempre espera o seu clique."
+  },
+  "agents_team_research": {
+    "message": "Pesquisa"
+  },
+  "agents_team_research_hint": {
+    "message": "Pesquisa na web e escreve um resumo na sua base de conhecimento."
+  },
+  "agents_team_meetings": {
+    "message": "Acompanhamento de reuniões"
+  },
+  "agents_team_meetings_hint": {
+    "message": "Quando uma reunião termina, rascunha as tarefas e os emails de acompanhamento a partir das notas."
+  },
+  "agents_team_calendar": {
+    "message": "Agenda"
+  },
+  "agents_team_calendar_hint": {
+    "message": "Lê o seu dia e propõe horários. Nunca aceita nem envia convites sem o seu clique."
+  },
+  "agents_setup_title": {
+    "message": "Montar minha equipe"
+  },
+  "agents_setup_intro": {
+    "message": "Marque os agentes que quiser. Cada um vira um rascunho para você conferir e criar; nada roda antes disso."
+  },
+  "agents_setup_create": {
+    "message": "Criar rascunhos"
+  },
+  "agents_setup_owned": {
+    "message": "$NAME$ já cuida desta área",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_setup_none": {
+    "message": "Marque pelo menos um agente."
+  },
+  "agents_setup_done": {
+    "message": "$COUNT$ rascunhos esperam por você em Revisar.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "agents_handoff_title": {
+    "message": "Entregue a $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_area": {
+    "message": "Para $AREA$",
+    "placeholders": {
+      "area": {
+        "content": "$1",
+        "example": "email"
+      }
+    }
+  },
+  "agents_handoff_queued": {
+    "message": "esperando para começar"
+  },
+  "agents_handoff_running": {
+    "message": "rodando"
+  },
+  "agents_handoff_waiting": {
+    "message": "espera por você"
+  },
+  "agents_handoff_done": {
+    "message": "pronto"
+  },
+  "agents_handoff_failed": {
+    "message": "não conseguiu terminar"
+  },
+  "agents_handoff_stopped": {
+    "message": "parado"
+  },
+  "agents_handoff_a11y": {
+    "message": "Entregue a $NAME$: $STATE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      },
+      "state": {
+        "content": "$2",
+        "example": "running"
+      }
+    }
+  },
+  "agents_handoff_open": {
+    "message": "Abrir o chat de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_answer": {
+    "message": "Responder a $NAME$ no chat dele",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
   }
 }

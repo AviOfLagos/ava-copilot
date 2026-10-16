@@ -7329,5 +7329,186 @@
   },
   "conn_setup_urlNotTyped": {
     "message": "Type the server's address in the chat yourself, then ask again: an address from a page or a file is not used."
+  },
+  "agents_trigger_meeting": {
+    "message": "When a meeting you took notes of ends"
+  },
+  "agents_triggerType_meeting": {
+    "message": "Meeting ended"
+  },
+  "agents_by_meeting": {
+    "message": "after a meeting"
+  },
+  "agents_by_handoff": {
+    "message": "handed over from a chat"
+  },
+  "agents_field_owns": {
+    "message": "Owns"
+  },
+  "agents_field_charter": {
+    "message": "Charter"
+  },
+  "agents_edit_owns": {
+    "message": "Areas it owns"
+  },
+  "agents_edit_ownsHint": {
+    "message": "Comma-separated, e.g. email, research. Ava hands work in these areas to it; two agents on at once cannot own the same area."
+  },
+  "agents_edit_charter": {
+    "message": "What it is for, in one line"
+  },
+  "agents_team_title": {
+    "message": "Your team"
+  },
+  "agents_team_intro": {
+    "message": "Agents that own an area of work. Ask Ava for something in their area and she hands it to them."
+  },
+  "agents_team_owns": {
+    "message": "Owns $AREAS$",
+    "placeholders": {
+      "areas": {
+        "content": "$1",
+        "example": "email, research"
+      }
+    }
+  },
+  "agents_team_last": {
+    "message": "Last: $TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "Three emails need a reply"
+      }
+    }
+  },
+  "agents_team_noResult": {
+    "message": "No result yet"
+  },
+  "agents_team_mail": {
+    "message": "Mail"
+  },
+  "agents_team_mail_hint": {
+    "message": "Reads Gmail in your signed-in tab, triages and drafts replies. Never sends."
+  },
+  "agents_team_social": {
+    "message": "Social"
+  },
+  "agents_team_social_hint": {
+    "message": "Drafts and schedules posts on X and LinkedIn. Posting always waits for your click."
+  },
+  "agents_team_research": {
+    "message": "Research"
+  },
+  "agents_team_research_hint": {
+    "message": "Researches on the web and writes a brief into your knowledge base."
+  },
+  "agents_team_meetings": {
+    "message": "Meetings follow-up"
+  },
+  "agents_team_meetings_hint": {
+    "message": "When a meeting ends, drafts the action items and follow-up emails from its notes."
+  },
+  "agents_team_calendar": {
+    "message": "Calendar"
+  },
+  "agents_team_calendar_hint": {
+    "message": "Reads your day and proposes slots. Never accepts or sends invites without your click."
+  },
+  "agents_setup_title": {
+    "message": "Set up my team"
+  },
+  "agents_setup_intro": {
+    "message": "Tick the agents you want. Each becomes a draft for you to check and create; nothing runs before you do."
+  },
+  "agents_setup_create": {
+    "message": "Make drafts"
+  },
+  "agents_setup_owned": {
+    "message": "$NAME$ already owns this area",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_setup_none": {
+    "message": "Tick at least one agent."
+  },
+  "agents_setup_done": {
+    "message": "$COUNT$ drafts wait for you under Review.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "agents_handoff_title": {
+    "message": "Handed to $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_area": {
+    "message": "For $AREA$",
+    "placeholders": {
+      "area": {
+        "content": "$1",
+        "example": "email"
+      }
+    }
+  },
+  "agents_handoff_queued": {
+    "message": "waiting to start"
+  },
+  "agents_handoff_running": {
+    "message": "running"
+  },
+  "agents_handoff_waiting": {
+    "message": "waits for you"
+  },
+  "agents_handoff_done": {
+    "message": "done"
+  },
+  "agents_handoff_failed": {
+    "message": "could not finish"
+  },
+  "agents_handoff_stopped": {
+    "message": "stopped"
+  },
+  "agents_handoff_a11y": {
+    "message": "Handed to $NAME$: $STATE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      },
+      "state": {
+        "content": "$2",
+        "example": "running"
+      }
+    }
+  },
+  "agents_handoff_open": {
+    "message": "Open $NAME$'s chat",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_answer": {
+    "message": "Answer $NAME$ in its chat",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
   }
 }

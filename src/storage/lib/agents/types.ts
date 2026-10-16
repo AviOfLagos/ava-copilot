@@ -7,6 +7,8 @@ export type AgentTrigger =
   | { type: 'tab'; urlPattern: string }
   | { type: 'inbox'; source?: string }
   | { type: 'topic'; topic: string }
+  // A meeting the user took notes of ends: its notes are the run's data (from outside, never instructions)
+  | { type: 'meeting_ended' }
   | { type: 'manual' };
 
 export interface AgentBudget {
@@ -41,6 +43,11 @@ export interface AgentProfileFields {
   startUrl?: string | null;
   // Leave the answer of each run it made on its own in the Inbox
   inboxResults?: boolean;
+  // The areas of work it owns ("email", "social posts", "research"): Ava hands work in them to it. No two
+  // switched-on agents a chat can see own the same area. Missing or empty: it owns nothing
+  owns?: string[];
+  // What it is for, in one line, shown with its areas
+  charter?: string | null;
 }
 
 /** A proposed version of an agent, waiting for the user's click (Create, or Apply for a change). Drafts never run. */
@@ -88,6 +95,21 @@ export interface AgentRunSpec {
   // How many agents the content has passed through on the bus
   hops: number;
   busMessageId: string | null;
+  // Handed to it from a chat (hand_to_agent): where its answer goes back to
+  handoff?: AgentHandoff | null;
+}
+
+/** A task Ava handed to an agent from a chat or a voice conversation, kept on the run's spec. */
+export interface AgentHandoff {
+  // The chat (or the voice conversation's chat) that handed it over; the answer is posted there
+  threadId: string;
+  // The user's message it was handed over for, so the chat shows its card under that turn
+  requestSeq: number | null;
+  // The area it was handed over for, when it went by area
+  area: string | null;
+  from: 'chat' | 'voice';
+  // When the answer was posted back in the chat; set once, so it is posted once
+  postedAt?: number | null;
 }
 
 /** Where an agent run's browser task is, kept on its "task" step to follow it after a restart. */

@@ -8,6 +8,7 @@ import { needsVision } from '@src/background/reader/reader';
 import { skillSectionFor } from '@src/background/skills/inject';
 import { workspaceSectionFor } from '@src/background/workspaces/inject';
 import { connectorToolsSectionFor } from '@src/background/integrations/section';
+import { teamSectionFor } from '@src/background/agents/team-section';
 
 const logger = createLogger('BasePrompt');
 /**
@@ -75,6 +76,7 @@ abstract class BasePrompt {
     const skills = await skillSectionFor(context, browserState.url);
     const workspace = await workspaceSectionFor(context);
     const tools = await connectorToolsSectionFor(context);
+    const team = await teamSectionFor(context);
     const currentTab = `{id: ${browserState.tabId}, url: ${browserState.url}, title: ${browserState.title}}`;
     const otherTabs = browserState.tabs
       .filter(tab => tab.id !== browserState.tabId)
@@ -90,7 +92,7 @@ Interactive elements from top layer of the current page inside the viewport:
 ${formattedElementsText}
 ${stepInfoDescription}
 ${actionResultsDescription}
-${workspace}${tools}${skills}`;
+${workspace}${tools}${team}${skills}`;
 
     if (browserState.screenshot && useVision) {
       return userMessage([textPart(stateDescription), imagePart(browserState.screenshot, 'image/jpeg')]);

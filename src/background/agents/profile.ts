@@ -19,6 +19,10 @@ export const MAX_TOPICS = 10;
 // The skill matcher loads at most three skills per step
 export const MAX_SKILLS = 3;
 export const MAX_INSTRUCTIONS = 4000;
+// Areas of work one agent owns, and how long an area's name and the charter may be
+export const MAX_OWNS = 6;
+export const MAX_AREA = 40;
+export const MAX_CHARTER = 200;
 
 export const DEFAULT_AGENT_BUDGET = { dailyUsd: 1, maxStepsPerRun: 40, runsPerDay: 24 };
 
@@ -39,6 +43,7 @@ const triggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('tab'), urlPattern: z.string().trim().min(1).max(300) }),
   z.object({ type: z.literal('inbox'), source: z.string().trim().max(80).optional() }),
   z.object({ type: z.literal('topic'), topic: z.string().trim().toLowerCase().min(1).max(64) }),
+  z.object({ type: z.literal('meeting_ended') }),
   z.object({ type: z.literal('manual') }),
 ]);
 
@@ -65,6 +70,8 @@ export const profileFieldsSchema = z.object({
   budget: budgetSchema.default(DEFAULT_AGENT_BUDGET),
   startUrl: z.string().trim().max(2000).nullable().default(null),
   inboxResults: z.boolean().default(true),
+  owns: z.array(z.string().trim().max(MAX_AREA)).max(MAX_OWNS).default([]),
+  charter: z.string().trim().max(MAX_CHARTER).nullable().default(null),
 });
 
 export type ProfileCheck = { ok: true; profile: AgentProfileFields } | { ok: false; issues: string[] };
@@ -84,6 +91,8 @@ const FIELD_NAMES: Record<string, string> = {
   publishes: 'The topics it posts to',
   budget: 'The budget',
   startUrl: 'The start page',
+  owns: 'The areas it owns',
+  charter: 'The charter',
 };
 
 function describeIssue(issue: z.core.$ZodIssue): string {
@@ -177,6 +186,14 @@ export function validateProfile(input: unknown, now = Date.now()): ProfileCheck 
     }
   }
 
+  const owns: string[] = [];
+  for (const entry of fields.owns) {
+    const area = normalArea(entry);
+    if (!area) continue;
+    if (!areaKey(area)) issues.push(`"${entry}" is not an area of work; name it in a word or two, like "email".`);
+    else if (!owns.some(existing => areaKey(existing) === areaKey(area))) owns.push(area);
+  }
+
   if (fields.executor === 'companion') {
     issues.push('Agents that run commands on the Mac need the Nex Brain companion, which is not set up yet.');
   }
@@ -194,8 +211,78 @@ export function validateProfile(input: unknown, now = Date.now()): ProfileCheck 
       publishes,
       skills: [...new Set(fields.skills)],
       connectors: [...new Set(fields.connectors)],
+      owns,
+      charter: fields.charter?.trim() || null,
     },
   };
+}
+
+// ── Ownership ─────────────────────────────────────────────────────────────────────────────────────
+
+/** An area as the user wrote it, tidied: lower case, single spaces. */
+export function normalArea(area: string): string {
+  return area.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function singular(word: string): string {
+  if (word.length > 4 && word.endsWith('ies')) return `${word.slice(0, -3)}y`;
+  if (/(ss|us|is)$/.test(word)) return word;
+  if (word.length > 4 && /(ches|shes|xes)$/.test(word)) return word.slice(0, -2);
+  if (word.length > 2 && word.endsWith('s')) return word.slice(0, -1);
+  return word;
+}
+
+/**
+ * What an area is compared by, so "Email", "emails" and "e-mail" are one area, and "Meeting follow-ups" is
+ * "meeting follow-up": lower case, letters and digits only, each word singular.
+ */
+export function areaKey(area: string): string {
+  return normalArea(area)
+    .replace(/\be-mail/g, 'email')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map(singular)
+    .join(' ');
+}
+
+/** Whether a chat in one of these workspaces could see both: the same workspace, or either in none. */
+export function workspacesOverlap(a: string | null | undefined, b: string | null | undefined): boolean {
+  return !a || !b || a === b;
+}
+
+/** Created, switched on: the agents whose areas count. */
+export const ownsWork = (agent: Pick<AgentProfile, 'status' | 'enabled'>): boolean =>
+  !isDraftAgent(agent) && agent.enabled;
+
+/**
+ * The first area this agent would own that a switched-on agent a chat could see alongside it already owns, and
+ * who owns it; null when there is none. Agents in no workspace are seen from every workspace, so they clash with
+ * all of them.
+ */
+export function ownershipClash(
+  profile: Pick<AgentProfileFields, 'owns' | 'workspaceId'>,
+  agentId: string | null,
+  others: readonly AgentProfile[],
+): { area: string; owner: AgentProfile } | null {
+  for (const area of profile.owns ?? []) {
+    const key = areaKey(area);
+    const owner = others.find(
+      other =>
+        other.id !== agentId &&
+        ownsWork(other) &&
+        workspacesOverlap(other.workspaceId, profile.workspaceId) &&
+        (other.owns ?? []).some(theirs => areaKey(theirs) === key),
+    );
+    if (owner) return { area, owner };
+  }
+  return null;
+}
+
+/** The refusal for a clash, in plain words. */
+export function clashMessage(clash: { area: string; owner: Pick<AgentProfile, 'name'> }): string {
+  return `"${clash.owner.name}" already owns ${clash.area}. Two agents cannot own the same area: take it off one of them, or pause "${clash.owner.name}" first.`;
 }
 
 /** Up to two initials, for an agent with no emoji. */
@@ -227,6 +314,8 @@ export function fieldsOf(agent: AgentProfileFields): AgentProfileFields {
     budget: { ...agent.budget },
     startUrl: agent.startUrl ?? null,
     inboxResults: agent.inboxResults ?? true,
+    owns: [...(agent.owns ?? [])],
+    charter: agent.charter ?? null,
   };
 }
 
@@ -281,6 +370,8 @@ const DIFF_FIELDS: ProfileField[] = [
   'connectors',
   'workspaceId',
   'inboxResults',
+  'owns',
+  'charter',
 ];
 
 /** A trigger in plain words, for the model and the diff. */
@@ -294,6 +385,8 @@ export function triggerWords(trigger: AgentTrigger): string {
       return trigger.source ? `when an Inbox item from ${trigger.source} arrives` : 'when an Inbox item arrives';
     case 'topic':
       return `when another agent posts to "${trigger.topic}"`;
+    case 'meeting_ended':
+      return 'when a meeting the user took notes of ends';
     case 'manual':
       return 'when asked';
   }
@@ -311,6 +404,10 @@ function fieldText(field: ProfileField, profile: AgentProfileFields | null): str
     }
     case 'inboxResults':
       return (profile.inboxResults ?? true) ? 'yes' : 'no';
+    case 'owns':
+      return (profile.owns ?? []).join(', ');
+    case 'charter':
+      return profile.charter ?? '';
     default:
       if (Array.isArray(value)) return value.join(', ');
       return value === null || value === undefined ? '' : String(value);
@@ -332,5 +429,6 @@ export function diffProfiles(base: AgentProfileFields | null, next: AgentProfile
 export function agentSummary(profile: AgentProfileFields): string {
   const when = profile.triggers.length ? profile.triggers.map(triggerWords).join('; ') : 'only when asked';
   const sites = profile.domains.length ? `; sites: ${profile.domains.join(', ')}` : '';
-  return `runs ${when}${sites}`;
+  const owns = profile.owns?.length ? `; owns ${profile.owns.join(', ')}` : '';
+  return `runs ${when}${sites}${owns}`;
 }
