@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
-import { ArrowLeft, KeyRound, LogIn, LogOut, RefreshCw, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, KeyRound, LogIn, LogOut, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { connectorToolState, db } from '@extension/storage';
+import { connectorCatalogEntry, connectorToolState, db } from '@extension/storage';
 import type { ConnectorRecord, ToolFingerprint, ToolPolicy } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { useLive } from '../hooks/useLive';
-import { inputClass, Section } from '../models/ui';
+import { inputClass, Section, Segmented } from '../models/ui';
 import type { PanelApi } from '../registry';
 import { hostOf, lastErrorText, STATUS_LABEL, statusTone } from './meta';
-import { runSignIn, SignInCancelled } from './signIn';
+import { SetupGuide } from './SetupGuide';
+import { runSignIn, SignInCancelled, SignInFailed } from './signIn';
 import { ToolRow } from './ToolRow';
 import { WorkspaceChecks } from './WorkspaceChecks';
 
@@ -27,7 +28,29 @@ function sortTools(tools: ToolFingerprint[]): ToolFingerprint[] {
  * One connector: whether it works, which workspaces may use it, its sign-in, and its tools with the user's
  * choice for each. New and changed tools come first and stay off until the user chooses.
  */
-export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id: string; onBack: () => void }) {
+/** A failed step, in words: a sign-in that went wrong says why and what to check. */
+function problemText(problem: unknown): string {
+  if (problem instanceof SignInCancelled) return t('conn_signIn_cancelled');
+  if (problem instanceof SignInFailed) {
+    if (problem.reason === 'page') return t('conn_signIn_pageFailed');
+    if (problem.reason === 'busy') return t('conn_signIn_otherOpen');
+    return t('conn_signIn_failed', [problem.message]);
+  }
+  return problem instanceof Error ? problem.message : String(problem);
+}
+
+export default function ConnectorDetail({
+  api,
+  id,
+  onBack,
+  autoSignIn,
+}: {
+  api: PanelApi;
+  id: string;
+  onBack: () => void;
+  // Start signing in as soon as the page shows (right after adding)
+  autoSignIn?: boolean;
+}) {
   const connector = useLive(() => db.connectors.get(id), [id], undefined as ConnectorRecord | undefined);
   const fingerprints = useLive(
     () => db.toolFingerprints.where('connectorId').equals(id).toArray(),
@@ -40,6 +63,18 @@ export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id
   const [newToken, setNewToken] = useState('');
   const [replacingToken, setReplacingToken] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [guide, setGuide] = useState(false);
+  const autoStarted = useRef(false);
+
+  // Right after adding, the sign-in opens by itself: the user's click on "Add connector" asked for it
+  const signInRef = useRef<(() => Promise<void>) | null>(null);
+  const readyToSignIn =
+    autoSignIn && connector?.authKind === 'oauth' && connector.status === 'needs_auth' && !autoStarted.current;
+  useEffect(() => {
+    if (!readyToSignIn) return;
+    autoStarted.current = true;
+    void signInRef.current?.();
+  }, [readyToSignIn]);
 
   if (!connector) {
     return (
@@ -59,15 +94,7 @@ export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id
       const text = await work();
       if (text) setNotice({ text, alert: false });
     } catch (problem) {
-      setNotice({
-        text:
-          problem instanceof SignInCancelled
-            ? t('conn_signIn_cancelled')
-            : problem instanceof Error
-              ? problem.message
-              : String(problem),
-        alert: !(problem instanceof SignInCancelled),
-      });
+      setNotice({ text: problemText(problem), alert: !(problem instanceof SignInCancelled) });
     } finally {
       setBusy(null);
     }
@@ -87,6 +114,14 @@ export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id
       const result = await runSignIn(api, id);
       if (result.refreshError) return t('conn_signIn_doneNoTools', [result.refreshError]);
       return t('conn_signIn_done', [String(result.tools ?? 0)]);
+    });
+
+  signInRef.current = signIn;
+
+  const changeAuth = (authKind: ConnectorRecord['authKind']) =>
+    run('auth', async () => {
+      await api.request({ type: 'conn_update', id, authKind }, 90_000);
+      return null;
     });
 
   const choose = async (tool: ToolFingerprint, policy: ToolPolicy) => {
@@ -166,7 +201,30 @@ export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id
             <RefreshCw className={cn('size-3.5', busy === 'refresh' && 'animate-spin')} />
             {t('conn_detail_refresh')}
           </Button>
+          {(connector.status === 'needs_auth' || connector.status === 'error') && !guide && (
+            <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setGuide(true)}>
+              <Sparkles className="size-3.5" aria-hidden />
+              {t('conn_setup_withAva')}
+            </Button>
+          )}
         </div>
+        {!connector.catalogId && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground text-[11px]">{t('conn_add_auth')}</span>
+            <Segmented
+              label={t('conn_add_auth')}
+              value={connector.authKind}
+              onChange={value => {
+                if (value !== connector.authKind) void changeAuth(value);
+              }}
+              options={[
+                { value: 'none', label: t('conn_auth_none') },
+                { value: 'token', label: t('conn_auth_token') },
+                { value: 'oauth', label: t('conn_auth_oauth') },
+              ]}
+            />
+          </div>
+        )}
         {replacingToken && (
           <form
             className="mt-2 flex items-center gap-1.5"
@@ -203,6 +261,15 @@ export default function ConnectorDetail({ api, id, onBack }: { api: PanelApi; id
           </p>
         )}
       </div>
+
+      {guide && (
+        <SetupGuide
+          api={api}
+          target={connectorCatalogEntry(connector.catalogId)?.id ?? 'custom'}
+          url={connector.url ?? undefined}
+          onClose={() => setGuide(false)}
+        />
+      )}
 
       <section aria-label={t('conn_workspaces')}>
         <h3 className="label-mono mb-1.5 px-1">{t('conn_workspaces')}</h3>

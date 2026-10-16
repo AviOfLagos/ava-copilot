@@ -413,3 +413,50 @@ describe('OAuth connectors', () => {
     expect(alerts).toEqual(['c1']);
   });
 });
+
+describe('a server that asks for a sign-in it was not added with', () => {
+  it('is switched to signing in, with no "sign in again" alert for a connector that never worked', async () => {
+    mcp.state.token = 'needed';
+    const { connector, refreshError } = await service.addAndConnect({
+      name: 'Asks',
+      url: 'http://127.0.0.1:9/mcp',
+      authKind: 'none',
+      workspaceIds: ['w1'],
+    });
+    expect(connector).toMatchObject({ authKind: 'oauth', status: 'needs_auth', secretRef: clientRef(connector.id) });
+    expect(refreshError).toBeNull();
+    expect(alerts).toEqual([]);
+  });
+
+  it('reads the tools at once when the server needs nothing', async () => {
+    const { connector, summary } = await service.addAndConnect({
+      name: 'Open',
+      url: 'http://127.0.0.1:9/mcp',
+      authKind: 'none',
+      workspaceIds: ['w1'],
+    });
+    expect(connector.status).toBe('connected');
+    expect(summary?.tools).toBe(3);
+  });
+
+  it('changes how a custom server signs in, dropping what was saved for the old way', async () => {
+    const added = await service.add({
+      name: 'Mock tools',
+      url: 'http://127.0.0.1:9/mcp',
+      authKind: 'token',
+      token: 'secret-token-1234',
+      workspaceIds: ['w1'],
+    });
+    const switched = await service.update(added.id, { authKind: 'oauth' });
+    expect(switched).toMatchObject({ authKind: 'oauth', status: 'needs_auth', credential: null });
+    expect(vault.data.has(`conn:${added.id}:token`)).toBe(false);
+    const back = await service.update(added.id, { authKind: 'token', token: 'another-5678' });
+    expect(back).toMatchObject({ authKind: 'token', status: 'connected' });
+    expect(vault.data.get(`conn:${added.id}:token`)).toBe('another-5678');
+  });
+
+  it('keeps a well-known server’s sign-in fixed', async () => {
+    const added = await service.add({ name: 'Linear', catalogId: 'linear', workspaceIds: [] });
+    await expect(service.update(added.id, { authKind: 'token' })).rejects.toMatchObject({ kind: 'invalid' });
+  });
+});

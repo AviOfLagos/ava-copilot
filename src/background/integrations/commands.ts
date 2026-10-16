@@ -54,6 +54,7 @@ export const updateSchema = z.object({
   clientSecret: secret.optional(),
   scope: z.string().trim().max(2000).nullable().optional(),
   timeoutSec: timeoutSec.optional(),
+  authKind: z.enum(['none', 'token', 'oauth']).optional(),
 });
 
 /** What the panel may know of a connector after a change: never a secret (the record holds none). */
@@ -90,7 +91,7 @@ async function tryRefresh(service: ConnectorService, connectorId: string): Promi
 
 export function registerConnectorCommands(service: ConnectorService): void {
   command('conn_add', addSchema, async input => {
-    const connector = await service.add({
+    const { connector, summary, refreshError } = await service.addAndConnect({
       name: input.name,
       url: input.url,
       authKind: input.authKind,
@@ -103,9 +104,12 @@ export function registerConnectorCommands(service: ConnectorService): void {
       catalogId: input.catalogId ?? null,
       timeoutMs: input.timeoutSec ? input.timeoutSec * 1000 : undefined,
     });
-    // A server with no sign-in, or a token already given, is read at once
-    const refreshed = connector.status === 'connected' ? await tryRefresh(service, connector.id) : {};
-    return { ...view(connector), ...refreshed };
+    return {
+      ...view(connector),
+      authKind: connector.authKind,
+      ...(summary ? { tools: summary.tools, added: summary.added.length, changed: summary.changed.length } : {}),
+      ...(refreshError ? { refreshError } : {}),
+    };
   });
 
   command('conn_update', updateSchema, async ({ id: connectorId, timeoutSec: seconds, ...changes }) => {

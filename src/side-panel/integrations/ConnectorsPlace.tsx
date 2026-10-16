@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Laptop, Plus } from 'lucide-react';
+import { ChevronRight, Laptop, Plus, Sparkles } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { CONNECTOR_CATALOG, connectorToolState, db } from '@extension/storage';
 import type { ConnectorCatalogId, ConnectorRecord, ToolFingerprint } from '@extension/storage';
@@ -10,10 +10,32 @@ import { useLive } from '../hooks/useLive';
 import { Section } from '../models/ui';
 import type { PanelApi } from '../registry';
 import AddConnector from './AddConnector';
+import VaultSettings from '../vault/VaultSettings';
 import ConnectorDetail from './ConnectorDetail';
 import { CATALOG_HOW, hostOf, STATUS_LABEL, statusTone } from './meta';
+import { SetupGuide } from './SetupGuide';
+import type { SetupTarget } from './SetupGuide';
 
-type View = { kind: 'list' } | { kind: 'detail'; id: string } | { kind: 'add'; catalogId: ConnectorCatalogId | null };
+type View =
+  | { kind: 'list' }
+  | { kind: 'detail'; id: string; signIn?: boolean }
+  | { kind: 'add'; catalogId: ConnectorCatalogId | null };
+
+/** "Set it up with Ava" next to a connection: the guide opens at the top of the list. */
+function AvaButton({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      aria-label={t('conn_setup_withAvaNamed', [name])}
+      title={t('conn_setup_withAva')}
+      onClick={onClick}
+      data-setup-start={name}>
+      <Sparkles className="size-3.5" aria-hidden />
+      {t('conn_setup_withAvaShort')}
+    </Button>
+  );
+}
 
 function ConnectorRow({
   connector,
@@ -55,11 +77,17 @@ function ConnectorRow({
 }
 
 function ConnectorList({
+  api,
   onOpen,
   onAdd,
+  guide,
+  onGuide,
 }: {
+  api: PanelApi;
   onOpen: (id: string) => void;
   onAdd: (catalogId: ConnectorCatalogId | null) => void;
+  guide: SetupTarget | null;
+  onGuide: (target: SetupTarget | null) => void;
 }) {
   const connectors = useLive(() => db.connectors.toArray(), [], [] as ConnectorRecord[]);
   const fingerprints = useLive(() => db.toolFingerprints.toArray(), [], [] as ToolFingerprint[]);
@@ -68,6 +96,9 @@ function ConnectorList({
 
   return (
     <>
+      {guide && (
+        <SetupGuide key={guide} api={api} target={guide} onClose={() => onGuide(null)} onOpenConnector={onOpen} />
+      )}
       <Section
         label={t('conn_list_title')}
         action={
@@ -100,6 +131,7 @@ function ConnectorList({
                 <span className="block text-[13px] font-medium">{entry.name}</span>
                 <span className="text-muted-foreground block text-[11.5px]">{t(CATALOG_HOW[entry.id])}</span>
               </span>
+              <AvaButton name={entry.name} onClick={() => onGuide(entry.id)} />
               <Button
                 size="sm"
                 variant="glass"
@@ -114,12 +146,21 @@ function ConnectorList({
               <span className="block text-[13px] font-medium">{t('conn_custom_title')}</span>
               <span className="text-muted-foreground block text-[11.5px]">{t('conn_custom_hint')}</span>
             </span>
+            <AvaButton name={t('conn_custom_title')} onClick={() => onGuide('custom')} />
             <Button size="sm" variant="glass" onClick={() => onAdd(null)}>
               <Plus className="size-3.5" />
               {t('conn_custom_add')}
             </Button>
           </li>
         </ul>
+      </Section>
+
+      <Section
+        label={t('conn_obsidian_title')}
+        action={<AvaButton name="Obsidian" onClick={() => onGuide('obsidian')} />}>
+        <div data-connections-obsidian>
+          <VaultSettings />
+        </div>
       </Section>
 
       <Section label={t('conn_mac_title')}>
@@ -145,12 +186,17 @@ function ConnectorList({
  */
 export default function ConnectorsPlace({ api }: { api: PanelApi }) {
   const [view, setView] = useState<View>({ kind: 'list' });
+  // The guided setup open at the top of the list, kept while the user looks at a connector and comes back
+  const [guide, setGuide] = useState<SetupTarget | null>(null);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4 pt-2" data-place="connectors">
       {view.kind === 'list' && (
         <ConnectorList
+          api={api}
           onOpen={id => setView({ kind: 'detail', id })}
           onAdd={catalogId => setView({ kind: 'add', catalogId })}
+          guide={guide}
+          onGuide={setGuide}
         />
       )}
       {view.kind === 'add' && (
@@ -158,10 +204,12 @@ export default function ConnectorsPlace({ api }: { api: PanelApi }) {
           api={api}
           catalogId={view.catalogId}
           onCancel={() => setView({ kind: 'list' })}
-          onAdded={id => setView({ kind: 'detail', id })}
+          onAdded={(id, signIn) => setView({ kind: 'detail', id, signIn })}
         />
       )}
-      {view.kind === 'detail' && <ConnectorDetail api={api} id={view.id} onBack={() => setView({ kind: 'list' })} />}
+      {view.kind === 'detail' && (
+        <ConnectorDetail api={api} id={view.id} autoSignIn={view.signIn} onBack={() => setView({ kind: 'list' })} />
+      )}
     </div>
   );
 }

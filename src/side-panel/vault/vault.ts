@@ -1,5 +1,5 @@
-import { db, graphStore, kbStore, workspaceStore } from '@extension/storage';
-import type { Workspace } from '@extension/storage';
+import { db, graphStore, kbStore, VAULT_STATE_KEY, workspaceStore } from '@extension/storage';
+import type { VaultState, Workspace } from '@extension/storage';
 import { EXPORT_ROOT, readFrontmatter, vaultNotes } from './markdown';
 
 /**
@@ -60,18 +60,60 @@ type PermissionHandle = FileSystemDirectoryHandle & {
   requestPermission(options: { mode: 'readwrite' }): Promise<PermissionState>;
 };
 
+export type VaultSupport = 'ok' | 'brave_off' | 'unsupported';
+
+// Where Brave turns folder access on (Brave opens brave:// pages as chrome:// ones too)
+export const BRAVE_FLAG_URL = 'brave://flags/#file-system-access-api';
+
+type PickerWindow = { showDirectoryPicker?: (options: object) => Promise<FileSystemDirectoryHandle> };
+
+/**
+ * Whether this browser lets a page pick a folder. Brave ships without it (brave://flags › "File System Access
+ * API"), so its button would do nothing; the panel says how to turn it on instead.
+ */
+export function vaultSupport(
+  scope: PickerWindow & { navigator?: { brave?: unknown } } = globalThis as unknown as PickerWindow,
+): VaultSupport {
+  if (typeof scope.showDirectoryPicker === 'function') return 'ok';
+  return scope.navigator?.brave ? 'brave_off' : 'unsupported';
+}
+
+/** The folder picker is missing: the browser keeps it off. */
+export class VaultUnsupported extends Error {
+  constructor(public readonly support: VaultSupport) {
+    super('This browser does not let pages pick a folder.');
+    this.name = 'VaultUnsupported';
+  }
+}
+
+/** Keeps the background's summary of the vault current, for "Set it up with Ava" (only when it changed). */
+async function record(state: VaultState): Promise<void> {
+  try {
+    const kept = (await chrome.storage.local.get(VAULT_STATE_KEY))[VAULT_STATE_KEY] as VaultState | undefined;
+    if (kept && kept.support === state.support && kept.name === state.name && kept.access === state.access) return;
+    await chrome.storage.local.set({ [VAULT_STATE_KEY]: state });
+  } catch {
+    // Only a hint for the guided setup
+  }
+}
+
 export async function vaultStatus(): Promise<VaultStatus> {
   const handle = (await get('handle')) as PermissionHandle | undefined;
   const readNotes = (await get('readNotes')) ?? true;
-  if (!handle) return { name: null, access: null, readNotes };
-  return { name: handle.name, access: await handle.queryPermission({ mode: 'readwrite' }), readNotes };
+  const status: VaultStatus = handle
+    ? { name: handle.name, access: await handle.queryPermission({ mode: 'readwrite' }), readNotes }
+    : { name: null, access: null, readNotes };
+  await record({ support: vaultSupport(), name: status.name, access: status.access });
+  return status;
 }
 
-/** Asks the user for their vault folder. Needs a click. */
+/** Asks the user for their vault folder. Needs a click, in a page where the browser allows the picker. */
 export async function connectVault(): Promise<void> {
-  const picker = (window as unknown as { showDirectoryPicker: (options: object) => Promise<FileSystemDirectoryHandle> })
-    .showDirectoryPicker;
-  const handle = await picker({ id: 'obsidian-vault', mode: 'readwrite' });
+  const support = vaultSupport();
+  const picker = (window as unknown as PickerWindow).showDirectoryPicker;
+  if (support !== 'ok' || !picker) throw new VaultUnsupported(support);
+  // Called on window: taken off it, the picker throws "Illegal invocation" in some builds
+  const handle = await picker.call(window, { id: 'obsidian-vault', mode: 'readwrite' });
   await set('handle', handle);
   await set('written', {});
   await set('read', {});
@@ -87,6 +129,7 @@ export async function disconnectVault(): Promise<void> {
   await set('handle', undefined);
   await set('written', undefined);
   await set('read', undefined);
+  await vaultStatus();
 }
 
 export async function setReadNotes(on: boolean): Promise<void> {
@@ -207,6 +250,8 @@ let running: Promise<{ written: number; read: number }> | null = null;
 export function syncVault(): Promise<{ written: number; read: number }> {
   running ??= (async () => {
     try {
+      // The background's summary stays current with every panel opening
+      await vaultStatus().catch(() => {});
       const handle = (await get('handle')) as PermissionHandle | undefined;
       if (!handle || (await handle.queryPermission({ mode: 'readwrite' })) !== 'granted')
         return { written: 0, read: 0 };

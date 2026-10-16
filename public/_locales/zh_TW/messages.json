@@ -7040,5 +7040,294 @@
   },
   "flow_needsBrain": {
     "message": "需要 Nex Brain：請在設定 › Nex Brain 中配對"
+  },
+  "conn_setup_needsUrl": {
+    "message": "伺服器的網址是什麼？貼在這裡，我會加入它，需要登入時也會帶你登入。"
+  },
+  "conn_setup_needsClient": {
+    "message": "$NAME$ 需要你自己的 OAuth 用戶端。我已開啟建立頁面：建立「網頁應用程式」用戶端並加入這個重新導向網址：$REDIRECT$\n然後把用戶端 ID（和密鑰）貼在下方。它們直接存入加密保管庫，我看不到。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Gmail"
+      },
+      "redirect": {
+        "content": "$2",
+        "example": "https://abc.chromiumapp.org/"
+      }
+    }
+  },
+  "conn_setup_turnedOff": {
+    "message": "$NAME$ 已關閉。請在它的頁面開啟，然後繼續。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_needsToken": {
+    "message": "$NAME$ 使用權杖登入。我已開啟建立頁面：建立並複製後，貼到下方欄位（不要貼在聊天中）。它會直接存入加密保管庫。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "GitHub"
+      }
+    }
+  },
+  "conn_setup_signIn": {
+    "message": "我已在新分頁開啟 $NAME$ 的登入頁。請自己登入並核准存取；我不會在那個頁面輸入或點擊任何東西。你完成後我就會繼續。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_notWorking": {
+    "message": "$NAME$ 目前沒有回應：$ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "The server did not answer."
+      }
+    }
+  },
+  "conn_setup_reviewTools": {
+    "message": "$NAME$ 已連線，共 $TOOLS$ 個工具。其中 $WAITING$ 個等你決定：在你選擇可自由執行或先詢問之前都會保持關閉。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      },
+      "waiting": {
+        "content": "$3",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_done": {
+    "message": "$NAME$ 已設定完成，$TOOLS$ 個工具可用。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_obsidianDone": {
+    "message": "你的保管庫 $NAME$ 已連線並在同步。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianAllow": {
+    "message": "瀏覽器需要你再次同意使用 $NAME$。請點擊下方的「允許存取」。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianBrave": {
+    "message": "Brave 預設關閉資料夾存取，所以保管庫按鈕還無法開啟資料夾。我已開啟設定：把「File System Access API」設為 Enabled 並按 Relaunch。Brave 重新啟動後，再打開這裡選擇你的保管庫資料夾。"
+  },
+  "conn_setup_obsidianPick": {
+    "message": "選擇你的 Obsidian 保管庫資料夾：瀏覽器只會在你點擊時開啟資料夾選擇器，請按下方的「選擇保管庫」並選取資料夾。"
+  },
+  "conn_setup_modelsDone": {
+    "message": "$PROVIDER$ 已有金鑰，設定完成。",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_modelsKey": {
+    "message": "我已開啟 $PROVIDER$ 的金鑰頁面和模型設定。建立並複製金鑰，貼到「模型」中（不要貼在聊天裡），然後繼續。",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_act_start": {
+    "message": "正在設定連線"
+  },
+  "conn_setup_signedIn": {
+    "message": "$NAME$ 已登入，共 $TOOLS$ 個工具。新工具會保持關閉，直到你在「連接器」中選擇。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_signInFailed": {
+    "message": "$NAME$ 的登入沒有完成：$ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "conn_setup_models": {
+    "message": "模型金鑰"
+  },
+  "conn_setup_title": {
+    "message": "與 Ava 一起設定 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_close": {
+    "message": "關閉設定"
+  },
+  "conn_setup_starting": {
+    "message": "正在查看目前狀態…"
+  },
+  "conn_setup_opened": {
+    "message": "已為你開啟 $COUNT$ 個分頁。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "conn_setup_next": {
+    "message": "下一步"
+  },
+  "conn_setup_saveClient": {
+    "message": "儲存並登入"
+  },
+  "conn_setup_waiting": {
+    "message": "正在登入分頁等你"
+  },
+  "conn_setup_checking": {
+    "message": "檢查中…"
+  },
+  "conn_setup_carryOn": {
+    "message": "我完成了，繼續"
+  },
+  "conn_setup_openModels": {
+    "message": "開啟模型"
+  },
+  "conn_setup_reviewNow": {
+    "message": "選擇工具"
+  },
+  "conn_setup_open": {
+    "message": "開啟"
+  },
+  "conn_setup_finish": {
+    "message": "完成"
+  },
+  "conn_setup_withAva": {
+    "message": "讓 Ava 幫你設定"
+  },
+  "conn_setup_withAvaShort": {
+    "message": "Ava"
+  },
+  "conn_setup_withAvaNamed": {
+    "message": "讓 Ava 設定 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_obsidian_title": {
+    "message": "這台電腦：Obsidian"
+  },
+  "conn_signIn_pageFailed": {
+    "message": "登入頁面顯示錯誤或無法載入。請檢查用戶端 ID，以及新增時顯示的重新導向網址是否已在該服務註冊。"
+  },
+  "conn_signIn_otherOpen": {
+    "message": "還有另一個登入視窗開著。請完成或關閉它後再試一次。"
+  },
+  "conn_signIn_failed": {
+    "message": "登入沒有完成：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "vault_error_notAllowed": {
+    "message": "瀏覽器沒有允許存取該資料夾。請再試一次，並在詢問時選擇「允許」（或「編輯檔案」）。"
+  },
+  "vault_error_generic": {
+    "message": "無法使用保管庫：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The folder was moved."
+      }
+    }
+  },
+  "vault_brave_title": {
+    "message": "Brave 預設關閉資料夾存取。請開啟一次："
+  },
+  "vault_brave_step1": {
+    "message": "開啟 Brave 的設定（下方按鈕）。"
+  },
+  "vault_brave_step2": {
+    "message": "把「File System Access API」設為 Enabled，然後按 Relaunch。"
+  },
+  "vault_brave_step3": {
+    "message": "回到這裡選擇你的保管庫。"
+  },
+  "vault_brave_open": {
+    "message": "開啟 Brave 設定"
+  },
+  "vault_unsupported": {
+    "message": "這個瀏覽器不允許擴充功能選擇資料夾，因此無法在這裡連接保管庫。Chrome 和 Edge 可以。"
+  },
+  "workspace_nameTaken": {
+    "message": "已經有名為 $NAME$ 的工作區。請換個名稱。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "conn_setup_unattended": {
+    "message": "只有在你自己開始的聊天中才能設定連線。"
+  },
+  "conn_setup_urlNotTyped": {
+    "message": "請在聊天中親自輸入伺服器位址後再試一次：來自網頁或檔案的位址不會被使用。"
   }
 }

@@ -7040,5 +7040,294 @@
   },
   "flow_needsBrain": {
     "message": "Precisa do Nex Brain: pareie em Configurações › Nex Brain"
+  },
+  "conn_setup_needsUrl": {
+    "message": "Qual é o endereço do servidor? Cole aqui e eu o adiciono e faço o login se ele pedir."
+  },
+  "conn_setup_needsClient": {
+    "message": "$NAME$ precisa de um cliente OAuth seu. Abri a página onde você cria um: crie um cliente \"Aplicativo da Web\" e adicione este endereço de redirecionamento: $REDIRECT$\nDepois cole o ID do cliente (e o segredo) abaixo. Eles vão direto para o cofre criptografado; eu nunca os vejo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Gmail"
+      },
+      "redirect": {
+        "content": "$2",
+        "example": "https://abc.chromiumapp.org/"
+      }
+    }
+  },
+  "conn_setup_turnedOff": {
+    "message": "$NAME$ está desligado. Ligue-o na página dele e continue.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_needsToken": {
+    "message": "$NAME$ entra com um token. Abri a página onde você cria um: crie, copie e cole no campo abaixo (nunca no chat). Ele vai direto para o cofre criptografado.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "GitHub"
+      }
+    }
+  },
+  "conn_setup_signIn": {
+    "message": "Abri o login do $NAME$ em uma nova aba. Entre lá e aprove o acesso você mesmo; não vou digitar nem clicar nada nessa página. Continuo assim que você terminar.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_notWorking": {
+    "message": "$NAME$ não está respondendo agora: $ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "The server did not answer."
+      }
+    }
+  },
+  "conn_setup_reviewTools": {
+    "message": "$NAME$ está conectado com $TOOLS$ ferramentas. $WAITING$ aguardam sua escolha: ficam desligadas até você dizer se cada uma pode rodar livremente ou perguntar antes.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      },
+      "waiting": {
+        "content": "$3",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_done": {
+    "message": "$NAME$ está configurado, com $TOOLS$ ferramentas prontas.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_obsidianDone": {
+    "message": "Seu cofre $NAME$ está conectado e sincronizando.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianAllow": {
+    "message": "O navegador precisa da sua autorização para usar $NAME$ de novo. Clique em \"Permitir acesso\" abaixo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianBrave": {
+    "message": "O Brave deixa o acesso a pastas desligado, então o botão do cofre ainda não abre pastas. Abri a configuração: mude \"File System Access API\" para Enabled e clique em Relaunch. Quando o Brave voltar, abra isto de novo e escolha a pasta do cofre."
+  },
+  "conn_setup_obsidianPick": {
+    "message": "Escolha a pasta do seu cofre do Obsidian: o navegador só abre o seletor de pastas com o seu clique, então clique em \"Escolher cofre\" abaixo e selecione a pasta."
+  },
+  "conn_setup_modelsDone": {
+    "message": "$PROVIDER$ já tem uma chave. Está tudo pronto.",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_modelsKey": {
+    "message": "Abri a página de chaves do $PROVIDER$ e as configurações de Modelos. Crie uma chave, copie e cole em Modelos (nunca no chat). Depois continue.",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_act_start": {
+    "message": "Configurando uma conexão"
+  },
+  "conn_setup_signedIn": {
+    "message": "$NAME$ está conectado, com $TOOLS$ ferramentas. Ferramentas novas ficam desligadas até você escolher em Conectores.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_signInFailed": {
+    "message": "O login do $NAME$ não terminou: $ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "conn_setup_models": {
+    "message": "uma chave de modelo"
+  },
+  "conn_setup_title": {
+    "message": "Configurando $NAME$ com a Ava",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_close": {
+    "message": "Fechar a configuração"
+  },
+  "conn_setup_starting": {
+    "message": "Vendo como estão as coisas…"
+  },
+  "conn_setup_opened": {
+    "message": "Abri $COUNT$ aba(s) para você.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "conn_setup_next": {
+    "message": "Próximo"
+  },
+  "conn_setup_saveClient": {
+    "message": "Salvar e entrar"
+  },
+  "conn_setup_waiting": {
+    "message": "Esperando você na aba de login"
+  },
+  "conn_setup_checking": {
+    "message": "Verificando…"
+  },
+  "conn_setup_carryOn": {
+    "message": "Terminei, continue"
+  },
+  "conn_setup_openModels": {
+    "message": "Abrir Modelos"
+  },
+  "conn_setup_reviewNow": {
+    "message": "Escolher as ferramentas"
+  },
+  "conn_setup_open": {
+    "message": "Abrir"
+  },
+  "conn_setup_finish": {
+    "message": "Concluído"
+  },
+  "conn_setup_withAva": {
+    "message": "Configurar com a Ava"
+  },
+  "conn_setup_withAvaShort": {
+    "message": "Ava"
+  },
+  "conn_setup_withAvaNamed": {
+    "message": "Configurar $NAME$ com a Ava",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_obsidian_title": {
+    "message": "Neste computador: Obsidian"
+  },
+  "conn_signIn_pageFailed": {
+    "message": "A página de login mostrou um erro ou não carregou. Confira o ID do cliente e se o endereço de redirecionamento mostrado ao adicionar está registrado no serviço."
+  },
+  "conn_signIn_otherOpen": {
+    "message": "Outra janela de login ainda está aberta. Termine ou feche-a e tente de novo."
+  },
+  "conn_signIn_failed": {
+    "message": "O login não terminou: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "vault_error_notAllowed": {
+    "message": "O navegador não permitiu acesso a essa pasta. Tente de novo e escolha \"Permitir\" (ou \"Editar arquivos\") quando ele perguntar."
+  },
+  "vault_error_generic": {
+    "message": "Não foi possível usar o cofre: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The folder was moved."
+      }
+    }
+  },
+  "vault_brave_title": {
+    "message": "O Brave deixa o acesso a pastas desligado. Ative uma vez:"
+  },
+  "vault_brave_step1": {
+    "message": "Abra a configuração do Brave (botão abaixo)."
+  },
+  "vault_brave_step2": {
+    "message": "Mude \"File System Access API\" para Enabled e clique em Relaunch."
+  },
+  "vault_brave_step3": {
+    "message": "Volte aqui e escolha seu cofre."
+  },
+  "vault_brave_open": {
+    "message": "Abrir a configuração do Brave"
+  },
+  "vault_unsupported": {
+    "message": "Este navegador não deixa extensões escolherem uma pasta, então não dá para conectar um cofre aqui. O Chrome e o Edge deixam."
+  },
+  "workspace_nameTaken": {
+    "message": "Já existe um espaço de trabalho chamado $NAME$. Escolha outro nome.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "conn_setup_unattended": {
+    "message": "Configurar uma conexão só é feito num chat que você mesmo iniciou."
+  },
+  "conn_setup_urlNotTyped": {
+    "message": "Digite você mesmo o endereço do servidor no chat e peça de novo: um endereço vindo de uma página ou de um arquivo não é usado."
   }
 }

@@ -7040,5 +7040,294 @@
   },
   "flow_needsBrain": {
     "message": "Needs Nex Brain: pair it in Settings › Nex Brain"
+  },
+  "conn_setup_needsUrl": {
+    "message": "What is the server's address? Paste it here and I'll add it and sign you in if it asks."
+  },
+  "conn_setup_needsClient": {
+    "message": "$NAME$ needs an OAuth client of your own. I opened the page where you make one: create a \"Web application\" client and add this redirect address: $REDIRECT$\nThen paste its client ID (and secret) below. They go straight to the encrypted vault; I never see them.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Gmail"
+      },
+      "redirect": {
+        "content": "$2",
+        "example": "https://abc.chromiumapp.org/"
+      }
+    }
+  },
+  "conn_setup_turnedOff": {
+    "message": "$NAME$ is turned off. Turn it on in its page, then carry on.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_needsToken": {
+    "message": "$NAME$ signs in with a token. I opened the page where you make one: create it, copy it, and paste it in the field below (never in the chat). It goes straight to the encrypted vault.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "GitHub"
+      }
+    }
+  },
+  "conn_setup_signIn": {
+    "message": "I opened $NAME$'s sign-in in a new tab. Log in there and approve access yourself; I won't type or click anything on that page. I'll carry on as soon as you're done.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_notWorking": {
+    "message": "$NAME$ isn't answering right now: $ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "The server did not answer."
+      }
+    }
+  },
+  "conn_setup_reviewTools": {
+    "message": "$NAME$ is connected with $TOOLS$ tools. $WAITING$ wait for your choice: they stay off until you say whether each may run freely or ask first.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      },
+      "waiting": {
+        "content": "$3",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_done": {
+    "message": "$NAME$ is set up, with $TOOLS$ tools ready.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_obsidianDone": {
+    "message": "Your vault $NAME$ is connected and syncing.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianAllow": {
+    "message": "The browser needs your OK to use $NAME$ again. Click \"Allow access\" below.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My vault"
+      }
+    }
+  },
+  "conn_setup_obsidianBrave": {
+    "message": "Brave keeps folder access off, so the vault button can't open a folder yet. I opened the setting: set \"File System Access API\" to Enabled and press Relaunch. When Brave is back, open this again and choose your vault folder."
+  },
+  "conn_setup_obsidianPick": {
+    "message": "Choose your Obsidian vault folder: the browser only opens its folder picker on your click, so press \"Choose vault\" below and pick the folder."
+  },
+  "conn_setup_modelsDone": {
+    "message": "$PROVIDER$ already has a key. You're set.",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_modelsKey": {
+    "message": "I opened $PROVIDER$'s key page and the Models settings. Create a key, copy it, and paste it in Models (never in the chat). Then carry on.",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "gemini"
+      }
+    }
+  },
+  "conn_setup_act_start": {
+    "message": "Setting up a connection"
+  },
+  "conn_setup_signedIn": {
+    "message": "$NAME$ is signed in, with $TOOLS$ tools. New tools stay off until you choose in Connectors.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "tools": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "conn_setup_signInFailed": {
+    "message": "$NAME$'s sign-in didn't finish: $ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      },
+      "error": {
+        "content": "$2",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "conn_setup_models": {
+    "message": "a model key"
+  },
+  "conn_setup_title": {
+    "message": "Setting up $NAME$ with Ava",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_setup_close": {
+    "message": "Close the setup"
+  },
+  "conn_setup_starting": {
+    "message": "Looking at where things stand…"
+  },
+  "conn_setup_opened": {
+    "message": "Opened $COUNT$ tab(s) for you.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "conn_setup_next": {
+    "message": "Next"
+  },
+  "conn_setup_saveClient": {
+    "message": "Save and sign in"
+  },
+  "conn_setup_waiting": {
+    "message": "Waiting for you in the sign-in tab"
+  },
+  "conn_setup_checking": {
+    "message": "Checking…"
+  },
+  "conn_setup_carryOn": {
+    "message": "I'm done, carry on"
+  },
+  "conn_setup_openModels": {
+    "message": "Open Models"
+  },
+  "conn_setup_reviewNow": {
+    "message": "Choose its tools"
+  },
+  "conn_setup_open": {
+    "message": "Open it"
+  },
+  "conn_setup_finish": {
+    "message": "Done"
+  },
+  "conn_setup_withAva": {
+    "message": "Set it up with Ava"
+  },
+  "conn_setup_withAvaShort": {
+    "message": "Ava"
+  },
+  "conn_setup_withAvaNamed": {
+    "message": "Set up $NAME$ with Ava",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Linear"
+      }
+    }
+  },
+  "conn_obsidian_title": {
+    "message": "On this computer: Obsidian"
+  },
+  "conn_signIn_pageFailed": {
+    "message": "The sign-in page showed an error or didn't load. Check the client ID, and that the redirect address shown when adding is registered with the service."
+  },
+  "conn_signIn_otherOpen": {
+    "message": "Another sign-in window is still open. Finish or close it, then try again."
+  },
+  "conn_signIn_failed": {
+    "message": "The sign-in didn't finish: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Access was denied."
+      }
+    }
+  },
+  "vault_error_notAllowed": {
+    "message": "The browser didn't allow access to that folder. Try again and choose \"Allow\" (or \"Edit files\") when it asks."
+  },
+  "vault_error_generic": {
+    "message": "The vault couldn't be used: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The folder was moved."
+      }
+    }
+  },
+  "vault_brave_title": {
+    "message": "Brave keeps folder access off. Turn it on once:"
+  },
+  "vault_brave_step1": {
+    "message": "Open Brave's setting (button below)."
+  },
+  "vault_brave_step2": {
+    "message": "Set \"File System Access API\" to Enabled, then press Relaunch."
+  },
+  "vault_brave_step3": {
+    "message": "Come back here and choose your vault."
+  },
+  "vault_brave_open": {
+    "message": "Open Brave's setting"
+  },
+  "vault_unsupported": {
+    "message": "This browser doesn't let extensions pick a folder, so a vault can't be connected here. Chrome and Edge can."
+  },
+  "workspace_nameTaken": {
+    "message": "There's already a workspace called $NAME$. Pick another name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nexprove"
+      }
+    }
+  },
+  "conn_setup_unattended": {
+    "message": "Setting up a connection is only done in a chat you started yourself."
+  },
+  "conn_setup_urlNotTyped": {
+    "message": "Type the server's address in the chat yourself, then ask again: an address from a page or a file is not used."
   }
 }
