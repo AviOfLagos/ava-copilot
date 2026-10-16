@@ -35,6 +35,7 @@ import RouteBoundary from './components/RouteBoundary';
 import { registeredPlace } from './registry';
 import type { PanelApi } from './registry';
 import './registers';
+import { useAvaNavigation } from './capabilities/useAvaNavigation';
 import { useTheme } from './layout/theme';
 import HomeView from './home/HomeView';
 import VoiceView from './voice/VoiceView';
@@ -366,6 +367,16 @@ const SidePanel = () => {
         }
       }),
   };
+  // Ava opens places and Settings sections here (open_place); the voice screen steps aside to show them
+  useAvaNavigation({
+    go: next => panelApi.go(next),
+    openThread: id => panelApi.openThread(id),
+    assistantName,
+    onOpened: text => {
+      setVoiceHidden(true);
+      if (text) setNotice(text);
+    },
+  });
   const postRef = useRef(post);
   postRef.current = post;
 

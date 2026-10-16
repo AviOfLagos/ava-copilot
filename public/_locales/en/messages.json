@@ -6693,5 +6693,27 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Draft Meeting links from the template"
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ opened $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "Settings › Audio devices"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "Settings › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "Audio devices"
+      }
+    }
   }
 }

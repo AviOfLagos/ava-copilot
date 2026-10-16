@@ -6693,5 +6693,27 @@
   },
   "flow_template_meetings_a11y": {
     "message": "從範本建立「會議連結」草稿"
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ 已開啟 $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "設定 › 音訊裝置"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "設定 › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "音訊裝置"
+      }
+    }
   }
 }

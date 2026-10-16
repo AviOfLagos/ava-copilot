@@ -6,6 +6,7 @@ import { TtsPlayer } from './tts';
 import { createVoiceSession } from './stt/economy';
 import type { AnyVoiceSession, EconomyOptions } from './stt/economy';
 import { enumerateAudioDevices } from './devices';
+import { measureMic, playTestTone } from './audio-check';
 import { localTts } from './tts-local/shared';
 import './tts-local/register';
 
@@ -205,6 +206,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return { running: voice !== null };
       case 'recorder_status':
         return { recording: recorder !== null, meetingId: recorder?.options.meetingId ?? null };
+      // check_audio: the chosen mic's level over ~2 s, and a test tone on the chosen speaker
+      case 'audio_check_mic':
+        // The background names the device: a fresh document may not have had the choice pushed yet
+        return measureMic(
+          typeof message.micDeviceId === 'string' ? message.micDeviceId : currentMicId,
+          typeof message.durationMs === 'number' ? Math.min(message.durationMs, 5000) : 2000,
+        );
+      case 'audio_check_tone':
+        return playTestTone(typeof message.speakerDeviceId === 'string' ? message.speakerDeviceId : currentSpeakerId);
+      // What the user is looking at now, as quiet context for the conversation (never a turn of its own)
+      case 'voice_context':
+        if (!voice || !('addContext' in voice)) return { ok: false };
+        voice.addContext(String(message.text ?? '').slice(0, 1000));
+        return { ok: true };
       case 'audio_devices_list':
         return { devices: await enumerateAudioDevices() };
       case 'audio_devices_apply': {

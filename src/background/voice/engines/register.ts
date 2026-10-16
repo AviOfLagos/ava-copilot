@@ -25,6 +25,7 @@ import { chooseEconomyEngines, SETUP_COMMAND } from './options';
 import { economyTurnRequest, systemSayRequest } from './protocol';
 import type { EconomyTurnReply } from './protocol';
 import type { VoiceEngineRuntimeStatus } from './wire';
+import { currentTabLine } from '../../capabilities/instance';
 
 /**
  * Wave 2 WS8, voice engines: the end_conversation voice tool, Settings › Voice engines' commands (status, "Say
@@ -174,7 +175,12 @@ async function economyTurn(message: unknown): Promise<EconomyTurnReply> {
   // A conversation the background no longer runs (it restarted) answers nothing
   if (!voice.running) return { said: '', ended: true };
   const settings = await voiceEngineSettingsStore.getSettings();
-  return runEconomyTurn(parsed.data, {
+  // The tab the user is on, as of this turn (the economy model hears no System context lines)
+  const tab = currentTabLine();
+  const turn = tab
+    ? { ...parsed.data, instructions: [parsed.data.instructions, tab].filter(Boolean).join('\n') }
+    : parsed.data;
+  return runEconomyTurn(turn, {
     model: async () => {
       const { chatModel, choice } = await createRoleModel(settings.economyModel, {
         sessionId: 'voice',

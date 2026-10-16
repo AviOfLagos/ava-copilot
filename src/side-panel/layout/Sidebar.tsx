@@ -55,7 +55,7 @@ interface SidebarProps {
 // The drawer's top list: the everyday places, plus whatever a stream registered for 'top', merged
 // and sorted by `order`. Gaps (10, 40, 50) are left for places not built yet (a registered place
 // that does not exist yet is simply absent, so the list degrades gracefully wave over wave).
-const CORE_TOP: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
+export const CORE_TOP: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
   { place: 'chat', label: 'nav_home', icon: House, order: 0 },
   { place: 'today', label: 'today_title', icon: CalendarDays, order: 20 },
   { place: 'meetings', label: 'nav_meetings', icon: Disc, order: 30 },
@@ -64,7 +64,7 @@ const CORE_TOP: { place: Place; label: Key; icon: LucideIcon; order: number }[] 
 // The profile popover: account-ish places. Knowledge base and Settings used to live in the top
 // list; they live here now, alongside Workspaces/Skills (registered by this stream) and whatever
 // Connectors/Models & usage/other streams add.
-const CORE_PROFILE: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
+export const CORE_PROFILE: { place: Place; label: Key; icon: LucideIcon; order: number }[] = [
   { place: 'memory', label: 'kb_title', icon: BookOpen, order: 0 },
   { place: 'settings', label: 'settings_title', icon: SlidersHorizontal, order: 50 },
   { place: 'help', label: 'nav_help', icon: CircleHelp, order: 60 },

@@ -6693,5 +6693,27 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Criar Links de reunião a partir do modelo"
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ abriu $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "Configurações › Dispositivos de áudio"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "Configurações › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "Dispositivos de áudio"
+      }
+    }
   }
 }
