@@ -110,6 +110,7 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'list_agents',
       'run_agent',
       'read_inbox',
+      'set_up_connection',
       'end_conversation',
       // Ava looks through the user's other chats
       'search_chats',

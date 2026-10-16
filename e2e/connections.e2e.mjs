@@ -305,7 +305,8 @@ test('from the chat: set_up_connection opens the sign-in, the chat hears when it
   await until(() => clickByName('New chat'), 'New chat in the drawer');
   await session.panel.waitForSelector('textarea', { timeout: 10000 });
   mock.start('setup-chat');
-  await session.send('Run the scripted scenario setup-chat');
+  // The address is one the user typed: setup never takes one from a page or a file
+  await session.send(`Run the scripted scenario setup-chat: connect ${mcp.oauthUrl}`);
   await session.waitForEnd(60000);
   // The tab answered (mock), the background finished the sign-in and told the chat
   await until(() => session.panelText().then(text => /is signed in, with 6 tools/.test(text)), 'the note in the chat');
@@ -318,7 +319,7 @@ test('from the chat: set_up_connection opens the sign-in, the chat hears when it
   await until(() => clickByName('New chat'), 'New chat in the drawer');
   await session.panel.waitForSelector('textarea', { timeout: 10000 });
   mock.start('setup-chat-again');
-  await session.send('Run the scripted scenario setup-chat-again');
+  await session.send(`Run the scripted scenario setup-chat-again for ${mcp.oauthUrl}`);
   await session.waitForEnd(60000);
   const again = mock.runs.get('setup-chat-again').navigatorCalls[1] ?? '';
   assert.match(again, /waiting \(review_tools\)|finished/);

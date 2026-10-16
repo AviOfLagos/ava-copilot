@@ -164,9 +164,10 @@ export class ThreadManager {
     if (thread.workspaceId) return;
     // A chat with no workspace still runs: placing it never fails a send
     const workspaces = await workspaceStore.list().catch(() => []);
-    // The user's pick, else the one the words name, else the default workspace
-    let workspace = picked ? workspaces.find(item => item.id === picked) : routeWorkspace(text, workspaces);
-    if (!workspace && !picked) {
+    // The user's pick, else the one the words name, else the default workspace. A pick since deleted counts as none
+    const pick = picked ? workspaces.find(item => item.id === picked) : undefined;
+    let workspace = pick ?? routeWorkspace(text, workspaces);
+    if (!workspace) {
       const fallback = await workspaceStore.getDefaultWorkspaceId().catch(() => null);
       workspace = workspaces.find(item => item.id === fallback) ?? null;
     }

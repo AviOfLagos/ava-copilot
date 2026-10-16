@@ -177,6 +177,18 @@ describe('ThreadManager', () => {
     ]);
   });
 
+  it('puts a chat whose picked workspace was deleted in the default one', async () => {
+    browser.open('https://chat.example');
+    const threadId = await manager.send({ text: 'Check the inbox', windowId: 1, workspaceId: 'deleted-ws' });
+    await settle();
+    expect((await store.messages(threadId)).map(m => [m.actor, m.content])).toContainEqual([
+      'system',
+      'workspace_placed:Nexprove',
+    ]);
+    await lastExecutor().complete('Done.');
+    await settle();
+  });
+
   it('runs threads at the same time, up to the limit', async () => {
     browser.open('https://a.example');
     await manager.send({ text: 'task a' });
