@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunStep } from '@extension/storage';
 import { diffSpecs } from '@src/background/workflows/diff';
-import { morningTechNews } from '@src/background/workflows/templates';
+import { meetingLinks, morningTechNews } from '@src/background/workflows/templates';
 import type { WorkflowSpec } from '@src/background/workflows/spec';
 import { buildDiagram, NODE_HEIGHT } from '../diagram';
 
@@ -104,5 +104,28 @@ describe('buildDiagram', () => {
     expect(edges.find(edge => edge.id === 'any>say:true')!.when).toBe('true');
     expect(nodes.find(node => node.id === 'say')!.data.unavailable).toBe(true);
     expect(nodes.find(node => node.id === 'any')!.data.unavailable).toBe(false);
+  });
+
+  it('turns left to right when a row of triggers would not fit the narrow panel, and stays top to bottom otherwise', () => {
+    const panel = { width: 370, height: 330 };
+    const meetings = buildDiagram({ spec: meetingLinks(), box: panel });
+    expect(meetings.nodes.every(node => node.data.direction === 'LR')).toBe(true);
+    const triggers = meetings.nodes.filter(node => node.id.startsWith('link_'));
+    // The five triggers stand in one column, the join step to their right
+    expect(new Set(triggers.map(node => node.position.x)).size).toBe(1);
+    expect(meetings.nodes.find(node => node.id === 'join')!.position.x).toBeGreaterThan(triggers[0].position.x);
+
+    expect(buildDiagram({ spec, box: panel }).nodes[0].data.direction).toBe('TB');
+    // The full tab has room for the row
+    expect(buildDiagram({ spec: meetingLinks(), box: { width: 1100, height: 560 } }).nodes[0].data.direction).toBe(
+      'TB',
+    );
+    expect(buildDiagram({ spec: meetingLinks() }).nodes[0].data.direction).toBe('TB');
+  });
+
+  it('shows what a step needs in place of its detail', () => {
+    const { nodes } = buildDiagram({ spec, notes: { pick: 'Needs Nex Brain' } });
+    expect(nodes.find(node => node.id === 'pick')!.data.note).toBe('Needs Nex Brain');
+    expect(nodes.find(node => node.id === 'hn')!.data.note).toBeNull();
   });
 });

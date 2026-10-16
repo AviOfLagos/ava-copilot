@@ -447,4 +447,80 @@ describe('WorkflowEngine', () => {
     const runs: RunRecord[] = await db.runs.toArray();
     expect(runs).toHaveLength(0);
   });
+
+  it('fails a side effect that cannot run before asking the user to allow it, and asks when it can', async () => {
+    const sandbox: WorkflowNode = { id: 'code', type: 'step.sandbox', label: 'Run the script', command: 'echo hi' };
+    let ran = 0;
+    let paired = false;
+    executors['step.sandbox'] = {
+      retry: null,
+      taints: true,
+      check: async () => {
+        if (!paired) throw new AppError('unavailable', 'This step needs Nex Brain.');
+      },
+      execute: async () => {
+        ran += 1;
+        return done('hi');
+      },
+    };
+    const engine = makeEngine();
+    const workflow = await saveWorkflow(spec([manual, sandbox], [{ from: 'start', to: 'code' }]));
+    const run = await engine.createRun(workflow, { trigger: { type: 'manual', detail: '' }, attended: true });
+    const failed = await engine.execute(run.id, new AbortController().signal);
+    expect(failed).toMatchObject({
+      status: 'failed',
+      error: { message: 'Run the script: This step needs Nex Brain.' },
+    });
+    expect((await stepsOf(run.id)).code).toMatchObject({ status: 'failed', approval: null, attempts: 0 });
+    expect(events).not.toContain('approval:code');
+
+    paired = true;
+    const next = await engine.createRun(workflow, { trigger: { type: 'manual', detail: '' }, attended: true });
+    expect((await engine.execute(next.id, new AbortController().signal))?.status).toBe('waiting_user');
+    expect(events).toContain('approval:code');
+    // Once allowed it is not checked again: the click is the user's answer
+    paired = false;
+    await engine.answer(next.id, 'code', true);
+    expect((await engine.execute(next.id, new AbortController().signal))?.status).toBe('succeeded');
+    expect(ran).toBe(1);
+  });
+
+  it('after a restart, a side effect that handed its work on carries on instead of being marked unknown', async () => {
+    const agentStep: WorkflowNode = {
+      id: 'agent',
+      type: 'step.agent',
+      label: 'Ask the agent',
+      task: 'Check',
+      agent: 'A',
+    };
+    let polls = 0;
+    executors['step.agent'] = {
+      retry: null,
+      taints: true,
+      resumable: true,
+      async execute({ state, saveState }) {
+        polls += 1;
+        if (!state) {
+          await saveState({ agentRunId: 'r1' });
+          return { kind: 'park', until: now + 15_000, waitingUser: false };
+        }
+        return done('the agent answered');
+      },
+    };
+    const workflow = await saveWorkflow(spec([manual, agentStep], [{ from: 'start', to: 'agent' }]));
+    const engine = makeEngine();
+    const run = await engine.createRun(workflow, { trigger: { type: 'manual', detail: '' }, attended: true });
+    expect((await engine.execute(run.id, new AbortController().signal))?.status).toBe('waiting_user');
+    await engine.answer(run.id, 'agent', true);
+    expect((await engine.execute(run.id, new AbortController().signal))?.status).toBe('running');
+
+    // The background stops long after the run began (the agent's work goes on without it)
+    now += 60 * 60_000;
+    events = [];
+    const recovered = await makeEngine().recover();
+    expect(recovered.resume).toEqual([run.id]);
+    expect(events).not.toContain('unknown:agent');
+    expect((await makeEngine().execute(run.id, new AbortController().signal))?.status).toBe('succeeded');
+    expect(polls).toBe(2);
+  });
 });

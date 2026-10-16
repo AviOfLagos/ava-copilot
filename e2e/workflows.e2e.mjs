@@ -2,7 +2,7 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { startMockLlm } from './mock-llm.mjs';
-import { launchExtension, openSession, sleep } from './harness.mjs';
+import { launchExtension, openSession, restartServiceWorker, sleep } from './harness.mjs';
 
 /**
  * End-to-end test of workflows: the user asks in chat for a morning routine, the agent drafts it, the panel
@@ -132,6 +132,14 @@ async function startProxy(mock) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', '*');
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
+    // A made-up API for the routines the tests write themselves; /api/slow answers after five seconds
+    const api = req.method === 'GET' && /^\/api\/(\w+)/.exec(req.url)?.[1];
+    if (api) {
+      seen.fetched.push(`api:${api}`);
+      if (api === 'slow') await sleep(5000);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ answer: api }));
+    }
     const source = req.method === 'GET' && /^\/(hn|hf|gh)\//.exec(req.url)?.[1];
     if (source) {
       seen.fetched.push(source);
@@ -227,6 +235,7 @@ before(async () => {
         'https://hn.algolia.com/': `${proxy.origin}/hn/`,
         'https://huggingface.co/': `${proxy.origin}/hf/`,
         'https://github.com/': `${proxy.origin}/gh/`,
+        'https://api.example.com/': `${proxy.origin}/api/`,
       },
     },
   });
@@ -403,4 +412,298 @@ test('"New workflow" opens a new chat with the routine starter in the composer, 
       throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 800)}`);
     });
   await session.close();
+});
+
+// ── From the 2026-10-16 audit: every test below but the restart one failed before its fix ──────────────
+
+/** An extension page that talks to the background like the full-tab editor (one-off messages). */
+async function editorPage() {
+  const page = await extension.browser.newPage();
+  await page.goto(`${extension.origin}/workflows.html`);
+  return page;
+}
+
+const ask = (page, message) =>
+  page.evaluate(message => chrome.runtime.sendMessage({ ...message, requestId: crypto.randomUUID() }), message);
+
+function writeStore(page, name, records) {
+  return page.evaluate(
+    (name, records) =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const tx = open.result.transaction(name, 'readwrite');
+          for (const record of records) tx.objectStore(name).put(record);
+          tx.oncomplete = () => {
+            open.result.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    name,
+    records,
+  );
+}
+
+/** Saves a routine as a draft and clicks Create for it, as the panel does. */
+async function createWorkflow(page, id, name, nodes, edges, allowHosts = []) {
+  const now = Date.now();
+  const spec = {
+    v: 1,
+    name,
+    description: '',
+    nodes,
+    edges: edges.map(([from, to]) => ({ from, to })),
+    allowHosts,
+    budget: { maxSteps: 60, maxModelCalls: 10, maxTokens: 400000, maxRunsPerDay: 24 },
+  };
+  await writeStore(page, 'workflows', [
+    {
+      id,
+      name,
+      description: '',
+      workspaceId: null,
+      agentId: null,
+      spec: null,
+      version: 0,
+      status: 'draft',
+      failuresInRow: 0,
+      lastRunAt: null,
+      lastRunStatus: null,
+      createdAt: now,
+      updatedAt: now,
+      draft: { spec, baseSpec: null, request: name, createdAt: now },
+    },
+  ]);
+  const reply = await ask(page, { type: 'workflow_confirm', id });
+  assert.equal(reply?.type, 'workflow_ok', JSON.stringify(reply));
+}
+
+const runsOf = async (page, workflowId) =>
+  (await readStore(page, 'runs'))
+    .filter(run => run.workflowId === workflowId)
+    .sort((a, b) => a.startedAt - b.startedAt);
+
+test('a hand edit after a run shows at once on the diagram, which the run still lights', async () => {
+  const session = await openSession(extension, mock);
+  await openWorkflows(session);
+  await openWorkflow(session, 'Morning tech news');
+  // The run of test 1 lights the diagram
+  assert.ok((await diagram(session)).every(node => node.status === 'succeeded'));
+  await session.panel.evaluate(() => document.querySelector('[data-flow-node="morning"]').click());
+  await session.panel.waitForSelector('section[aria-label="Step Every morning"] input');
+  await session.panel.evaluate(() => {
+    const input = [...document.querySelectorAll('input')].find(item => item.value === '30 7 * * *');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '0 8 * * *');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await session.click('Save');
+  // Before the fix the diagram kept showing the last run's version (07:30) and the inspector went back to it
+  await session.panel.waitForFunction(
+    () => document.querySelector('[data-flow-node="morning"]')?.innerText.includes('08:00'),
+    { polling: 300, timeout: 10000 },
+  );
+  assert.ok(
+    (await diagram(session)).every(node => node.status === 'succeeded'),
+    'the run still lights it',
+  );
+  assert.equal(
+    await session.panel.evaluate(() =>
+      [...document.querySelectorAll('input')].some(item => item.value === '0 8 * * *'),
+    ),
+    true,
+  );
+  assert.deepEqual(session.panelErrors, []);
+  await session.close();
+});
+
+test('the meeting-links routine reads as page triggers, laid out to fit the panel', async () => {
+  const session = await openSession(extension, mock);
+  await session.panel.setViewport({ width: 400, height: 900 });
+  await openWorkflows(session);
+  await session.panel.evaluate(() =>
+    document.querySelector('button[aria-label="Draft Meeting links from the template"]').click(),
+  );
+  await session.panel.waitForSelector('[data-flow-node="join"]', { timeout: 10000 });
+  await session.click('Create');
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Run now'), {
+    polling: 300,
+    timeout: 10000,
+  });
+  // Before: "By hand", and five cards in one row shrunk to a third of their size
+  assert.match(await session.panelText(), /When one of 5 kinds of page opens/);
+  const boxes = await session.panel.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll('[data-flow-node]')].map(node => {
+        const box = node.getBoundingClientRect();
+        return [node.dataset.flowNode, { x: Math.round(box.x), width: box.width }];
+      }),
+    ),
+  );
+  const triggers = Object.entries(boxes).filter(([id]) => id.startsWith('link_'));
+  assert.equal(new Set(triggers.map(([, box]) => box.x)).size, 1, `one column: ${JSON.stringify(boxes)}`);
+  assert.ok(boxes.join.x > triggers[0][1].x, 'the join step is to their right');
+  assert.ok(boxes.join.width > 188 * 0.6, `cards readable: ${boxes.join.width}px`);
+  await session.click('Back to workflows');
+  await session.panel.waitForSelector('[data-workflow="Meeting links"]');
+  assert.match(await session.panelText(), /Meeting links Active When one of 5 kinds of page opens/);
+  await session.close();
+});
+
+test('an offer nobody answered gives way to the next meeting link instead of hiding it', async () => {
+  const page = await editorPage();
+  const [workflow] = (await readStore(page, 'workflows')).filter(item => item.name === 'Meeting links');
+  assert.ok(workflow, 'made in the test before');
+  const meet = await extension.browser.newPage();
+  await meet.setRequestInterception(true);
+  // Never the real site: the meeting pages are answered here
+  meet.on('request', request =>
+    request.url().startsWith('https://meet.google.com/')
+      ? request.respond({ status: 200, contentType: 'text/html', body: '<html><body><p>Lobby</p></body></html>' })
+      : request.continue(),
+  );
+  await meet.goto('https://meet.google.com/abc-defg-hij');
+  const [first] = await until(async () => {
+    const runs = await runsOf(page, workflow.id);
+    return runs.length === 1 && runs[0].status === 'waiting_user' ? runs : null;
+  }, 'the first meeting offers to join');
+  await meet.goto('https://meet.google.com/xyz-abcd-efg');
+  const runs = await until(async () => {
+    const list = await runsOf(page, workflow.id);
+    return list.length === 2 && list[1].status === 'waiting_user' ? list : null;
+  }, 'the second meeting offers to join too');
+  assert.equal(runs[0].id, first.id);
+  assert.equal(runs[0].status, 'cancelled');
+  assert.match(runs[0].error.message, /newer run/);
+  assert.match(runs[1].trigger.detail, /xyz-abcd-efg/);
+  const offers = (await readStore(page, 'inbox')).filter(
+    item => item.kind === 'approval' && item.source === `workflow:${workflow.id}`,
+  );
+  assert.deepEqual(offers.map(item => item.status).sort(), ['done', 'unread']);
+  // Declined, so nothing joins
+  assert.equal(
+    (await ask(page, { type: 'workflow_step_answer', runId: runs[1].id, nodeId: 'join', approved: false })).type,
+    'workflow_ok',
+  );
+  await ask(page, { type: 'workflow_pause', id: workflow.id, paused: true });
+  await meet.close();
+  await page.close();
+});
+
+test('a sandbox step without Nex Brain says so before asking for a click', async () => {
+  const page = await editorPage();
+  await createWorkflow(
+    page,
+    'wf-sandbox',
+    'Build the site',
+    [
+      { id: 'go', type: 'trigger.manual', label: 'By hand' },
+      { id: 'build', type: 'step.sandbox', label: 'Run the build', command: 'make' },
+    ],
+    [['go', 'build']],
+  );
+  const session = await openSession(extension, mock);
+  await openWorkflows(session);
+  await openWorkflow(session, 'Build the site');
+  // The diagram says what it needs before anything runs
+  assert.match(
+    await session.panel.evaluate(() => document.querySelector('[data-flow-node="build"]').innerText),
+    /Needs Nex Brain/,
+  );
+  await session.click('Run now');
+  const [run] = await until(async () => {
+    const runs = await runsOf(page, 'wf-sandbox');
+    return runs[0]?.status === 'failed' ? runs : null;
+  }, 'the run fails at once');
+  // Before: it waited for "Hold to allow", and only then said Nex Brain was not paired
+  assert.match(run.error.message, /Nex Brain.*Settings › Nex Brain/);
+  assert.equal(
+    (await readStore(page, 'inbox')).filter(item => item.source === 'workflow:wf-sandbox' && item.kind === 'approval')
+      .length,
+    0,
+  );
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Settings › Nex Brain'), {
+    polling: 300,
+    timeout: 10000,
+  });
+  await session.close();
+  await page.close();
+});
+
+test('a run cut off by a service worker restart carries on and finishes', async () => {
+  const page = await editorPage();
+  await createWorkflow(
+    page,
+    'wf-slow',
+    'Slow source',
+    [
+      { id: 'go', type: 'trigger.manual', label: 'By hand' },
+      {
+        id: 'fetch',
+        type: 'step.http_get',
+        label: 'Slow API',
+        url: 'https://api.example.com/slow',
+        format: 'json',
+        maxBytes: 10000,
+      },
+      {
+        id: 'note',
+        type: 'out.inbox',
+        label: 'Note',
+        title: 'Slow: {{steps.fetch.output}}',
+        body: '',
+        priority: 'low',
+      },
+    ],
+    [
+      ['go', 'fetch'],
+      ['fetch', 'note'],
+    ],
+    ['api.example.com'],
+  );
+  assert.equal((await ask(page, { type: 'workflow_run', id: 'wf-slow' })).type, 'workflow_ok');
+  await until(async () => (await runsOf(page, 'wf-slow'))[0]?.status === 'running', 'the run started');
+  await sleep(1000);
+  await restartServiceWorker(extension, page);
+  const [run] = await until(
+    async () => {
+      const runs = await runsOf(page, 'wf-slow');
+      return runs[0]?.status === 'succeeded' ? runs : null;
+    },
+    'the run finished after the restart',
+    120000,
+  );
+  assert.equal(run.status, 'succeeded');
+  assert.ok((await readStore(page, 'inbox')).some(item => item.title.includes('"answer":"slow"')));
+  await page.close();
+});
+
+test('"New workflow" in the full tab drafts a routine from the words typed there', async () => {
+  const page = await editorPage();
+  await page.setViewport({ width: 1100, height: 900 });
+  await page.waitForSelector('[data-new-workflow]');
+  const before = proxy.seen.authoring.length;
+  await page.evaluate(() => document.querySelector('[data-new-workflow]').click());
+  // Before: nothing happened (it wanted a chat, and this page has none)
+  await page.waitForSelector('[data-describe-workflow] textarea', { timeout: 10000 });
+  await page.evaluate(text => {
+    const area = document.querySelector('[data-describe-workflow] textarea');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(area, text);
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+  }, REQUEST);
+  await page.evaluate(() =>
+    [...document.querySelectorAll('[data-describe-workflow] button')]
+      .find(b => b.innerText.trim() === 'Draft it')
+      .click(),
+  );
+  await page.waitForFunction(() => document.querySelectorAll('[data-flow-node][data-change="added"]').length === 5, {
+    polling: 300,
+    timeout: 30000,
+  });
+  assert.equal(proxy.seen.authoring.length, before + 1);
+  assert.ok(proxy.seen.authoring.at(-1).includes(REQUEST));
+  assert.match(await page.evaluate(() => document.body.innerText), /Create/);
+  await page.close();
 });

@@ -49,11 +49,13 @@ export interface NodeInspectorProps {
   node: WorkflowNode;
   step?: RunStep;
   editable: boolean;
+  // What the step needs before it can run, e.g. Nex Brain paired
+  note?: string | null;
   api: PanelApi;
   onClose: () => void;
 }
 
-export default function NodeInspector({ workflowId, node, step, editable, api, onClose }: NodeInspectorProps) {
+export default function NodeInspector({ workflowId, node, step, editable, note, api, onClose }: NodeInspectorProps) {
   const meta = NODE_META[node.type];
   const Icon = meta.icon;
   const instruction = instructionOf(node);
@@ -115,6 +117,12 @@ export default function NodeInspector({ workflowId, node, step, editable, api, o
           <X className="size-3.5" aria-hidden />
         </Button>
       </div>
+
+      {note && (
+        <p role="note" className="text-destructive mt-1.5 text-[12px]">
+          {note}
+        </p>
+      )}
 
       {editable ? (
         <form onSubmit={save} className="mt-2 flex flex-col gap-2">

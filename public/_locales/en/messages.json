@@ -6693,5 +6693,75 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Draft Meeting links from the template"
+  },
+  "flow_trigger_page": {
+    "message": "When $PATTERN$ opens",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "meet.google.com/*-*-*"
+      }
+    }
+  },
+  "flow_trigger_pages": {
+    "message": "When one of $COUNT$ kinds of page opens",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "flow_by_tab": {
+    "message": "by an open page"
+  },
+  "flow_chat_waiting_title": {
+    "message": "“$STEP$” waits for your click in its chat",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Check the order"
+      }
+    }
+  },
+  "flow_chat_waiting_body": {
+    "message": "The browser task asks before it acts. Open its chat to answer; the routine carries on after."
+  },
+  "flow_chat_open": {
+    "message": "Open its chat"
+  },
+  "flow_showingOlderRun": {
+    "message": "Run: $STATUS$, $AGO$ · an earlier version",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "flow_showCurrent": {
+    "message": "Show the current version"
+  },
+  "flow_describe_label": {
+    "message": "Describe the routine"
+  },
+  "flow_describe_placeholder": {
+    "message": "Every morning at 7:30 check Hacker News and put the best in my brief"
+  },
+  "flow_describe_submit": {
+    "message": "Draft it"
+  },
+  "flow_describe_busy": {
+    "message": "Drafting…"
+  },
+  "flow_describe_hint": {
+    "message": "A draft is drawn for you to check; nothing runs until you click Create."
+  },
+  "flow_needsBrain": {
+    "message": "Needs Nex Brain: pair it in Settings › Nex Brain"
   }
 }

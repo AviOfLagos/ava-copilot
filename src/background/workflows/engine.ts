@@ -75,6 +75,11 @@ export interface StepExecutor {
   resumable?: boolean;
   // Calls a model: counted against the run's model budget and the user's daily cap
   usesModel?: boolean;
+  /**
+   * Says why the step cannot run at all (Nex Brain not paired, no such agent or connector) by throwing, before
+   * the user is asked to allow it: an approval for a step that would then fail is a click for nothing.
+   */
+  check?: (context: Omit<StepContext, 'state' | 'saveState'>) => Promise<void>;
   execute: (context: StepContext) => Promise<StepOutcome>;
 }
 
@@ -329,6 +334,23 @@ export class WorkflowEngine {
         }
 
         if (isSideEffect(node)) {
+          if (step.approval !== 'declined' && step.approval !== 'approved' && executor.check) {
+            // A step that cannot run fails now, plainly, instead of asking the user to allow it first
+            try {
+              await executor.check({
+                node,
+                params: resolveParams(node, this.scope(run, workflow, byNode)),
+                run,
+                workflow,
+                signal,
+              });
+            } catch (thrown) {
+              const problem = toAppError(thrown);
+              const error = { kind: problem.kind, message: problem.message.slice(0, 500) };
+              await this.patchStep(step, { status: 'failed', error, endedAt: this.clock.now() });
+              return await this.finish(run, 'failed', { kind: error.kind, message: `${node.label}: ${error.message}` });
+            }
+          }
           if (step.approval === 'declined') {
             await this.patchStep(step, { status: 'cancelled', endedAt: this.clock.now() });
             return await this.finish(run, 'cancelled', { kind: 'cancelled', message: `You declined "${node.label}".` });
@@ -432,7 +454,7 @@ export class WorkflowEngine {
   }
 
   /** Ends a run that is not being worked on right now (queued, put away, or waiting for the user). */
-  async cancel(runId: string): Promise<RunRecord | undefined> {
+  async cancel(runId: string, message = 'Stopped.'): Promise<RunRecord | undefined> {
     const run = await this.store.getRun(runId);
     if (!run || isTerminal(run.status)) return run;
     for (const step of await this.store.listSteps(runId)) {
@@ -440,7 +462,7 @@ export class WorkflowEngine {
         await this.store.updateStep(step.id, { status: 'cancelled', endedAt: this.clock.now() });
       }
     }
-    return this.finish(run, 'cancelled', { kind: 'cancelled', message: 'Stopped.' });
+    return this.finish(run, 'cancelled', { kind: 'cancelled', message });
   }
 
   /**
@@ -468,18 +490,21 @@ export class WorkflowEngine {
       const nodes = new Map((parseSpec(run.spec)?.nodes ?? []).map(node => [node.id, node]));
       const recent = now - (run.leaseUntil ?? run.startedAt) < RESUME_WINDOW_MS;
       let cutOff: { step: RunStep; node: WorkflowNode } | null = null;
+      // A step that handed its work on (a browser task, an agent's run) and saved where it is carries on from
+      // there, side effect or not, however long ago: it was put away or follows work that goes on without it
+      let carriesOn = false;
       for (const step of steps.filter(item => item.status === 'running')) {
         const node = nodes.get(step.nodeId);
         const executor = node && this.executorFor(node.type);
-        if (step.sideEffect) {
+        if (executor?.resumable && step.state) {
+          carriesOn = true;
+        } else if (step.sideEffect) {
           const error = {
             kind: 'unknown_outcome',
             message: 'The browser stopped while this step ran; it may or may not have happened.',
           };
           await this.store.updateStep(step.id, { status: 'unknown_outcome', error, endedAt: now });
           if (node) cutOff = { step: { ...step, status: 'unknown_outcome', error }, node };
-        } else if (recent && executor?.resumable && step.state) {
-          // Carries on from its saved state
         } else {
           await this.store.updateStep(step.id, recent ? { status: 'queued' } : { status: 'interrupted', endedAt: now });
         }
@@ -490,7 +515,7 @@ export class WorkflowEngine {
           kind: 'unknown_outcome',
           message: `${cutOff.node.label}: it may or may not have happened.`,
         });
-      } else if (recent) {
+      } else if (recent || carriesOn) {
         await this.store.updateRun(run.id, { status: 'queued', leaseUntil: null });
         recovered.resume.push(run.id);
       } else {

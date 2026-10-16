@@ -6693,5 +6693,75 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Criar Links de reunião a partir do modelo"
+  },
+  "flow_trigger_page": {
+    "message": "Quando $PATTERN$ abre",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "meet.google.com/*-*-*"
+      }
+    }
+  },
+  "flow_trigger_pages": {
+    "message": "Quando abre um de $COUNT$ tipos de página",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "flow_by_tab": {
+    "message": "por uma página aberta"
+  },
+  "flow_chat_waiting_title": {
+    "message": "“$STEP$” espera seu clique no chat dela",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Check the order"
+      }
+    }
+  },
+  "flow_chat_waiting_body": {
+    "message": "A tarefa no navegador pergunta antes de agir. Abra o chat dela para responder; a rotina continua depois."
+  },
+  "flow_chat_open": {
+    "message": "Abrir o chat"
+  },
+  "flow_showingOlderRun": {
+    "message": "Execução: $STATUS$, $AGO$ · uma versão anterior",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "flow_showCurrent": {
+    "message": "Mostrar a versão atual"
+  },
+  "flow_describe_label": {
+    "message": "Descreva a rotina"
+  },
+  "flow_describe_placeholder": {
+    "message": "Toda manhã às 7:30, veja o Hacker News e coloque o melhor no meu resumo"
+  },
+  "flow_describe_submit": {
+    "message": "Criar rascunho"
+  },
+  "flow_describe_busy": {
+    "message": "Criando o rascunho…"
+  },
+  "flow_describe_hint": {
+    "message": "Um rascunho é desenhado para você conferir; nada roda até você clicar em Criar."
+  },
+  "flow_needsBrain": {
+    "message": "Precisa do Nex Brain: pareie em Configurações › Nex Brain"
   }
 }

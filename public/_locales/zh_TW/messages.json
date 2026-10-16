@@ -6693,5 +6693,75 @@
   },
   "flow_template_meetings_a11y": {
     "message": "從範本建立「會議連結」草稿"
+  },
+  "flow_trigger_page": {
+    "message": "開啟 $PATTERN$ 時",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "meet.google.com/*-*-*"
+      }
+    }
+  },
+  "flow_trigger_pages": {
+    "message": "開啟 $COUNT$ 種頁面之一時",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "flow_by_tab": {
+    "message": "由開啟的頁面觸發"
+  },
+  "flow_chat_waiting_title": {
+    "message": "「$STEP$」在它的對話中等待你點擊",
+    "placeholders": {
+      "step": {
+        "content": "$1",
+        "example": "Check the order"
+      }
+    }
+  },
+  "flow_chat_waiting_body": {
+    "message": "瀏覽器任務在行動前會先詢問。打開它的對話來回答，流程之後會繼續。"
+  },
+  "flow_chat_open": {
+    "message": "打開對話"
+  },
+  "flow_showingOlderRun": {
+    "message": "執行：$STATUS$，$AGO$ · 較早的版本",
+    "placeholders": {
+      "status": {
+        "content": "$1",
+        "example": "Succeeded"
+      },
+      "ago": {
+        "content": "$2",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "flow_showCurrent": {
+    "message": "顯示目前版本"
+  },
+  "flow_describe_label": {
+    "message": "描述這個流程"
+  },
+  "flow_describe_placeholder": {
+    "message": "每天早上 7:30 查看 Hacker News，把最好的放進我的晨報"
+  },
+  "flow_describe_submit": {
+    "message": "建立草稿"
+  },
+  "flow_describe_busy": {
+    "message": "正在建立草稿…"
+  },
+  "flow_describe_hint": {
+    "message": "會先畫出草稿讓你檢查；在你點擊建立之前不會執行任何東西。"
+  },
+  "flow_needsBrain": {
+    "message": "需要 Nex Brain：請在設定 › Nex Brain 中配對"
   }
 }

@@ -20,6 +20,7 @@ import { sanitizeSectionMarkdown } from './brief';
 import type { WorkflowBriefSection } from './brief';
 import type { StepContext, StepExecutor, StepOutcome } from './engine';
 import { postToInbox, workflowSource } from './inbox';
+import { precheckFor } from './prechecks';
 import { usageOf, workflowModel } from './models';
 import { hostAllowed, parseSpec } from './spec';
 import type { NodeOf, NodeType } from './spec';
@@ -35,7 +36,6 @@ const logger = createLogger('Workflows');
 
 const TEXT_CHARS = 60_000;
 const FETCH_TIMEOUT_MS = 20_000;
-const PAGE_LOAD_MS = 30_000;
 // A browser task running longer than this, without waiting for the user, is stopped
 const BROWSE_TIMEOUT_MS = 15 * 60_000;
 
@@ -231,18 +231,6 @@ async function backgroundTab(url: string): Promise<chrome.tabs.Tab> {
   const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
   return chrome.tabs.create({ url, active: false, ...(window?.id !== undefined ? { windowId: window.id } : {}) });
 }
-
-async function waitForLoad(tabId: number, signal: AbortSignal): Promise<chrome.tabs.Tab> {
-  const deadline = Date.now() + PAGE_LOAD_MS;
-  for (;;) {
-    const tab = await chrome.tabs.get(tabId);
-    if (tab.status === 'complete') return tab;
-    if (Date.now() > deadline) throw new AppError('timeout', 'The page took too long to load.');
-    await abortableSleep(300, signal);
-  }
-}
-
-/** Opens an allowed page in a background tab, reads its text and closes it. */
 
 /**
  * Reads a page on the workflow's allowed hosts as text. It is fetched, not opened in a tab: no cookies,
@@ -594,6 +582,10 @@ export function registerStepExecutor(type: NodeType, executor: StepExecutor): vo
   registered.set(type, executor);
 }
 
+/** The executor of a kind of step, with the check it needs before the user is asked to allow it. */
 export function executorFor(type: NodeType): StepExecutor | undefined {
-  return registered.get(type) ?? builtIn[type];
+  const executor = registered.get(type) ?? builtIn[type];
+  if (!executor) return undefined;
+  const check = executor.check ?? precheckFor(type);
+  return check ? { ...executor, check } : executor;
 }

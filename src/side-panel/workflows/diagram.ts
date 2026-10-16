@@ -14,12 +14,18 @@ import type { WorkflowEdge, WorkflowNode, WorkflowSpec } from '@src/background/w
 export const NODE_WIDTH = 188;
 export const NODE_HEIGHT = 62;
 
+export type Direction = 'TB' | 'LR';
+
 export interface FlowNodeData extends Record<string, unknown> {
   node: WorkflowNode;
+  // Top to bottom, or left to right when that fits the box better (many triggers side by side)
+  direction: Direction;
   change: NodeChange | null;
   status: RunStepStatus | null;
   // A kind of step not built yet: it would stop a run
   unavailable: boolean;
+  // What the step needs before it can run (e.g. Nex Brain paired), shown instead of its detail
+  note: string | null;
 }
 
 export interface DiagramNode {
@@ -47,6 +53,10 @@ export interface DiagramInput {
   spec: WorkflowSpec;
   diff?: SpecDiff | null;
   steps?: RunStep[] | null;
+  // The box the diagram is fitted into: the direction that shows the cards biggest in it is used
+  box?: { width: number; height: number };
+  // Per node id: what it needs before it can run
+  notes?: Readonly<Record<string, string>>;
 }
 
 /** The state of a wire: lit once its source finished, moving while its target runs, or the diff's mark. */
@@ -61,7 +71,13 @@ function wireState(edge: WorkflowEdge, diff: SpecDiff | null | undefined, steps:
   return 'idle';
 }
 
-export function buildDiagram({ spec, diff, steps }: DiagramInput): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
+/**
+ * The diagram's nodes and edges. With a box, the layout is top to bottom unless left to right fits it clearly better.
+ */
+export function buildDiagram({ spec, diff, steps, box, notes }: DiagramInput): {
+  nodes: DiagramNode[];
+  edges: DiagramEdge[];
+} {
   const byNode = new Map((steps ?? []).map(step => [step.nodeId, step]));
   const ghosts = diff?.removedNodes ?? [];
   const allNodes = [...spec.nodes, ...ghosts];
@@ -73,12 +89,22 @@ export function buildDiagram({ spec, diff, steps }: DiagramInput): { nodes: Diag
     ),
   ];
 
-  const graph = new graphlib.Graph();
-  graph.setGraph({ rankdir: 'TB', nodesep: 20, ranksep: 34, marginx: 8, marginy: 8 });
-  graph.setDefaultEdgeLabel(() => ({}));
-  for (const node of allNodes) graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  for (const edge of allEdges) graph.setEdge(edge.from, edge.to);
-  layout(graph);
+  const laidOut = (direction: Direction) => {
+    const graph = new graphlib.Graph();
+    graph.setGraph({ rankdir: direction, nodesep: 20, ranksep: direction === 'TB' ? 34 : 44, marginx: 8, marginy: 8 });
+    graph.setDefaultEdgeLabel(() => ({}));
+    for (const node of allNodes) graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    for (const edge of allEdges) graph.setEdge(edge.from, edge.to);
+    layout(graph);
+    const { width = 1, height = 1 } = graph.graph() as { width?: number; height?: number };
+    // The diagram is never shown bigger than life size, so a layout that would only grow past it gains nothing
+    return { graph, scale: box ? Math.min(1, box.width / width, box.height / height) : 1 };
+  };
+  const down = laidOut('TB');
+  // Left to right only when it shows the cards clearly bigger, e.g. five triggers that would sit in one row
+  const across = box ? laidOut('LR') : null;
+  const direction: Direction = across && across.scale > down.scale * 1.25 ? 'LR' : 'TB';
+  const graph = direction === 'LR' ? across!.graph : down.graph;
 
   const nodes: DiagramNode[] = allNodes.map(node => {
     const point = graph.node(node.id) as { x: number; y: number };
@@ -90,7 +116,14 @@ export function buildDiagram({ spec, diff, steps }: DiagramInput): { nodes: Diag
       position: { x: point.x - NODE_WIDTH / 2, y: point.y - NODE_HEIGHT / 2 },
       width: NODE_WIDTH,
       height: NODE_HEIGHT,
-      data: { node, change, status, unavailable: NOT_YET_AVAILABLE.has(node.type) },
+      data: {
+        node,
+        direction,
+        change,
+        status,
+        unavailable: NOT_YET_AVAILABLE.has(node.type),
+        note: notes?.[node.id] ?? null,
+      },
       ariaLabel: [node.label, change, status].filter(Boolean).join(', '),
     };
   });

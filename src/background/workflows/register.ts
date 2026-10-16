@@ -2,7 +2,7 @@
 // (see ../registry and ../jobs/runner).
 import { z } from 'zod';
 import { db } from '@extension/storage';
-import { toAppError } from '@extension/shared';
+import { AppError, toAppError } from '@extension/shared';
 import { registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { dispatchCommand, registerCommand, registerRecovery } from '../registry';
@@ -10,7 +10,7 @@ import { registerWorkflowActions } from './actions';
 import { workflowService } from './instance';
 import { RUN_JOB, SCHEDULE_JOB } from './service';
 import { TEMPLATE_IDS } from './templates';
-import { registerWorkflowVoiceTools } from './voice';
+import { authorFromWords, registerWorkflowVoiceTools } from './voice';
 import { registerStepExecutor } from './executors';
 import { meetingJoinExecutor } from './meeting-join';
 import { parseSpec } from './spec';
@@ -42,6 +42,13 @@ function command<S extends z.ZodType>(
 
 command('workflow_template', z.object({ template: z.enum(TEMPLATE_IDS) }), async ({ template }) => {
   const workflow = await service.fromTemplate(template);
+  return { id: workflow.id };
+});
+// "New workflow" in the full-tab editor: the user's words become a draft, written like one asked for in chat
+command('workflow_draft', z.object({ request: z.string().trim().min(3).max(2000) }), async ({ request }) => {
+  const result = await authorFromWords(request, null, 'workflows-page');
+  if (!result.ok) throw new AppError('invalid', result.error);
+  const workflow = await service.saveDraft({ spec: result.spec, request });
   return { id: workflow.id };
 });
 command('workflow_confirm', z.object({ id }), async input => {

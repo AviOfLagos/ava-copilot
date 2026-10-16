@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowLeft, Check, Maximize2, Pause, Pencil, Play, Square, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Maximize2, MessageSquare, Pause, Pencil, Play, Square, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db } from '@extension/storage';
 import type { JobRecord, RunRecord, RunStep, WorkflowRecord } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { diffSpecs } from '@src/background/workflows/diff';
+import { brainSettingsStore } from '@src/background/companion/state';
 import { parseSpec } from '@src/background/workflows/spec';
+import type { WorkflowSpec } from '@src/background/workflows/spec';
 import { Button } from '../components/ui/button';
 import { HoldButton } from '../components/ui/hold-button';
 import { useLive } from '../hooks/useLive';
@@ -24,7 +26,19 @@ const TRIGGER_LABEL: Record<string, Parameters<typeof t>[0]> = {
   chat: 'flow_by_chat',
   voice: 'flow_by_voice',
   event: 'flow_by_event',
+  tab: 'flow_by_tab',
 };
+
+/** Whether two versions have the same steps (by id and kind) joined the same way. */
+function sameShape(a: WorkflowSpec | null, b: WorkflowSpec | null): boolean {
+  if (!a || !b) return false;
+  const shape = (spec: WorkflowSpec) =>
+    [
+      spec.nodes.map(node => `${node.id}:${node.type}`).sort(),
+      spec.edges.map(edge => `${edge.from}>${edge.to}:${edge.when ?? ''}`).sort(),
+    ].join('|');
+  return shape(a) === shape(b);
+}
 
 function RunRow({ run, shown, onShow }: { run: RunRecord; shown: boolean; onShow: () => void }) {
   const took = run.endedAt ? durationText(run.endedAt - run.startedAt) : null;
@@ -93,6 +107,14 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
     [] as RunStep[],
   );
 
+  // A sandbox step runs in Nex Brain: the diagram says so while this browser is not paired with it
+  const [brainPaired, setBrainPaired] = useState(true);
+  useEffect(() => {
+    const load = () => void brainSettingsStore.getSettings().then(settings => setBrainPaired(settings.paired));
+    load();
+    return brainSettingsStore.subscribe(load);
+  }, []);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [view, setView] = useState<'draft' | 'live'>('draft');
   const [busy, setBusy] = useState(false);
@@ -120,15 +142,28 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
   }
 
   const showingDraft = Boolean(draftSpec) && (view === 'draft' || !confirmedSpec);
-  const spec = showingDraft ? draftSpec : (runSpec ?? confirmedSpec);
+  // The diagram is what runs now, lit by the latest run when that run ran this version. A run of an earlier
+  // version shows its own diagram only when the user picks it in the history, so an edit never seems undone.
+  // An edit by hand (a name, a schedule, an instruction) keeps the same steps and wires, so its run still lights it
+  const runIsCurrent =
+    Boolean(shownRun) && (shownRun!.specVersion === workflow.version || sameShape(runSpec, confirmedSpec));
+  const showingOlderRun = !showingDraft && !runIsCurrent && Boolean(pickedRun) && Boolean(runSpec);
+  const spec = showingDraft ? draftSpec : showingOlderRun ? runSpec : (confirmedSpec ?? runSpec);
+  const litSteps = showingDraft || (!runIsCurrent && !showingOlderRun && confirmedSpec) ? null : steps;
   const isNew = workflow.status === 'draft';
   const running = runs.some(run => OPEN.has(run.status));
   const liveRun = runs.find(run => OPEN.has(run.status));
-  const waiting = showingDraft
-    ? []
-    : steps.filter(
-        step => step.status === 'waiting_user' && step.approval === 'pending' && shownRun?.status === 'waiting_user',
-      );
+  // What the latest run waits for shows whichever version the diagram shows (a change to review included)
+  const waiting = steps.filter(
+    step => step.status === 'waiting_user' && step.approval === 'pending' && shownRun?.status === 'waiting_user',
+  );
+  // A browser task that asks before it acts: the user answers in its chat
+  const waitingInChat = steps.flatMap(step => {
+    const threadId = (step.state as { threadId?: unknown } | null)?.threadId;
+    return step.status === 'waiting_user' && step.approval !== 'pending' && typeof threadId === 'string'
+      ? [{ step, threadId }]
+      : [];
+  });
 
   const act = async (message: Record<string, unknown>, after?: () => void) => {
     setBusy(true);
@@ -150,7 +185,16 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
     void act({ type: 'workflow_rename', id, name: next }, () => setRenaming(false));
   };
 
+  const notes: Record<string, string> = Object.fromEntries(
+    (spec?.nodes ?? []).flatMap(node =>
+      node.type === 'step.sandbox' && !brainPaired ? [[node.id, t('flow_needsBrain')]] : [],
+    ),
+  );
+
   const nodeOf = (nodeId: string | null) => (nodeId && spec ? spec.nodes.find(node => node.id === nodeId) : undefined);
+  // A waiting step by the name it has in the run's own version
+  const runNodeLabel = (nodeId: string) =>
+    runSpec?.nodes.find(node => node.id === nodeId)?.label ?? nodeOf(nodeId)?.label ?? nodeId;
   const selectedNode = nodeOf(selected);
 
   return (
@@ -181,7 +225,7 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
           )}
           <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px]">
             <StatusBadge workflow={workflow} />
-            <span>{scheduleOf(workflow) ?? t('flow_trigger_byHand')}</span>
+            <span>{scheduleOf(workflow)}</span>
             {workflow.status === 'active' && job?.status === 'scheduled' && (
               <span>· {t('flow_next', [whenText(job.runAt)])}</span>
             )}
@@ -333,13 +377,13 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
       )}
 
       {waiting.map(step => {
-        const node = nodeOf(step.nodeId);
+        const label = runNodeLabel(step.nodeId);
         return (
           <section
             key={step.id}
-            aria-label={t('flow_approval_title', [node?.label ?? step.nodeId])}
+            aria-label={t('flow_approval_title', [label])}
             className="border-hold/50 bg-hold/10 rounded-xl border px-3 py-2.5">
-            <p className="text-[13px] font-medium">{t('flow_approval_title', [node?.label ?? step.nodeId])}</p>
+            <p className="text-[13px] font-medium">{t('flow_approval_title', [label])}</p>
             <p className="text-muted-foreground mt-1 text-[12px]">
               {t('flow_approval_body')}
               {shownRun?.tainted ? ` ${t('flow_approval_tainted')}` : ''}
@@ -365,23 +409,56 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
         );
       })}
 
+      {waitingInChat.map(({ step, threadId }) => {
+        const label = runNodeLabel(step.nodeId);
+        return (
+          <section
+            key={step.id}
+            aria-label={t('flow_chat_waiting_title', [label])}
+            className="border-hold/50 bg-hold/10 rounded-xl border px-3 py-2.5">
+            <p className="text-[13px] font-medium">{t('flow_chat_waiting_title', [label])}</p>
+            <p className="text-muted-foreground mt-1 text-[12px]">{t('flow_chat_waiting_body')}</p>
+            <div className="mt-2 flex gap-1.5">
+              <Button size="sm" variant="glass" onClick={() => api.openThread(threadId)}>
+                <MessageSquare className="size-3.5" aria-hidden />
+                {t('flow_chat_open')}
+              </Button>
+            </div>
+          </section>
+        );
+      })}
+
       {spec ? (
         <FlowDiagram
           spec={spec}
           diff={showingDraft ? diff : null}
-          steps={showingDraft ? null : steps}
+          steps={litSteps}
+          notes={notes}
           selectedId={selected}
           onSelect={setSelected}
           height={wide ? 560 : 330}
+          width={wide ? 860 : 370}
           label={t('flow_diagram_a11y', [workflow.name])}
         />
       ) : (
         <p className="text-muted-foreground text-[12.5px]">{t('flow_invalid')}</p>
       )}
 
-      {!showingDraft && shownRun && (
-        <p className="text-muted-foreground -mt-1 px-1 text-[11.5px]" aria-live="polite">
-          {t('flow_showingRun', [t(STATUS_LABEL[shownRun.status]), relativeTime(shownRun.startedAt)])}
+      {!showingDraft && shownRun && litSteps && (
+        <p
+          className="text-muted-foreground -mt-1 flex flex-wrap items-center gap-x-2 px-1 text-[11.5px]"
+          aria-live="polite">
+          <span>
+            {t(showingOlderRun ? 'flow_showingOlderRun' : 'flow_showingRun', [
+              t(STATUS_LABEL[shownRun.status]),
+              relativeTime(shownRun.startedAt),
+            ])}
+          </span>
+          {showingOlderRun && (
+            <button type="button" className="underline underline-offset-2" onClick={() => setPickedRun(null)}>
+              {t('flow_showCurrent')}
+            </button>
+          )}
         </p>
       )}
 
@@ -389,8 +466,9 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
         <NodeInspector
           workflowId={id}
           node={selectedNode}
-          step={showingDraft ? undefined : steps.find(step => step.nodeId === selectedNode.id)}
-          editable={showingDraft || !workflow.draft}
+          note={notes[selectedNode.id] ?? null}
+          step={litSteps?.find(step => step.nodeId === selectedNode.id)}
+          editable={showingDraft || (!workflow.draft && !showingOlderRun)}
           api={api}
           onClose={() => setSelected(null)}
         />

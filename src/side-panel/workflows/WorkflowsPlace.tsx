@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { ChevronRight, Newspaper, Plus, Video } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db } from '@extension/storage';
@@ -9,7 +10,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { useLive } from '../hooks/useLive';
 import type { PanelApi } from '../registry';
-import { relativeTime, scheduleText, STATUS_LABEL, statusTone, whenText } from './meta';
+import { relativeTime, STATUS_LABEL, statusTone, triggerSummary, whenText } from './meta';
 import WorkflowDetail from './WorkflowDetail';
 
 /**
@@ -17,10 +18,10 @@ import WorkflowDetail from './WorkflowDetail';
  * their workflows with when they run next and how the last run went; a workflow opens on its diagram.
  */
 
-export function scheduleOf(workflow: WorkflowRecord): string | null {
+/** When a workflow runs, from what runs now (or its draft, before it is created). */
+export function scheduleOf(workflow: WorkflowRecord): string {
   const spec = parseSpec(workflow.spec) ?? parseSpec(workflow.draft?.spec);
-  const trigger = spec?.nodes.find(node => node.type === 'trigger.schedule');
-  return trigger && trigger.type === 'trigger.schedule' ? scheduleText(trigger.cron) : null;
+  return spec ? triggerSummary(spec) : t('flow_trigger_byHand');
 }
 
 export function StatusBadge({ workflow }: { workflow: WorkflowRecord }) {
@@ -31,7 +32,7 @@ export function StatusBadge({ workflow }: { workflow: WorkflowRecord }) {
 
 function WorkflowRow({ workflow, job, onOpen }: { workflow: WorkflowRecord; job?: JobRecord; onOpen: () => void }) {
   const parts = [
-    scheduleOf(workflow) ?? t('flow_trigger_byHand'),
+    scheduleOf(workflow),
     workflow.status === 'active' && job?.status === 'scheduled' ? t('flow_next', [whenText(job.runAt)]) : null,
     workflow.lastRunAt && workflow.lastRunStatus
       ? t('flow_last', [t(STATUS_LABEL[workflow.lastRunStatus]), relativeTime(workflow.lastRunAt)])
@@ -59,7 +60,80 @@ function WorkflowRow({ workflow, job, onOpen }: { workflow: WorkflowRecord; job?
   );
 }
 
-function WorkflowList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => void }) {
+/**
+ * "New workflow" where there is no chat to ask in (the full-tab editor): the user describes the routine here and gets
+ * the draft's diagram, written by the same authoring as chat. Nothing runs before they click Create.
+ */
+function DescribeWorkflow({
+  api,
+  onOpen,
+  onCancel,
+}: {
+  api: PanelApi;
+  onOpen: (id: string) => void;
+  onCancel: () => void;
+}) {
+  const [request, setRequest] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (request.trim().length < 3 || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const reply = await api.request<{ id: string }>({ type: 'workflow_draft', request: request.trim() }, 120_000);
+      onOpen(reply.id);
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : String(problem));
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={submit} className="glass flex flex-col gap-2 rounded-xl px-3 py-2.5" data-describe-workflow>
+      <label className="flex flex-col gap-1.5 text-[12px]">
+        <span className="font-medium">{t('flow_describe_label')}</span>
+        <textarea
+          value={request}
+          onChange={event => setRequest(event.target.value)}
+          onKeyDown={event => event.key === 'Escape' && onCancel()}
+          placeholder={t('flow_describe_placeholder')}
+          rows={3}
+          maxLength={2000}
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
+          className="border-input w-full resize-y rounded-lg border bg-transparent px-2 py-1.5 text-[12.5px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ring)]"
+        />
+      </label>
+      <p className="text-muted-foreground text-[11.5px]">{t('flow_describe_hint')}</p>
+      {error && (
+        <p role="alert" className="text-destructive text-[12px]">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-1.5">
+        <Button type="submit" size="sm" disabled={busy || request.trim().length < 3}>
+          {busy ? t('flow_describe_busy') : t('flow_describe_submit')}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+          {t('flow_cancel')}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function WorkflowList({
+  api,
+  onOpen,
+  describeHere = false,
+}: {
+  api: PanelApi;
+  onOpen: (id: string) => void;
+  // Ask for a new routine on this page instead of in a chat (the full-tab editor has no chat)
+  describeHere?: boolean;
+}) {
+  const [describing, setDescribing] = useState(false);
   const workflows = useLive(() => db.workflows.toArray(), [], [] as WorkflowRecord[]);
   const jobs = useLive(() => db.jobs.where('kind').equals('workflow').toArray(), [], [] as JobRecord[]);
   const [busy, setBusy] = useState(false);
@@ -91,13 +165,17 @@ function WorkflowList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => 
         <p className="text-muted-foreground mt-1 text-[12.5px] leading-relaxed">{t('flow_intro')}</p>
       </header>
 
-      <Button
-        onClick={() => api.startThread(`${t('flow_new_starter')} `)}
-        className="w-full justify-center"
-        data-new-workflow>
-        <Plus className="size-4" aria-hidden />
-        {t('flow_new')}
-      </Button>
+      {describing ? (
+        <DescribeWorkflow api={api} onOpen={onOpen} onCancel={() => setDescribing(false)} />
+      ) : (
+        <Button
+          onClick={() => (describeHere ? setDescribing(true) : api.startThread(`${t('flow_new_starter')} `))}
+          className="w-full justify-center"
+          data-new-workflow>
+          <Plus className="size-4" aria-hidden />
+          {t('flow_new')}
+        </Button>
+      )}
 
       {error && (
         <div role="alert" className="border-destructive/40 bg-destructive/10 rounded-xl border px-3 py-2 text-[12.5px]">
@@ -219,7 +297,7 @@ export function WorkflowsView({ api, initialId = null, wide = false, onOpenFull 
       />
     );
   }
-  return <WorkflowList api={api} onOpen={setOpenId} />;
+  return <WorkflowList api={api} onOpen={setOpenId} describeHere={wide} />;
 }
 
 export default function WorkflowsPlace({ api }: { api: PanelApi }) {
