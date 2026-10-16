@@ -1289,6 +1289,43 @@ Design and sources (Letta, Generative Agents, Mem0/Zep): `docs/ava-identity.md`.
   their own (daily and voice only); Zoom/Teams joining relies on their web clients and auto-notes, untested on the
   real sites; the language code list for half-cascade models is by name, not checked against the API.
 
+### Meeting notes start on join, and never fail silently (2026-10-16)
+
+Owner's report: the "what is this call about?" window opened behind the browser on every join, and two meetings
+that day were not recorded without anyone noticing.
+
+- **Root cause.** Auto-notes (`meetings/autojoin.ts`) never waited for that window, but they could never record
+  audio either: Chrome hands a tab's audio over only after the user invokes the extension on that tab, so a joined
+  call always fell back to reading Meet's captions. If captions did not arrive (turned off, or Meet's caption DOM
+  not matching `CAPTION_SELECTORS`), nothing was taken down and nothing said so; a start error went only to the
+  log. The window itself was a `chrome.windows.create` popup, which macOS/Brave puts behind a full-screen or
+  focused call window, so the one visible sign looked like a gate. Two more holes: the toast told the user to press
+  Alt+Shift+M "to add audio", but that shortcut *stopped* a running meeting; and a captions meeting never ended when
+  the user left the call, so the next call was skipped as "already recording".
+- **Now** (`meetings/join-flow.ts`, a small state machine with its effects injected): join → notes start at once
+  (audio if the tab was invoked, else captions); a calendar match sets the topic; otherwise the optional note is
+  asked in the side panel (`side-panel/meetings/AutoNotesCard.tsx`, at the top of every view) and as an Inbox item,
+  with a quiet notification. No popup window any more (`meeting-ask.html` is unused; delete with approval). Answering
+  calls `meeting_add_note` → `setTopic(…, 'user')` (up to 500 chars) and marks the Inbox item done; ignoring it
+  changes nothing.
+- **Loud failures** (`meetings/alerts.ts`): a start failure, captions-only notes with nothing caught after
+  `nothingCapturedSeconds` (90 s), or a recorder error → a notification that stays until dismissed, an Inbox alert,
+  and Ava says it when a conversation is on. The `nothing_captured` warning shows in the card and the meeting view.
+- **Audio, reliably.** The toolbar click (or Alt+Shift+M) on the call is the invocation Chrome needs: it now upgrades
+  a captions-only meeting to audio on the same timeline (`MeetingManager.addAudio`, recorder `offsetSeconds`); the
+  card's "Record audio" does the same when the tab was invoked earlier (the grant lasts until the tab navigates).
+  Nothing can grant it without a user action on the tab, so the card, the toast and the alert all say where to click.
+- **Leaving ends notes**: the call tab moving off the call, or its Leave button gone for three checks (~90 s).
+- Tests: `meetings/__tests__/join-flow.test.ts` (8: join records without an answer, calendar topic, note added and
+  empty note ignored, start failure alerts, a failing alert keeps the recording, nothing-captured alerts once, quiet
+  when captions or audio arrive, recorder failure only while recording). E2E in Brave, `e2e/meeting.e2e.mjs` +2 on
+  an intercepted Meet call: joining records with no answer, no popup, the card/Inbox/notification show, captions
+  arrive, the note attaches; a call with nothing to capture raises the alert (Inbox, notification, panel) and the
+  toolbar click turns it into an audio recording. `meeting` 8/8, `voice` 6/6, `calendar` 1/1.
+- Not covered: Meet's real caption DOM is unverified against today's Meet (the alert now makes a mismatch visible);
+  leave detection has no automated test (it needs 90 s of alarms); there is still no "ask before recording" setting:
+  Auto-notes on (the default) records, off does nothing.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

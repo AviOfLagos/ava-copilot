@@ -1,13 +1,18 @@
 import { meetingSettingsStore, meetingStore, upcomingEventsStore } from '@extension/storage';
 import type { UpcomingEvent } from '@extension/storage';
 import { createLogger } from '../log';
+import { deliverMeetingEvent } from './alerts';
+import { JoinFlow } from './join-flow';
 import type { MeetingManager } from './manager';
+import { platformOf } from './segments';
 
 const logger = createLogger('AutoJoin');
 
 export const AUTOJOIN_ALARM = 'meeting-autojoin';
 const CANDIDATES_KEY = 'autojoin-candidates';
 const DECLINED_KEY = 'autojoin-declined';
+// How many checks in a row found the recorded call without its Leave button
+const LEFT_KEY = 'autojoin-left-checks';
 // A calendar event this close to now, without a matching link, is taken to be the call
 const NEAR_MS = 15 * 60 * 1000;
 
@@ -71,13 +76,40 @@ async function sessionList(key: string): Promise<number[]> {
   return (((await chrome.storage.session.get(key))[key] as number[] | undefined) ?? []).slice(-50);
 }
 
+/** The user said this call is not one to take notes on. */
+export async function declineCallTab(tabId: number): Promise<void> {
+  const declined = await sessionList(DECLINED_KEY);
+  if (!declined.includes(tabId)) await chrome.storage.session.set({ [DECLINED_KEY]: [...declined, tabId] });
+}
+
+/** The join flow wired to the real meeting manager, store, calendar and alerts. */
+export function joinFlowFor(meetings: MeetingManager): JoinFlow {
+  return new JoinFlow({
+    start: tabId => meetings.start({ tabId, auto: true }),
+    meeting: meetingId => meetingStore.get(meetingId),
+    segmentCount: async meetingId => (await meetingStore.segments(meetingId)).length,
+    setTopic: (meetingId, topic, source) => meetings.setTopic(meetingId, topic, source),
+    addWarning: (meetingId, warning) => meetingStore.addWarning(meetingId, warning),
+    calendarEvent: async url => matchEvent(url, (await upcomingEventsStore.get()).events ?? []),
+    emit: deliverMeetingEvent,
+    platformOf,
+  });
+}
+
 /**
- * Starts meeting notes by itself when the user joins a call on Meet, Zoom or Teams, from the
- * meeting's captions (Chrome only gives tab audio after the user invokes the extension on the tab;
- * Alt+Shift+M adds it). When the calendar does not say what the call is, a small window asks.
+ * Starts meeting notes by itself when the user joins a call on Meet, Zoom or Teams, without asking
+ * anything first. It records the tab's audio when Chrome allows it (the user invoked the extension on
+ * the tab: the toolbar button or Alt+Shift+M), else reads the call's captions until the user does.
+ * What the call is about is asked in the side panel and the Inbox, never in a window of its own, and
+ * never before notes start. It also ends notes when the user leaves the call, and says so loudly when
+ * nothing is being taken down.
  */
 export class AutoJoin {
-  constructor(private readonly meetings: MeetingManager) {}
+  readonly flow: JoinFlow;
+
+  constructor(private readonly meetings: MeetingManager) {
+    this.flow = joinFlowFor(meetings);
+  }
 
   start(): void {
     void chrome.alarms.create(AUTOJOIN_ALARM, { periodInMinutes: 0.5 });
@@ -92,8 +124,7 @@ export class AutoJoin {
 
   /** The user said this call is not one to take notes on. */
   async decline(tabId: number): Promise<void> {
-    const declined = await sessionList(DECLINED_KEY);
-    await chrome.storage.session.set({ [DECLINED_KEY]: [...declined, tabId] });
+    await declineCallTab(tabId);
   }
 
   private async watch(tabId: number): Promise<void> {
@@ -109,8 +140,11 @@ export class AutoJoin {
   }
 
   private async check(): Promise<void> {
-    const { autoNotes } = await meetingSettingsStore.getSettings();
-    if (!autoNotes) return;
+    const settings = await meetingSettingsStore.getSettings();
+    await this.watchRecording(settings.nothingCapturedSeconds).catch(error =>
+      logger.warning('Could not check the meeting being recorded', error),
+    );
+    if (!settings.autoNotes) return;
     if ((await meetingStore.active()).some(meeting => meeting.status === 'recording')) return;
     const declined = new Set(await sessionList(DECLINED_KEY));
     for (const tabId of await sessionList(CANDIDATES_KEY)) {
@@ -127,44 +161,48 @@ export class AutoJoin {
     }
   }
 
+  /**
+   * The meeting being recorded: says so when nothing is being caught, and ends it once the user has
+   * left the call (the tab moved off it, or its Leave button has been gone for three checks in a row).
+   */
+  private async watchRecording(graceSeconds: number): Promise<void> {
+    const recording = (await meetingStore.active()).find(meeting => meeting.status === 'recording');
+    if (!recording) return;
+    await this.flow.checkCapturing(recording.id, graceSeconds);
+    if (recording.tabId === null || !isCallUrl(recording.url)) return;
+    const tab = await chrome.tabs.get(recording.tabId).catch(() => undefined);
+    if (!tab) return; // A closed tab ends the meeting on its own
+    let left = !tab.url || !isCallUrl(tab.url);
+    if (!left) {
+      const [result] = await chrome.scripting
+        .executeScript({ target: { tabId: recording.tabId }, func: inCall })
+        .catch(() => []);
+      const misses =
+        ((await chrome.storage.session.get(LEFT_KEY))[LEFT_KEY] as Record<string, number> | undefined) ?? {};
+      const count = result?.result === false ? (misses[recording.id] ?? 0) + 1 : 0;
+      await chrome.storage.session.set({ [LEFT_KEY]: { [recording.id]: count } });
+      left = count >= 3;
+    }
+    if (left) {
+      logger.info('The user left the call; ending its notes');
+      await this.meetings.stop(recording.id);
+    }
+  }
+
   private async join(tabId: number, url: string): Promise<void> {
     try {
       if (new URL(url).hostname === 'meet.google.com') {
         await chrome.scripting.executeScript({ target: { tabId }, func: turnOnMeetCaptions }).catch(() => []);
       }
-      const meetingId = await this.meetings.start({ tabId, auto: true });
+      // Tried once per call tab: a failure is said loudly, not retried every half minute
       await this.forget(tabId);
-      const { events } = await upcomingEventsStore.get();
-      const event = matchEvent(url, events ?? []);
-      if (event) {
-        await this.meetings.setTopic(meetingId, event.title, 'calendar');
-        await chrome.notifications.create(`autojoin:${meetingId}`, {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icon-128.png'),
-          title: 'Taking notes on this call',
-          message: 'From the call’s captions. Press Alt+Shift+M on the call to add its audio.',
-          priority: 1,
-        });
-      } else {
-        await this.ask(meetingId);
+      const result = await this.flow.joined(tabId, url);
+      if (result.ok) {
+        const { nothingCapturedSeconds } = await meetingSettingsStore.getSettings();
+        setTimeout(() => void this.check(), nothingCapturedSeconds * 1000 + 1000);
       }
     } catch (error) {
       logger.error('Could not start notes on the call', error);
     }
-  }
-
-  /** A small window asking what the call is about, with the day's calendar as quick answers. */
-  private async ask(meetingId: string): Promise<void> {
-    const display = await chrome.windows.getLastFocused().catch(() => undefined);
-    const width = 380;
-    await chrome.windows.create({
-      url: chrome.runtime.getURL(`meeting-ask.html?meeting=${encodeURIComponent(meetingId)}`),
-      type: 'popup',
-      width,
-      height: 340,
-      left: display?.left !== undefined && display.width ? display.left + display.width - width - 24 : undefined,
-      top: display?.top !== undefined ? display.top + 80 : undefined,
-      focused: true,
-    });
   }
 }

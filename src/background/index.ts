@@ -20,6 +20,8 @@ import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
 import { CalendarWatcher } from './calendar/watcher';
 import { AutoJoin } from './meetings/autojoin';
+import { deliverMeetingEvent } from './meetings/alerts';
+import { addAudioOnInvoke } from './meetings/register';
 import { connectGoogleCalendar } from './calendar/connect';
 import { draftSkill, teachTranscript } from './skills/teach';
 import { resolveModels } from './threads/factory';
@@ -69,6 +71,8 @@ chrome.action.onClicked.addListener(tab => {
       .open({ windowId: tab.windowId })
       .catch(error => logger.error('Could not open the side panel', error));
   }
+  // Notes that started on their own from captions record the call's audio from this click on
+  if (tab.id !== undefined) void addAudioOnInvoke(meetings, tab.id);
 });
 
 // The keyboard shortcut also invokes the extension on the tab, so notes start there directly
@@ -78,10 +82,20 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   }
   try {
     const recording = (await meetingStore.active()).find(meeting => meeting.status === 'recording');
+    // On a call taking notes from captions, the shortcut adds the audio rather than stopping
+    if (recording?.tabId === tab.id && recording.source === 'captions' && (await addAudioOnInvoke(meetings, tab.id))) {
+      return;
+    }
     if (recording) await meetings.stop(recording.id);
     else await meetings.start({ tabId: tab.id });
   } catch (error) {
     logger.error('Meeting shortcut failed', error);
+    await deliverMeetingEvent({
+      kind: 'start_failed',
+      tabId: tab.id,
+      platform: '',
+      reason: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -159,6 +173,7 @@ chrome.runtime.onMessage.addListener(message => {
       break;
     case 'meeting_recorder_error':
       logger.error('Recorder error', message.error);
+      void autoJoin.flow.recorderFailed(meetingId, String(message.error ?? ''));
       break;
   }
 });

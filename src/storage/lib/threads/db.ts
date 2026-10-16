@@ -99,7 +99,16 @@ export type MeetingStatus = 'recording' | 'finishing' | 'done' | 'failed';
 export type MeetingSource = 'audio' | 'captions';
 
 // Things the user should know while recording
-export type MeetingWarning = 'silence' | 'quota' | 'no_mic' | 'tab_closed' | 'cap' | 'transcription' | 'interrupted';
+export type MeetingWarning =
+  | 'silence'
+  | 'quota'
+  | 'no_mic'
+  | 'tab_closed'
+  | 'cap'
+  | 'transcription'
+  | 'interrupted'
+  // Notes started on captions only, and none arrived: nothing is being taken down
+  | 'nothing_captured';
 
 export interface ActionItem {
   owner: string;

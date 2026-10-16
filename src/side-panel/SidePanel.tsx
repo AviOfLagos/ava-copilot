@@ -46,6 +46,7 @@ import SettingsView from './settings/SettingsView';
 import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
+import AutoNotesCard from './meetings/AutoNotesCard';
 import KnowledgeView from './kb/KnowledgeView';
 import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
@@ -791,6 +792,8 @@ const SidePanel = () => {
           />
         </div>
       )}
+
+      <AutoNotesCard recording={recording} api={panelApi} onOpen={id => openMeeting(id)} />
 
       {view === 'consent' && consent && (
         <ConsentDialog

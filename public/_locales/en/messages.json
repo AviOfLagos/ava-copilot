@@ -1266,6 +1266,75 @@
   "meeting_warning_interrupted": {
     "message": "The recording was interrupted. The notes cover what was recorded before it."
   },
+  "meeting_warning_nothingCaptured": {
+    "message": "Nothing has been captured yet: no audio and no captions. Click the Nex Copilot icon on the call tab to record its audio, or turn on the call's captions."
+  },
+  "meeting_auto_notifyTitle": {
+    "message": "Taking notes on this call"
+  },
+  "meeting_auto_notifyAudio": {
+    "message": "Recording the call's audio."
+  },
+  "meeting_auto_notifyCaptions": {
+    "message": "Reading the call's captions. Click the Nex Copilot icon on the call to record its audio too."
+  },
+  "meeting_auto_notifyNote": {
+    "message": "You can add a note on what it's about in the side panel. Notes go on either way."
+  },
+  "meeting_auto_inboxTitle": {
+    "message": "Notes started on your $1 call"
+  },
+  "meeting_auto_inboxBody": {
+    "message": "Notes started when you joined. A note on what the call is about is optional: add it in the side panel and the summary uses it."
+  },
+  "meeting_alert_failedTitle": {
+    "message": "This call is NOT being recorded"
+  },
+  "meeting_alert_failedBody": {
+    "message": "Notes could not start on your $1 call: $2"
+  },
+  "meeting_alert_nothingTitle": {
+    "message": "Nothing is being recorded"
+  },
+  "meeting_alert_nothingBody": {
+    "message": "No audio and no captions from your $1 call yet. Click the Nex Copilot icon on the call to record its audio, or turn on the call's captions."
+  },
+  "meeting_alert_recorderBody": {
+    "message": "The recorder stopped working on your $1 call: $2"
+  },
+  "meeting_alert_audioAdded": {
+    "message": "Now recording the call's audio too."
+  },
+  "meeting_auto_cardAsk": {
+    "message": "Add a note on what it's about? Optional: notes go on either way."
+  },
+  "meeting_auto_noteLabel": {
+    "message": "Note on what the call is about"
+  },
+  "meeting_auto_placeholder": {
+    "message": "e.g. Stage 2 planning with the mentors"
+  },
+  "meeting_auto_save": {
+    "message": "Add note"
+  },
+  "meeting_auto_dismiss": {
+    "message": "Dismiss"
+  },
+  "meeting_auto_skip": {
+    "message": "Don't take notes on this call"
+  },
+  "meeting_auto_captionsOnly": {
+    "message": "From the call's captions only. Click the Nex Copilot icon on the call tab to record its audio."
+  },
+  "meeting_auto_recordAudio": {
+    "message": "Record audio"
+  },
+  "meeting_auto_noteSaved": {
+    "message": "Note added: the summary and notes use it."
+  },
+  "meeting_auto_open": {
+    "message": "Open meeting"
+  },
   "meeting_note_tldr": {
     "message": "TL;DR"
   },
