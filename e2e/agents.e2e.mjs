@@ -424,8 +424,9 @@ test('a team: set up from a starter, Ava hands work to its owner, the answer com
     'the hand-off started a run',
   );
   assert.equal(run.attended, true);
-  assert.equal(run.tainted, false, "the user's own words are trusted");
-  assert.equal(run.spec.task, HANDOFF_TASK);
+  // The agent's task is the user's own words; Ava's rewording only comes along as data
+  assert.equal(run.spec.task, `Run the scripted scenario handoff-chat. Have the research agent ${HANDOFF_TASK}.`);
+  assert.equal(run.tainted, true, "Ava's rewording is passed as data");
   assert.equal(run.spec.handoff.area, 'research');
   const chat = (await readStore(session.panel, 'threads')).find(thread => thread.id === run.trigger.detail);
   assert.notEqual(chat.origin, 'agent', 'handed over from the user chat');

@@ -114,6 +114,10 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'read_inbox',
       'set_up_connection',
       'end_conversation',
+      // Google Drive through the signed-in browser
+      'drive_search',
+      'drive_read',
+      'drive_save_to_knowledge',
       // Ava looks through the user's other chats
       'search_chats',
       'read_chat',
@@ -137,6 +141,7 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'list_connectors',
       'list_workspaces',
       'list_personalities',
+      'install_skill',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
