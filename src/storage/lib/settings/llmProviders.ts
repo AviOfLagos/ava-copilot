@@ -50,6 +50,8 @@ export type LLMProviderStorage = BaseStorage<LLMKeyRecord> & {
   getAllProviders: () => Promise<Record<string, ProviderConfig>>;
   /** Every provider with its key masked, in any context: for showing which keys exist. */
   getProviderSummaries: () => Promise<Record<string, ProviderConfig>>;
+  /** Sets a provider's model names (its active models) and nothing else; keys are not touched. */
+  setModelNames: (providerId: string, modelNames: string[]) => Promise<void>;
 };
 
 // Built-in providers that were removed (Cerebras, Llama API, Groq); their saved configs, including API keys, are deleted.
@@ -477,6 +479,15 @@ export const llmProviderStore: LLMProviderStorage = {
         ...latest.providers,
         [providerId]: completeConfig,
       },
+    });
+  },
+  async setModelNames(providerId: string, modelNames: string[]) {
+    const latest = (await storage.get()) || { providers: {} };
+    const previous = latest.providers?.[providerId];
+    if (!previous) return;
+    await storage.set({
+      ...latest,
+      providers: { ...latest.providers, [providerId]: { ...previous, modelNames: [...new Set(modelNames)] } },
     });
   },
   async getProvider(providerId: string) {

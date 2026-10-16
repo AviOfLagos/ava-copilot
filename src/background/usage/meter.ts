@@ -29,6 +29,9 @@ export interface UsageAttribution {
   workspaceId?: string | null;
   // The role the model was picked for; chats are 'thread'
   role?: ModelRole | 'thread';
+  // Light work routed to a local model, and the cloud model it replaced (to count what was saved)
+  light?: boolean;
+  savedAgainst?: { providerId: string; model: string } | null;
 }
 
 // Where a task's model calls report to
@@ -141,6 +144,12 @@ async function record(
     outputTokens,
     costUsd: cost,
   };
+  if (details.light) {
+    event.light = true;
+    event.savedUsd = details.savedAgainst
+      ? await priceOfCall({ ...details.savedAgainst, inputTokens, outputTokens, day }, database).catch(() => null)
+      : null;
+  }
   await database.usageEvents.add(event);
   return event;
 }
@@ -206,6 +215,8 @@ export function meterModel(chatModel: ChatModel, scope: UsageScope): ChatModel {
                 {
                   providerId: chatModel.provider,
                   role: scope.role,
+                  light: scope.light,
+                  savedAgainst: scope.savedAgainst,
                   agentId: scope.agentId,
                   workflowId: scope.workflowId,
                   runId: scope.runId,

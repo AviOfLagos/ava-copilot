@@ -23,6 +23,15 @@ export interface ModelSettingsRecord {
   unpricedDailyTokenCap: number;
   // The first look for local servers (Ollama, LM Studio) has run
   localProbeDone: boolean;
+  // Light work (summaries, titles, classification, routine steps, reflection) runs on a local model when one
+  // is running
+  preferLocalLight: boolean;
+  // With no local model running, light work may use the cloud without asking again
+  lightCloudAllowed: boolean;
+  // When the "start a local model or allow the cloud" notice was shown; it is shown once
+  lightNoticeAt: number | null;
+  // The memory the user says this computer has, in GB: browsers report at most 8
+  localMemoryGb: number | null;
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettingsRecord = {
@@ -32,6 +41,10 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettingsRecord = {
   pinnedEmbed: null,
   unpricedDailyTokenCap: 2_000_000,
   localProbeDone: false,
+  preferLocalLight: true,
+  lightCloudAllowed: false,
+  lightNoticeAt: null,
+  localMemoryGb: null,
 };
 
 export const MODEL_ROLES: ModelRole[] = [

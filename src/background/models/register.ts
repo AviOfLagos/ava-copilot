@@ -23,12 +23,18 @@ import {
   answer,
   checkSavedOrDraft,
   checkSchema,
+  lightRouteSchema,
+  localReport,
+  localReportSchema,
+  testModel,
+  testModelSchema,
   refreshSchema,
   removeProvider,
   removeSchema,
   saveProvider,
   saveSchema,
 } from './commands';
+import { forgetLocalChecks, lightRoute } from './light';
 import { liveTokenFromSettings } from './liveToken';
 
 const logger = createLogger('Models');
@@ -187,6 +193,22 @@ registerCommand('models_provider_check', checkSchema, (input, context) =>
 
 registerCommand('models_provider_remove', removeSchema, (input, context) =>
   answer(context, 'models_provider_removed', () => removeProvider(input)),
+);
+
+registerCommand('models_test_model', testModelSchema, (input, context) =>
+  answer(context, 'models_model_tested', () => testModel(input)),
+);
+
+registerCommand('models_local_report', localReportSchema, (_input, context) =>
+  answer(context, 'models_local_reported', () => localReport()),
+);
+
+registerCommand('models_light_route', lightRouteSchema, (_input, context) =>
+  answer(context, 'models_light_routed', async () => {
+    // Asked from the page, perhaps right after the user started a server: look again
+    forgetLocalChecks();
+    return { route: await lightRoute() };
+  }),
 );
 
 // ── Settings page and offscreen document ──────────────────────────────────────────────────────────

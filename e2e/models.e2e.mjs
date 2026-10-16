@@ -66,6 +66,17 @@ async function startModelServer() {
     if (req.method === 'GET' && req.url === '/api/tags') {
       return json(res, 200, { models: [{ name: 'qwen3.8:8b' }, { name: 'nomic-embed-text:latest' }] });
     }
+    // Ollama's OpenAI-compatible chat: light work routed here answers as the local model
+    if (req.method === 'POST' && req.url === '/v1/chat/completions') {
+      const { model } = JSON.parse(body || '{}');
+      return json(res, 200, {
+        id: 'local-1',
+        object: 'chat.completion',
+        model,
+        choices: [{ index: 0, message: { role: 'assistant', content: 'A local summary.' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 120, completion_tokens: 8, total_tokens: 128 },
+      });
+    }
     if (req.method === 'POST' && req.url === '/api/show') {
       const { model } = JSON.parse(body || '{}');
       return json(res, 200, {
@@ -147,62 +158,6 @@ function command(page, message) {
     message,
   );
 }
-
-test('the open "Add New Provider" list is not clipped by the Model Selection card below it', async () => {
-  // Regression test for the global stacking-context fix (src/ui/lib/theme.css): every card gets its
-  // own stacking context from backdrop-filter, so without the fix a later sibling card always paints
-  // over an earlier card's open dropdown, no matter the dropdown's own z-index.
-  await options.bringToFront();
-  await options.waitForSelector('[data-provider-menu-trigger]', { timeout: 10000 });
-  await options.click('[data-provider-menu-trigger]');
-  await options.waitForSelector('[data-provider-menu]', { timeout: 5000 });
-
-  const geometry = await options.evaluate(() => {
-    const trigger = document.querySelector('[data-provider-menu-trigger]');
-    const menu = document.querySelector('[data-provider-menu]');
-    const providersCard = trigger.closest('.rounded-lg.border');
-    const nextCard = providersCard?.nextElementSibling ?? null;
-    const menuRect = menu.getBoundingClientRect();
-    const nextRect = nextCard?.getBoundingClientRect();
-    if (!nextRect) return { overlaps: false, nextCardHeading: null };
-
-    // The point in the middle of wherever the two boxes actually overlap: only reachable when the
-    // dropdown really does extend past its own card and over the next one (the bug this proves fixed).
-    const top = Math.max(menuRect.top, nextRect.top);
-    const bottom = Math.min(menuRect.bottom, nextRect.bottom);
-    const left = Math.max(menuRect.left, nextRect.left);
-    const right = Math.min(menuRect.right, nextRect.right);
-    const overlaps = bottom > top && right > left;
-    if (!overlaps) return { overlaps, nextCardHeading: nextCard.querySelector('h2')?.textContent ?? null };
-
-    const x = Math.round((left + right) / 2);
-    const y = Math.round((top + bottom) / 2);
-    const topElement = document.elementFromPoint(x, y);
-    return {
-      overlaps,
-      x,
-      y,
-      nextCardHeading: nextCard.querySelector('h2')?.textContent ?? null,
-      topIsMenu: Boolean(topElement && menu.contains(topElement)),
-      topElementHtml: topElement?.outerHTML?.slice(0, 160) ?? null,
-    };
-  });
-
-  assert.equal(geometry.nextCardHeading, 'Model Selection');
-  assert.ok(
-    geometry.overlaps,
-    `the open dropdown must extend past the Providers card and over "Model Selection" for this test to ` +
-      `prove anything; it does not currently (geometry: ${JSON.stringify(geometry)})`,
-  );
-  assert.ok(
-    geometry.topIsMenu,
-    `document.elementFromPoint at (${geometry.x}, ${geometry.y}), where the dropdown overlaps the next ` +
-      `card, hit the card instead of the dropdown: ${geometry.topElementHtml}`,
-  );
-
-  // Leave the page as the next test expects it
-  await options.click('[data-provider-menu-trigger]');
-});
 
 test('plaintext keys move into the encrypted vault, and storage keeps only their last characters', async () => {
   const current = await extension.getStorage('llm-api-keys');
@@ -330,14 +285,25 @@ test('the settings page shows keys masked, replaces one through the background, 
   assert.equal(await options.$eval(`${card} [data-key-display]`, el => el.textContent), '••••4321');
   const pageText = await options.evaluate(() => document.body.innerText);
   assert.ok(!pageText.includes(NVIDIA_KEY) && !pageText.includes(OPENROUTER_KEY), 'no key on the page');
-  assert.equal(await options.$eval('#nvidia-api-key', el => el.value), '', 'the key field starts empty');
 
+  // The same Models page as the panel's: "Replace key" opens the editor, whose key field starts empty
+  const clickIn = (card, label) =>
+    options.evaluate(
+      (card, label) => {
+        const button = [...document.querySelectorAll(`${card} button`)].find(b => b.innerText.trim() === label);
+        button?.click();
+        return Boolean(button);
+      },
+      card,
+      label,
+    );
   const saveWithKey = async key => {
-    await options.click('#nvidia-api-key', { clickCount: 3 });
-    await options.type('#nvidia-api-key', key);
-    await options.evaluate(card => {
-      [...document.querySelectorAll(`${card} button`)].find(button => button.innerText.trim() === 'Save').click();
-    }, card);
+    if (!(await options.$('#models-nvidia-key'))) assert.ok(await clickIn(card, 'Replace key'));
+    await options.waitForSelector('#models-nvidia-key', { timeout: 5000 });
+    assert.equal(await options.$eval('#models-nvidia-key', el => el.value), '', 'the key field starts empty');
+    await options.click('#models-nvidia-key', { clickCount: 3 });
+    await options.type('#models-nvidia-key', key);
+    assert.ok(await clickIn(card, 'Save'));
   };
 
   // A key the provider refuses is saved, and the page says so
@@ -383,13 +349,13 @@ test('model calls are recorded as usage events, with no price for a model nobody
   await session.close();
 });
 
-test('the Models & usage page in the panel lists providers, models and usage', async () => {
+/** Opens the panel on the Models & usage page, from the drawer or the profile menu. */
+async function openModelsPage() {
   const panel = await extension.browser.newPage();
+  await panel.setViewport({ width: 400, height: 1400 });
   await panel.goto(`${extension.origin}/sidepanel.html`);
   await panel.waitForSelector('textarea');
   await panel.bringToFront();
-
-  // Reached from the drawer: its list, or the profile menu at its foot
   const clickByName = name =>
     panel.evaluate(name => {
       const button = [...document.querySelectorAll('button, [role="menuitem"]')].find(
@@ -413,8 +379,30 @@ test('the Models & usage page in the panel lists providers, models and usage', a
     found = await clickByName('Models & usage');
   }
   assert.ok(found, 'Models & usage is reachable from the profile menu');
-
   await panel.waitForSelector('[data-place="models"]', { timeout: 10000 });
+  return panel;
+}
+
+/** Clicks one of the Models page's tabs. */
+async function openTab(page, label) {
+  const found = await page.evaluate(label => {
+    const tab = [...document.querySelectorAll('[role="tab"]')].find(el => el.innerText.trim() === label);
+    tab?.click();
+    return Boolean(tab);
+  }, label);
+  assert.ok(found, `the ${label} tab`);
+  await sleep(300);
+}
+
+/** The model names a role's picker offers. */
+const roleOptions = (page, role) =>
+  page.evaluate(
+    role => [...document.querySelectorAll(`#models-role-${role} option`)].map(option => option.value),
+    role,
+  );
+
+test('the Models & usage page in the panel lists providers, models and usage', async () => {
+  const panel = await openModelsPage();
   await until(
     () => panel.evaluate(() => document.querySelector('[data-provider="nvidia"] [data-key-display]')?.textContent),
     'the masked key in the panel',
@@ -428,6 +416,7 @@ test('the Models & usage page in the panel lists providers, models and usage', a
     await panel.$eval('[data-model="openrouter:anthropic/claude-opus-5-5"]', el => el.innerText),
     /\$3\s*\/\s*\$15\b/,
   );
+  await openTab(panel, 'Usage');
   await until(
     () =>
       panel.evaluate(() => Number(document.querySelector('[data-usage-total]')?.getAttribute('data-usage-total')) > 0),
@@ -435,5 +424,148 @@ test('the Models & usage page in the panel lists providers, models and usage', a
   );
   const text = await panel.evaluate(() => document.body.innerText);
   assert.ok(!text.includes(NVIDIA_KEY_2) && !text.includes(OPENROUTER_KEY), 'no key in the panel');
+  await panel.close();
+});
+
+test('models are turned on and off, and roles offer only the ones that are on', async () => {
+  const panel = await openModelsPage();
+  const free = 'openrouter:meta-llama/llama-4-scout:free';
+  const opus = 'openrouter|anthropic/claude-opus-5-5';
+  await panel.waitForSelector(`[data-model="${free}"] [role="switch"]`, { timeout: 15000 });
+  // OpenRouter was saved with Claude Opus only: the free Llama is off, and no role offers it
+  assert.equal(await panel.$eval(`[data-model="${free}"]`, el => el.dataset.active), 'false');
+  await openTab(panel, 'Roles');
+  await panel.waitForSelector('#models-role-fast');
+  let fast = await roleOptions(panel, 'fast');
+  assert.ok(fast.includes(opus), 'an active model is offered');
+  assert.ok(!fast.includes('openrouter|meta-llama/llama-4-scout:free'), 'a model that is off is not offered');
+
+  // Turned on, it is offered; the provider's saved list is what changed
+  await openTab(panel, 'Models');
+  await panel.click(`[data-model="${free}"] [role="switch"]`);
+  await until(async () => {
+    const stored = await extension.getStorage('llm-api-keys');
+    return stored.providers.openrouter.modelNames.includes('meta-llama/llama-4-scout:free');
+  }, 'the model to be turned on');
+  await openTab(panel, 'Roles');
+  fast = await until(async () => {
+    const options = await roleOptions(panel, 'fast');
+    return options.includes('openrouter|meta-llama/llama-4-scout:free') ? options : null;
+  }, 'the role to offer the model');
+
+  // And off again: gone from the picker, and from storage
+  await openTab(panel, 'Models');
+  await panel.click(`[data-model="${free}"] [role="switch"]`);
+  await until(async () => {
+    const stored = await extension.getStorage('llm-api-keys');
+    return !stored.providers.openrouter.modelNames.includes('meta-llama/llama-4-scout:free');
+  }, 'the model to be turned off');
+  await openTab(panel, 'Roles');
+  await until(
+    async () => !(await roleOptions(panel, 'fast')).includes('openrouter|meta-llama/llama-4-scout:free'),
+    'the role to stop offering it',
+  );
+  // Keys never reach storage in the clear while toggling
+  assert.ok(!JSON.stringify(await extension.getStorage('llm-api-keys')).includes(OPENROUTER_KEY));
+  await panel.close();
+});
+
+test('local models that fit this computer are recommended, with install commands and installed ones marked', async () => {
+  const panel = await openModelsPage();
+  await openTab(panel, 'Local');
+  await panel.waitForSelector('[data-recommendation]', { timeout: 10000 });
+  const recs = await panel.$$eval('[data-recommendation]', items =>
+    items.map(item => ({
+      name: item.dataset.recommendation,
+      installed: item.dataset.installed,
+      command: item.querySelector('[data-command]')?.textContent ?? null,
+    })),
+  );
+  assert.ok(recs.length >= 2 && recs.length <= 4, `2–4 recommendations, got ${recs.length}`);
+  assert.ok(
+    recs.some(rec => rec.name === 'nomic-embed-text' && rec.installed === 'true'),
+    'installed one is marked',
+  );
+  for (const rec of recs.filter(rec => rec.installed === 'false')) {
+    assert.equal(rec.command, `ollama pull ${rec.name}`);
+  }
+  // Telling it the computer has more memory changes the advice
+  await panel.evaluate(() =>
+    [...document.querySelectorAll('[role="radio"]')].find(el => el.innerText.trim() === '64 GB')?.click(),
+  );
+  await until(
+    () => panel.evaluate(() => document.querySelector('[data-recommendation="qwen3:30b"]') !== null),
+    'bigger models for 64 GB',
+  );
+  assert.match(await panel.$eval('[data-spec]', el => el.innerText), /64 GB/);
+  await panel.close();
+});
+
+test('light work runs on the running local model, and what that saved shows in usage', async () => {
+  // OpenRouter's cheap model is the cloud alternative a summary would otherwise use
+  await extension.setStorage({
+    'model-settings': { roles: { fast: { providerId: 'openrouter', model: 'anthropic/claude-opus-5-5' } } },
+  });
+  const panel = await openModelsPage();
+  await openTab(panel, 'Local');
+  await until(
+    () => panel.evaluate(() => document.querySelector('[data-light-route]')?.getAttribute('data-light-route')),
+    'the light-work route',
+  );
+  assert.equal(await panel.$eval('[data-light-route]', el => el.dataset.lightRoute), 'local');
+  assert.match(await panel.$eval('[data-light-route]', el => el.innerText), /Ollama · qwen3\.8:8b/);
+
+  // A workspace summary is light work: with something to summarise, it is written by the local model
+  const now = Date.now();
+  await panel.evaluate(
+    item =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const tx = open.result.transaction('kbItems', 'readwrite');
+          tx.objectStore('kbItems').put(item);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    {
+      id: 'page:light-1',
+      sourceType: 'page',
+      sourceId: 'https://example.com/light',
+      title: 'A page to summarise',
+      url: 'https://example.com/light',
+      sourceDate: now,
+      sourceUpdatedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      chunkCount: 0,
+      unembedded: 0,
+      workspaceId: null,
+    },
+  );
+  const before = models.seen.filter(request => request.path === '/v1/chat/completions').length;
+  const reply = await panel.evaluate(() =>
+    chrome.runtime.sendMessage({ type: 'history_summarize', workspaceId: null, force: true, requestId: 'light' }),
+  );
+  assert.equal(reply.type, 'history_ok');
+  const calls = models.seen.filter(request => request.path === '/v1/chat/completions').slice(before);
+  assert.ok(calls.length >= 1, 'the local model was called');
+  assert.equal(JSON.parse(calls[0].body).model, 'qwen3.8:8b');
+
+  // Recorded as light work, free, with what the cloud model would have cost
+  const event = await until(async () => {
+    const rows = await readTable(options, 'usageEvents');
+    return rows.find(row => row.light && row.providerId === 'ollama');
+  }, 'a light usage event');
+  assert.equal(event.costUsd, 0);
+  assert.ok(event.savedUsd > 0, `saved ${event.savedUsd}`);
+  await openTab(panel, 'Usage');
+  await until(
+    () => panel.evaluate(() => document.querySelector('[data-light-saved]') !== null),
+    'the savings line in usage',
+  );
+  // Nothing told the user to start Ollama: it was running
+  assert.equal((await readTable(options, 'inbox')).filter(item => item.source === 'models').length, 0);
   await panel.close();
 });

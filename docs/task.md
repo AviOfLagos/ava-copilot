@@ -415,6 +415,50 @@ Plan: [wave2-plan.md](wave2-plan.md). Built by the lead so the parallel streams 
 - Tests: vault, provider keys and migration (fake-indexeddb), discovery per provider (mock fetch), catalog refresh,
   roles, usage events and caps, Live tokens, commands; `e2e/models.e2e.mjs` (its own model-list server).
 
+### Models rework: one page, active models, local first for light work (2026-10-16)
+
+Problems seen on the old screens (`node e2e/manual/models-shots.mjs <dir> <prefix>` takes 400 px shots): two model
+UIs (the settings page's providers + "Models" chips + Planner/Navigator + speech-to-text, and the panel's providers +
+catalog + roles) that did not agree — choosing the Smart role never changed the browser agent's Planner; every
+discovered model was offered to every role (hundreds with OpenRouter); roles with nothing to pick said only
+"none available yet"; Transcription offered models dictation cannot use; provider actions wrapped onto a second line;
+no last-check time; nothing about local models beyond "found on this Mac".
+
+- **One page** (`src/side-panel/models`, `ModelsHub`), tabs Models / Roles / Local / Usage. The settings page's Models
+  tab renders the same hub over its own port (`options/components/ModelSettings.tsx`; the options Tailwind config scans
+  the panel's models and ui folders and takes its colours). `options/components/models/ProviderCard.tsx` is gone.
+- **Active models** (`storage/lib/models/active.ts`): a provider's saved model names are its active models (what the
+  old "Models" chips edited); a provider with none saved offers all it lists. The registry turns on a sensible few the
+  first time it lists a provider with none (`seedActiveModels` in `catalog.ts`: every local chat/embedding model, or a
+  cloud provider's best per role). Switches write `llmProviderStore.setModelNames` (keys untouched; not a refresh
+  trigger). The last model of a provider stays on; models a role/agent/pinned embedding uses cannot be turned off.
+  `pickRoleModel({ activeOnly: true })` (used by `resolveRole` and the page) ignores inactive models, mappings and
+  agent models, but keeps the pinned embedding model. Each model row shows which roles it serves, and has a Test.
+- **Roles** pick from active models only; Smart/Fast are also the browser agent's Planner/Navigator (one choice writes
+  both, reasoning effort kept for OpenAI reasoning models); Transcription writes dictation's model when it is Gemini.
+  Empty roles say what would fix them and offer "Turn on" for the best inactive model.
+- **Local** (`storage/lib/models/recommend.ts`, pure): memory from `navigator.deviceMemory` (a floor at Chrome's 8 GB
+  cap, Brave reports more) or the user's pick (`localMemoryGb`), cores, WebGPU adapter vendor → 2–4 Ollama models
+  (chat, light, vision, embed) with size, why, `ollama pull …` (copy) or Installed + Test. `models_local_report`
+  reads Ollama's `/api/tags` and `/api/ps`; `models_test_model` asks one model for "OK" (metered). The page says
+  what a browser cannot see (real memory, disk, GPU memory).
+- **Light-work routing** (`background/models/light.ts`, decision `storage/lib/models/routing.ts`): `lightModel(task,
+  scope, fallback)` uses the active local model when "Prefer local for light tasks" is on (default) and its server
+  answers (a 1.5 s list request remembered for a minute; 404 counts as up, 403/network failure does not). Otherwise
+  it posts one Inbox alert ("Start Ollama to save cost — or allow cloud", `lightNoticeAt`) and uses the cloud's fast
+  role; "Allow cloud for light tasks" (`lightCloudAllowed`) silences it. Used by Inbox summaries (`inbox/model.ts`),
+  workspace summaries (`history/summaries.ts`) and routine model steps (`workflowModel('light')` in
+  `workflows/executors.ts`). Local light calls record `light: true` and `savedUsd` (the replaced cloud model's price,
+  `UsageScope.savedAgainst`); Usage shows "N light tasks ran locally, saving about $X".
+- Not routed yet (other streams' files, one-line swaps to `lightModel(...)`): reflection (`identity/register.ts`),
+  the brief (`brief/manager.ts`), chat summaries for `read_chat` (`chats/register.ts`), the graph builder
+  (`graph/builder.ts`), meeting summaries (`meetings/manager.ts`).
+- Tests: `storage/lib/models/__tests__/{active,recommend}.test.ts` (active filtering, defaults, toggles, roles, routing
+  decisions, spec → recommendation rules), `background/models/__tests__/light.test.ts` (local running / not running /
+  cloud allowed, the one-time notice, savings, 404 vs 403), catalog seeding; `e2e/models.e2e.mjs`: toggling models,
+  roles offering only active ones, recommendations (and the memory pick), a workspace summary routed to the mock
+  Ollama with its savings shown.
+
 ### Wave 2 — WS6 Interactive graph (built 2026-10-12)
 
 Plan: [wave2-plan.md](wave2-plan.md) § WS6. Replaces the canvas in the "Knowledge graph" entry above.

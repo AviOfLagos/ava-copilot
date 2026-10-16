@@ -1,6 +1,8 @@
 import { resolve } from 'node:path';
 // Tailwind's config loader ignores WXT aliases, so import withUI from source.
 import { withUI } from '../ui/lib/withUI';
+// The Models tab renders the panel's Models page: its colours and its files come along
+import panel from '../side-panel/tailwind.config';
 
 /*
  * The settings page renders its dark variant always (Options.tsx), and the colours that variant uses
@@ -17,7 +19,12 @@ const surface = {
 
 export default withUI({
   // This config sits in the page folder; don't scan it for class names.
-  content: [resolve(__dirname, '**/*.{js,ts,jsx,tsx}'), `!${resolve(__dirname, 'tailwind.config.ts')}`],
+  content: [
+    resolve(__dirname, '**/*.{js,ts,jsx,tsx}'),
+    `!${resolve(__dirname, 'tailwind.config.ts')}`,
+    resolve(__dirname, '../side-panel/models/**/*.{ts,tsx}'),
+    resolve(__dirname, '../side-panel/components/ui/**/*.{ts,tsx}'),
+  ],
   theme: {
     extend: {
       fontFamily: {
@@ -25,6 +32,7 @@ export default withUI({
         mono: ['"Geist Mono Variable"', 'ui-monospace', 'monospace'],
       },
       colors: {
+        ...(panel.theme?.extend?.colors as Record<string, unknown>),
         slate: surface,
         gray: {
           100: 'var(--color-accent)',

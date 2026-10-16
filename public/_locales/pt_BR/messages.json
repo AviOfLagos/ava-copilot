@@ -3075,7 +3075,7 @@
     "message": "Qual modelo faz o quê"
   },
   "models_roles_hint": {
-    "message": "Os recursos pedem um tipo de modelo, nunca um nome. Automático escolhe o melhor disponível, e um local quando a nuvem cai."
+    "message": "Os recursos pedem um tipo de modelo, nunca um nome. Cada função escolhe apenas entre os modelos ativos; Automático escolhe o melhor deles."
   },
   "models_role_fast": {
     "message": "Rápido"
@@ -6762,5 +6762,191 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Criar Links de reunião a partir do modelo"
+  },
+  "models_light_notice_title": {
+    "message": "Tarefas leves estão usando a nuvem"
+  },
+  "models_light_notice_body": {
+    "message": "Nenhum modelo local está rodando, então o trabalho leve (resumos, títulos, etapas de rotinas) usa um modelo na nuvem. Inicie o Ollama para economizar, ou permita a nuvem para tarefas leves em Modelos › Local."
+  },
+  "models_tab_models": {
+    "message": "Modelos"
+  },
+  "models_tab_roles": {
+    "message": "Funções"
+  },
+  "models_tab_local": {
+    "message": "Local"
+  },
+  "models_tab_usage": {
+    "message": "Uso"
+  },
+  "models_summary": {
+    "message": "$1 modelos ativos · trabalho inteligente: $2"
+  },
+  "models_summary_none": {
+    "message": "Nenhum provedor ainda. Adicione uma chave abaixo ou inicie o Ollama para modelos locais gratuitos."
+  },
+  "models_active_on": {
+    "message": "Ativar $1"
+  },
+  "models_active_off": {
+    "message": "Desativar $1"
+  },
+  "models_active_locked": {
+    "message": "Em uso em $1: escolha outro modelo lá primeiro."
+  },
+  "models_active_azure": {
+    "message": "Os modelos do Azure são suas implantações: edite o provedor para mudá-los."
+  },
+  "models_active_lastOne": {
+    "message": "$1 mantém pelo menos um modelo ativo. Remova o provedor para deixar de usá-lo."
+  },
+  "models_active_hint": {
+    "message": "$1 de $2 modelos estão ativos. As funções escolhem apenas entre os modelos ativos."
+  },
+  "models_catalog_filter": {
+    "message": "Mostrar"
+  },
+  "models_catalog_active": {
+    "message": "Ativos"
+  },
+  "models_catalog_emptyNoProvider": {
+    "message": "Adicione uma chave de provedor acima, ou inicie o Ollama, para ver modelos."
+  },
+  "models_catalog_emptyLocal": {
+    "message": "Nenhum modelo local. Inicie o Ollama ou o LM Studio, ou veja Local para modelos que cabem neste computador."
+  },
+  "models_test_ok": {
+    "message": "Respondeu em $1 ms."
+  },
+  "models_role_empty": {
+    "message": "Nenhum modelo ativo faz isso. Adicione uma chave de provedor ou ative um modelo."
+  },
+  "models_role_empty_local": {
+    "message": "Nenhum modelo local ativo. Inicie o Ollama ou o LM Studio e instale um (veja Local)."
+  },
+  "models_role_empty_embed": {
+    "message": "Nenhum modelo de embeddings ativo. Instale o nomic-embed-text no Ollama ou ative um."
+  },
+  "models_role_empty_gemini": {
+    "message": "Nenhum modelo ativo faz isso. Uma chave do Gemini resolve."
+  },
+  "models_role_turnOn": {
+    "message": "Ativar $1"
+  },
+  "models_role_planner": {
+    "message": "Também o planejador do agente de navegação."
+  },
+  "models_role_navigator": {
+    "message": "Também o navegador do agente de navegação."
+  },
+  "models_role_effort": {
+    "message": "Raciocínio"
+  },
+  "models_role_effortDefault": {
+    "message": "Padrão do provedor"
+  },
+  "models_role_dictationGemini": {
+    "message": "O ditado na caixa de chat precisa de um modelo Gemini; este atende às reuniões."
+  },
+  "models_provider_checked": {
+    "message": "verificado $1"
+  },
+  "models_light": {
+    "message": "Trabalho leve"
+  },
+  "models_light_prefer": {
+    "message": "Preferir local para tarefas leves"
+  },
+  "models_light_prefer_hint": {
+    "message": "Resumos, títulos, classificação, etapas de rotinas, resumos da Caixa de entrada e reflexão rodam em um modelo local quando houver um rodando. O agente de navegação e a visão mantêm suas funções."
+  },
+  "models_light_local": {
+    "message": "O trabalho leve roda em $1 (grátis, privado)."
+  },
+  "models_light_cloud": {
+    "message": "Nenhum modelo local rodando: o trabalho leve usa $1."
+  },
+  "models_light_cloudChosen": {
+    "message": "O trabalho leve usa $1."
+  },
+  "models_light_noCloud": {
+    "message": "nenhum modelo na nuvem ainda"
+  },
+  "models_light_recheck": {
+    "message": "Verificar de novo"
+  },
+  "models_light_allowCloud": {
+    "message": "Permitir nuvem para tarefas leves"
+  },
+  "models_light_cloudAllowed": {
+    "message": "Nuvem permitida para tarefas leves quando nenhum modelo local roda."
+  },
+  "models_light_cloudAllowed_undo": {
+    "message": "Perguntar de novo"
+  },
+  "models_rec": {
+    "message": "Modelos locais para este computador"
+  },
+  "models_spec_line": {
+    "message": "Memória $1 · $2 núcleos · GPU $3"
+  },
+  "models_spec_noGpu": {
+    "message": "não informada"
+  },
+  "models_spec_memory": {
+    "message": "Memória"
+  },
+  "models_spec_memoryAuto": {
+    "message": "Auto"
+  },
+  "models_spec_limits": {
+    "message": "Os navegadores arredondam a memória e muitas vezes a limitam (a 8 GB no Chrome), e não veem o espaço livre em disco nem a memória da GPU. Escolha sua memória para um ajuste melhor."
+  },
+  "models_rec_ollamaOff": {
+    "message": "O Ollama não está respondendo. Instale-o em ollama.com e inicie-o para que esta extensão possa chamá-lo:"
+  },
+  "models_rec_chat": {
+    "message": "Chat"
+  },
+  "models_rec_chat_why": {
+    "message": "Respostas e resumos neste computador: o maior que cabe com folga."
+  },
+  "models_rec_light": {
+    "message": "Leve"
+  },
+  "models_rec_light_why": {
+    "message": "Pequeno e rápido: títulos, classificação e etapas de rotinas."
+  },
+  "models_rec_vision": {
+    "message": "Visão"
+  },
+  "models_rec_vision_why": {
+    "message": "Lê capturas de tela e imagens localmente."
+  },
+  "models_rec_embed": {
+    "message": "Embeddings"
+  },
+  "models_rec_embed_why": {
+    "message": "Busca na memória pelo significado; pequeno e rápido."
+  },
+  "models_rec_size": {
+    "message": "$1 GB"
+  },
+  "models_rec_installed": {
+    "message": "Instalado"
+  },
+  "models_rec_copy": {
+    "message": "Copiar $1"
+  },
+  "models_rec_copied": {
+    "message": "Copiado"
+  },
+  "models_rec_loaded": {
+    "message": "Carregados agora: $1"
+  },
+  "models_usage_lightSaved": {
+    "message": "$1 tarefas leves rodaram localmente, economizando cerca de $2."
   }
 }

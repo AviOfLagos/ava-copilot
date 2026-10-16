@@ -4,3 +4,6 @@ export * from './health';
 export * from './capabilities';
 export * from './roles';
 export * from './protocol';
+export * from './active';
+export * from './routing';
+export * from './recommend';

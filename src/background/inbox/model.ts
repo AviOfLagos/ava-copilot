@@ -1,5 +1,5 @@
 import type { ChatModel } from '../llm/types';
-import { createRoleModel } from '../models/roles';
+import { lightModel } from '../models/light';
 import { resolveModels } from '../threads/factory';
 
 /**
@@ -8,10 +8,7 @@ import { resolveModels } from '../threads/factory';
  * model from the agent settings instead of failing the whole summary.
  */
 export async function summarizerModel(sessionId: string): Promise<ChatModel> {
-  try {
-    return (await createRoleModel('fast', { sessionId, notify: () => {} })).chatModel;
-  } catch {
-    const { navigator } = await resolveModels(null, { sessionId, notify: () => {} });
-    return navigator;
-  }
+  // Light work: a running local model first when the user prefers it, else the cloud's fast model
+  const scope = { sessionId, notify: () => {} };
+  return (await lightModel('inbox', scope, async () => (await resolveModels(null, scope)).navigator)).chatModel;
 }
