@@ -6,6 +6,7 @@ import type { SkillRecord, SkillSource } from './parse';
 import accountSwitching from './builtin/account-switching.md?raw';
 import chatApps from './builtin/chat-apps.md?raw';
 import gmail from './builtin/gmail.md?raw';
+import googleDrive from './builtin/google-drive.md?raw';
 import googleForms from './builtin/google-forms.md?raw';
 import whatsappWeb from './builtin/whatsapp-web.md?raw';
 
@@ -15,6 +16,7 @@ export const BUILTIN_SKILL_FILES: Record<string, string> = {
   'account-switching.md': accountSwitching,
   'gmail.md': gmail,
   'google-forms.md': googleForms,
+  'google-drive.md': googleDrive,
   'whatsapp-web.md': whatsappWeb,
 };
 

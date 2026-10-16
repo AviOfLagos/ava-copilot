@@ -7329,5 +7329,77 @@
   },
   "conn_setup_urlNotTyped": {
     "message": "請在聊天中親自輸入伺服器位址後再試一次：來自網頁或檔案的位址不會被使用。"
+  },
+  "drive_section_title": {
+    "message": "Google 雲端硬碟"
+  },
+  "drive_name": {
+    "message": "Google 雲端硬碟"
+  },
+  "drive_badge_noSetup": {
+    "message": "免設定"
+  },
+  "drive_section_how": {
+    "message": "透過你已登入的瀏覽器運作，免設定。在聊天中請我尋找、閱讀、儲存或建立檔案。"
+  },
+  "drive_add_label": {
+    "message": "從雲端硬碟新增：貼上文件、試算表、簡報或 PDF 的連結"
+  },
+  "drive_add_button": {
+    "message": "從雲端硬碟新增"
+  },
+  "drive_add_workspace": {
+    "message": "加入此工作區的知識庫"
+  },
+  "drive_add_noWorkspace": {
+    "message": "無工作區"
+  },
+  "drive_add_working": {
+    "message": "正在 Google 分頁中讀取檔案…"
+  },
+  "drive_add_signIn": {
+    "message": "我在 Google 的登入頁面，請登入，然後再按一次「從雲端硬碟新增」。"
+  },
+  "drive_add_notLink": {
+    "message": "這不是 Google 雲端硬碟、文件、試算表或簡報的連結。"
+  },
+  "drive_add_folder": {
+    "message": "這是資料夾，請貼上單一檔案的連結。"
+  },
+  "drive_add_noAccess": {
+    "message": "你的 Google 帳戶無法開啟該檔案。"
+  },
+  "drive_add_unreadable": {
+    "message": "雲端硬碟無法顯示此檔案的文字（圖片、掃描檔或二進位檔）。"
+  },
+  "drive_add_empty": {
+    "message": "該檔案沒有文字。"
+  },
+  "drive_add_blocked": {
+    "message": "你的防火牆設定封鎖了 Google 雲端硬碟。"
+  },
+  "drive_add_failed": {
+    "message": "無法新增該檔案，請再試一次。"
+  },
+  "drive_catalog_advanced": {
+    "message": "進階：Google 的 MCP 伺服器，需要你自己的 Google Cloud 用戶端（ID 與密鑰）"
+  },
+  "drive_add_saved": {
+    "message": "已將「$TITLE$」加入知識庫。",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
+  },
+  "drive_add_refreshed": {
+    "message": "已更新知識庫中的「$TITLE$」。",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Q3 plan"
+      }
+    }
   }
 }

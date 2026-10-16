@@ -12,6 +12,7 @@ import type { PanelApi } from '../registry';
 import AddConnector from './AddConnector';
 import VaultSettings from '../vault/VaultSettings';
 import ConnectorDetail from './ConnectorDetail';
+import { DriveSection } from './DriveSection';
 import { CATALOG_HOW, hostOf, STATUS_LABEL, statusTone } from './meta';
 import { SetupGuide } from './SetupGuide';
 import type { SetupTarget } from './SetupGuide';
@@ -122,6 +123,8 @@ function ConnectorList({
           </ul>
         )}
       </Section>
+
+      <DriveSection api={api} />
 
       <Section label={t('conn_catalog_title')}>
         <ul className="divide-border/60 divide-y">

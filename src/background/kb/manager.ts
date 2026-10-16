@@ -254,6 +254,40 @@ export class KnowledgeBase {
     return item!;
   }
 
+  /**
+   * Keeps or refreshes a document read somewhere other than a tab's page, under its own source id (e.g.
+   * `drive:<fileId>` for a Google Drive file), with the link that opens it. Saving it again replaces it.
+   */
+  async saveDocument(doc: {
+    sourceId: string;
+    title: string;
+    url: string;
+    text: string;
+    workspaceId: string | null;
+    agentId?: string | null;
+  }): Promise<KnowledgeItem> {
+    const text = doc.text.trim().slice(0, MAX_PAGE_CHARS);
+    if (!text) throw new Error(t('kb_pageEmpty'));
+    const item = await this.serial(async () => {
+      const now = Date.now();
+      return this.write(
+        {
+          sourceType: 'page',
+          sourceId: doc.sourceId,
+          title: doc.title,
+          url: doc.url,
+          sourceDate: now,
+          sourceUpdatedAt: now,
+          workspaceId: doc.workspaceId,
+          agentId: doc.agentId ?? null,
+        },
+        chunkPage(doc.url, text),
+      );
+    });
+    void this.embedPending();
+    return item!;
+  }
+
   /** Keeps something the user asked to remember: a fact, a decision, text from a page. */
   async saveNote(text: string, title?: string, workspaceId: string | null = null): Promise<KnowledgeItem> {
     const body = text.trim();

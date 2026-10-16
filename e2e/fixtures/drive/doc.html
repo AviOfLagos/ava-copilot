@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>__TITLE__ - Google Docs</title>
+    <style>
+      body {
+        font: 14px sans-serif;
+        margin: 16px;
+      }
+      [role='dialog'] {
+        border: 1px solid #888;
+        padding: 12px;
+        margin-top: 12px;
+        width: 420px;
+      }
+      [role='option'] {
+        padding: 4px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A stand-in for the Docs editor: title box, hidden text box (iframe), Share button and share dialog -->
+    <input class="docs-title-input" aria-label="Rename" value="__TITLE__" />
+    <div id="docs-titlebar-share-client-button">
+      <div role="button" tabindex="0" aria-label="Share. Private to only me.">Share</div>
+    </div>
+    <iframe class="docs-texteventtarget-iframe" title="Document content" style="width: 400px; height: 60px"></iframe>
+    <div id="dialog-root"></div>
+    <script>
+      const id = '__ID__';
+      const post = (what, body) =>
+        fetch(`/__fixture/${what}`, { method: 'POST', body: JSON.stringify({ id, ...body }) });
+
+      const editor = document.querySelector('iframe').contentDocument;
+      editor.body.contentEditable = 'true';
+      editor.addEventListener('paste', event => {
+        event.preventDefault();
+        void post('paste', { text: event.clipboardData.getData('text/plain') });
+      });
+      const title = document.querySelector('.docs-title-input');
+      title.addEventListener('change', () => void post('title', { title: title.value }));
+
+      document.querySelector('[aria-label^="Share. "]').addEventListener('click', () => {
+        if (document.querySelector('[role="dialog"]')) return;
+        const chips = [];
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        dialog.innerHTML = `<h2>Share “${document.title.replace(' - Google Docs', '')}”</h2>
+          <div class="chips"></div>
+          <input type="email" aria-label="Add people, groups, and calendar events" />
+          <button type="button" aria-haspopup="listbox" aria-label="Choose a role">Viewer</button>
+          <div role="listbox" hidden><div role="option">Viewer</div><div role="option">Commenter</div><div role="option">Editor</div></div>
+          <button type="button" aria-label="Send">Send</button>`;
+        document.getElementById('dialog-root').append(dialog);
+        const input = dialog.querySelector('input');
+        input.addEventListener('keydown', event => {
+          if (event.key !== 'Enter' || !input.value) return;
+          chips.push(input.value);
+          dialog.querySelector('.chips').textContent = chips.join(', ');
+          input.value = '';
+        });
+        const role = dialog.querySelector('[aria-haspopup]');
+        const listbox = dialog.querySelector('[role="listbox"]');
+        role.addEventListener('click', () => (listbox.hidden = false));
+        for (const option of listbox.querySelectorAll('[role="option"]')) {
+          option.addEventListener('click', () => {
+            role.textContent = option.textContent;
+            listbox.hidden = true;
+          });
+        }
+        dialog.querySelector('[aria-label="Send"]').addEventListener('click', async () => {
+          await post('share', { emails: chips, role: role.textContent });
+          dialog.remove();
+        });
+      });
+    </script>
+  </body>
+</html>

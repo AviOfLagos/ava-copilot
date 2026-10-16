@@ -32,7 +32,8 @@ export const CATALOG_HOW: Record<ConnectorCatalogId, MessageKey> = {
   slack: 'conn_catalog_slack',
   gmail: 'conn_catalog_google',
   google_calendar: 'conn_catalog_google',
-  google_drive: 'conn_catalog_google',
+  // Drive works through the signed-in browser (DriveSection); its MCP server is the advanced way
+  google_drive: 'drive_catalog_advanced',
 };
 
 const ERROR_TEXT: Record<string, MessageKey> = {

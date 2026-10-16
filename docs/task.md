@@ -1520,6 +1520,73 @@ notification) can land on Connectors; `ThreadManager.placeInWorkspace` gives a c
 one was deleted meanwhile (`picked` set, not found, so no fallback to the default) and the Home picker keeps the
 deleted id.
 
+### Google Drive through the signed-in browser (2026-10-16)
+
+Drive's MCP connector needs the user's own Google Cloud OAuth client, so for a normal user it never worked. Drive now
+works through the Google session the browser already has, the way WhatsApp Web and Gmail do: no project, no client,
+no token (the tab is the credential, so nothing here ever holds one). `src/background/drive/`, skill
+`src/storage/lib/skills/builtin/google-drive.md`.
+- **Where it works** (`tab.ts`): for a chat, a tab bound to it: a Drive/Docs tab it may already use (its own, or a
+  free one its binding may take over, never another chat's or a private one), else a new tab it opens; navigation goes
+  through the chat's `BrowserContext`. The panel and voice use a tab the extension opens for itself (inactive, id in
+  `storage.session`, reused while on Google and no chat holds it). Every address, and where Google's redirects land,
+  is checked against the firewall first (`DriveBlockedError`); the sign-in page is Google's own and only shown.
+- **Account**: the chat's workspace (`workspace.accounts.google`, or one named in `drive_search`'s `workspace`; panel
+  and voice: the picked / default workspace) goes into every address as `authuser=<email>`. Landing on
+  `accounts.google.com` raises `DriveSignInError`: in a chat the tab comes to the front, the chat says "I'm on
+  Google's sign-in page, please sign in" and a needs-user card ("Continue" / "Stop") waits; Continue tries once more.
+  The panel and voice say the same and bring the tab forward.
+- **Reading** (`service.ts`): `drive_search` (`drive/search?q=`) and `drive_list` (a folder or My Drive) read the
+  rows (`readDriveRows`, selectors and type words from the skill; ids from `data-id`). `drive_read` opens the file
+  (`open?id=` tells a bare id's kind) and takes Docs as `export?format=txt`, Sheets as `export?format=csv(&gid)`,
+  Slides as `export/txt`, fetched **from the Docs tab** (same origin, its session; opening an export as a page would
+  download a file). If the page cannot fetch it, the background fetches it with the browser's cookies (text types
+  only, ≤ 200 000 characters, 20 s); a Doc then falls back to `/mobilebasic`'s page text. Other files: a text file's
+  download, else Drive's viewer text (PDFs), read until it stops growing. An HTML body (sign-in or error page) never
+  counts as the file. The agent gets 12 000 characters, voice 4 000, always through `wrapUntrustedContent` (titles
+  included: a title giving orders arrives defused).
+- **Knowledge base**: `drive_save_to_knowledge` and the panel's "Add from Drive" (Connectors › Google Drive, a pasted
+  link and a workspace) call the new `KnowledgeBase.saveDocument` with source `drive:<fileId>` (item
+  `page:drive:<id>`, the plain editor link, the workspace): search and the graph pick it up from the usual change
+  event; adding again refreshes the one item ("Refreshed …"). Saving the same file from another workspace moves it
+  there (one item per file).
+- **Writing**: `drive_create_doc` opens `document/create?title=…(&folder=)`, waits for the editor's text box, renames
+  through the title box when needed, pastes the text into `docs-texteventtarget-iframe` (a paste event in the page's
+  world) and reads the export back to check it. A private Doc in the user's own Drive is an edit: no card, except in a
+  chat started by an agent or routine, where it passes `reviewAction` first. `drive_share({file, email, role})` fills
+  the share dialog (address chip and role: that shares nothing), puts the focus back in it, then passes
+  `reviewAction` as a commit (`permission`; the card shows the page's title and the dialog's contents, never the
+  model's wording) and presses Send only after the click; a refusal stops the task, a dialog that does not close is
+  "Drive did not confirm it". Trash and delete are left to the generic page actions (the click gate already stops
+  "Move to trash"), with the flow in the skill. **Upload is not built**: a file input needs a file the user picks, and
+  there is no clean path from the extension.
+- **Voice and Ava**: voice tools `drive_search`, `drive_read`, `drive_save_to_knowledge` (registered, so guarded after
+  the wake word like every registered tool), in Ava's catalog under "Memory, knowledge, Google Drive and other chats".
+- **Routines**: `step.agent` runs a chat with `origin: 'workflow'`, so a routine can call every drive action; reads
+  need nothing, and a share or a new Doc there waits for its approval (`reviewAction` treats the chat as unattended).
+  `step.tool` stays for connectors (MCP) only.
+- **Connectors**: a "Google Drive" section above the catalogue ("No setup", "Works through your signed-in browser"),
+  with "Add from Drive"; the MCP row now reads "Advanced: Google's MCP server, with your own Google Cloud client".
+- Not checked against the real Drive (no sign-in from here): the row, title-box and share-dialog selectors are the
+  skill's best reading of Google's page and may need an edit there; the URL forms were checked against public pages
+  (Slides `export/txt`, Docs `mobilebasic`, `authuser=`), `document/create?title=&folder=` was not.
+
+Tests: unit `drive/__tests__/urls.test.ts` (9: links, ids, `/u/<n>/`, look-alike hosts, exports, `authuser`),
+`service.test.ts` (11: skill selectors and kinds, search with the account, the sign-in page, export in the tab, the
+background and `mobilebasic` fallbacks, HTML never taken, a bare id resolved and a PDF from the viewer, folders and
+foreign links refused, a new Doc pasted in the page world and checked, share filled → asked → Send only after yes),
+`kb/__tests__/manager.test.ts` (+1 `saveDocument`). E2E in Brave `e2e/drive.e2e.mjs` (6) with fixture pages for
+Drive, the Docs editor (title box, text box iframe, share dialog) and the sign-in page, answered for every tab and the
+worker through browser-wide `Fetch` interception: Connectors row + Add from Drive saved then refreshed; a chat
+search → read → save (titles defused inside the untrusted block, `authuser` on every address, the user's tab never
+driven); the sign-in page handed over; a new Doc with title and text, no card; sharing only after Confirm with the
+address on the card; the firewall blocking Docs. `kb`, `connections`, `integrations`, `skills`, `ava-hub` E2E green.
+
+For the lead (files not owned): the one-line import in `src/background/registers.ts`, the additive
+`KnowledgeBase.saveDocument` in `kb/manager.ts`, two `TOOL_GROUPS` lines and the group title in
+`capabilities/catalog.ts`, the built-in list in `skills/__tests__/skills.test.ts`. The confirm card does not show a
+request's `intent`; showing it would put "Share 'Q3 plan' with ada@x.com as editor" on the card word for word.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

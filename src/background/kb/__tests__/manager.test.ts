@@ -221,6 +221,31 @@ describe('KnowledgeBase', () => {
     expect(hits[0].chunk.anchor).toEqual({ kind: 'page', url: 'https://example.com/handbook' });
   });
 
+  it('keeps a document under its own source id, and saving it again replaces it', async () => {
+    const link = 'https://docs.google.com/document/d/abc123def456/edit';
+    const first = await kb.saveDocument({
+      sourceId: 'drive:abc123def456',
+      title: 'Q3 plan',
+      url: link,
+      text: 'Revenue grew twelve percent.',
+      workspaceId: 'nexprove',
+    });
+    expect(first).toMatchObject({ id: 'page:drive:abc123def456', url: link, workspaceId: 'nexprove' });
+    await kb.saveDocument({
+      sourceId: 'drive:abc123def456',
+      title: 'Q3 plan',
+      url: link,
+      text: 'Revenue grew fifteen percent.',
+      workspaceId: 'nexprove',
+    });
+    expect((await store.items()).filter(item => item.sourceId === 'drive:abc123def456')).toHaveLength(1);
+    const hits = await kb.search('revenue fifteen', 3, 'nexprove');
+    expect(hits[0].chunk.text).toContain('fifteen');
+    await expect(
+      kb.saveDocument({ sourceId: 'drive:x', title: 'x', url: link, text: '  ', workspaceId: null }),
+    ).rejects.toThrow('kb_pageEmpty');
+  });
+
   it('sweeps settled chats and done meetings that changed, and nothing else', async () => {
     const settled = await chat('Settled', [['q1', 'a1']]);
     const running = await chat('Running', [['q2', 'a2']]);
