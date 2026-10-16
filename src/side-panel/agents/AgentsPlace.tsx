@@ -3,7 +3,6 @@ import { ChevronRight, Plus } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db, localDay } from '@extension/storage';
 import type { AgentProfile, JobRecord, RunRecord, UsageEvent } from '@extension/storage';
-import { AGENT_TEMPLATE_IDS } from '@src/background/agents/templates';
 import type { AgentTemplateId } from '@src/background/agents/templates';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -12,6 +11,7 @@ import type { PanelApi } from '../registry';
 import { whenText } from '../workflows/meta';
 import AgentDetail, { Avatar, StateBadge } from './AgentDetail';
 import { formatUsd, isOpenRun, nextScheduled, triggerText } from './meta';
+import { TeamList, TeamSetup } from './TeamView';
 
 /**
  * Agents: they work for the user on their own, in a window of their own. The list puts what waits for the
@@ -21,7 +21,9 @@ import { formatUsd, isOpenRun, nextScheduled, triggerText } from './meta';
 
 type MessageKey = Parameters<typeof t>[0];
 
-const TEMPLATES: Record<AgentTemplateId, { avatar: string; name: MessageKey; hint: MessageKey }> = {
+// The single templates; the starter team has its own card (TeamSetup)
+const SINGLE_TEMPLATES = ['social_watcher', 'research_scout'] as const satisfies readonly AgentTemplateId[];
+const TEMPLATES: Record<(typeof SINGLE_TEMPLATES)[number], { avatar: string; name: MessageKey; hint: MessageKey }> = {
   social_watcher: { avatar: '👀', name: 'agents_template_social', hint: 'agents_template_social_hint' },
   research_scout: { avatar: '🔭', name: 'agents_template_research', hint: 'agents_template_research_hint' },
 };
@@ -98,7 +100,10 @@ function AgentList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => voi
   const review = agents
     .filter(agent => agent.draft)
     .sort((a, b) => (b.draft?.createdAt ?? 0) - (a.draft?.createdAt ?? 0));
-  const others = agents.filter(agent => !agent.draft).sort((a, b) => a.name.localeCompare(b.name));
+  // Agents that own an area are in the team list; the rest here
+  const others = agents
+    .filter(agent => !agent.draft && !agent.owns?.length)
+    .sort((a, b) => a.name.localeCompare(b.name));
   const openRunOf = (id: string) => runs.find(run => run.agentId === id && isOpenRun(run));
 
   const fromTemplate = async (template: AgentTemplateId) => {
@@ -155,6 +160,8 @@ function AgentList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => voi
         </section>
       )}
 
+      <TeamList agents={agents} openRunOf={openRunOf} onOpen={onOpen} />
+
       {others.length > 0 && (
         <section aria-labelledby="agents-yours" className="flex flex-col gap-1.5">
           <h2 id="agents-yours" className="label-mono px-1">
@@ -174,11 +181,13 @@ function AgentList({ api, onOpen }: { api: PanelApi; onOpen: (id: string) => voi
         </div>
       )}
 
+      <TeamSetup api={api} agents={agents} />
+
       <section aria-labelledby="agents-templates" className="flex flex-col gap-1.5">
         <h2 id="agents-templates" className="label-mono px-1">
           {t('agents_section_templates')}
         </h2>
-        {AGENT_TEMPLATE_IDS.map(template => {
+        {SINGLE_TEMPLATES.map(template => {
           const meta = TEMPLATES[template];
           return (
             <div key={template} className="glass flex items-center gap-3 rounded-xl px-3 py-2.5">

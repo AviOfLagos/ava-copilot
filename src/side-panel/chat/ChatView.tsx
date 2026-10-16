@@ -40,6 +40,8 @@ import { Button } from '../components/ui/button';
 import { duration, toTurns } from './turns';
 import type { StepKind, Turn } from './turns';
 import { useAssistantName } from '../hooks/useAssistant';
+import { registeredTurnAddons } from '../registry';
+import type { PanelApi } from '../registry';
 
 const STEP_ICONS: Record<StepKind, LucideIcon> = {
   plan: Route,
@@ -85,6 +87,8 @@ interface ChatViewProps {
   onSpeak?: (threadId: string, messageId: string, text: string) => void;
   onStopSpeaking?: () => void;
   footer?: React.ReactNode;
+  // For what features show under a turn (registerTurnAddon), e.g. opening an agent's chat
+  api?: PanelApi;
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -186,6 +190,7 @@ export default function ChatView({
   onSpeak,
   onStopSpeaking,
   footer,
+  api,
 }: ChatViewProps) {
   const running = thread.status === 'running' || thread.status === 'waiting_confirm';
   const idle = thread.status === 'idle' || thread.status === 'error';
@@ -241,6 +246,9 @@ export default function ChatView({
                 </Message>
               )}
               {showTrail && <RunTrail turn={turn} held={held} activity={thread.activity} open={latest} />}
+              {registeredTurnAddons().map(([id, Addon]) => (
+                <Addon key={id} thread={thread} requestSeq={turn.request?.seq ?? null} api={api} />
+              ))}
               {showFailedRetry && onRetry && (
                 <div className="pl-1">
                   <Button variant="outline" size="sm" onClick={onRetry}>

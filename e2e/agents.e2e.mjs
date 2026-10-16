@@ -22,10 +22,20 @@ const done = () => [{ done: { text: 'Scripted steps complete.', success: true } 
 const typeName = name => page => [
   { input_text: { intent: 'Fill the name', index: page.find('input', 'name'), text: name } },
 ];
+const HANDOFF_TASK = 'look into the fixture quote form';
+const OWNER_REQUEST = 'Make another agent that owns Research';
 const scenarios = {
   'agent-create': [() => [{ create_agent: { intent: 'Draft the agent', request: REQUEST } }], done],
   // What the agent itself does on each run, in its own tab
   'agent-run': [typeName('Scout'), done],
+  // The chat hands the work to the agent that owns research, then says so and finishes
+  'handoff-chat': [
+    () => [{ hand_to_agent: { intent: 'Hand it over', area: 'research', agent: '', task: HANDOFF_TASK } }],
+    done,
+  ],
+  // The research agent's run: its task names no scenario, so it follows the one started last
+  'handoff-run': [done],
+  'agent-create-owner': [() => [{ create_agent: { intent: 'Draft the agent', request: OWNER_REQUEST } }], done],
 };
 
 // The agent as the scripted model drafts it, in the flat shape the structured call asks for
@@ -45,6 +55,8 @@ const authored = fixtureUrl => ({
   dailyUsd: 1,
   maxStepsPerRun: 30,
   runsPerDay: 10,
+  owns: [],
+  charter: '',
 });
 
 const textOf = message =>
@@ -78,7 +90,8 @@ function reply(res, request, content) {
 }
 
 async function startProxy(mock) {
-  const seen = { authoring: [] };
+  // `next`: what the next agent-drafting call answers instead of the fixture scout, when a test sets it
+  const seen = { authoring: [], next: null };
   const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', '*');
@@ -98,7 +111,9 @@ async function startProxy(mock) {
             .map(textOf)
             .join('\n'),
         );
-        return reply(res, request, authored(mock.fixtureUrl));
+        const answer = seen.next ?? authored(mock.fixtureUrl);
+        seen.next = null;
+        return reply(res, request, answer);
       }
     }
     // Everything else is the scripted chat and the fixture page
@@ -117,6 +132,40 @@ async function startProxy(mock) {
     seen,
     close: () => new Promise(resolve => server.close(resolve)),
   };
+}
+
+/** Changes one record in the extension's IndexedDB, for a test's setup only (the panel never writes there). */
+function patchRecord(page, store, id, patch) {
+  return page.evaluate(
+    (store, id, patch) =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const objects = open.result.transaction(store, 'readwrite').objectStore(store);
+          const get = objects.get(id);
+          get.onsuccess = () => {
+            const record = get.result;
+            for (const [path, value] of Object.entries(patch)) {
+              const keys = path.split('.');
+              let target = record;
+              for (const key of keys.slice(0, -1)) target = target[key];
+              target[keys.at(-1)] = value;
+            }
+            const put = objects.put(record);
+            put.onsuccess = () => {
+              resolve(true);
+              open.result.close();
+            };
+            put.onerror = () => reject(put.error);
+          };
+          get.onerror = () => reject(get.error);
+        };
+      }),
+    store,
+    id,
+    patch,
+  );
 }
 
 function readStore(page, store) {
@@ -330,4 +379,148 @@ test('"New agent" opens a new chat with the agent starter in the composer, focus
       throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 800)}`);
     });
   await session.close();
+});
+
+test('a team: set up from a starter, Ava hands work to its owner, the answer comes back, one owner per area', async () => {
+  // 1. "Set up my team" makes a draft of the starter the user ticks; Create turns it on
+  const setup = await openSession(extension, mock);
+  const fixtureUrl = setup.web.url();
+  await setup.panel.bringToFront();
+  await setup.click('Menu');
+  await setup.click('Agents');
+  await setup.panel.waitForSelector('[data-team-setup]', { timeout: 10000 });
+  await setup.panel.evaluate(() => document.querySelector('[data-team-setup]').click());
+  await setup.panel.waitForSelector('[data-team-template="team_research"]', { timeout: 10000 });
+  await setup.panel.evaluate(() => document.querySelector('[data-team-template="team_research"]').click());
+  await setup.panel.evaluate(() => document.querySelector('[data-team-create]').click());
+  const draft = await until(async () => {
+    const agents = await readStore(setup.panel, 'agents');
+    return agents.find(agent => agent.template === 'team_research') ?? null;
+  }, 'the starter became a draft');
+  assert.equal(draft.status, 'draft');
+  assert.deepEqual(draft.owns, ['research']);
+  assert.deepEqual(await agentRuns(setup.panel, draft.id), [], 'a draft never runs');
+  // Test setup only: its runs start on the fixture page instead of a search engine
+  await patchRecord(setup.panel, 'agents', draft.id, { startUrl: fixtureUrl, 'draft.profile.startUrl': fixtureUrl });
+  await setup.panel.waitForSelector('[data-agent="Research"]', { timeout: 10000 });
+  await setup.panel.evaluate(() => document.querySelector('[data-agent="Research"]').click());
+  await setup.panel.waitForSelector('[data-agent-draft]', { timeout: 10000 });
+  await setup.click('Create');
+  const research = await until(async () => {
+    const stored = (await readStore(setup.panel, 'agents')).find(agent => agent.id === draft.id);
+    return stored?.status === 'active' && !stored.draft ? stored : null;
+  }, 'Create turned it on');
+  await setup.close();
+
+  // 2. In a chat, "have the research agent look into …": a hand-off card, a run in the agents' window, and the
+  // answer posted back in the chat
+  const session = await openSession(extension, mock);
+  mock.start('handoff-chat');
+  mock.start('handoff-run');
+  await session.send(`Run the scripted scenario handoff-chat. Have the research agent ${HANDOFF_TASK}.`);
+  await session.waitForEnd(90000);
+  const run = await until(
+    async () => (await agentRuns(session.panel, research.id)).find(item => item.trigger.type === 'handoff') ?? null,
+    'the hand-off started a run',
+  );
+  assert.equal(run.attended, true);
+  assert.equal(run.tainted, false, "the user's own words are trusted");
+  assert.equal(run.spec.task, HANDOFF_TASK);
+  assert.equal(run.spec.handoff.area, 'research');
+  const chat = (await readStore(session.panel, 'threads')).find(thread => thread.id === run.trigger.detail);
+  assert.notEqual(chat.origin, 'agent', 'handed over from the user chat');
+  await session.panel.bringToFront();
+  await session.panel.waitForSelector('[data-handoff-agent="Research"]', { timeout: 20000 }).catch(async error => {
+    throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 800)}`);
+  });
+
+  const ended = await until(
+    async () => {
+      const current = (await agentRuns(session.panel, research.id)).find(item => item.id === run.id);
+      return ['succeeded', 'failed', 'cancelled', 'interrupted'].includes(current.status) ? current : null;
+    },
+    'the handed-over run ended',
+    120000,
+  );
+  assert.equal(ended.status, 'succeeded', `the run succeeded: ${JSON.stringify(ended.error)}`);
+  const place = await runPlace(session.panel, ended);
+  const agentWindow = await session.panel.evaluate(
+    async () => (await chrome.storage.session.get('agent-window'))['agent-window']?.windowId,
+  );
+  assert.equal(place.thread.origin, 'agent');
+  assert.equal(place.tab?.windowId, agentWindow, "it ran in the agents' window");
+
+  const answer = await until(
+    async () => {
+      const messages = (await readStore(session.panel, 'messages')).filter(message => message.threadId === chat.id);
+      return messages.find(message => message.content.startsWith('**Research** is done:')) ?? null;
+    },
+    'the answer was posted back in the chat',
+    30000,
+  ).catch(async error => {
+    const runs = (await readStore(session.panel, 'runs')).filter(item => item.id === run.id);
+    const jobs = (await readStore(session.panel, 'jobs')).filter(job => job.kind === 'agent-handoff-post');
+    const messages = (await readStore(session.panel, 'messages')).filter(message => message.threadId === chat.id);
+    const thread = (await readStore(session.panel, 'threads')).find(item => item.id === chat.id);
+    throw new Error(
+      `${error.message}: ${JSON.stringify({ spec: runs[0]?.spec, jobs, status: thread?.status, messages: messages.map(m => [m.actor, m.content.slice(0, 60)]) })}`,
+    );
+  });
+  assert.match(answer.content, /E2E scenario finished/);
+  await session.panel.bringToFront();
+  await session.panel.waitForFunction(
+    () => {
+      const card = document.querySelector('[data-handoff-agent="Research"]');
+      return card?.getAttribute('data-handoff') === 'done' && /Research is done/.test(document.body.innerText);
+    },
+    { polling: 300, timeout: 20000 },
+  );
+  const card = await session.panel.evaluate(() => document.querySelector('[data-handoff-agent="Research"]').innerText);
+  assert.match(card, /Handed to Research/);
+  assert.match(card, /done/);
+  assert.match(card, /E2E scenario finished/);
+
+  // 3. The team view shows it with what it owns and its last result
+  await session.click('Menu');
+  await session.click('Agents');
+  await session.panel.waitForFunction(
+    () => /Last: E2E scenario finished/.test(document.querySelector('[data-team-agent="Research"]')?.innerText ?? ''),
+    { polling: 300, timeout: 10000 },
+  );
+  const teamText = await session.panel.evaluate(() => document.querySelector('[data-agents-team]').innerText);
+  assert.match(teamText, /research/);
+  assert.match(teamText, /E2E scenario finished/);
+  await session.close();
+
+  // 4. A second agent that claims the same area (in other words) is refused at Create, and stays a draft
+  const second = await openSession(extension, mock);
+  proxy.seen.next = {
+    ...authored(fixtureUrl),
+    name: 'Rival researcher',
+    triggers: [{ type: 'manual', value: '' }],
+    owns: ['Researches'],
+    charter: 'Also research',
+  };
+  mock.start('agent-create-owner');
+  await second.send(`Run the scripted scenario agent-create-owner. ${OWNER_REQUEST}`);
+  await second.waitForEnd(90000);
+  const rival = await until(
+    async () => (await readStore(second.panel, 'agents')).find(agent => agent.name === 'Rival researcher') ?? null,
+    'the rival was drafted',
+  );
+  await second.panel.bringToFront();
+  await second.click('Menu');
+  await second.click('Agents');
+  await second.panel.waitForSelector('[data-agent="Rival researcher"]', { timeout: 10000 });
+  await second.panel.evaluate(() => document.querySelector('[data-agent="Rival researcher"]').click());
+  await second.panel.waitForSelector('[data-agent-draft]', { timeout: 10000 });
+  await second.click('Create');
+  await second.panel.waitForFunction(
+    () => /already owns research/.test(document.querySelector('[role="alert"]')?.innerText ?? ''),
+    { polling: 300, timeout: 10000 },
+  );
+  const after = (await readStore(second.panel, 'agents')).find(agent => agent.id === rival.id);
+  assert.equal(after.status, 'draft', 'the rival stays a draft');
+  assert.deepEqual(second.panelErrors, []);
+  await second.close();
 });

@@ -5,7 +5,7 @@ import { createLogger } from '../log';
 import { registerCommand } from '../registry';
 import { AGENT_ROLES } from './profile';
 import type { AgentService } from './service';
-import { AGENT_TEMPLATE_IDS } from './templates';
+import { AGENT_TEMPLATE_IDS, TEAM_TEMPLATE_IDS } from './templates';
 
 /** The panel's commands for agents. Each replies `agents_ok` with its result, or an error sentence. */
 
@@ -33,6 +33,8 @@ export const fieldsPatchSchema = z
       runsPerDay: z.number().int().min(1).max(288),
     }),
     inboxResults: z.boolean(),
+    owns: z.array(z.string().max(40)).max(6),
+    charter: z.string().max(200).nullable(),
   })
   .partial()
   .strict();
@@ -58,6 +60,17 @@ export function registerAgentCommands(service: AgentService): void {
     'agents_template',
     z.object({ template: z.enum(AGENT_TEMPLATE_IDS), workspaceId: z.string().max(100).nullable().optional() }),
     async input => ({ id: (await service.fromTemplate(input.template, input.workspaceId ?? null)).id }),
+  );
+  // "Set up my team": a draft for each starter the user ticked
+  command(
+    'agents_team_setup',
+    z.object({
+      templates: z.array(z.enum(TEAM_TEMPLATE_IDS)).min(1).max(TEAM_TEMPLATE_IDS.length),
+      workspaceId: z.string().max(100).nullable().optional(),
+    }),
+    async input => ({
+      ids: (await service.setUpTeam(input.templates, input.workspaceId ?? null)).map(agent => agent.id),
+    }),
   );
   command('agents_confirm', z.object({ id }), async input => {
     const agent = await service.confirm(input.id);

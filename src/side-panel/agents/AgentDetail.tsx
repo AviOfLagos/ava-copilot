@@ -50,6 +50,8 @@ const FIELD_LABEL: Record<ProfileField, MessageKey> = {
   workspaceId: 'agents_field_workspace',
   inboxResults: 'agents_field_inboxResults',
   executor: 'agents_field_executor',
+  owns: 'agents_field_owns',
+  charter: 'agents_field_charter',
 };
 
 export function Avatar({ agent, size = 'md' }: { agent: Pick<AgentProfile, 'avatar' | 'name'>; size?: 'md' | 'lg' }) {
@@ -429,6 +431,12 @@ export default function AgentDetail({ id, api, onBack }: AgentDetailProps) {
         !isNew && (
           <Section id="agent-profile" title={t('agents_section_profile')}>
             <dl className="glass rounded-xl px-3 py-1.5">
+              {(fields.owns?.length ?? 0) > 0 && (
+                <Row label={t('agents_field_owns')}>
+                  <span data-agent-owns>{fields.owns!.join(', ')}</span>
+                  {fields.charter && <span className="text-muted-foreground block">{fields.charter}</span>}
+                </Row>
+              )}
               <Row label={t('agents_field_instructions')}>
                 <span className="whitespace-pre-wrap">{fields.instructions}</span>
               </Row>

@@ -6,6 +6,7 @@ import { services } from '../registry/services';
 import { postToInbox, settleInboxItem } from '../workflows/inbox';
 import { workflowService } from '../workflows/instance';
 import { RUN_JOB, runKey } from '../workflows/service';
+import { HandoffService } from './handoff';
 import { AgentService } from './service';
 import { AgentWindow } from './window';
 import { WorkflowTabTriggers } from './workflow-tab';
@@ -34,7 +35,7 @@ const workflowTabs = new WorkflowTabTriggers({
   },
 });
 
-export const agentService = new AgentService({
+export const agentService: AgentService = new AgentService({
   db,
   jobs,
   threads: () => services().threads,
@@ -53,4 +54,13 @@ export const agentService = new AgentService({
   onWorkflowTab: async event => {
     await workflowTabs.fire(event);
   },
+  // A run handed over from a chat posts its answer back there
+  onRunEnded: (runId: string): Promise<void> => handoffService.deliver(runId),
+});
+
+/** Ava's hand-offs to the agent that owns the work (hand_to_agent), and their answers back in the chat. */
+export const handoffService: HandoffService = new HandoffService({
+  db,
+  jobs,
+  requestRun: (agentId, request) => agentService.requestRun(agentId, request),
 });

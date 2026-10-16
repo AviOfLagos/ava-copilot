@@ -38,6 +38,8 @@ export function triggerText(trigger: AgentTrigger): string {
       return trigger.source ? t('agents_trigger_inboxFrom', [trigger.source]) : t('agents_trigger_inbox');
     case 'topic':
       return t('agents_trigger_topic', [trigger.topic]);
+    case 'meeting_ended':
+      return t('agents_trigger_meeting');
     case 'manual':
       return t('agents_trigger_manual');
   }
@@ -48,6 +50,7 @@ export const TRIGGER_TYPE_LABEL: Record<AgentTrigger['type'], MessageKey> = {
   tab: 'agents_triggerType_tab',
   inbox: 'agents_triggerType_inbox',
   topic: 'agents_triggerType_topic',
+  meeting_ended: 'agents_triggerType_meeting',
   manual: 'agents_triggerType_manual',
 };
 
@@ -62,6 +65,8 @@ export function runTriggerText(run: Pick<RunRecord, 'trigger'>): string {
     workflow: 'agents_by_workflow',
     chat: 'agents_by_chat',
     voice: 'agents_by_voice',
+    meeting: 'agents_by_meeting',
+    handoff: 'agents_by_handoff',
   };
   return t(key[run.trigger.type] ?? 'agents_by_hand');
 }

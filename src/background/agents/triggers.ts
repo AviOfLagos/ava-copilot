@@ -1,4 +1,4 @@
-import type { AgentProfile, InboxItem } from '@extension/storage';
+import type { AgentProfile, InboxItem, MeetingRecord } from '@extension/storage';
 import { isDraftAgent } from './profile';
 import { matchesUrlPattern, tabPatternIssue } from './patterns';
 
@@ -50,6 +50,53 @@ export function agentsForInboxItem(
           trigger.type === 'inbox' && (!trigger.source || trigger.source.toLowerCase() === item.source.toLowerCase()),
       ),
   );
+}
+
+/**
+ * The agents a meeting that ended wakes: those with a meeting_ended trigger, in its workspace or in none. An agent
+ * in a workspace never hears of a meeting outside it, and an agent that took the notes itself is not woken by them.
+ */
+export function agentsForMeeting(
+  agents: readonly AgentProfile[],
+  meeting: Pick<MeetingRecord, 'workspaceId' | 'agentId'>,
+): AgentProfile[] {
+  return agents.filter(
+    agent =>
+      isAwake(agent) &&
+      agent.id !== meeting.agentId &&
+      (!agent.workspaceId || agent.workspaceId === (meeting.workspaceId ?? null)) &&
+      agent.triggers.some(trigger => trigger.type === 'meeting_ended'),
+  );
+}
+
+// The most of a meeting's notes a run is given
+const MEETING_DATA_CHARS = 8000;
+
+/** A meeting's notes as a run's data: what was said came from the call, so it is data, never instructions. */
+export function meetingData(
+  meeting: Pick<MeetingRecord, 'title' | 'note' | 'markdown' | 'startedAt' | 'endedAt' | 'url'>,
+): string {
+  const note = meeting.note;
+  const when = new Date(meeting.startedAt).toISOString().slice(0, 16).replace('T', ' ');
+  const lines = [`A meeting ended: "${note?.title || meeting.title}" (${when}).`];
+  if (note) {
+    if (note.participants.length) lines.push(`Participants: ${note.participants.join(', ')}`);
+    if (note.tldr.length) lines.push(`Summary:\n${note.tldr.map(line => `- ${line}`).join('\n')}`);
+    if (note.decisions.length) lines.push(`Decisions:\n${note.decisions.map(line => `- ${line}`).join('\n')}`);
+    if (note.actionItems.length) {
+      lines.push(
+        `Action items:\n${note.actionItems
+          .map(item => `- ${item.task} (owner: ${item.owner || 'unassigned'}${item.due ? `, due ${item.due}` : ''})`)
+          .join('\n')}`,
+      );
+    }
+    if (note.openQuestions.length) {
+      lines.push(`Open questions:\n${note.openQuestions.map(line => `- ${line}`).join('\n')}`);
+    }
+  } else if (meeting.markdown.trim()) {
+    lines.push(meeting.markdown.trim());
+  }
+  return lines.join('\n').slice(0, MEETING_DATA_CHARS);
 }
 
 export interface TabEvent {

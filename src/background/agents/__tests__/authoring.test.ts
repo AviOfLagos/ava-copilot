@@ -28,6 +28,8 @@ const answer = (overrides: Partial<AuthoredAgent> = {}): AuthoredAgent => ({
   dailyUsd: 0.5,
   maxStepsPerRun: 15,
   runsPerDay: 12,
+  owns: [],
+  charter: '',
   ...overrides,
 });
 

@@ -83,6 +83,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   list_agents: 'tasks',
   run_agent: 'tasks',
   install_skill: 'tasks',
+  hand_to_agent: 'tasks',
   get_brief: 'meetings',
   get_schedule: 'meetings',
   join_next_meeting: 'meetings',

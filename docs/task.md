@@ -1575,6 +1575,60 @@ Known gaps:
 - `fflate` is a devDependency bundled into the extension; moving it to `dependencies` is the lead's call.
 - Background error sentences of the fetcher are English in every locale.
 
+### Agents that own their work (2026-10-16)
+
+A team of agents, each owning an area of work, that Ava hands work to. `src/background/agents/{handoff,
+handoff-state,team,team-section}.ts`, `src/side-panel/agents/{TeamView,HandoffCard}.tsx`, locale keys `agents_`.
+
+- **Ownership.** `AgentProfileFields.owns?: string[]` (≤ 6 areas, ≤ 40 chars) and `charter?: string | null`
+  (≤ 200), optional fields (no Dexie version bump). Areas compare by `areaKey` (lower case, letters and digits,
+  each word singular, "e-mail" → "email"), so "Email", "emails" and "E-mail" are one area. `ownershipClash`: no two
+  created, switched-on agents a chat could see together own the same area (same workspace, or either in none). Checked
+  at Create/Apply (when the agent is or becomes on), hand edits of an agent that is on, and resume; drafts and paused
+  agents own nothing. Editor fields "Areas it owns" and the charter; the authoring call writes `owns`/`charter` too
+  (only when the user says the agent handles an area).
+- **Hand-off.** Chat action and voice tool `hand_to_agent({area|agent, task})`. `HandoffService.handOff` resolves
+  the switched-on owner (exact area first, then one area's words inside the other; a paused owner is named and
+  refused) or the agent by name, among the chat's team only (`teamOf`: created agents of the chat's workspace and of
+  none; a chat in no workspace sees only agents in none). It starts a run with `trigger {type:'handoff', detail:
+  threadId}`, attended, queued behind an open run, and `spec.handoff {threadId, requestSeq, area, from, postedAt}`.
+  Trust: the task is trusted only when the user's own words (the chat's last user message, or the voice
+  conversation's recent words) cover ≥ 80 % of its words; otherwise the run gets the user's words as its task and
+  Ava's wording as wrapped data, tainted. Refused from any chat the user is not in (`origin` agent/workflow/brief),
+  so an agent's run can never chain a hand-off; the bus keeps its own hop limit. When the run ends
+  (`AgentServiceDeps.onRunEnded`), its answer is posted in the chat as the planner ("**Mail** is done: …", or why it
+  could not finish), once (`postedAt` in a transaction); a chat busy with another task gets it when free (watched
+  each second for 20 s, and a job `agent-handoff-post` every 5 s up to 10 min that survives a restart; recovery
+  posts what ended unposted in the last day). Voice: the agent's chat is announced by the voice watch like a
+  `do_task` chat ("… is done. The result: …"); the answer also lands in the voice conversation's chat.
+- **Prompt block.** `[Your agents]` in each step's browser state of a chat the user is in (`teamSectionFor`, one
+  line in `agent/prompts/base.ts` beside the workspace and connector sections): the team's areas and charters and
+  when to hand over. Voice: the `hand_to_agent` declaration's description is a getter listing the voice
+  conversation's workspace's team from a snapshot refreshed by Dexie hooks on `agents`. `TOOL_GROUPS.hand_to_agent
+  = 'tasks'`, so `what_can_you_do` lists it.
+- **Starter team** (`TEAM_TEMPLATE_IDS`, drafts only, via "Set up my team" with a workspace choice; command
+  `agents_team_setup`): Mail (`mail.google.com`, gmail + account-switching skills, weekday 09:00 + manual, triages
+  and leaves draft replies), Social (x.com/linkedin.com, drafts and schedules, stops before Post/Schedule), Research
+  (open web, brief saved with `save_to_knowledge`, publishes `research.brief`), Meetings follow-up (new trigger
+  `meeting_ended`: a `db.meetings` `updating` hook on status `done` → `onMeetingEnded`, tainted, notes as data via
+  `meetingData`, once per meeting and agent, same workspace or none; drafts action items and follow-up emails) and
+  Calendar (calendar.google.com, proposes slots, never saves or sends invites). Each says it never sends, posts,
+  accepts, deletes or buys; the gate holds anyway (agent chats always ask). A starter whose area is already owned
+  shows who owns it and cannot be ticked.
+- **Panel.** Agents place: "Your team" (agents that own something: state badge, area chips, last result or
+  charter), the setup card, the rest under "Your agents". Chat: a registered turn add-on (`registerTurnAddon` in
+  `side-panel/registry.ts`, rendered by `ChatView` under a turn's steps) shows "Handed to Mail · running / waits
+  for you (amber) / done: <first line>" from the run record, with a link to the agent's chat.
+- Tests: unit `agents/__tests__/team.test.ts` (17: area keys, owns normalising, clash rules, templates valid,
+  team per workspace, resolution, trust, prompt block, meetings, Create/edit/resume refused, team setup, hand-off
+  posted once, busy chat via job, Ava's wording as tainted data, refusals, queueing, meeting runs). E2E
+  `e2e/agents.e2e.mjs` (+1): Set up my team → Research draft → Create; chat "have the research agent look into …"
+  → card → run in the agents' window → "**Research** is done" in the chat and the card done → team view shows the
+  last result; a rival drafted owning "Researches" is refused at Create and stays a draft. `voice.e2e.mjs` tool list
+  updated; `ava-hub` green.
+- Not done: no E2E of the voice hand-off (the voice tool shares `handOff` with the chat action); the meeting trigger
+  has no E2E (unit only).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

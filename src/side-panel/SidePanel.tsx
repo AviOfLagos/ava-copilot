@@ -964,6 +964,7 @@ const SidePanel = () => {
             }
             onSpeak={(threadId, messageId, text) => post({ type: 'speak_say', threadId, messageId, text })}
             onStopSpeaking={() => post({ type: 'speak_stop' })}
+            api={panelApi}
             footer={
               (canTeach || savedSkillIn === thread.id) && (
                 <TeachCard

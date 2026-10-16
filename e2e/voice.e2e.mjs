@@ -109,6 +109,8 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'list_workflows',
       'list_agents',
       'run_agent',
+      // Ava hands work to the agent that owns its area
+      'hand_to_agent',
       'read_inbox',
       'set_up_connection',
       'end_conversation',

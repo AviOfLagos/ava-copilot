@@ -7549,5 +7549,186 @@
         "example": "pdf"
       }
     }
+  },
+  "agents_trigger_meeting": {
+    "message": "你做了筆記的會議結束時"
+  },
+  "agents_triggerType_meeting": {
+    "message": "會議結束"
+  },
+  "agents_by_meeting": {
+    "message": "會議結束後"
+  },
+  "agents_by_handoff": {
+    "message": "由對話交辦"
+  },
+  "agents_field_owns": {
+    "message": "負責"
+  },
+  "agents_field_charter": {
+    "message": "職責"
+  },
+  "agents_edit_owns": {
+    "message": "負責的領域"
+  },
+  "agents_edit_ownsHint": {
+    "message": "以逗號分隔，例如 email、research。Ava 會把這些領域的工作交給它；兩個同時開啟的代理不能負責同一個領域。"
+  },
+  "agents_edit_charter": {
+    "message": "一句話說明它的用途"
+  },
+  "agents_team_title": {
+    "message": "你的團隊"
+  },
+  "agents_team_intro": {
+    "message": "負責某個工作領域的代理。向 Ava 提出該領域的事，她就會交給它們。"
+  },
+  "agents_team_owns": {
+    "message": "負責 $AREAS$",
+    "placeholders": {
+      "areas": {
+        "content": "$1",
+        "example": "email, research"
+      }
+    }
+  },
+  "agents_team_last": {
+    "message": "上次：$TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "Three emails need a reply"
+      }
+    }
+  },
+  "agents_team_noResult": {
+    "message": "還沒有結果"
+  },
+  "agents_team_mail": {
+    "message": "郵件"
+  },
+  "agents_team_mail_hint": {
+    "message": "在你已登入的 Gmail 閱讀、分類並草擬回覆。從不寄出。"
+  },
+  "agents_team_social": {
+    "message": "社群"
+  },
+  "agents_team_social_hint": {
+    "message": "在 X 和 LinkedIn 草擬並排程貼文。發布一律等你點擊。"
+  },
+  "agents_team_research": {
+    "message": "研究"
+  },
+  "agents_team_research_hint": {
+    "message": "上網研究，並把摘要寫進你的知識庫。"
+  },
+  "agents_team_meetings": {
+    "message": "會議後續"
+  },
+  "agents_team_meetings_hint": {
+    "message": "會議結束後，依筆記草擬待辦事項與後續郵件。"
+  },
+  "agents_team_calendar": {
+    "message": "行事曆"
+  },
+  "agents_team_calendar_hint": {
+    "message": "讀取你的一天並提議時段。未經你點擊絕不接受或寄出邀請。"
+  },
+  "agents_setup_title": {
+    "message": "建立我的團隊"
+  },
+  "agents_setup_intro": {
+    "message": "勾選你要的代理。每個都會成為草稿，由你檢查並建立；在那之前什麼都不會執行。"
+  },
+  "agents_setup_create": {
+    "message": "建立草稿"
+  },
+  "agents_setup_owned": {
+    "message": "$NAME$ 已負責這個領域",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_setup_none": {
+    "message": "請至少勾選一個代理。"
+  },
+  "agents_setup_done": {
+    "message": "有 $COUNT$ 份草稿在「待檢查」等你。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "agents_handoff_title": {
+    "message": "已交給 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_area": {
+    "message": "負責 $AREA$",
+    "placeholders": {
+      "area": {
+        "content": "$1",
+        "example": "email"
+      }
+    }
+  },
+  "agents_handoff_queued": {
+    "message": "等待開始"
+  },
+  "agents_handoff_running": {
+    "message": "執行中"
+  },
+  "agents_handoff_waiting": {
+    "message": "等你處理"
+  },
+  "agents_handoff_done": {
+    "message": "完成"
+  },
+  "agents_handoff_failed": {
+    "message": "未能完成"
+  },
+  "agents_handoff_stopped": {
+    "message": "已停止"
+  },
+  "agents_handoff_a11y": {
+    "message": "已交給 $NAME$：$STATE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      },
+      "state": {
+        "content": "$2",
+        "example": "running"
+      }
+    }
+  },
+  "agents_handoff_open": {
+    "message": "開啟 $NAME$ 的對話",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
+  },
+  "agents_handoff_answer": {
+    "message": "在 $NAME$ 的對話中回覆",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Mail"
+      }
+    }
   }
 }
