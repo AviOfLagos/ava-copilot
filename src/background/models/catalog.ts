@@ -1,5 +1,6 @@
 import {
   db as defaultDb,
+  defaultActiveModels,
   getProviderTypeByProviderId,
   isKeyOptional,
   isLocalProvider,
@@ -234,6 +235,21 @@ export async function probeLocalServers(
   ]);
 }
 
+/**
+ * A provider listed for the first time with no models chosen gets a sensible few turned on (every local model, or a
+ * cloud provider's best per kind of work), so the role pickers start short instead of offering hundreds.
+ */
+async function seedActiveModels(providers: Record<string, ProviderConfig>, checked: ProviderCheck[]): Promise<void> {
+  for (const check of checked) {
+    const config = providers[check.providerId];
+    if (!config || check.entries.length === 0) continue;
+    const type = config.type ?? getProviderTypeByProviderId(check.providerId);
+    if (type === ProviderTypeEnum.AzureOpenAI || (config.modelNames ?? []).length > 0) continue;
+    const names = defaultActiveModels(check.entries, isLocalProvider({ ...config, type }));
+    if (names.length) await llmProviderStore.setModelNames(check.providerId, names);
+  }
+}
+
 export interface RefreshReport {
   checked: ProviderCheck[];
   local: LocalServerProbe[];
@@ -255,6 +271,7 @@ export async function refreshCatalog(options: RefreshOptions = {}): Promise<Refr
     options.signal?.throwIfAborted();
     await applyCheck(check, database);
   }
+  await seedActiveModels(providers, checked);
 
   // Providers no longer configured leave the catalog and the health record
   const configured = new Set(Object.keys(providers));

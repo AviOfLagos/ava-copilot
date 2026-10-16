@@ -5,7 +5,7 @@ import { getDefaultDisplayNameFromProviderId, ProviderTypeEnum, takesBaseUrl } f
 import type { LocalServerKind, ProviderHint } from '@extension/storage';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { HealthDot, inputClass, Section } from './ui';
+import { HealthDot, inputClass, Section, timeAgo } from './ui';
 import type { ProviderRow, ProvidersState } from './useProviders';
 
 type MessageKey = Parameters<typeof t>[0];
@@ -148,6 +148,15 @@ function ProviderEditor({ row, state }: { row: ProviderRow; state: ProvidersStat
         <Button size="sm" variant="ghost" disabled={!!state.busy[row.id]} onClick={() => state.cancel(row.id)}>
           {t('models_cancel')}
         </Button>
+        {/* A provider that needs a key gets a new one or is removed; only optional keys can go */}
+        {row.hasKey && row.keyOptional && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => void state.removeKey(row.id).then(() => state.cancel(row.id))}>
+            {t('models_key_remove')}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -176,34 +185,36 @@ function ProviderItem({ row, state }: { row: ProviderRow; state: ProvidersState 
       </div>
 
       {!editing && (
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-muted-foreground font-mono text-[11.5px]" data-key-display>
-            {row.hasKey ? row.keyDisplay : row.keyOptional ? t('models_key_notNeeded') : t('models_key_none')}
-          </span>
-          <span className="flex-1" />
-          <Button size="sm" variant="ghost" onClick={() => state.edit(row.id, {})}>
-            {row.hasKey ? t('models_key_replace') : t('models_edit')}
-          </Button>
-          {/* A provider that needs a key gets a new one or is removed; only optional keys can go */}
-          {row.hasKey && row.keyOptional && (
-            <Button size="sm" variant="ghost" onClick={() => void state.removeKey(row.id)}>
-              {t('models_key_remove')}
+        <>
+          <div className="mt-0.5 flex items-center gap-2 pl-4">
+            <span className="text-muted-foreground font-mono text-[11.5px]" data-key-display>
+              {row.hasKey ? row.keyDisplay : row.keyOptional ? t('models_key_notNeeded') : t('models_key_none')}
+            </span>
+            {row.health?.checkedAt ? (
+              <span className="text-muted-foreground ml-auto font-mono text-[10.5px]" data-checked-at>
+                {t('models_provider_checked', [timeAgo(row.health.checkedAt)])}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-1 flex items-center justify-end gap-0.5">
+            <Button size="sm" variant="ghost" onClick={() => state.edit(row.id, {})}>
+              {row.hasKey ? t('models_key_replace') : t('models_edit')}
             </Button>
-          )}
-          <Button size="sm" variant="ghost" disabled={!!state.busy[row.id]} onClick={() => void state.check(row.id)}>
-            {t('models_test')}
-          </Button>
-          <Button
-            size="sm"
-            variant={confirmRemove ? 'destructive' : 'ghost'}
-            onBlur={() => setConfirmRemove(false)}
-            onClick={() => {
-              if (!confirmRemove) setConfirmRemove(true);
-              else void state.remove(row.id);
-            }}>
-            {confirmRemove ? t('models_removeConfirm') : t('models_remove')}
-          </Button>
-        </div>
+            <Button size="sm" variant="ghost" disabled={!!state.busy[row.id]} onClick={() => void state.check(row.id)}>
+              {t('models_test')}
+            </Button>
+            <Button
+              size="sm"
+              variant={confirmRemove ? 'destructive' : 'ghost'}
+              onBlur={() => setConfirmRemove(false)}
+              onClick={() => {
+                if (!confirmRemove) setConfirmRemove(true);
+                else void state.remove(row.id);
+              }}>
+              {confirmRemove ? t('models_removeConfirm') : t('models_remove')}
+            </Button>
+          </div>
+        </>
       )}
 
       {editing && <ProviderEditor row={row} state={state} />}

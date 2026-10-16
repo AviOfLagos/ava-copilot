@@ -2,6 +2,7 @@ import { ProviderTypeEnum } from '../settings/types';
 import { getProviderTypeByProviderId, isLocalProvider, providerIsUsable } from '../settings/llmProviders';
 import type { ProviderConfig } from '../settings/llmProviders';
 import type { ModelConfig } from '../settings/agentModels';
+import { activeModelIds, modelKey } from './active';
 import { fitsRole, scoreForRole, tagsFromName, TAG, withTags } from './capabilities';
 import type { ProviderHealth } from './health';
 import type { ModelSettingsRecord, RoleTarget } from './settings';
@@ -37,6 +38,8 @@ export interface RoleInputs {
   agentId?: string | null;
   // Providers whose circuit breaker is open right now
   down?: Set<string>;
+  // Pick only from active models (./active.ts); the pinned embedding model is kept either way
+  activeOnly?: boolean;
 }
 
 /** Tags a provider's kind adds to a model's own: every Gemini chat model can search with Google and hear audio. */
@@ -151,8 +154,10 @@ export function pickRoleModel(inputs: RoleInputs): RoleChoice | null {
   const agentConfigs = Object.values(inputs.agentModels ?? {}).filter((config): config is ModelConfig => !!config);
   for (const config of agentConfigs) preferred.add(`${config.provider}:${config.modelName}`);
   const context = { preferred, agentProviders: new Set(agentConfigs.map(config => config.provider)) };
+  const active = inputs.activeOnly ? activeModelIds(providers, inputs.catalog) : null;
+  const isActive = (target: RoleTarget) => !active || active.has(modelKey(target.providerId, target.model));
   const ranked = [...fromCatalog, ...saved]
-    .filter(entry => fitsRole(entry, role))
+    .filter(entry => fitsRole(entry, role) && isActive(entry))
     .map(entry => ({ entry, score: scoreForRole(entry, role, context) }))
     .sort((a, b) => b.score - a.score || a.entry.id.localeCompare(b.entry.id))
     .map(({ entry }) => entry);
@@ -167,13 +172,13 @@ export function pickRoleModel(inputs: RoleInputs): RoleChoice | null {
   };
 
   const mapped = mappedTarget(inputs);
-  if (mapped && usable(mapped.target.providerId)) {
+  if (mapped && usable(mapped.target.providerId) && (isActive(mapped.target) || mapped.source === 'pinned')) {
     if (!isDown(mapped.target.providerId) || role === 'embed') return choose(mapped.target, mapped.source);
     return standInFor(mapped.target.providerId) ?? choose(mapped.target, mapped.source);
   }
 
   const setting = settingTarget(inputs);
-  if (setting && usable(setting.providerId)) {
+  if (setting && usable(setting.providerId) && isActive(setting)) {
     if (!isDown(setting.providerId)) return choose(setting, 'setting');
     return standInFor(setting.providerId) ?? choose(setting, 'setting');
   }

@@ -33,3 +33,14 @@ main textarea {
 ::selection {
   background: rgb(var(--primary-rgb) / 0.3);
 }
+
+/* The Models tab is the panel's Models page */
+@layer components {
+  .label-mono {
+    font-family: 'Geist Mono Variable', ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+}

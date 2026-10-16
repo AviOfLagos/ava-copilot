@@ -3006,7 +3006,7 @@
     "message": "各項工作使用的模型"
   },
   "models_roles_hint": {
-    "message": "各功能只指定模型種類，不指定名稱。「自動」會選出可用的最佳模型，雲端故障時改用本機模型。"
+    "message": "功能只要求某種模型，從不指定名稱。每個角色只從已啟用的模型中挑選；「自動」會挑其中最好的。"
   },
   "models_role_fast": {
     "message": "快速"
@@ -6693,5 +6693,191 @@
   },
   "flow_template_meetings_a11y": {
     "message": "從範本建立「會議連結」草稿"
+  },
+  "models_light_notice_title": {
+    "message": "輕量工作正在使用雲端"
+  },
+  "models_light_notice_body": {
+    "message": "沒有本機模型在執行，所以輕量工作（摘要、標題、例行步驟）會使用雲端模型。啟動 Ollama 以節省費用，或在「模型 › 本機」允許輕量工作使用雲端。"
+  },
+  "models_tab_models": {
+    "message": "模型"
+  },
+  "models_tab_roles": {
+    "message": "角色"
+  },
+  "models_tab_local": {
+    "message": "本機"
+  },
+  "models_tab_usage": {
+    "message": "用量"
+  },
+  "models_summary": {
+    "message": "已啟用 $1 個模型 · 進階工作：$2"
+  },
+  "models_summary_none": {
+    "message": "尚未設定提供者。在下方新增金鑰，或啟動 Ollama 使用免費的本機模型。"
+  },
+  "models_active_on": {
+    "message": "啟用 $1"
+  },
+  "models_active_off": {
+    "message": "停用 $1"
+  },
+  "models_active_locked": {
+    "message": "正用於「$1」：請先在那裡選擇其他模型。"
+  },
+  "models_active_azure": {
+    "message": "Azure 的模型就是它的部署：請編輯提供者來變更。"
+  },
+  "models_active_lastOne": {
+    "message": "$1 至少要保留一個啟用的模型。若要停止使用，請移除該提供者。"
+  },
+  "models_active_hint": {
+    "message": "$2 個模型中已啟用 $1 個。角色只會從已啟用的模型中選擇。"
+  },
+  "models_catalog_filter": {
+    "message": "顯示"
+  },
+  "models_catalog_active": {
+    "message": "已啟用"
+  },
+  "models_catalog_emptyNoProvider": {
+    "message": "在上方新增提供者金鑰，或啟動 Ollama，即可看到模型。"
+  },
+  "models_catalog_emptyLocal": {
+    "message": "沒有本機模型。啟動 Ollama 或 LM Studio，或到「本機」查看適合這台電腦的模型。"
+  },
+  "models_test_ok": {
+    "message": "在 $1 毫秒內回應。"
+  },
+  "models_role_empty": {
+    "message": "沒有已啟用的模型能做這件事。新增提供者金鑰，或啟用一個模型。"
+  },
+  "models_role_empty_local": {
+    "message": "沒有已啟用的本機模型。啟動 Ollama 或 LM Studio 並安裝一個（見「本機」）。"
+  },
+  "models_role_empty_embed": {
+    "message": "沒有已啟用的嵌入模型。在 Ollama 安裝 nomic-embed-text，或啟用一個。"
+  },
+  "models_role_empty_gemini": {
+    "message": "沒有已啟用的模型能做這件事。Gemini 金鑰即可涵蓋。"
+  },
+  "models_role_turnOn": {
+    "message": "啟用 $1"
+  },
+  "models_role_planner": {
+    "message": "也是瀏覽器代理的規劃者。"
+  },
+  "models_role_navigator": {
+    "message": "也是瀏覽器代理的導航者。"
+  },
+  "models_role_effort": {
+    "message": "推理"
+  },
+  "models_role_effortDefault": {
+    "message": "提供者預設"
+  },
+  "models_role_dictationGemini": {
+    "message": "聊天框的語音輸入需要 Gemini 模型；這個模型用於會議。"
+  },
+  "models_provider_checked": {
+    "message": "$1檢查"
+  },
+  "models_light": {
+    "message": "輕量工作"
+  },
+  "models_light_prefer": {
+    "message": "輕量工作優先使用本機"
+  },
+  "models_light_prefer_hint": {
+    "message": "有本機模型執行時，摘要、標題、分類、例行步驟、收件匣摘要與每日回顧都會在本機模型上執行。瀏覽器代理與視覺維持各自的角色。"
+  },
+  "models_light_local": {
+    "message": "輕量工作在 $1 上執行（免費、私密）。"
+  },
+  "models_light_cloud": {
+    "message": "沒有本機模型在執行：輕量工作使用 $1。"
+  },
+  "models_light_cloudChosen": {
+    "message": "輕量工作使用 $1。"
+  },
+  "models_light_noCloud": {
+    "message": "尚無雲端模型"
+  },
+  "models_light_recheck": {
+    "message": "再檢查一次"
+  },
+  "models_light_allowCloud": {
+    "message": "允許輕量工作使用雲端"
+  },
+  "models_light_cloudAllowed": {
+    "message": "沒有本機模型執行時，允許輕量工作使用雲端。"
+  },
+  "models_light_cloudAllowed_undo": {
+    "message": "再次詢問"
+  },
+  "models_rec": {
+    "message": "適合這台電腦的本機模型"
+  },
+  "models_spec_line": {
+    "message": "記憶體 $1 · $2 核心 · GPU $3"
+  },
+  "models_spec_noGpu": {
+    "message": "未回報"
+  },
+  "models_spec_memory": {
+    "message": "記憶體"
+  },
+  "models_spec_memoryAuto": {
+    "message": "自動"
+  },
+  "models_spec_limits": {
+    "message": "瀏覽器會將記憶體四捨五入，且常有上限（Chrome 為 8 GB），也看不到可用磁碟空間或 GPU 記憶體。選擇你的記憶體大小以獲得更合適的建議。"
+  },
+  "models_rec_ollamaOff": {
+    "message": "Ollama 沒有回應。請從 ollama.com 安裝，然後以允許此擴充功能呼叫的方式啟動："
+  },
+  "models_rec_chat": {
+    "message": "聊天"
+  },
+  "models_rec_chat_why": {
+    "message": "在這台電腦上回答與摘要：能順暢執行的最大模型。"
+  },
+  "models_rec_light": {
+    "message": "輕量"
+  },
+  "models_rec_light_why": {
+    "message": "小巧快速：標題、分類與例行步驟。"
+  },
+  "models_rec_vision": {
+    "message": "視覺"
+  },
+  "models_rec_vision_why": {
+    "message": "在本機讀取螢幕截圖與圖片。"
+  },
+  "models_rec_embed": {
+    "message": "嵌入"
+  },
+  "models_rec_embed_why": {
+    "message": "依語意搜尋記憶；小巧快速。"
+  },
+  "models_rec_size": {
+    "message": "$1 GB"
+  },
+  "models_rec_installed": {
+    "message": "已安裝"
+  },
+  "models_rec_copy": {
+    "message": "複製 $1"
+  },
+  "models_rec_copied": {
+    "message": "已複製"
+  },
+  "models_rec_loaded": {
+    "message": "目前已載入：$1"
+  },
+  "models_usage_lightSaved": {
+    "message": "有 $1 項輕量工作在本機執行，約省下 $2。"
   }
 }

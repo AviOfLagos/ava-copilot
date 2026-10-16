@@ -3006,7 +3006,7 @@
     "message": "Which model does what"
   },
   "models_roles_hint": {
-    "message": "Features ask for a kind of model, never a name. Automatic picks the best one available, and a local one when the cloud is down."
+    "message": "Features ask for a kind of model, never a name. Each role picks only from models that are on; Automatic picks the best of them."
   },
   "models_role_fast": {
     "message": "Fast"
@@ -6693,5 +6693,191 @@
   },
   "flow_template_meetings_a11y": {
     "message": "Draft Meeting links from the template"
+  },
+  "models_light_notice_title": {
+    "message": "Light tasks are using the cloud"
+  },
+  "models_light_notice_body": {
+    "message": "No local model is running, so light work (summaries, titles, routine steps) uses a cloud model. Start Ollama to save cost, or allow cloud for light tasks in Models › Local."
+  },
+  "models_tab_models": {
+    "message": "Models"
+  },
+  "models_tab_roles": {
+    "message": "Roles"
+  },
+  "models_tab_local": {
+    "message": "Local"
+  },
+  "models_tab_usage": {
+    "message": "Usage"
+  },
+  "models_summary": {
+    "message": "$1 models on · smart work: $2"
+  },
+  "models_summary_none": {
+    "message": "No provider yet. Add a key below, or start Ollama for free local models."
+  },
+  "models_active_on": {
+    "message": "Turn on $1"
+  },
+  "models_active_off": {
+    "message": "Turn off $1"
+  },
+  "models_active_locked": {
+    "message": "In use for $1: pick another model there first."
+  },
+  "models_active_azure": {
+    "message": "Azure models are its deployments: edit the provider to change them."
+  },
+  "models_active_lastOne": {
+    "message": "$1 keeps at least one model on. Remove the provider to stop using it."
+  },
+  "models_active_hint": {
+    "message": "$1 of $2 models are on. Roles choose only from models that are on."
+  },
+  "models_catalog_filter": {
+    "message": "Show"
+  },
+  "models_catalog_active": {
+    "message": "On"
+  },
+  "models_catalog_emptyNoProvider": {
+    "message": "Add a provider key above, or start Ollama, to see models."
+  },
+  "models_catalog_emptyLocal": {
+    "message": "No local models. Start Ollama or LM Studio, or see Local for models that fit this computer."
+  },
+  "models_test_ok": {
+    "message": "Answered in $1 ms."
+  },
+  "models_role_empty": {
+    "message": "No model that is on can do this. Add a provider key, or turn a model on."
+  },
+  "models_role_empty_local": {
+    "message": "No local model is on. Start Ollama or LM Studio and install one (see Local)."
+  },
+  "models_role_empty_embed": {
+    "message": "No embedding model is on. Install nomic-embed-text in Ollama, or turn one on."
+  },
+  "models_role_empty_gemini": {
+    "message": "No model that is on can do this. A Gemini key covers it."
+  },
+  "models_role_turnOn": {
+    "message": "Turn on $1"
+  },
+  "models_role_planner": {
+    "message": "Also the browser agent's planner."
+  },
+  "models_role_navigator": {
+    "message": "Also the browser agent's navigator."
+  },
+  "models_role_effort": {
+    "message": "Reasoning"
+  },
+  "models_role_effortDefault": {
+    "message": "Provider default"
+  },
+  "models_role_dictationGemini": {
+    "message": "Dictation in the chat box needs a Gemini model; this one serves meetings."
+  },
+  "models_provider_checked": {
+    "message": "checked $1"
+  },
+  "models_light": {
+    "message": "Light work"
+  },
+  "models_light_prefer": {
+    "message": "Prefer local for light tasks"
+  },
+  "models_light_prefer_hint": {
+    "message": "Summaries, titles, sorting, routine steps, Inbox summaries and reflection run on a local model when one is running. The browser agent and vision keep their roles."
+  },
+  "models_light_local": {
+    "message": "Light work runs on $1 (free, private)."
+  },
+  "models_light_cloud": {
+    "message": "No local model is running: light work uses $1."
+  },
+  "models_light_cloudChosen": {
+    "message": "Light work uses $1."
+  },
+  "models_light_noCloud": {
+    "message": "no cloud model yet"
+  },
+  "models_light_recheck": {
+    "message": "Check again"
+  },
+  "models_light_allowCloud": {
+    "message": "Allow cloud for light tasks"
+  },
+  "models_light_cloudAllowed": {
+    "message": "Cloud allowed for light tasks when no local model runs."
+  },
+  "models_light_cloudAllowed_undo": {
+    "message": "Ask again"
+  },
+  "models_rec": {
+    "message": "Local models for this computer"
+  },
+  "models_spec_line": {
+    "message": "Memory $1 · $2 cores · GPU $3"
+  },
+  "models_spec_noGpu": {
+    "message": "not reported"
+  },
+  "models_spec_memory": {
+    "message": "Memory"
+  },
+  "models_spec_memoryAuto": {
+    "message": "Auto"
+  },
+  "models_spec_limits": {
+    "message": "Browsers round the memory and often cap it (at 8 GB in Chrome), and can't see free disk space or GPU memory. Pick your memory for a better fit."
+  },
+  "models_rec_ollamaOff": {
+    "message": "Ollama isn't answering. Install it from ollama.com, then start it so this extension may call it:"
+  },
+  "models_rec_chat": {
+    "message": "Chat"
+  },
+  "models_rec_chat_why": {
+    "message": "Answers and summaries on this computer: the largest that fits comfortably."
+  },
+  "models_rec_light": {
+    "message": "Light"
+  },
+  "models_rec_light_why": {
+    "message": "Small and quick: titles, sorting and routine steps."
+  },
+  "models_rec_vision": {
+    "message": "Vision"
+  },
+  "models_rec_vision_why": {
+    "message": "Reads screenshots and images locally."
+  },
+  "models_rec_embed": {
+    "message": "Embeddings"
+  },
+  "models_rec_embed_why": {
+    "message": "Searches memory by meaning; tiny and fast."
+  },
+  "models_rec_size": {
+    "message": "$1 GB"
+  },
+  "models_rec_installed": {
+    "message": "Installed"
+  },
+  "models_rec_copy": {
+    "message": "Copy $1"
+  },
+  "models_rec_copied": {
+    "message": "Copied"
+  },
+  "models_rec_loaded": {
+    "message": "Loaded now: $1"
+  },
+  "models_usage_lightSaved": {
+    "message": "$1 light tasks ran locally, saving about $2."
   }
 }

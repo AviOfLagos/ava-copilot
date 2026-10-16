@@ -69,6 +69,8 @@ export async function resolveRole(role: ModelRole, scope: RoleScope = {}): Promi
     workspaceId: scope.workspaceId ?? null,
     agentId: scope.agentId ?? null,
     down: await downProviders(providers),
+    // Only models the user turned on (Models page); a provider with none chosen offers all it lists
+    activeOnly: true,
   });
   if (!choice) {
     throw new AppError('not_found', `No model can do "${role}" work yet. Add a provider in Models & usage.`);

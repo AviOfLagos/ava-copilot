@@ -1,10 +1,23 @@
 import { z } from 'zod';
-import { applyGeminiDefaults, db, llmProviderStore, modelHealthStore, ProviderTypeEnum } from '@extension/storage';
+import {
+  applyGeminiDefaults,
+  db,
+  getProviderTypeByProviderId,
+  llmProviderStore,
+  modelHealthStore,
+  ProviderTypeEnum,
+} from '@extension/storage';
 import type { ProviderConfig, ProviderHealth } from '@extension/storage';
-import { toAppError } from '@extension/shared';
+import { AppError, toAppError } from '@extension/shared';
 import type { CommandContext } from '../registry';
 import { createLogger } from '../log';
+import { generatePlainText } from '../llm/generate';
+import { userMessage } from '../llm/messages';
+import { createChatModel } from '../llm/providers';
+import { meterModel } from '../usage/meter';
 import { applyCheck, checkProvider } from './catalog';
+import { ollamaRoot } from './discovery';
+import { fetchJson } from './http';
 
 /**
  * The Models page's commands: everything that touches a key or the network goes through the background.
@@ -189,3 +202,66 @@ export async function removeProvider(input: z.infer<typeof removeSchema>): Promi
   await modelHealthStore.setProviders({ [input.providerId]: null });
   return { providerId: input.providerId };
 }
+
+// ── Models page: test one model, what a local server reports, where light work goes ─────────────────
+
+export const testModelSchema = z.object({
+  type: z.literal('models_test_model'),
+  requestId,
+  providerId,
+  model: z.string().min(1).max(200),
+});
+
+const TEST_TIMEOUT_MS = 60_000;
+
+/** Asks one model for a one-word answer, metered like any call: whether it answered, how fast, and what it said. */
+export async function testModel(input: z.infer<typeof testModelSchema>): Promise<Record<string, unknown>> {
+  const provider = await llmProviderStore.getProvider(input.providerId);
+  if (!provider) throw new AppError('not_found', 'That provider is no longer set up.');
+  const chatModel = meterModel(createChatModel(provider, { provider: input.providerId, modelName: input.model }), {
+    sessionId: 'models-test',
+    notify: () => {},
+  });
+  const started = Date.now();
+  const text = await generatePlainText({
+    chatModel,
+    messages: [userMessage('Reply with the single word OK.')],
+    abortSignal: AbortSignal.timeout(TEST_TIMEOUT_MS),
+  });
+  return { ok: true, ms: Date.now() - started, text: text.trim().slice(0, 80) };
+}
+
+export const localReportSchema = z.object({ type: z.literal('models_local_report'), requestId });
+
+interface OllamaListed {
+  name?: string;
+  model?: string;
+  size?: number;
+}
+
+/**
+ * What the local Ollama server says: installed models with their sizes and the models loaded now. Never throws;
+ * a server that does not answer comes back as `running: false`.
+ */
+export async function localReport(): Promise<Record<string, unknown>> {
+  const providers = await llmProviderStore.getProviderSummaries();
+  const entry = Object.entries(providers).find(
+    ([id, config]) => (config.type ?? getProviderTypeByProviderId(id)) === ProviderTypeEnum.Ollama,
+  );
+  const root = ollamaRoot(entry?.[1].baseUrl);
+  const read = async (path: string) =>
+    fetchJson<{ models?: OllamaListed[] }>(`${root}${path}`, { retry: false, timeoutMs: 3000 }).catch(() => null);
+  const [tags, ps] = await Promise.all([read('/api/tags'), read('/api/ps')]);
+  const shape = (model: OllamaListed) => ({
+    name: String(model.name ?? model.model ?? ''),
+    sizeBytes: typeof model.size === 'number' ? model.size : null,
+  });
+  return {
+    running: tags !== null,
+    providerId: entry?.[0] ?? null,
+    installed: (tags?.models ?? []).map(shape).filter(model => model.name),
+    loaded: (ps?.models ?? []).map(shape).filter(model => model.name),
+  };
+}
+
+export const lightRouteSchema = z.object({ type: z.literal('models_light_route'), requestId });

@@ -49,4 +49,7 @@ export interface UsageEvent {
   outputTokens: number;
   // null when the price is not known
   costUsd: number | null;
+  // Light work run on a local model: what the cloud model it replaced would have cost (null: no price known)
+  light?: boolean;
+  savedUsd?: number | null;
 }

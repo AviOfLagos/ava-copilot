@@ -8,6 +8,7 @@ import { actionsOf, fingerprintOf, itemsOf, plainSummary, rollup } from './rollu
 import { SUMMARY_INSTRUCTIONS, summaryInput } from './summary-prompt';
 import type { RollupEntry } from './rollup';
 import { resolveModels } from '../threads/factory';
+import { lightModel } from '../models/light';
 import { isOverDailyBudget } from '../usage/budget';
 
 const logger = createLogger('WorkspaceSummaries');
@@ -28,7 +29,11 @@ export interface SummaryDeps {
 
 const defaultDeps: SummaryDeps = {
   store: kbStore,
-  model: async () => (await resolveModels(null, { sessionId: SUMMARY_SESSION, notify: () => {} })).planner,
+  // Light work: a running local model first when the user prefers it (models/light.ts)
+  model: async () => {
+    const scope = { sessionId: SUMMARY_SESSION, notify: () => {} };
+    return (await lightModel('summary', scope, async () => (await resolveModels(null, scope)).planner)).chatModel;
+  },
   overCap: () => isOverDailyBudget(),
   workspaces: () => workspaceStore.list(),
   aboutUser: async workspaceId => summaryContext(await loadIdentityContext(workspaceId)),

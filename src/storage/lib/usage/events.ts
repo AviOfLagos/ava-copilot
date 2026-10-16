@@ -115,3 +115,15 @@ export function totalUsage(events: UsageEvent[]): UsageRow {
   for (const event of events) add(row, event);
   return row;
 }
+
+/** Light work that ran on a local model: how many calls, and what the cloud model it replaced would have cost. */
+export function lightSavings(events: UsageEvent[]): { calls: number; savedUsd: number } {
+  let calls = 0;
+  let savedUsd = 0;
+  for (const event of events) {
+    if (!event.light) continue;
+    calls += 1;
+    savedUsd += event.savedUsd ?? 0;
+  }
+  return { calls, savedUsd };
+}

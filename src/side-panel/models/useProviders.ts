@@ -406,6 +406,7 @@ export function useProviders(request: ModelsRequest) {
   );
 
   return {
+    request,
     loaded,
     rows,
     saved,

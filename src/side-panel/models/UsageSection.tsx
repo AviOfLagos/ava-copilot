@@ -4,6 +4,7 @@ import {
   db,
   getDefaultDisplayNameFromProviderId,
   lastDays,
+  lightSavings,
   summarizeUsage,
   totalUsage,
   workspaceStore,
@@ -47,6 +48,7 @@ export default function UsageSection({ state }: { state: ProvidersState }) {
   }, []);
 
   const total = useMemo(() => totalUsage(events), [events]);
+  const saved = useMemo(() => lightSavings(events), [events]);
   const rows = useMemo(() => summarizeUsage(events, by, by === 'day' ? days : undefined), [events, by, days]);
   const measure = measureOf(by === 'day' ? rows : summarizeUsage(events, 'day', days));
   const dimension = DIMENSIONS.find(item => item.value === by)!;
@@ -98,6 +100,11 @@ export default function UsageSection({ state }: { state: ProvidersState }) {
             <div className="text-muted-foreground text-[10.5px]">{t('models_usage_calls')}</div>
           </div>
         </div>
+        {saved.calls > 0 && (
+          <p className="text-[11.5px]" data-light-saved={saved.savedUsd}>
+            {t('models_usage_lightSaved', [String(saved.calls), formatUsd(saved.savedUsd)])}
+          </p>
+        )}
         {total.unpricedTokens > 0 && (
           <p className="text-muted-foreground text-[11px]">
             {t('models_usage_unpriced', [formatTokens(total.unpricedTokens)])}

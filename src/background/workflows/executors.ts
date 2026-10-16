@@ -476,7 +476,8 @@ export function llmExecutor(): StepExecutor {
       const node = params as unknown as NodeOf<'step.llm'>;
       const session = `workflow:${workflow.id}`;
       const before = await usageOf(session);
-      const chatModel = await workflowModel('smart', session);
+      // A model step is light work: a running local model first (Models › Prefer local for light tasks)
+      const chatModel = await workflowModel('light', session);
       const text = await generatePlainText({
         chatModel,
         messages: [

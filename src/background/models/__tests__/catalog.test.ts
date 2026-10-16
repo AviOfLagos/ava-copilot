@@ -91,6 +91,14 @@ describe('refreshCatalog', () => {
     expect(health.providers.custom_openai_1).toMatchObject({ status: 'unknown', errorKind: 'not_found' });
     // Nothing about keys in the health record
     expect(JSON.stringify(health)).not.toMatch(/AIza|nvapi/);
+
+    // Providers listed with no models chosen get a sensible few turned on, keys untouched
+    const providers = await llmProviderStore.getProviderSummaries();
+    expect(providers.ollama.modelNames).toEqual(['qwen3.8:8b']);
+    expect(providers.nvidia.modelNames).toEqual(['meta/llama-3.3-70b-instruct']);
+    expect(providers.gemini.modelNames).toContain('gemini-3.8-flash');
+    expect(providers.gemini.hasKey).toBe(true);
+    expect(providers.custom_openai_1.modelNames ?? []).toEqual([]);
   });
 
   it('keeps a failing provider’s models, marked, with a hint; drops removed providers', async () => {
