@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseSkill } from '@extension/storage';
 import type { SkillRecord } from '@extension/storage';
+import { enT } from './en';
 import {
   keywordMatches,
   matchSkills,
@@ -10,7 +11,9 @@ import {
   slashNames,
   urlMatches,
 } from '../match';
-import { draftToMarkdown, teachTranscript } from '../teach';
+import { canTeachFrom, draftToMarkdown, teachTranscript } from '../teach';
+
+vi.mock('@extension/i18n', () => ({ t: enT }));
 
 function skill(id: string, fields: Partial<SkillRecord> = {}): SkillRecord {
   return {
@@ -126,9 +129,55 @@ describe('teach', () => {
     expect(text).toContain('Pages: https://app.zedu.app/c/general, https://app.zedu.app/c/random');
     expect(text).toContain('User: Post hello in #general\nStep: Clicking Send message\nPlanner: Posted.');
 
-    const long = teachTranscript({ title: 't', boundUrl: null }, [{ actor: 'user', content: 'y'.repeat(40_000) }], []);
+    const long = teachTranscript({ title: 't', boundUrl: null }, [{ actor: 'user', content: 'y '.repeat(20_000) }], []);
     expect(long).toContain('[…earlier steps cut]');
     expect(long).toContain('Pages: unknown');
+  });
+
+  it('leaves out what the user typed or picked, and fences the log off as data', () => {
+    const text = teachTranscript(
+      { title: 'Fill the quote form for ada@example.com', boundUrl: 'https://app.example.com/quote?token=abc123' },
+      [
+        { actor: 'user', content: 'Fill name "Grace Hopper", phone +1 (555) 010-9999, password is hunter2' },
+        { actor: 'navigator', content: 'Input Grace Hopper into index 4' },
+        { actor: 'navigator', content: 'Selected option "Premium plan" from dropdown with index 7' },
+        { actor: 'navigator', content: 'Sent keys: Control+V' },
+        { actor: 'navigator', content: 'Opened https://app.example.com/quote?session=s3cret' },
+        { actor: 'navigator', content: 'Pasted sk-live-abcdefghijklmnop' },
+        { actor: 'planner', content: 'Done.' },
+      ],
+      [],
+    );
+    for (const secret of [
+      'Grace Hopper',
+      'ada@example.com',
+      '555',
+      'hunter2',
+      'Premium plan',
+      'Control+V',
+      's3cret',
+      'abc123',
+      'sk-live',
+    ]) {
+      expect(text).not.toContain(secret);
+    }
+    expect(text).toContain('Step: Input [value] into index 4');
+    expect(text).toContain('Step: Selected option [value] from dropdown with index 7');
+    expect(text).toContain('Step: Sent keys: [value]\n');
+    expect(text).toContain('Opened https://app.example.com/quote');
+    expect(text).toContain('Pages: https://app.example.com/quote');
+    expect(text).toContain('<nano_untrusted_content>');
+  });
+
+  it('is never offered or written for a chat an agent, routine or brief started', () => {
+    const done = { status: 'idle' as const, error: null, meetingId: null };
+    expect(canTeachFrom({ ...done, origin: 'user' })).toBe(true);
+    expect(canTeachFrom({ ...done, origin: 'voice' })).toBe(true);
+    for (const origin of ['agent', 'workflow', 'brief']) {
+      expect(canTeachFrom({ ...done, origin })).toBe(false);
+      expect(() => teachTranscript({ title: 't', boundUrl: null, origin }, [], [])).toThrow(/agent or a routine/);
+    }
+    expect(canTeachFrom({ ...done, status: 'error' })).toBe(false);
   });
 
   it('turns a draft into a skill file that parses', () => {

@@ -11,10 +11,32 @@
  * Tips for the agent…
  *
  * `urls` and `keywords` may also sit at the top level. Only this subset of YAML is read: plain and
- * quoted scalars, inline lists, and indented `- item` lists.
+ * quoted scalars, `|` and `>` block scalars, inline lists, and indented `- item` lists.
  */
 
 export type SkillSource = 'builtin' | 'imported' | 'taught' | 'written';
+
+// Where an installed skill came from: a link (raw file, GitHub, gist) or a file the user dropped
+export type SkillOriginKind = 'url' | 'github' | 'gist' | 'file' | 'zip';
+
+export interface SkillOrigin {
+  // The link it was fetched from, or the file's name; "Check for update" fetches this again
+  url: string;
+  kind: SkillOriginKind;
+  installedAt: number;
+}
+
+// A Markdown file that came with a skill (e.g. reference.md); the agent reads it on request
+export interface SkillReference {
+  path: string;
+  body: string;
+}
+
+// A file of the skill that was not installed, and why: code is never run, other files are not Markdown
+export interface DroppedSkillFile {
+  path: string;
+  reason: 'code' | 'other' | 'too_long';
+}
 
 export interface SkillRecord {
   // The name as a slug; also what `/name` calls
@@ -27,6 +49,15 @@ export interface SkillRecord {
   source: SkillSource;
   enabled: boolean;
   updatedAt: number;
+  // Written by someone else (installed from a link or file): it is wrapped as untrusted guidance in the
+  // prompt, and it only loads once the user turned on exactly this content (approvedSha256 === sha256)
+  trust?: 'external';
+  origin?: SkillOrigin;
+  // SHA-256 of the content (see skillHash), and of the content the user last turned on
+  sha256?: string;
+  approvedSha256?: string | null;
+  references?: SkillReference[];
+  dropped?: DroppedSkillFile[];
 }
 
 export interface ParsedSkill {
@@ -101,7 +132,15 @@ export function parseFrontmatter(text: string): Record<string, Value> {
       if (colon === -1 || line.startsWith('-')) continue;
       const key = line.slice(0, colon).trim();
       const value = line.slice(colon + 1).trim();
-      if (value) {
+      if (/^[|>][+-]?$/.test(value)) {
+        // A block scalar: the more-indented lines below, kept (|) or folded into one line (>)
+        const block: string[] = [];
+        while (i < lines.length && indentOf(lines[i]) > indent) {
+          block.push(lines[i].trim());
+          i += 1;
+        }
+        result[key] = block.join(value.startsWith('|') ? '\n' : ' ');
+      } else if (value) {
         result[key] = value.startsWith('[') ? inlineList(value) : unquote(value);
       } else if (i < lines.length && indentOf(lines[i]) > indent && lines[i].trim().startsWith('-')) {
         const items: string[] = [];
