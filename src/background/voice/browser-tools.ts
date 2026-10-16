@@ -247,20 +247,34 @@ export interface ScreenImage {
 export async function readScreen(
   windowId?: number,
   heldByThread: (tabId: number) => boolean = () => false,
-): Promise<{ text: string; image: ScreenImage | null }> {
-  const id = await windowOf(windowId);
-  const [tab] = await chrome.tabs.query(id !== undefined ? { windowId: id, active: true } : { active: true });
+  // The tab the user means (capabilities/tabs.ts#targetTab: the one in front, else the last one worked on)
+  targetTabId?: number,
+): Promise<{ text: string; image: ScreenImage | null; tabId?: number }> {
+  const target = targetTabId !== undefined ? await chrome.tabs.get(targetTabId).catch(() => undefined) : undefined;
+  const id = target?.windowId ?? (await windowOf(windowId));
+  const [front] = await chrome.tabs.query(id !== undefined ? { windowId: id, active: true } : { active: true });
+  const tab = target ?? front;
   if (!tab?.id) return { text: 'No tab is in front.', image: null };
   const text = await readPage(id, tab.id, heldByThread);
+  // Private, task-held and blocked tabs are never named or pictured; readPage says why it cannot read them
   const readable =
     !tab.incognito &&
     !heldByThread(tab.id) &&
     !!tab.url &&
     /^https?:/.test(tab.url) &&
     (await allowedByFirewall(tab.url));
-  if (!readable) return { text, image: null };
+  // A picture shows only what is visible: the tab must be the one in front of its window
+  if (!tab.active)
+    return {
+      text: readable
+        ? `The last tab you worked on: "${tab.title ?? ''}" at ${hostOf(tab.url)} (not in front, so no picture).\n${text}`
+        : text,
+      image: null,
+      tabId: tab.id,
+    };
+  if (!readable) return { text, image: null, tabId: tab.id };
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 }).catch(() => null);
   const match = dataUrl ? /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl) : null;
   const where = `The tab in front: "${tab.title ?? ''}" at ${hostOf(tab.url)}.`;
-  return { text: `${where}\n${text}`, image: match ? { mediaType: match[1], data: match[2] } : null };
+  return { text: `${where}\n${text}`, image: match ? { mediaType: match[1], data: match[2] } : null, tabId: tab.id };
 }

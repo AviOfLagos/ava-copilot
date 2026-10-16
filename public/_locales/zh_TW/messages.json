@@ -6948,5 +6948,27 @@
   },
   "models_usage_lightSaved": {
     "message": "有 $1 項輕量工作在本機執行，約省下 $2。"
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ 已開啟 $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "設定 › 音訊裝置"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "設定 › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "音訊裝置"
+      }
+    }
   }
 }

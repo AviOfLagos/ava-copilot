@@ -121,6 +121,19 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'update_memory',
       'where_are_we',
       'change_setting',
+      // Ava as the hub: what she can do, the panel's places, checks, and panel features with no voice tool before
+      'what_can_you_do',
+      'open_place',
+      'check_audio',
+      'check_model',
+      'switch_model',
+      'start_meeting_notes',
+      'stop_meeting_notes',
+      'read_confirm_cards',
+      'manage_inbox',
+      'list_connectors',
+      'list_workspaces',
+      'list_personalities',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);

@@ -83,6 +83,23 @@ export function registeredActions(context: AgentContext): Action[] {
   return actions.map(action => action.create(context));
 }
 
+/**
+ * Each registered action's name and description, for the capability list (what Ava can do). Built from a stand-in
+ * context: creating an action only wraps its handler, which never runs here. One that cannot be made this way is
+ * left out rather than failing the list.
+ */
+export function registeredActionSchemas(): { name: string; description: string }[] {
+  const stub = {} as AgentContext;
+  return actions.flatMap(action => {
+    try {
+      const made = action.create(stub);
+      return [{ name: made.name(), description: made.schema.description }];
+    } catch {
+      return [];
+    }
+  });
+}
+
 /** The registered actions' instructions, as one section of the navigator's prompt; empty when none. */
 export function registeredActionPrompts(): string {
   const lines = actions.map(action => action.prompt?.trim()).filter(Boolean);

@@ -88,6 +88,11 @@ export function typedTurn(text: string, images: TurnImage[] = [], note = '') {
   return { clientContent: { turns: [{ role: 'user', parts }], turnComplete: true } };
 }
 
+/** Context the model should know but not answer: a user turn left open (turnComplete false). */
+export function contextTurn(text: string) {
+  return { clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: false } };
+}
+
 /** A screenshot as a Live video frame: realtime input, so it is context for the turn under way, not a new turn. */
 export function screenFrame(image: TurnImage) {
   return { realtimeInput: { video: { mimeType: image.mediaType, data: image.data } } };
@@ -124,6 +129,8 @@ export class VoiceSession {
   private said = '';
   // Things to say, held until the copilot is not speaking
   private notices: string[] = [];
+  // The latest quiet context (the tab in front), waiting for the copilot to stop speaking
+  private context: string | null = null;
   // Messages typed in the chat, held until the session is ready
   private typed: ReturnType<typeof typedTurn>[] = [];
   private speaking = false;
@@ -206,6 +213,17 @@ export class VoiceSession {
   }
 
   /**
+   * Quiet context (the tab the user switched to): added to the conversation without asking for an answer
+   * (turnComplete false). Held while the copilot speaks, since client content cuts off what it is saying.
+   */
+  addContext(text: string): void {
+    if (!text.trim()) return;
+    // Only the latest matters: an older tab line is out of date
+    this.context = text;
+    this.flushContext();
+  }
+
+  /**
    * A picture of the screen for the model to look at (read_screen), sent as a video frame so it does not start a
    * turn of its own: the tool's answer that follows says what it is. False when the session is not ready.
    */
@@ -248,6 +266,13 @@ export class VoiceSession {
       }),
     );
     this.inputSeconds += samples.length / INPUT_RATE;
+  }
+
+  private flushContext(): void {
+    if (!this.ready || this.speaking || !this.context || this.socket?.readyState !== WebSocket.OPEN) return;
+    const text = this.context;
+    this.context = null;
+    this.socket.send(JSON.stringify(contextTurn(text)));
   }
 
   private flushNotices(): void {
@@ -343,6 +368,7 @@ export class VoiceSession {
         for (const chunk of preroll) this.send(chunk);
         if (preroll.length) this.gate.force();
         this.flushTyped();
+        this.flushContext();
         this.flushNotices();
       }
       const content = message.serverContent;
@@ -364,6 +390,7 @@ export class VoiceSession {
         this.said = '';
         this.speaking = false;
         this.status('listening');
+        this.flushContext();
         this.flushNotices();
       }
       for (const call of message.toolCall?.functionCalls ?? []) {

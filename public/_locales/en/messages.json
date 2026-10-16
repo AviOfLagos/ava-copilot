@@ -6948,5 +6948,27 @@
   },
   "models_usage_lightSaved": {
     "message": "$1 light tasks ran locally, saving about $2."
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ opened $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "Settings › Audio devices"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "Settings › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "Audio devices"
+      }
+    }
   }
 }

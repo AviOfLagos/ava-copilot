@@ -383,6 +383,8 @@ export async function startMockLlm(scenarios) {
     typed: [],
     // Screen pictures sent as video frames
     frames: [],
+    // Quiet context lines (turnComplete false), e.g. the tab the user switched to
+    context: [],
   };
   server.on('upgrade', (req, socket) => {
     if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
@@ -457,6 +459,12 @@ export async function startMockLlm(scenarios) {
             },
           });
           send({ serverContent: { turnComplete: true } });
+        } else if (session.voice && message.clientContent?.turnComplete === false) {
+          // Quiet context (the tab the user switched to): kept, never answered
+          live.context.push({
+            session: live.sessions.indexOf(session),
+            text: message.clientContent.turns[0].parts[0].text,
+          });
         } else if (session.voice && message.clientContent) {
           const parts = message.clientContent.turns[0].parts;
           const words = parts.find(part => part.text?.startsWith('The user typed'));

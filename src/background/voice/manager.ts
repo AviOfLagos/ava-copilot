@@ -43,6 +43,9 @@ import { systemMessage, userMessage } from '../llm/messages';
 import { resolveModels } from '../threads/factory';
 import { economyVoiceOptions } from './engines/options';
 import { mediaOf } from '../threads/attachments';
+import { compactCapabilities } from '../capabilities/catalog';
+import { currentCapabilities } from '../capabilities/sources';
+import { currentTabLine, currentTarget, tabTracker } from '../capabilities/instance';
 
 const logger = createLogger('Voice');
 
@@ -176,7 +179,14 @@ export class VoiceManager {
           model: settings.liveModel,
           speechConfig: liveSpeechConfig(settings.liveModel, voiceIdentity),
         }),
-        instructions: voiceSessionInstructions(this.assistantName, stylePrompt, personality, history, identity),
+        instructions: voiceSessionInstructions(
+          this.assistantName,
+          stylePrompt,
+          personality,
+          history,
+          identity,
+          capabilitySection(),
+        ),
         tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
         // Echoed in every status, so a panel knows which chat holds the conversation
         threadId: thread.id,
@@ -334,7 +344,13 @@ export class VoiceManager {
         return 'Handed over; it runs in a chat linked to this conversation. The user will hear when it finishes or needs their click.';
       }
       case 'read_screen': {
-        const screen = await readScreen(this.windowId, tabId => this.threads.holderOf(tabId) !== null);
+        // The tab the user is on, known without asking; else the last one worked on
+        const screen = await readScreen(
+          this.windowId,
+          tabId => this.threads.holderOf(tabId) !== null,
+          currentTarget()?.tabId,
+        );
+        if (screen.tabId !== undefined) void tabTracker.worked(screen.tabId);
         if (!screen.image) return screen.text;
         const shown = await toOffscreen<{ ok?: boolean }>({ type: 'voice_image', image: screen.image }).catch(
           () => null,
@@ -429,17 +445,20 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         return this.think(String(args.question ?? ''), args.use_page === true);
       case 'list_tabs':
         return listTabs(this.windowId);
-      case 'read_page':
-        return readPage(
-          this.windowId,
-          typeof args.tab_id === 'number' ? args.tab_id : undefined,
-          tabId => this.threads.holderOf(tabId) !== null,
-        );
+      case 'read_page': {
+        // A tab id from list_tabs, else the tab the user is on (or the last one worked on)
+        const target = typeof args.tab_id === 'number' ? null : currentTarget();
+        const tabId = typeof args.tab_id === 'number' ? args.tab_id : target?.tabId;
+        if (tabId !== undefined) void tabTracker.worked(tabId);
+        return readPage(target?.windowId ?? this.windowId, tabId, id => this.threads.holderOf(id) !== null);
+      }
       case 'open_tab':
         // Only a site the user named, or one already open: never one a read page suggested
         return openTab(String(args.target ?? ''), this.windowId, [...this.recentHeard, heard].join(' '));
       case 'switch_tab':
-        return typeof args.tab_id === 'number' ? switchTab(args.tab_id, this.windowId) : 'No tab id was given.';
+        if (typeof args.tab_id !== 'number') return 'No tab id was given.';
+        void tabTracker.worked(args.tab_id);
+        return switchTab(args.tab_id, this.windowId);
       case 'get_status':
         return this.describeStatus();
       case 'stop_tasks':
@@ -572,6 +591,13 @@ A picture of the screen was sent to you just now: describe what you see in it, a
       logger.warning('Voice watch failed', error);
     }
   }
+}
+
+/** What she can do and the tab in front, for the start of a conversation; kept current by System context lines. */
+function capabilitySection(): string {
+  const tab = currentTabLine();
+  return `What you can do (your tools by group; what_can_you_do gives the full list):
+${compactCapabilities(currentCapabilities())}${tab ? `\n${tab}` : ''}`;
 }
 
 function stateKey(thread: Pick<ThreadRecord, 'status' | 'pendingRequest'>): string {

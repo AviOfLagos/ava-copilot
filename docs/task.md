@@ -1370,6 +1370,53 @@ that day were not recorded without anyone noticing.
   leave detection has no automated test (it needs 90 s of alarms); there is still no "ask before recording" setting:
   Auto-notes on (the default) records, off does nothing.
 
+### Ava as the master interface (2026-10-16)
+
+- **Capability list that can't drift** (`src/background/capabilities/catalog.ts`, `sources.ts`): built at call time
+  from the core `VOICE_TOOLS`, every `registerVoiceTool`, the navigator's own action schemas plus every
+  `registerAgentAction` (new `registeredActionSchemas()` in the registry), and the panel's places and Settings
+  sections, which the panel reports at start (`side-panel/capabilities/register.ts` → `capabilities_panel`, kept in
+  storage.local `capabilities-panel` so Ava knows them with the panel closed). Only the group a tool goes under is kept
+  by hand (`TOOL_GROUPS`); an unknown tool lands in "More", never nowhere, and a unit test scans the background for
+  `registerVoiceTool` names without a group. A compact version goes in the voice setup (after the rules) and in the
+  navigator's prompt (the action's `prompt` is a getter); `what_can_you_do` (voice tool, free like `stop_tasks`, and
+  chat action) returns the full grouped list. Command `capabilities_list` returns names, text and the tab line.
+- **Panel audit → new tools**: `open_place` (any place, Settings section — scrolled to and focused — or the chat of a
+  waiting card; with the panel closed it waits in storage.session until the panel opens, since an extension can't open
+  its own side panel without a click), `start_meeting_notes` / `stop_meeting_notes` (meeting manager),
+  `read_confirm_cards` (cards and Inbox approvals read aloud, wrapped untrusted; answering stays the click),
+  `manage_inbox` (done/read/snooze through the Inbox's own commands; approvals refused), `list_connectors`,
+  `list_workspaces`, `list_personalities`. Chat actions: `what_can_you_do`, `open_place`, `check_audio`,
+  `check_model`. Still panel-only on purpose: adding/signing in/enabling connectors, creating/editing workspaces and
+  personalities, answering approvals and confirm cards.
+- **Diagnostics, rules only**: `check_audio` (`audio-check.ts` + `src/offscreen/audio-check.ts`): the chosen
+  mic/speaker labels, the mic's RMS over 2 s in 100 ms slices (no echo cancellation/AGC) judged silent < 0.002 peak,
+  quiet < 0.02, else "I can hear you", plus a 0.7 s two-note tone via `setSinkId` and "ask whether they heard it".
+  `check_model` (`model-check.ts` rules, `probes.ts` pings): a 16-token request to the chat (navigator) and
+  speech-to-text models, a Live socket setup (skipped with a note while a Live conversation runs on it; economy mode
+  noted), errors classified (rate limit, key, unreachable, timeout), slow > 8 s (Live 6 s); alternatives from
+  configured providers, the catalog, health and open breakers. Rate limit/key → another cloud provider first; down/
+  slow → a running local model first; Live → economy voice. `switch_model` applies only a switch check_model just
+  recommended, and only when the user's latest words say yes (`spokenYes`, as `change_setting`); chat moves the
+  navigator (and the planner when it was on the failing provider), speech moves the speech-to-text model.
+- **Tab awareness** (`tabs.ts`, `instance.ts`): `TabTracker` follows `tabs.onActivated/onUpdated/onRemoved` and
+  `windows.onFocusChanged` (only the focused window counts; private tabs are "a private tab"; persisted in
+  storage.session). On a switch or title change (settled 400 ms) a running Live conversation gets
+  "System context (no reply needed): The user's tab in front: … (previous: …)" as `clientContent` with
+  `turnComplete: false` (`VoiceSession.addContext`, held while she speaks); economy turns get the line in their
+  instructions; the voice setup and the navigator prompt start with it. `read_screen`/`read_page` default to the tab
+  in front, else the last tab Ava worked on (`targetTab`); no click, but the wake-word guard still applies.
+- Voice instructions: never "I can't" for anything on the list; call `what_can_you_do`; say the tool in a few words.
+- Tests: unit `capabilities/__tests__` (catalog: every tool once, unknown → More, every registered voice tool has a
+  group, place matching; audio verdicts from fake levels; error classes and switch rules; tracker switch/previous/
+  private/fallback), `offscreen/__tests__/typed.test.ts` (context turn). E2E `e2e/ava-hub.e2e.mjs` (4) in Brave:
+  `what_can_you_do` lists tools and the panel's places, switching tabs reaches Live as quiet context with no confirm,
+  `check_audio` hears the fake mic, `open_place` focuses Settings › Audio devices. `voice` (tool list updated),
+  `voice-thread`, `identity`, `personalities`, `agent`, `wake`, `voice-engines` green.
+- Known gaps: the navigator's tab line is read when its prompt is built (per task), not per step; recent model
+  failures come from the registry's health and breakers, not a per-call failure log (the usage meter records no
+  errors); `check_model` does not ping the TTS engine; `open_place` cannot open a closed panel.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -2,7 +2,8 @@
 // come from that sound: every tool needs a click, the ones that only read too, since an answer spoken
 // aloud can reach a call. Only these need none; a tool added later is guarded until listed here.
 // set_personality only changes how the assistant talks (the user's own settings), never what it may do
-export const UNGUARDED_TOOLS = new Set(['stop_tasks', 'end_conversation', 'set_personality']);
+// what_can_you_do only lists the assistant's own abilities, nothing of the user's
+export const UNGUARDED_TOOLS = new Set(['stop_tasks', 'end_conversation', 'set_personality', 'what_can_you_do']);
 // How the click-to-allow notice names each tool; one not named here is "act for you"
 export const TOOL_ACTIONS: Record<string, string> = {
   run_browser_task: 'run a task in the browser',

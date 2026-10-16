@@ -6948,5 +6948,27 @@
   },
   "models_usage_lightSaved": {
     "message": "$1 tarefas leves rodaram localmente, economizando cerca de $2."
+  },
+  "ava_cap_opened": {
+    "message": "$ASSISTANT$ abriu $PLACE$",
+    "placeholders": {
+      "assistant": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "place": {
+        "content": "$2",
+        "example": "Configurações › Dispositivos de áudio"
+      }
+    }
+  },
+  "ava_cap_settingsPath": {
+    "message": "Configurações › $SECTION$",
+    "placeholders": {
+      "section": {
+        "content": "$1",
+        "example": "Dispositivos de áudio"
+      }
+    }
   }
 }

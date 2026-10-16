@@ -15,3 +15,4 @@ import './personalities/register';
 import './audio-devices/register';
 import './identity/register';
 import './meetings/register';
+import './capabilities/register';

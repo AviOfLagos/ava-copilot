@@ -17,7 +17,18 @@ let meetingUrl;
 const panelText = async () => (await panel.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
 const waitForText = (text, timeout = 20000) =>
   panel.waitForFunction(t => document.body.innerText.includes(t), { timeout, polling: 250 }, text);
+// Waits for the button first: a view opened by the click before renders a moment later
 const click = async label => {
+  await panel
+    .waitForFunction(
+      label =>
+        [...document.querySelectorAll('button')].some(
+          b => b.innerText.trim() === label || b.getAttribute('aria-label') === label,
+        ),
+      { timeout: 20000, polling: 250 },
+      label,
+    )
+    .catch(() => {});
   await panel.evaluate(label => {
     const button = [...document.querySelectorAll('button')].find(
       b => b.innerText.trim() === label || b.getAttribute('aria-label') === label,
