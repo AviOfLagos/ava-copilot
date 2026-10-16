@@ -328,6 +328,23 @@ export function skillFullText(skill: Pick<SkillRecord, 'body'> & { references?: 
   );
 }
 
+/**
+ * Everything an approval covers, as lines to compare: name, description, where it applies and its keywords, then
+ * the full text. An update diff shows all of it, so "Use this version" never approves a change the user did not see.
+ */
+export function skillReviewText(
+  skill: Pick<SkillRecord, 'name' | 'description' | 'urls' | 'keywords' | 'body'> & { references?: SkillReference[] },
+): string {
+  return [
+    `name: ${skill.name}`,
+    `description: ${skill.description}`,
+    `applies on: ${skill.urls.join(', ') || '(no sites)'}`,
+    `keywords: ${skill.keywords.join(', ') || '(none)'}`,
+    '',
+    skillFullText(skill),
+  ].join('\n');
+}
+
 /** Characters in a skill, main file and references together. */
 export function skillSize(skill: Pick<SkillRecord, 'body'> & { references?: SkillReference[] }): number {
   return skill.body.length + (skill.references ?? []).reduce((sum, reference) => sum + reference.body.length, 0);

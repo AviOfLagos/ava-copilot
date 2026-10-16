@@ -26,6 +26,7 @@ const {
   revealInvisible,
   skillHash,
   skillRedFlags,
+  skillReviewText,
   stripInvisible,
   unzipSkillFiles,
 } = await import('../external');
@@ -214,9 +215,32 @@ describe('installing', () => {
     expect(updated.enabled).toBe(true);
     expect(awaitingReview(updated)).toBe(false);
 
-    const edited = await skillStore.save('---\nname: pdf\n---\nEdited by me', 'imported');
+    const edited = await skillStore.save('---\nname: pdf\n---\nEdited by me', 'imported', '', { editOf: 'pdf' });
     expect(edited.trust).toBe('external');
     expect(edited.origin?.url).toBe(origin.url);
     expect(awaitingReview(edited)).toBe(false);
+  });
+});
+
+describe('what a review covers', () => {
+  it('a file or a draft with an installed skill’s name never takes it over or counts as read', async () => {
+    const installed = await skillStore.install(await candidateFromFiles(files, origin));
+    expect(awaitingReview(installed)).toBe(true);
+    const imported = await skillStore.save(PDF_SKILL.replace('# PDF', '# Changed'), 'imported', 'pdf.md');
+    expect(imported.id).not.toBe(installed.id);
+    const kept = (await skillStore.all()).find(skill => skill.id === installed.id)!;
+    expect(kept.body).toContain('# PDF');
+    expect(awaitingReview(kept)).toBe(true);
+    // The user's own edit of that skill is the one way it changes in place
+    const edited = await skillStore.save(PDF_SKILL, 'imported', '', { editOf: installed.id });
+    expect(edited.id).toBe(installed.id);
+    expect(awaitingReview(edited)).toBe(false);
+  });
+
+  it('an update diff shows a change to where a skill applies', () => {
+    const base = { name: 'pdf', description: 'd', urls: ['*.pdf.example/*'], keywords: ['pdf'], body: 'Same.' };
+    const before = skillReviewText(base);
+    const after = skillReviewText({ ...base, urls: ['*'] });
+    expect(lineDiff(before, after).some(line => line.op === 'add' && line.text.includes('applies on: *'))).toBe(true);
   });
 });

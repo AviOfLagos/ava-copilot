@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { t } from '@extension/i18n';
-import { lineDiff, revealInvisible, skillFullText, skillRedFlags, skillStore } from '@extension/storage';
+import { lineDiff, revealInvisible, skillRedFlags, skillReviewText, skillStore } from '@extension/storage';
 import type { DiffLine, SkillCandidate, SkillRecord } from '@extension/storage';
 import { cn } from '@extension/ui';
 import type { PanelApi } from '../registry';
@@ -39,7 +39,7 @@ export default function InstalledDetails({ api, skill }: { api: PanelApi; skill:
   const fromLink = /^https?:/i.test(skill.origin?.url ?? '');
 
   const diff = useMemo(
-    () => (candidate ? compactDiff(lineDiff(skillFullText(skill), skillFullText(candidate))) : []),
+    () => (candidate ? compactDiff(lineDiff(skillReviewText(skill), skillReviewText(candidate))) : []),
     [candidate, skill],
   );
   const flags = useMemo(() => (candidate ? skillRedFlags(candidate, candidate.origin.url) : []), [candidate]);

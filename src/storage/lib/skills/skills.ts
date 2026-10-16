@@ -162,14 +162,24 @@ export const skillStore = {
 
   /**
    * Adds a skill from its Markdown, replacing one with the same name. A user skill named like a
-   * built-in one replaces it.
+   * built-in one replaces it. Only the user's edit of an installed skill (`editOf` its id) replaces it and counts
+   * as read; any other skill with its name (an imported file, a taught draft) gets a name of its own.
    *
    * @throws When the file is not a valid skill
    */
-  async save(markdown: string, source: SkillSource, fileName = ''): Promise<SkillRecord> {
+  async save(
+    markdown: string,
+    source: SkillSource,
+    fileName = '',
+    options: { editOf?: string } = {},
+  ): Promise<SkillRecord> {
     const parsed = parseSkill(markdown, fileName);
     const current = await state();
-    const id = skillId(parsed.name);
+    let id = skillId(parsed.name);
+    const named = current.skills.find(skill => skill.id === id);
+    if (named?.trust === 'external' && options.editOf !== id) {
+      id = freeId(id, new Set([...current.skills.map(skill => skill.id), ...builtinSkills().map(skill => skill.id)]));
+    }
     let record: SkillRecord = { ...parsed, id, source, enabled: true, updatedAt: Date.now() };
     const previous = current.skills.find(skill => skill.id === id);
     if (previous?.trust === 'external') {

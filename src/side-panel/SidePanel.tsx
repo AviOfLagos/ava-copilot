@@ -164,6 +164,8 @@ const SidePanel = () => {
     thread?.status === 'idle' &&
     !thread.error &&
     !thread.meetingId &&
+    // Never in a chat an agent, a routine or the brief ran (background/skills/teach.ts#canTeachFrom)
+    !['agent', 'workflow', 'brief'].includes(thread.origin ?? '') &&
     !thread.tags.includes(SKILL_OFFERED_TAG) &&
     threadMessages.some(message => message.actor === 'navigator') &&
     threadMessages.at(-1)?.actor === 'planner';

@@ -120,8 +120,8 @@ describe('reading an installed skill', () => {
     const section = skillsSection([{ skill: installed(), reason: 'url' }], text => `<wrapped>${text}</wrapped>`);
     expect(section).toContain('<skill name="tips" installed_from="example.com">');
     expect(section).toContain('Written by someone else');
-    expect(section).toContain('<wrapped>Click the blue button.</wrapped>');
-    expect(section).toContain('read_skill_section if you need it: reference.md');
+    expect(section).toContain('<wrapped>Click the blue button.');
+    expect(section).toContain('read_skill_section if you need it: reference.md</wrapped>');
     expect(section).toContain("still waits for the user's confirmation");
   });
 

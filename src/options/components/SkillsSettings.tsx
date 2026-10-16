@@ -70,7 +70,7 @@ export function SkillsSettings({ isDarkMode = false }: SkillsSettingsProps) {
     try {
       const previous = skills.find(skill => skill.id === editing.id);
       const source = previous && previous.source !== 'builtin' ? previous.source : 'written';
-      const saved = await skillStore.save(editing.markdown, source);
+      const saved = await skillStore.save(editing.markdown, source, '', { editOf: editing.id });
       // A renamed skill replaces the old one
       if (previous && previous.source !== 'builtin' && previous.id !== saved.id) await skillStore.remove(previous.id);
       setEditing(null);
@@ -173,7 +173,15 @@ export function SkillsSettings({ isDarkMode = false }: SkillsSettingsProps) {
                   <input
                     type="checkbox"
                     checked={skill.enabled}
-                    onChange={event => void skillStore.setEnabled(skill.id, event.target.checked).then(load)}
+                    onChange={event =>
+                      void skillStore
+                        .setEnabled(skill.id, event.target.checked)
+                        .then(load)
+                        // An installed skill turns on only from its review card in the panel: say so
+                        .catch((error: unknown) =>
+                          setStatus({ text: error instanceof Error ? error.message : String(error), error: true }),
+                        )
+                    }
                   />
                   {t('options_skills_on')}
                 </label>

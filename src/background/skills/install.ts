@@ -14,6 +14,7 @@ import { normalAddress, userTyped } from '../integrations/setupAction';
 import type { RegisteredVoiceTool } from '../registry';
 import { fetchSkill } from './fetch';
 import type { Fetcher, FetchedSkill, SkillListing } from './fetch';
+import { sectionName } from './match';
 
 /**
  * Installing a skill from a link, from the panel, a chat or by voice. Every way in ends the same: the skill is saved
@@ -106,7 +107,7 @@ export async function runReadSkillSection(input: z.infer<typeof readSkillSection
   const id = input.skill.trim().replace(/^\//, '').toLowerCase();
   // Only skills that may load: on, and for an installed one, turned on as it reads now
   const skill = (await skillStore.enabled()).find(item => item.id === id);
-  const section = skill?.references?.find(reference => reference.path === input.section.trim());
+  const section = skill?.references?.find(reference => sectionName(reference.path) === input.section.trim());
   if (!skill || !section) {
     return new ActionResult({
       error: `No section "${input.section}" in a skill called "${id}".`,
@@ -115,7 +116,7 @@ export async function runReadSkillSection(input: z.infer<typeof readSkillSection
   }
   const body = skill.trust === 'external' ? wrapUntrustedContent(stripInvisible(section.body)) : section.body;
   return new ActionResult({
-    extractedContent: `Section ${section.path} of skill /${skill.id}:\n${body}`,
+    extractedContent: `Section ${sectionName(section.path)} of skill /${skill.id}:\n${body}`,
     includeInMemory: true,
   });
 }
