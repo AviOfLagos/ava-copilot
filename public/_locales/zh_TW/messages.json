@@ -1266,6 +1266,75 @@
   "meeting_warning_interrupted": {
     "message": "The recording was interrupted. The notes cover what was recorded before it."
   },
+  "meeting_warning_nothingCaptured": {
+    "message": "尚未擷取到任何內容：沒有音訊，也沒有字幕。請在通話分頁上點擊 Nex Copilot 圖示以錄製音訊，或開啟通話字幕。"
+  },
+  "meeting_auto_notifyTitle": {
+    "message": "正在為這通通話做筆記"
+  },
+  "meeting_auto_notifyAudio": {
+    "message": "正在錄製通話音訊。"
+  },
+  "meeting_auto_notifyCaptions": {
+    "message": "正在讀取通話字幕。在通話上點擊 Nex Copilot 圖示，也能錄製音訊。"
+  },
+  "meeting_auto_notifyNote": {
+    "message": "你可以在側邊面板加上這通通話的主題備註。不論是否填寫，筆記都會繼續。"
+  },
+  "meeting_auto_inboxTitle": {
+    "message": "已開始為你的 $1 通話做筆記"
+  },
+  "meeting_auto_inboxBody": {
+    "message": "你加入通話時筆記就已開始。主題備註是選填的：在側邊面板加上後，摘要會參考它。"
+  },
+  "meeting_alert_failedTitle": {
+    "message": "這通通話「沒有」在錄製"
+  },
+  "meeting_alert_failedBody": {
+    "message": "無法開始為你的 $1 通話做筆記：$2"
+  },
+  "meeting_alert_nothingTitle": {
+    "message": "目前沒有錄到任何內容"
+  },
+  "meeting_alert_nothingBody": {
+    "message": "你的 $1 通話目前沒有音訊也沒有字幕。請在通話上點擊 Nex Copilot 圖示以錄製音訊，或開啟通話字幕。"
+  },
+  "meeting_alert_recorderBody": {
+    "message": "你的 $1 通話錄音器停止運作：$2"
+  },
+  "meeting_alert_audioAdded": {
+    "message": "現在也在錄製通話音訊。"
+  },
+  "meeting_auto_cardAsk": {
+    "message": "要加上主題備註嗎？選填：不論如何筆記都會繼續。"
+  },
+  "meeting_auto_noteLabel": {
+    "message": "通話主題備註"
+  },
+  "meeting_auto_placeholder": {
+    "message": "例如：與導師討論第二階段規劃"
+  },
+  "meeting_auto_save": {
+    "message": "加上備註"
+  },
+  "meeting_auto_dismiss": {
+    "message": "關閉"
+  },
+  "meeting_auto_skip": {
+    "message": "不要為這通通話做筆記"
+  },
+  "meeting_auto_captionsOnly": {
+    "message": "目前只來自通話字幕。在通話分頁上點擊 Nex Copilot 圖示即可錄製音訊。"
+  },
+  "meeting_auto_recordAudio": {
+    "message": "錄製音訊"
+  },
+  "meeting_auto_noteSaved": {
+    "message": "已加上備註：摘要與筆記會參考它。"
+  },
+  "meeting_auto_open": {
+    "message": "開啟會議"
+  },
   "meeting_note_tldr": {
     "message": "TL;DR"
   },

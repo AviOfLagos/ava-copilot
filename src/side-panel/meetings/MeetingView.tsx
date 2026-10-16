@@ -31,6 +31,7 @@ const WARNINGS: Record<MeetingWarning, Parameters<typeof t>[0]> = {
   cap: 'meeting_warning_cap',
   transcription: 'meeting_warning_transcription',
   interrupted: 'meeting_warning_interrupted',
+  nothing_captured: 'meeting_warning_nothingCaptured',
 };
 
 const LIVE_STATUS = {

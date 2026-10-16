@@ -95,7 +95,7 @@ export class MeetingManager {
   /** What the call is about, told by the user or the calendar. */
   async setTopic(meetingId: string, topic: string, source: 'user' | 'calendar' = 'user'): Promise<void> {
     const meeting = await this.meetings.get(meetingId);
-    const clean = topic.replace(/\s+/g, ' ').trim().slice(0, 200);
+    const clean = topic.replace(/\s+/g, ' ').trim().slice(0, 500);
     if (!meeting || !clean) return;
     await this.meetings.update(meetingId, { topic: clean, topicSource: source, title: clean.slice(0, 80) });
     if (meeting.threadId)
@@ -137,28 +137,7 @@ export class MeetingManager {
 
     try {
       if (streamId) {
-        await ensureOffscreen();
-        const response = await this.toOffscreen({
-          type: 'recorder_start',
-          options: {
-            meetingId: meeting.id,
-            streamId,
-            withMic,
-            plan: {
-              firstChunkSeconds: settings.firstChunkSeconds,
-              chunkSeconds: settings.chunkSeconds,
-              overlapSeconds: settings.overlapSeconds,
-            },
-            silenceWarnSeconds: settings.silenceWarnSeconds,
-            live: await this.liveOptions(settings),
-          },
-        });
-        if (!response?.ok) {
-          throw new Error(response?.error ?? 'The recorder did not start');
-        }
-        if (withMic && !response.micUsed) {
-          await this.meetings.addWarning(meeting.id, 'no_mic');
-        }
+        await this.startRecorder(meeting.id, streamId, withMic, settings, 0);
       } else {
         await this.startCaptions(tab.id, meeting.id);
       }
@@ -169,6 +148,66 @@ export class MeetingManager {
 
     await this.setBadge(tab.id, true);
     void this.placeInWorkspace(meeting.id).catch(error => logger.warning('Could not place the meeting', error));
+    return meeting.id;
+  }
+
+  /** Starts the offscreen recorder for a meeting, `offsetSeconds` into its timeline. */
+  private async startRecorder(
+    meetingId: string,
+    streamId: string,
+    withMic: boolean,
+    settings: Awaited<ReturnType<typeof meetingSettingsStore.getSettings>>,
+    offsetSeconds: number,
+  ): Promise<void> {
+    await ensureOffscreen();
+    const response = await this.toOffscreen({
+      type: 'recorder_start',
+      options: {
+        meetingId,
+        streamId,
+        withMic,
+        offsetSeconds,
+        plan: {
+          firstChunkSeconds: settings.firstChunkSeconds,
+          chunkSeconds: settings.chunkSeconds,
+          overlapSeconds: settings.overlapSeconds,
+        },
+        silenceWarnSeconds: settings.silenceWarnSeconds,
+        live: await this.liveOptions(settings),
+      },
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error ?? 'The recorder did not start');
+    }
+    if (withMic && !response.micUsed) {
+      await this.meetings.addWarning(meetingId, 'no_mic');
+    }
+  }
+
+  /**
+   * The user invoked the extension on a tab (the toolbar button or the shortcut), which is what lets
+   * Chrome hand over its audio. A meeting there that runs on captions only starts recording the audio
+   * too, on the same timeline; its caption lines so far stay in the transcript.
+   *
+   * @returns The meeting that now records audio, or null when there was none to upgrade or Chrome refused
+   */
+  async addAudio(tabId: number): Promise<string | null> {
+    const meeting = (await this.meetings.active()).find(
+      active => active.tabId === tabId && active.status === 'recording' && active.source === 'captions',
+    );
+    if (!meeting) return null;
+    let streamId: string;
+    try {
+      streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+    } catch (error) {
+      logger.info('Tab audio still cannot be captured', error);
+      return null;
+    }
+    const settings = await meetingSettingsStore.getSettings();
+    await this.startRecorder(meeting.id, streamId, meeting.withMic, settings, (Date.now() - meeting.startedAt) / 1000);
+    await chrome.scripting.executeScript({ target: { tabId }, func: stopWatchingCaptions }).catch(() => {});
+    await this.meetings.update(meeting.id, { source: 'audio' });
+    await this.meetings.clearWarning(meeting.id, 'nothing_captured');
     return meeting.id;
   }
 

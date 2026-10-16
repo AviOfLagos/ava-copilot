@@ -20,6 +20,9 @@ export interface RecorderOptions {
   live?: LiveOptions;
   // The chosen microphone (Settings › Voice devices), or null/undefined for the system default
   micDeviceId?: string | null;
+  // Seconds into the meeting this recording starts at: a meeting that began on captions and gets its
+  // audio later keeps one timeline
+  offsetSeconds?: number;
 }
 
 type Notify = (message: Record<string, unknown>) => void;
@@ -104,7 +107,7 @@ export class Recorder {
 
     if (this.options.live) {
       const { meetingId } = this.options;
-      const startedAt = Date.now();
+      const startedAt = Date.now() - (this.options.offsetSeconds ?? 0) * 1000;
       this.live = new LiveCaptions(
         this.options.live,
         text => {
@@ -169,14 +172,15 @@ export class Recorder {
 
   private write(chunk: PcmChunk, final = false): void {
     const { meetingId } = this.options;
+    const offset = this.options.offsetSeconds ?? 0;
     this.writing = this.writing.then(async () => {
       try {
         await meetingStore.addChunk({
           id: crypto.randomUUID(),
           meetingId,
           index: chunk.index,
-          tStart: chunk.tStart,
-          tEnd: chunk.tEnd,
+          tStart: chunk.tStart + offset,
+          tEnd: chunk.tEnd + offset,
           mimeType: 'audio/wav',
           data: toBase64(encodeWav(chunk.samples, SAMPLE_RATE)),
           final,

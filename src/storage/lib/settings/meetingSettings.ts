@@ -20,6 +20,8 @@ export interface MeetingSettingsConfig {
   liveCaptions: boolean;
   // Start notes by themselves when the user joins a call on Meet, Zoom or Teams
   autoNotes: boolean;
+  // Notes that started on captions only and have caught nothing after this long raise an alert
+  nothingCapturedSeconds: number;
   // Listen on the device for "Hey Ava", which starts a voice conversation; off until the user turns it on
   wakeWord: boolean;
   liveModel: string;
@@ -38,6 +40,7 @@ export const DEFAULT_MEETING_SETTINGS: MeetingSettingsConfig = {
   silenceWarnSeconds: 300,
   liveCaptions: true,
   autoNotes: true,
+  nothingCapturedSeconds: 90,
   wakeWord: false,
   liveModel: 'gemini-3.8-live',
   liveEndpoint:

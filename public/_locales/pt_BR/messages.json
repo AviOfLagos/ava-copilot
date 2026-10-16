@@ -1266,6 +1266,75 @@
   "meeting_warning_interrupted": {
     "message": "The recording was interrupted. The notes cover what was recorded before it."
   },
+  "meeting_warning_nothingCaptured": {
+    "message": "Nada foi capturado ainda: nem áudio nem legendas. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio, ou ative as legendas da chamada."
+  },
+  "meeting_auto_notifyTitle": {
+    "message": "Fazendo anotações desta chamada"
+  },
+  "meeting_auto_notifyAudio": {
+    "message": "Gravando o áudio da chamada."
+  },
+  "meeting_auto_notifyCaptions": {
+    "message": "Lendo as legendas da chamada. Clique no ícone do Nex Copilot na chamada para gravar o áudio também."
+  },
+  "meeting_auto_notifyNote": {
+    "message": "Você pode adicionar uma nota sobre o assunto no painel lateral. As anotações continuam de qualquer forma."
+  },
+  "meeting_auto_inboxTitle": {
+    "message": "Anotações iniciadas na sua chamada do $1"
+  },
+  "meeting_auto_inboxBody": {
+    "message": "As anotações começaram quando você entrou. Uma nota sobre o assunto é opcional: adicione no painel lateral e o resumo a usará."
+  },
+  "meeting_alert_failedTitle": {
+    "message": "Esta chamada NÃO está sendo gravada"
+  },
+  "meeting_alert_failedBody": {
+    "message": "Não foi possível iniciar as anotações na sua chamada do $1: $2"
+  },
+  "meeting_alert_nothingTitle": {
+    "message": "Nada está sendo gravado"
+  },
+  "meeting_alert_nothingBody": {
+    "message": "Ainda não há áudio nem legendas da sua chamada do $1. Clique no ícone do Nex Copilot na chamada para gravar o áudio, ou ative as legendas."
+  },
+  "meeting_alert_recorderBody": {
+    "message": "O gravador parou de funcionar na sua chamada do $1: $2"
+  },
+  "meeting_alert_audioAdded": {
+    "message": "Agora gravando também o áudio da chamada."
+  },
+  "meeting_auto_cardAsk": {
+    "message": "Quer adicionar uma nota sobre o assunto? Opcional: as anotações continuam de qualquer forma."
+  },
+  "meeting_auto_noteLabel": {
+    "message": "Nota sobre o assunto da chamada"
+  },
+  "meeting_auto_placeholder": {
+    "message": "ex.: planejamento da etapa 2 com os mentores"
+  },
+  "meeting_auto_save": {
+    "message": "Adicionar nota"
+  },
+  "meeting_auto_dismiss": {
+    "message": "Dispensar"
+  },
+  "meeting_auto_skip": {
+    "message": "Não anotar esta chamada"
+  },
+  "meeting_auto_captionsOnly": {
+    "message": "Somente pelas legendas da chamada. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio."
+  },
+  "meeting_auto_recordAudio": {
+    "message": "Gravar áudio"
+  },
+  "meeting_auto_noteSaved": {
+    "message": "Nota adicionada: o resumo e as anotações vão usá-la."
+  },
+  "meeting_auto_open": {
+    "message": "Abrir reunião"
+  },
   "meeting_note_tldr": {
     "message": "TL;DR"
   },

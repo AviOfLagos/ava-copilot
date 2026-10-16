@@ -347,3 +347,147 @@ test('a tab that cannot be recorded and has no captions explains how to allow it
   await waitForText('Click the Nex Copilot icon on the meeting tab');
   await web.close();
 });
+
+// A Google Meet call, served in place of the real one: a Leave button (so the user is in the call) and,
+// when asked for, Meet's captions behind its "Turn on captions" button
+const meetCall = ({ captions }) => `<!doctype html><html lang="en"><head><title>Meet – abc-defg-hij</title></head><body>
+<button aria-label="Leave call">Leave</button>
+${captions ? '<button aria-label="Turn on captions" id="cc">CC</button><div aria-label="Captions" id="region"></div>' : ''}
+<script>
+  const cc = document.getElementById('cc');
+  cc?.addEventListener('click', () => {
+    cc.setAttribute('aria-label', 'Turn off captions');
+    const speaker = document.createElement('div');
+    speaker.dataset.speaker = 'Ada';
+    const line = document.createElement('div');
+    line.setAttribute('jsname', 'tgaKEf');
+    speaker.append(line);
+    document.getElementById('region').append(speaker);
+    let n = 0;
+    setInterval(() => { n += 1; line.textContent = 'Meet caption ' + n; }, 2000);
+  });
+</script></body></html>`;
+
+async function joinMeetCall(options) {
+  const meet = await extension.browser.newPage();
+  await meet.setRequestInterception(true);
+  meet.on('request', request =>
+    request.url().startsWith('https://meet.google.com/')
+      ? request.respond({ status: 200, contentType: 'text/html', body: meetCall(options) })
+      : request.continue(),
+  );
+  await meet.goto('https://meet.google.com/abc-defg-hij');
+  return meet;
+}
+
+const waitFor = async (check, what, timeout = 30000) => {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    const value = await check();
+    if (value) return value;
+    await sleep(500);
+  }
+  throw new Error(`Timed out waiting for ${what}`);
+};
+const latestMeeting = async () => (await readTable('meetings')).sort((a, b) => b.startedAt - a.startedAt)[0];
+const shot = async name => {
+  await panel.bringToFront();
+  await panel.setViewport({ width: 400, height: 900 });
+  await sleep(400);
+  await panel.screenshot({ path: `${process.env.E2E_SHOTS ?? '/tmp'}/${name}.png` });
+};
+
+test('joining a call starts notes with no answer; the note is optional and adds context', async () => {
+  const before = (await readTable('meetings')).length;
+  const meet = await joinMeetCall({ captions: true });
+  // Notes start on their own once the user is in the call: nothing is answered first
+  const meeting = await waitFor(
+    async () => (await readTable('meetings')).length > before && (await latestMeeting()),
+    'notes to start on their own',
+  );
+  assert.equal(meeting.status, 'recording');
+  assert.equal(meeting.auto, true);
+  assert.equal(meeting.source, 'captions', 'never invoked on the tab: its captions are read');
+  // No window of its own that could hide behind the browser
+  const asks = extension.browser.targets().filter(target => target.url().includes('meeting-ask.html'));
+  assert.equal(asks.length, 0);
+
+  // The optional note shows in the panel and as an Inbox item, with a notification
+  await waitForText('Add a note on what it');
+  await waitForText('From the call');
+  const inbox = await waitFor(
+    async () => (await readTable('inbox')).find(item => item.id === `meetings|started:${meeting.id}`),
+    'the Inbox item',
+  );
+  assert.equal(inbox.status, 'unread');
+  const notifications = await panel.evaluate(() => chrome.notifications.getAll());
+  assert.ok(Object.keys(notifications).includes(`meeting:${meeting.id}`));
+  await shot('meeting-autojoin-prompt');
+
+  // Ignoring it changes nothing: the captions keep coming in
+  await waitFor(
+    async () =>
+      (await readTable('segments')).some(s => s.meetingId === meeting.id && /^Meet caption \d+$/.test(s.text)),
+    'captions in the transcript',
+  );
+  assert.equal((await latestMeeting()).status, 'recording');
+  assert.equal((await latestMeeting()).topic, undefined);
+
+  // Answering adds the note as context
+  await panel.type('#auto-notes-note', 'Hiring plan with Ada');
+  await press('Add note');
+  await waitForText('Note added');
+  const noted = await latestMeeting();
+  assert.equal(noted.topic, 'Hiring plan with Ada');
+  assert.equal(noted.topicSource, 'user');
+  assert.equal(noted.status, 'recording');
+  assert.equal((await readTable('inbox')).find(item => item.id === inbox.id).status, 'done');
+  await shot('meeting-autojoin-noted');
+
+  await press('Open meeting');
+  await click('Stop');
+  await waitFor(async () => (await latestMeeting()).status === 'done', 'the meeting to finish');
+  await meet.close();
+});
+
+test('a call where nothing can be recorded raises a visible alert, and the toolbar click adds its audio', async () => {
+  const settings = await extension.getStorage('meeting-settings');
+  await extension.setStorage({ 'meeting-settings': { ...settings, nothingCapturedSeconds: 4 } });
+  const before = (await readTable('meetings')).length;
+  const meet = await joinMeetCall({ captions: false });
+  const meeting = await waitFor(
+    async () => (await readTable('meetings')).length > before && (await latestMeeting()),
+    'notes to start on their own',
+  );
+  assert.equal(meeting.source, 'captions');
+
+  // No captions and no audio: the user is told, loudly, everywhere
+  const alert = await waitFor(
+    async () => (await readTable('inbox')).find(item => item.id === `meetings|nothing:${meeting.id}`),
+    'the alert',
+    20000,
+  );
+  assert.equal(alert.kind, 'alert');
+  assert.match(alert.title, /Nothing is being recorded/);
+  assert.ok((await latestMeeting()).warnings.includes('nothing_captured'));
+  const notifications = await panel.evaluate(() => chrome.notifications.getAll());
+  assert.ok(Object.keys(notifications).includes(`meeting:nothing:${meeting.id}`));
+  await waitForText('Nothing has been captured yet');
+  await shot('meeting-autojoin-alert');
+
+  // The toolbar click on the call is what lets Chrome hand over the audio: the same meeting records it
+  await pressToolbarButton(extension, meet);
+  await waitFor(async () => (await latestMeeting()).source === 'audio', 'the audio to be recorded');
+  assert.equal((await latestMeeting()).id, meeting.id);
+  assert.ok(!(await latestMeeting()).warnings.includes('nothing_captured'));
+  await waitFor(
+    async () => (await readTable('audioChunks')).some(chunk => chunk.meetingId === meeting.id),
+    'audio chunks',
+  );
+  await panel.bringToFront();
+  await press('Open meeting');
+  await click('Stop');
+  await waitFor(async () => (await latestMeeting()).status === 'done', 'the meeting to finish', 40000);
+  await extension.setStorage({ 'meeting-settings': settings });
+  await meet.close();
+});
