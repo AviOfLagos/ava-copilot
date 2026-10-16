@@ -25,7 +25,7 @@ import { t } from '@extension/i18n';
 import type { RunStatus, RunStepStatus } from '@extension/storage';
 import { cronShape } from '@src/background/workflows/describe';
 import { groupOf } from '@src/background/workflows/spec';
-import type { NodeType, WorkflowNode } from '@src/background/workflows/spec';
+import type { NodeType, WorkflowNode, WorkflowSpec } from '@src/background/workflows/spec';
 
 type MessageKey = Parameters<typeof t>[0];
 
@@ -106,6 +106,24 @@ export function scheduleText(cron: string): string {
     default:
       return t('flow_cron_custom', [cron]);
   }
+}
+
+/**
+ * When a workflow runs, in a few words: its schedule, the pages that start it, the event it listens for, or by hand.
+ * A routine with several ways in names them all, e.g. "Every day at 07:30 · When a meeting ends".
+ */
+export function triggerSummary(spec: Pick<WorkflowSpec, 'nodes'>): string {
+  const triggers = spec.nodes.filter(node => groupOf(node.type) === 'trigger');
+  const parts: string[] = [];
+  const pages = triggers.flatMap(node => (node.type === 'trigger.tab' ? [node.urlPattern] : []));
+  for (const node of triggers) {
+    if (node.type === 'trigger.schedule') parts.push(scheduleText(node.cron));
+    if (node.type === 'trigger.event') parts.push(nodeSubtitle(node));
+  }
+  if (pages.length === 1) parts.push(t('flow_trigger_page', [pages[0]]));
+  if (pages.length > 1) parts.push(t('flow_trigger_pages', [String(pages.length)]));
+  // By hand is always possible; it is named only when nothing else starts the routine
+  return [...new Set(parts)].join(' · ') || t('flow_trigger_byHand');
 }
 
 function host(url: string): string {

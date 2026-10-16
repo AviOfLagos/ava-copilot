@@ -1417,6 +1417,50 @@ that day were not recorded without anyone noticing.
   failures come from the registry's health and breakers, not a per-call failure log (the usage meter records no
   errors); `check_model` does not ping the TTS engine; `open_place` cannot open a closed panel.
 
+### Workflows audit (2026-10-16)
+
+"Workflows don't work properly": every way in (chat, New workflow, both templates, voice), the diagram and inspector,
+each trigger and step kind, approvals, cancel, retries, budgets and a service-worker restart were driven in Brave
+against the mocks. Broken → fixed, by impact:
+- **An unanswered approval stopped the routine for good.** The open run blocked every later firing: after one ignored
+  "join this meeting?" offer, Meeting links never offered again; a scheduled routine skipped every later time. Now a
+  new firing (schedule, event, tab) replaces a run that only waits for an approval (cancelled "a newer run took its
+  place", its Inbox item settled). A browser task waiting in its chat is work under way and is kept.
+  (`service.ts` `blockingRun`, `engine.cancel(runId, message)`)
+- **Hand edits looked undone.** After any run the diagram and inspector showed that run's version, so a new schedule,
+  name or instruction saved in the inspector reverted on screen (the header said 08:00, the card 07:30). The diagram
+  now shows what runs now; the latest run lights it when it ran this version or one with the same steps; an older
+  version shows only when picked in the history ("an earlier version", read-only). (`WorkflowDetail.tsx`)
+- **Steps that could not run asked for a click first.** A sandbox step without Nex Brain, an agent step naming no
+  such agent and a tool step without its connector waited for "Hold to allow" and failed only after it. A new
+  `StepExecutor.check` runs before the approval (`prechecks.ts`, merged in `executorFor`): "This step runs code in
+  Nex Brain … Pair it in Settings › Nex Brain"; "There is no agent "X"; your agents: …"; the connector's own refusal
+  ("This routine is in no workspace …" instead of "This chat …"). Sandbox cards say "Needs Nex Brain" while unpaired.
+- **A restart marked a handed-off side effect unknown.** An agent step (a side effect) parked on its agent's run was
+  marked "may or may not have happened" after a service-worker restart, and any parked run more than 15 minutes old
+  was closed as interrupted. A step with saved state whose executor is resumable now carries on. (`engine.recover`)
+- **Meeting links was unreadable in the panel**: five triggers in one row, zoomed to 32 %. The diagram picks left to
+  right when that fits the box clearly better (now 74 %). (`diagram.ts` `box`, handles follow the direction)
+- **Tab and event routines read "By hand"** in the list and header; runs from a tab said "by hand". Now "When one of 5
+  kinds of page opens", "When a meeting ends", "by an open page". (`meta.ts` `triggerSummary`)
+- **"New workflow" did nothing in the full-tab editor** (it wanted a chat). It now asks for the routine on the page
+  and drafts it through the same authoring (`workflow_draft` command, `authorFromWords`).
+- **A browser task waiting for a click showed nothing to click**: the run said "Waits for your click" but only the
+  Inbox could answer. The panel shows "… waits for your click in its chat" with "Open its chat" (the full tab opens
+  the side panel on it). Approval cards also show while a change to review is on screen.
+- The 5-minute schedule floor looked at the next three times only (`59,0 23,0 * * *` passed); it checks 60.
+- Checked and working: http_get (retry with back-off on 503), read_page, llm, condition branches, memory save/search,
+  inbox, notify, brief section, budgets, cancel mid-step, schedule catch-up, pause/resume, cron edit re-schedules,
+  DST (once a day at local time; unit tests for Lisbon fall-back and New York spring-forward), restart mid-run,
+  out.speak's "not available yet". web_search/browse open google.com, so they are covered by unit tests only.
+- Tests: unit `prechecks.test.ts` (3), engine +2, service +3, spec +2, diagram +2 (1 299 total green);
+  `e2e/workflows.e2e.mjs` 8/8 in Brave (+6: edit after a run, meeting-links layout and summary, a newer meeting
+  replaces an ignored offer, sandbox without Nex Brain, restart mid-run, full-tab New workflow); `inbox`, `identity`,
+  `companion`, `integrations`, `agents` E2E green. Locale keys `flow_*` (+15).
+- Known gaps: the full tab's "Open its chat" relies on the side panel reading `open-thread` when it opens, so an
+  already open panel does not switch chats; a hand-edited schedule leaves the description's wording as it was;
+  cancelling a run does not cancel an agent step's own agent run.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

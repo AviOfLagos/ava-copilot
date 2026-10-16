@@ -11,10 +11,21 @@ import { WorkflowsView } from './WorkflowsPlace';
  */
 
 function messageApi(): PanelApi {
+  // Known before any click: opening the side panel must happen in the click itself, with no wait before it
+  let windowId: number | undefined;
+  void chrome.windows
+    .getCurrent()
+    .then(window => (windowId = window.id))
+    .catch(() => {});
   return {
     // Chats and other places live in the side panel
     go: () => {},
-    openThread: () => {},
+    // A chat opens in the side panel, which shows the one asked for when it opens
+    openThread: threadId => {
+      void chrome.storage.session.set({ 'open-thread': threadId }).catch(() => {});
+      if (windowId !== undefined) void chrome.sidePanel.open({ windowId }).catch(() => {});
+    },
+    // "New workflow" asks on this page instead (WorkflowsView with `wide`)
     startThread: () => {},
     post: message => void chrome.runtime.sendMessage(message).catch(() => {}),
     request: <T,>(message: Record<string, unknown>, timeoutMs = 30_000) =>

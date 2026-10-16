@@ -23,10 +23,12 @@ import { isMeetingLinksRequest, meetingLinks } from './templates';
  * call, never the voice model's own words), and a draft never runs before the user's click in Workflows.
  */
 
-/** The routine for a spoken request: the meeting-links template for that request, else the authoring call. */
-async function authorByVoice(request: string, current: WorkflowSpec | null) {
+/**
+ * The routine for a request in the user's words, spoken or typed in Workflows: the meeting-links template for that
+ * request, else the authoring call (its usage counted under `sessionId`).
+ */
+export async function authorFromWords(request: string, current: WorkflowSpec | null, sessionId: string) {
   if (!current && isMeetingLinksRequest(request)) return { ok: true as const, spec: meetingLinks() };
-  const sessionId = services().voice.currentThreadId ?? 'voice';
   const chatModel = await workflowModel('smart', sessionId);
   return authorSpec({
     request,
@@ -97,7 +99,7 @@ export function registerWorkflowVoiceTools(service: WorkflowService): void {
       const request = String(args.request ?? '').trim();
       if (!request) return 'No request was given.';
       try {
-        const result = await authorByVoice(request, null);
+        const result = await authorFromWords(request, null, services().voice.currentThreadId ?? 'voice');
         if (!result.ok) return result.error;
         const workflow = await service.saveDraft({
           spec: result.spec,
@@ -132,7 +134,7 @@ export function registerWorkflowVoiceTools(service: WorkflowService): void {
       const current = parseSpec(workflow.draft?.spec) ?? parseSpec(workflow.spec);
       try {
         const change = String(args.change ?? '').trim();
-        const result = await authorByVoice(change, current);
+        const result = await authorFromWords(change, current, services().voice.currentThreadId ?? 'voice');
         if (!result.ok) return result.error;
         await service.saveDraft({ workflowId: workflow.id, spec: result.spec, request: change });
         return `Drafted the change to "${workflow.name}": ${outline(result.spec)}. Tell the user to check it in Workflows and click ${workflow.status === 'draft' ? 'Create' : 'Apply'}.`;

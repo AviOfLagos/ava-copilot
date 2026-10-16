@@ -14,6 +14,8 @@ export const MAX_NODES = 30;
 export const MAX_EDGES = 60;
 // A schedule may fire at most this often, so a routine cannot run away with the user's budget
 export const MIN_SCHEDULE_GAP_MS = 5 * 60_000;
+// How many coming times a schedule is checked over
+const SCHEDULE_SAMPLE = 60;
 export const DEFAULT_HTTP_BYTES = 1_000_000;
 export const MAX_HTTP_BYTES = 2_000_000;
 
@@ -287,7 +289,8 @@ export function checkSchedule(cron: string, timezone: string, after: number): { 
   if (!isTimezone(timezone)) return { error: `"${timezone}" is not a time zone (use a name like Europe/Lisbon).` };
   let runs: Date[];
   try {
-    runs = new Cron(cron, { timezone, paused: true }).nextRuns(3, new Date(after));
+    // Enough times to see every gap of a day's pattern (e.g. 23:59 then 00:00), not just the next three
+    runs = new Cron(cron, { timezone, paused: true }).nextRuns(SCHEDULE_SAMPLE, new Date(after));
   } catch {
     return { error: `"${cron}" is not a schedule (use cron, e.g. "30 7 * * *" for every day at 07:30).` };
   }

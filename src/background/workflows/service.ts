@@ -302,7 +302,7 @@ export class WorkflowService {
         if (!isTerminal(same.status)) await this.execute(same.id, signal);
         return;
       }
-      if (runs.some(run => !isTerminal(run.status))) {
+      if (await this.blockingRun(workflow)) {
         logger.info(`"${workflow.name}" is still running; this time is skipped`);
         return;
       }
@@ -338,7 +338,7 @@ export class WorkflowService {
       const listens = parseSpec(workflow.spec)?.nodes.some(
         node => node.type === 'trigger.event' && node.event === event && (!node.source || node.source === source),
       );
-      if (!listens || (await this.openRunOf(workflow.id))) continue;
+      if (!listens || (await this.blockingRun(workflow))) continue;
       const run = await this.engine.createRun(workflow, {
         trigger: { type: 'event', detail: `${event}:${id}` },
         attended: false,
@@ -367,7 +367,7 @@ export class WorkflowService {
       const key = `${workflow.id}@${url}`;
       if ((this.tabFired.get(key) ?? 0) > now - TAB_REPEAT_MS) continue;
       this.tabFired.set(key, now);
-      if (await this.openRunOf(workflow.id)) continue;
+      if (await this.blockingRun(workflow)) continue;
       // Also after a restart: the same address shortly after does not fire again
       const recent = (await runsOf(this.database, workflow.id)).some(
         run =>
@@ -452,6 +452,22 @@ export class WorkflowService {
 
   private async openRunOf(workflowId: string): Promise<RunRecord | undefined> {
     return (await runsOf(this.database, workflowId)).find(run => !isTerminal(run.status));
+  }
+
+  /**
+   * The run that keeps a firing from starting another, or undefined. A run that only waits for the user's click on
+   * an approval does not: the user let that offer go, and keeping it would stop the routine from ever firing
+   * again (a meeting link they ignored would hide every later meeting). It is closed and its Inbox item settled.
+   */
+  private async blockingRun(workflow: WorkflowRecord): Promise<RunRecord | undefined> {
+    const open = await this.openRunOf(workflow.id);
+    if (!open || open.status !== 'waiting_user' || this.executing.has(open.id)) return open;
+    const steps = await this.database.runSteps.where('runId').equals(open.id).toArray();
+    const onlyApproval = steps.some(step => step.status === 'waiting_user' && step.approval === 'pending');
+    if (!onlyApproval) return open;
+    logger.info(`"${workflow.name}": an offer nobody answered gives way to a newer run`);
+    await this.engine.cancel(open.id, 'Not answered before the routine started again; a newer run took its place.');
+    return undefined;
   }
 
   // Removes a job without stopping one that runs now: a run under way finishes, and nothing comes after it

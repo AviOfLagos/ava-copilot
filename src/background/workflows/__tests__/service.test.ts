@@ -10,7 +10,7 @@ import { conditionFreeSpec } from './fixtures';
 import { briefSectionExecutor } from '../executors';
 import { WorkflowService } from '../service';
 import type { StepExecutor } from '../engine';
-import { morningTechNews } from '../templates';
+import { meetingLinks, morningTechNews } from '../templates';
 import { briefMarkdown } from '../../brief/brief';
 
 // The model setup reaches the browser automation, which loads the extension polyfill
@@ -188,6 +188,78 @@ describe('WorkflowService', () => {
     const edited = await service.editNode(workflow.id, 'morning', { cron: '0 6 * * 1-5', label: 'Weekday mornings' });
     expect(edited.version).toBe(2);
     expect((await jobOf(workflow))?.cron).toBe('0 6 * * 1-5');
+  });
+});
+
+describe('a run nobody answered', () => {
+  const MEET_1 = 'https://meet.google.com/abc-defg-hij';
+  const MEET_2 = 'https://meet.google.com/xyz-abcd-efg';
+  const openRuns = async (workflowId: string) =>
+    (await db.runs.where('workflowId').equals(workflowId).toArray()).sort((a, b) => a.startedAt - b.startedAt);
+
+  it('gives way to the next meeting link, so an ignored offer never hides later meetings', async () => {
+    executors['step.meeting_join'] = {
+      retry: null,
+      taints: false,
+      execute: async () => ({ kind: 'done', output: {} }),
+    };
+    const workflow = await service.confirm((await service.saveDraft({ spec: meetingLinks(), request: 'x' })).id);
+    const now = Date.now();
+    expect(await service.fireTab(1, MEET_1, now)).toHaveLength(1);
+    await until(async () => (await openRuns(workflow.id))[0]?.status === 'waiting_user');
+    const [first] = await openRuns(workflow.id);
+    const offer = (await db.inbox.toArray()).find(item => item.kind === 'approval');
+    expect(offer?.status).toBe('unread');
+
+    expect(await service.fireTab(2, MEET_2, now + 60_000)).toHaveLength(1);
+    await until(async () => (await openRuns(workflow.id)).length === 2);
+    await until(async () => (await openRuns(workflow.id))[1].status === 'waiting_user');
+    const [replaced, current] = await openRuns(workflow.id);
+    expect(replaced.id).toBe(first.id);
+    expect(replaced).toMatchObject({ status: 'cancelled', error: { message: expect.stringMatching(/newer run/) } });
+    expect(current.trigger.detail).toContain(MEET_2);
+    // The old offer leaves the Inbox; the new one waits there
+    expect((await db.inbox.get(offer!.id))?.status).toBe('done');
+    expect(
+      (await db.inbox.toArray()).filter(item => item.kind === 'approval' && item.status === 'unread'),
+    ).toHaveLength(1);
+  });
+
+  it('gives way to the next scheduled time instead of skipping every time after it', async () => {
+    executors['step.sandbox'] = { retry: null, taints: true, execute: async () => ({ kind: 'done', output: 'ok' }) };
+    const spec = conditionFreeSpec();
+    spec.nodes = [spec.nodes[0], { id: 'code', type: 'step.sandbox', label: 'Run the script', command: 'make' }];
+    spec.edges = [{ from: 'start', to: 'code' }];
+    const workflow = await service.confirm((await service.saveDraft({ spec, request: 'x' })).id);
+    const job = (await jobOf(workflow)) as JobRecord;
+    await service.fire(job, new AbortController().signal);
+    expect((await openRuns(workflow.id))[0].status).toBe('waiting_user');
+    await service.fire({ ...job, runAt: job.runAt + 86_400_000 }, new AbortController().signal);
+    expect((await openRuns(workflow.id)).map(run => run.status)).toEqual(['cancelled', 'waiting_user']);
+  });
+
+  it('keeps a run whose browser task waits for a click in its chat: that is work under way', async () => {
+    const spec = meetingLinks();
+    spec.nodes = [
+      spec.nodes[0],
+      { id: 'look', type: 'step.browse', label: 'Look at the page', task: 'Read the agenda' },
+    ];
+    spec.edges = [{ from: spec.nodes[0].id, to: 'look' }];
+    spec.nodes[0] = { ...spec.nodes[0], urlPattern: 'meet.google.com/*-*-*' } as (typeof spec.nodes)[0];
+    executors['step.browse'] = {
+      retry: null,
+      taints: true,
+      resumable: true,
+      execute: async ({ saveState }) => {
+        await saveState({ threadId: 't1' });
+        return { kind: 'park', until: Date.now() + 60_000, waitingUser: true, state: { threadId: 't1' } };
+      },
+    };
+    const workflow = await service.confirm((await service.saveDraft({ spec, request: 'x' })).id);
+    await service.fireTab(1, MEET_1, Date.now());
+    await until(async () => (await openRuns(workflow.id))[0]?.status === 'waiting_user');
+    expect(await service.fireTab(2, MEET_2, Date.now() + 60_000)).toHaveLength(0);
+    expect((await openRuns(workflow.id)).map(run => run.status)).toEqual(['waiting_user']);
   });
 });
 

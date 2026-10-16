@@ -198,3 +198,25 @@ describe('describe', () => {
     expect(triggerText(news())).toBe('every day at 07:30 (Europe/Lisbon)');
   });
 });
+
+describe('schedules over time', () => {
+  it('sees a gap shorter than 5 minutes even when it is not among the next three times', () => {
+    // 00:00, 00:59, 23:00, 23:59: from 00:30 the next three times are an hour or more apart, then 23:59 → 00:00
+    const from = Date.UTC(2026, 9, 12, 0, 30);
+    expect(checkSchedule('59,0 23,0 * * *', 'UTC', from)).toEqual({ error: expect.stringMatching(/too often/) });
+  });
+
+  it('runs once a day at the local time across the clock changes', () => {
+    // Lisbon falls back on 25 October 2026: 07:30 is 06:30 UTC before and 07:30 UTC after
+    const lisbon = checkSchedule('30 7 * * *', 'Europe/Lisbon', Date.UTC(2026, 9, 24, 12, 0));
+    expect(lisbon).toEqual({ next: Date.UTC(2026, 9, 25, 7, 30) });
+    // 01:30 happens twice that night; the routine runs once, at the first
+    expect(checkSchedule('30 1 * * *', 'Europe/Lisbon', Date.UTC(2026, 9, 24, 12, 0))).toEqual({
+      next: Date.UTC(2026, 9, 25, 0, 30),
+    });
+    // New York springs forward on 14 March 2027: 02:30 does not exist, so it runs an hour later, once
+    expect(checkSchedule('30 2 * * *', 'America/New_York', Date.UTC(2027, 2, 13, 12, 0))).toEqual({
+      next: Date.UTC(2027, 2, 14, 7, 30),
+    });
+  });
+});

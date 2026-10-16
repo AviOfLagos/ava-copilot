@@ -44,7 +44,9 @@ function StatusMark({ status }: { status: RunStepStatus | null }) {
 const CHANGE_LABEL = { added: 'flow_diff_added', changed: 'flow_diff_changed', removed: 'flow_diff_removed' } as const;
 
 const FlowNodeCard = memo(function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
-  const { node, change, status, unavailable } = data;
+  const { node, change, status, unavailable, direction, note } = data;
+  const detail = unavailable ? t('flow_node_notYet') : (note ?? nodeSubtitle(node));
+  const across = direction === 'LR';
   const { icon: Icon } = NODE_META[node.type];
   const group = groupOf(node.type);
   return (
@@ -53,7 +55,7 @@ const FlowNodeCard = memo(function FlowNodeCard({ data, selected }: NodeProps<Fl
       data-status={status ?? 'none'}
       data-change={change ?? 'none'}
       // The whole name on hover: cards are narrow in the side panel
-      title={`${node.label}\n${unavailable ? t('flow_node_notYet') : nodeSubtitle(node)}`}
+      title={`${node.label}\n${detail}`}
       className={cn(
         'glass relative flex size-full items-center gap-2.5 rounded-xl px-2.5 text-left transition-[border-color,box-shadow,opacity] duration-200 ease-out',
         status === 'running' && 'border-primary/70 shadow-[0_0_0_3px_rgb(var(--primary-rgb)/0.14)]',
@@ -66,7 +68,12 @@ const FlowNodeCard = memo(function FlowNodeCard({ data, selected }: NodeProps<Fl
         change === 'removed' && 'border-destructive/50 border-dashed opacity-60',
         selected && 'ring-ring ring-1',
       )}>
-      <Handle type="target" position={Position.Top} isConnectable={false} className="flow-handle" />
+      <Handle
+        type="target"
+        position={across ? Position.Left : Position.Top}
+        isConnectable={false}
+        className="flow-handle"
+      />
       <span
         className={cn(
           'flex size-7 shrink-0 items-center justify-center rounded-lg',
@@ -83,8 +90,12 @@ const FlowNodeCard = memo(function FlowNodeCard({ data, selected }: NodeProps<Fl
           )}>
           {node.label}
         </span>
-        <span className="text-muted-foreground block truncate text-[11px] leading-tight">
-          {unavailable ? t('flow_node_notYet') : nodeSubtitle(node)}
+        <span
+          className={cn(
+            'block truncate text-[11px] leading-tight',
+            note && !unavailable ? 'text-destructive' : 'text-muted-foreground',
+          )}>
+          {detail}
         </span>
       </span>
       <StatusMark status={status} />
@@ -99,7 +110,12 @@ const FlowNodeCard = memo(function FlowNodeCard({ data, selected }: NodeProps<Fl
           {t(CHANGE_LABEL[change])}
         </span>
       )}
-      <Handle type="source" position={Position.Bottom} isConnectable={false} className="flow-handle" />
+      <Handle
+        type="source"
+        position={across ? Position.Right : Position.Bottom}
+        isConnectable={false}
+        className="flow-handle"
+      />
     </div>
   );
 });
@@ -115,10 +131,12 @@ const WIRE: Record<WireState, { stroke: string; dash?: string }> = {
   skipped: { stroke: 'var(--color-border)', dash: '2 4' },
 };
 
-export interface FlowDiagramProps extends DiagramInput {
+export interface FlowDiagramProps extends Omit<DiagramInput, 'box'> {
   selectedId: string | null;
   onSelect: (nodeId: string | null) => void;
-  height?: number | string;
+  height?: number;
+  // About how wide the diagram is shown, for picking its direction (the panel is narrow, the full tab wide)
+  width?: number;
   label: string;
 }
 
@@ -126,13 +144,16 @@ export default function FlowDiagram({
   spec,
   diff,
   steps,
+  notes,
   selectedId,
   onSelect,
   height = 320,
+  width = 370,
   label,
 }: FlowDiagramProps) {
+  const notesKey = JSON.stringify(notes ?? {});
   const { nodes, edges } = useMemo(() => {
-    const diagram = buildDiagram({ spec, diff, steps });
+    const diagram = buildDiagram({ spec, diff, steps, notes, box: { width, height } });
     const flowNodes: FlowNode[] = diagram.nodes.map(node => ({ ...node, selected: node.id === selectedId }));
     const flowEdges: Edge[] = diagram.edges.map(edge => {
       const wire = WIRE[edge.state];
@@ -150,7 +171,8 @@ export default function FlowDiagram({
       };
     });
     return { nodes: flowNodes, edges: flowEdges };
-  }, [spec, diff, steps, selectedId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notes by value: the panel builds a new object each render
+  }, [spec, diff, steps, notesKey, selectedId, width, height]);
 
   // A new shape is laid out and fitted again; status changes only repaint
   const shape = useMemo(
