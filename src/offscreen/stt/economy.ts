@@ -8,6 +8,7 @@ import type { SttEngine } from './engines';
 import { recordHeard } from './listen';
 import { acquireStt, releaseStt } from './pool';
 import { hasWords, UtteranceCollector } from './utterances';
+import { level } from '../vad';
 
 /**
  * The economy voice conversation: the same Talk button, tools and thread as the Gemini Live one, but no audio
@@ -17,8 +18,13 @@ import { hasWords, UtteranceCollector } from './utterances';
  */
 
 const INPUT_RATE = 16_000;
-// Speech over the copilot's answer this long stops the answer (shorter is a cough or an echo)
+// Speech over the copilot's answer this long stops the answer (shorter is a cough or an echo). It counts from the
+// gate opening, and while the answer plays the gate itself already asks for louder speech held for 300 ms
 const BARGE_IN_MS = 400;
+// The answer's voice still reaches the microphone a moment after it stops playing
+const ECHO_TAIL_MS = 300;
+// The quiet that ends an utterance (UtteranceCollector's default)
+const UTTERANCE_HANGOVER_MS = 700;
 // Exchanges sent with each turn, newest last
 const HISTORY_TURNS = 8;
 const SORRY = 'Sorry, I could not answer that.';
@@ -67,6 +73,14 @@ export class EconomySession {
   private bargeSamples = 0;
   // Bumped when the user talks over an answer: an answer still on its way is not spoken
   private interruptions = 0;
+  // When the answer's voice last stopped, for its echo tail
+  private spokeUntil = 0;
+  // The utterance being collected was heard over the answer, and whether it stopped the answer: one that did
+  // not is the answer's own echo (or noise under it), never a turn
+  private overPlayback = false;
+  private bargedIn = false;
+  // Dictation in the chat box has the microphone: nothing heard here counts meanwhile
+  private micHeld = false;
 
   constructor(
     private readonly options: EconomyOptions,
@@ -120,16 +134,50 @@ export class EconomySession {
     this.pump();
   }
 
+  /** Holds the microphone (dictation in the chat box has it) or gives it back; typed turns still work. */
+  holdMic(on: boolean): void {
+    if (this.micHeld === on) return;
+    this.micHeld = on;
+    if (on) {
+      this.collector.cancel();
+      this.bargeSamples = 0;
+      this.overPlayback = false;
+      this.bargedIn = false;
+    }
+  }
+
+  /** The answer's voice can be heard now (or was a moment ago). */
+  private audible(): boolean {
+    return this.speaking || performance.now() - this.spokeUntil < ECHO_TAIL_MS;
+  }
+
   private fromMic(samples: Float32Array): void {
-    if (!this.ready || this.stopped) return;
-    const { utterance } = this.collector.push(samples);
+    if (!this.ready || this.stopped || this.micHeld) return;
+    const playing = this.audible();
+    const { speechStarted, utterance } = this.collector.push(samples, { playing });
+    if (speechStarted) {
+      this.overPlayback = this.speaking;
+      this.bargedIn = false;
+    }
     if (this.speaking && this.collector.speaking) {
-      this.bargeSamples += samples.length;
-      if (this.bargeSamples >= (BARGE_IN_MS / 1000) * INPUT_RATE) this.interrupt();
+      this.overPlayback = true;
+      // Only loud audio counts toward a barge-in, not the quiet the gate lets through after it
+      if (level(samples) > this.collector.threshold(true)) this.bargeSamples += samples.length;
+      if (this.bargeSamples >= (BARGE_IN_MS / 1000) * INPUT_RATE) {
+        this.bargedIn = true;
+        this.interrupt();
+      }
     } else {
       this.bargeSamples = 0;
     }
     if (utterance) {
+      // The last loud sound was one hangover ago: if that was while the answer could still be heard, all of it was
+      const lastLoud = performance.now() - UTTERANCE_HANGOVER_MS;
+      const echo = this.overPlayback && !this.bargedIn && (this.speaking || lastLoud <= this.spokeUntil + ECHO_TAIL_MS);
+      this.overPlayback = false;
+      this.bargedIn = false;
+      // Heard over the answer without stopping it: the answer's own echo, dropped so it is never answered
+      if (echo) return;
       this.utterances.push(utterance);
       void this.transcribeNext();
     }
@@ -140,6 +188,7 @@ export class EconomySession {
     this.bargeSamples = 0;
     this.interruptions++;
     this.speaking = false;
+    this.spokeUntil = performance.now();
     this.deps.stopSpeaking(this.options.economy.tts);
     this.status('listening');
   }
@@ -235,6 +284,8 @@ export class EconomySession {
       } catch (error) {
         if (!this.stopped) this.status('listening', `The voice failed: ${String(error)}`);
       }
+      // Already false when the user talked over it
+      if (this.speaking) this.spokeUntil = performance.now();
       this.speaking = false;
       this.bargeSamples = 0;
       if (this.stopped) return;
