@@ -47,6 +47,9 @@ fallback (AI SDK `ToolLoopAgent`) can replace eve without the extension noticing
 
 ## Re-run the probe
 
+The probe was removed from the tree on 2026-10-17 once the companion was built; it is in git history up to commit
+`f91aab9`. To run it again: `git checkout f91aab9 -- companion/spike`, then:
+
 ```bash
 cd companion/spike/eve-probe
 snare shield check . >/dev/null && command pnpm install --ignore-workspace

@@ -419,9 +419,6 @@ test('joining a call starts notes with no answer; the note is optional and adds 
   assert.equal(meeting.status, 'recording');
   assert.equal(meeting.auto, true);
   assert.equal(meeting.source, 'captions', 'never invoked on the tab: its captions are read');
-  // No window of its own that could hide behind the browser
-  const asks = extension.browser.targets().filter(target => target.url().includes('meeting-ask.html'));
-  assert.equal(asks.length, 0);
 
   // The optional note shows in the panel and as an Inbox item, with a notification
   await waitForText('Add a note on what it');

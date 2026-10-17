@@ -208,25 +208,6 @@ db.meetings.hook('updating', (changes: Partial<{ status: string }>, meetingId: s
   }
 });
 
-// The small window that asks what a call is about
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('meeting-ask.html'))) return;
-  const meetingId = typeof message?.meetingId === 'string' ? message.meetingId : null;
-  if (!meetingId) return;
-  const run = async () => {
-    if (message.type === 'meeting_topic') {
-      await meetings.setTopic(meetingId, String(message.topic ?? ''));
-    } else if (message.type === 'meeting_not_this_call') {
-      const meeting = await meetingStore.get(meetingId);
-      if (meeting?.tabId != null) await autoJoin.decline(meeting.tabId);
-      await meetings.stop(meetingId);
-    }
-    return { ok: true };
-  };
-  run().then(sendResponse, error => sendResponse({ ok: false, error: String(error) }));
-  return true;
-});
-
 // Settings pages manage the knowledge base through the background, which keeps its search index
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || typeof message?.type !== 'string' || !message.type.startsWith('kb_')) {
