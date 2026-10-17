@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import {
   AgentNameEnum,
-  ProviderTypeEnum,
   agentModelStore,
   db,
+  LLM_PROVIDERS_STORAGE_KEY,
   llmProviderStore,
+  providerIsUsable,
   meetingSettingsStore,
   threadStore,
   type KbAnswer,
@@ -87,6 +88,8 @@ const SidePanel = () => {
   const { dark: isDarkMode } = useTheme();
   const assistantName = useAssistantName();
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null);
+  // When the welcome screen last asked for the first-run model step
+  const [setupAt, setSetupAt] = useState(0);
   const [threadId, setThreadId] = useState<string | null>(threadFromUrl);
   // Where the user is, and whether the menu (places and chat history) is open
   const [place, setPlace] = useState<Place>('chat');
@@ -175,10 +178,8 @@ const SidePanel = () => {
     try {
       const navigatorModel = await agentModelStore.getAgentModel(AgentNameEnum.Navigator);
       const provider = navigatorModel ? await llmProviderStore.getProvider(navigatorModel.provider) : undefined;
-      // Local and custom OpenAI-compatible providers can run without a key
-      const keyOptional =
-        provider?.type === ProviderTypeEnum.Ollama || provider?.type === ProviderTypeEnum.CustomOpenAI;
-      setHasConfiguredModels(!!provider && (keyOptional || provider.apiKey.trim() !== ''));
+      // Local servers (Ollama, LM Studio) and custom OpenAI-compatible providers can run without a key
+      setHasConfiguredModels(!!navigatorModel && providerIsUsable(provider, navigatorModel.provider));
     } catch (error) {
       console.error('Error checking model configuration:', error);
       setHasConfiguredModels(false);
@@ -190,9 +191,17 @@ const SidePanel = () => {
     const recheck = () => !document.hidden && void checkModelConfiguration();
     document.addEventListener('visibilitychange', recheck);
     window.addEventListener('focus', recheck);
+    // A model set up anywhere (the first-run setup, Models & usage) makes the panel ready at once
+    const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && (changes['agent-models'] || changes[LLM_PROVIDERS_STORAGE_KEY])) {
+        void checkModelConfiguration();
+      }
+    };
+    chrome.storage.onChanged.addListener(onStorage);
     return () => {
       document.removeEventListener('visibilitychange', recheck);
       window.removeEventListener('focus', recheck);
+      chrome.storage.onChanged.removeListener(onStorage);
     };
   }, [checkModelConfiguration]);
 
@@ -746,7 +755,13 @@ const SidePanel = () => {
 
   return (
     <div className="aura text-foreground relative flex h-screen flex-col overflow-hidden font-sans">
-      <Onboarding hasModel={hasConfiguredModels} onOpenModels={() => go('models' as Place)} />
+      <Onboarding
+        hasModel={hasConfiguredModels}
+        request={panelApi.request}
+        onOpenModels={() => go('models' as Place)}
+        reopenAt={setupAt}
+        hideResume={view === 'welcome'}
+      />
       {voiceStatus !== 'off' && !voiceHidden && (
         <VoiceView
           status={voiceStatus}
@@ -909,10 +924,10 @@ const SidePanel = () => {
           <LiveOrb size={132} label={assistantName} />
           <div className="space-y-2">
             <h3 className="text-lg font-medium tracking-tight">{t('welcome_title')}</h3>
-            <p className="text-muted-foreground text-sm">{t('welcome_instruction')}</p>
+            <p className="text-muted-foreground text-sm">{t('onboard_welcome_body')}</p>
           </div>
-          <Button size="lg" onClick={() => chrome.runtime.openOptionsPage()}>
-            {t('welcome_openSettings')}
+          <Button size="lg" onClick={() => setSetupAt(Date.now())}>
+            {t('onboard_welcome_button')}
           </Button>
         </div>
       )}

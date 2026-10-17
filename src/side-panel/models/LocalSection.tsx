@@ -80,7 +80,7 @@ function useBrowserSpec(): BrowserSpec | null {
   return spec;
 }
 
-function CopyCommand({ command }: { command: string }) {
+export function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="bg-muted/60 mt-1 flex items-center gap-1 rounded-lg py-0.5 pl-2 pr-0.5">

@@ -7814,5 +7814,101 @@
         "example": "Q3 plan"
       }
     }
+  },
+  "onboard_model_intro": {
+    "message": "$1 needs one model to think with: one running on this computer, or a provider’s API key. Pick one and connect it."
+  },
+  "onboard_model_readyTitle": {
+    "message": "Ready."
+  },
+  "onboard_model_using": {
+    "message": "Using $1 from $2. Change it any time in Models & usage."
+  },
+  "onboard_model_choose": {
+    "message": "How to connect a model"
+  },
+  "onboard_model_tab_local": {
+    "message": "On this computer"
+  },
+  "onboard_model_tab_key": {
+    "message": "API key"
+  },
+  "onboard_model_local_none": {
+    "message": "No local model server is running yet. To run models privately and for free:"
+  },
+  "onboard_model_local_install": {
+    "message": "Install Ollama from ollama.com and open it."
+  },
+  "onboard_model_local_pull": {
+    "message": "In Terminal, download a model that fits this computer:"
+  },
+  "onboard_model_local_looking": {
+    "message": "Looking for Ollama and LM Studio…"
+  },
+  "onboard_model_local_watching": {
+    "message": "Watching for it: this updates by itself a few seconds after it starts. LM Studio works too, with its local server on."
+  },
+  "onboard_model_local_orKey": {
+    "message": "Or use an API key instead"
+  },
+  "onboard_model_local_use": {
+    "message": "Use $1"
+  },
+  "onboard_model_local_connected": {
+    "message": "$1 is connected."
+  },
+  "onboard_model_local_model": {
+    "message": "Model"
+  },
+  "onboard_model_local_pick": {
+    "message": "Pick a model…"
+  },
+  "onboard_model_local_empty": {
+    "message": "$1 is running but has no models yet. Download one:"
+  },
+  "onboard_model_local_noChat": {
+    "message": "Connected, but none of its models can chat. Download a chat model, then pick it here."
+  },
+  "onboard_model_key_provider": {
+    "message": "Provider"
+  },
+  "onboard_model_key_show": {
+    "message": "Show key"
+  },
+  "onboard_model_key_hide": {
+    "message": "Hide key"
+  },
+  "onboard_model_key_connect": {
+    "message": "Check and connect"
+  },
+  "onboard_model_key_checking": {
+    "message": "Checking the key with the provider…"
+  },
+  "onboard_model_key_ok": {
+    "message": "The key works. $1 lists $2."
+  },
+  "onboard_model_key_missing": {
+    "message": "Paste the API key first."
+  },
+  "onboard_model_key_badUrl": {
+    "message": "Enter the provider’s address, starting with https://"
+  },
+  "onboard_model_key_noList": {
+    "message": "This address answered but lists no models. Add it in Models & usage with a model name."
+  },
+  "onboard_model_more": {
+    "message": "More providers and settings in Models & usage"
+  },
+  "onboard_model_needed": {
+    "message": "Connect a model to go on, or Skip for now."
+  },
+  "onboard_model_owed": {
+    "message": "Finish setup"
+  },
+  "onboard_welcome_body": {
+    "message": "Connect one model to start: one running on this computer, or a provider’s API key."
+  },
+  "onboard_welcome_button": {
+    "message": "Connect a model"
   }
 }

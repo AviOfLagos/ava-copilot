@@ -234,3 +234,88 @@ describe('a saved key stays with its server', () => {
     expect((await llmProviderStore.getProvider('custom_good'))?.baseUrl).toBe('https://good.example/v1');
   });
 });
+
+describe('role defaults for any provider', () => {
+  it('gives an OpenAI key the best listed models, turning them on when the saved suggestions are not offered', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fakeFetch({
+        'https://api.openai.com/v1/models': {
+          json: { data: [{ id: 'gpt-7-pro' }, { id: 'gpt-7-mini' }, { id: 'text-embedding-3-small' }] },
+        },
+      }).fetch,
+    );
+    const reply = await send({
+      type: 'models_provider_save',
+      providerId: 'openai',
+      config: { type: 'openai', name: 'OpenAI', modelNames: ['gpt-6-astra'] },
+      apiKey: 'sk-openai-test-1234',
+    });
+    expect(reply).toMatchObject({ health: { status: 'ok' }, assigned: { planner: { modelName: 'gpt-7-pro' } } });
+    expect(await agentModelStore.getAgentModel('planner' as never)).toMatchObject({ modelName: 'gpt-7-pro' });
+    expect(await agentModelStore.getAgentModel('navigator' as never)).toMatchObject({ modelName: 'gpt-7-mini' });
+    expect((await llmProviderStore.getProvider('openai'))?.modelNames).toContain('gpt-7-pro');
+    expect((await modelSettingsStore.getSettings()).roles.fast).toEqual({ providerId: 'openai', model: 'gpt-7-mini' });
+  });
+
+  it('gives a local Ollama its chat model for both agents, and leaves a working choice alone afterwards', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fakeFetch({
+        // No /api/show: what each model can do comes from its name
+        'http://localhost:11434/api/tags': { json: { models: [{ name: 'qwen3:4b' }, { name: 'nomic-embed-text' }] } },
+      }).fetch,
+    );
+    const reply = await send({
+      type: 'models_provider_save',
+      providerId: 'ollama',
+      config: { type: 'ollama', modelNames: ['qwen3:4b', 'nomic-embed-text'] },
+    });
+    expect(reply).toMatchObject({ health: { status: 'ok' } });
+    expect(await agentModelStore.getAgentModel('navigator' as never)).toEqual({
+      provider: 'ollama',
+      modelName: 'qwen3:4b',
+    });
+    expect(await agentModelStore.getAgentModel('planner' as never)).toMatchObject({ modelName: 'qwen3:4b' });
+
+    // A second provider saved later changes nothing that works
+    vi.stubGlobal(
+      'fetch',
+      fakeFetch({ 'http://localhost:1234/v1/models': { json: { data: [{ id: 'llama-4-8b' }] } } }).fetch,
+    );
+    const second = await send({ type: 'models_provider_save', providerId: 'lmstudio', config: { type: 'lmstudio' } });
+    expect(second).toMatchObject({ assigned: {} });
+    expect(await agentModelStore.getAgentModel('navigator' as never)).toMatchObject({ provider: 'ollama' });
+  });
+
+  it('assigns nothing for a local server that does not answer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    const reply = await send({ type: 'models_provider_save', providerId: 'ollama', config: { type: 'ollama' } });
+    expect(reply).toMatchObject({ health: { status: 'error' }, assigned: {} });
+    expect(await agentModelStore.getAgentModel('navigator' as never)).toBeUndefined();
+  });
+});
+
+describe('models_local_probe', () => {
+  it('says which local servers answer now, and records only what changed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fakeFetch({ 'http://localhost:11434/api/tags': { json: { models: [{ name: 'qwen3:4b' }] } } }).fetch,
+    );
+    const reply = await send({ type: 'models_local_probe' });
+    expect(reply).toMatchObject({
+      type: 'models_local_probed',
+      local: [
+        { kind: 'ollama', status: 'found', models: ['qwen3:4b'] },
+        { kind: 'lmstudio', status: 'absent' },
+      ],
+    });
+    const first = (await modelHealthStore.getHealth()).local.ollama;
+    expect(first).toMatchObject({ status: 'found' });
+    await send({ type: 'models_local_probe' });
+    expect((await modelHealthStore.getHealth()).local.ollama?.checkedAt).toBe(first?.checkedAt);
+  });
+});

@@ -7814,5 +7814,101 @@
         "example": "Q3 plan"
       }
     }
+  },
+  "onboard_model_intro": {
+    "message": "$1 precisa de um modelo para pensar: um rodando neste computador ou a chave de API de um provedor. Escolha um e conecte."
+  },
+  "onboard_model_readyTitle": {
+    "message": "Pronto."
+  },
+  "onboard_model_using": {
+    "message": "Usando $1 de $2. Mude quando quiser em Modelos e uso."
+  },
+  "onboard_model_choose": {
+    "message": "Como conectar um modelo"
+  },
+  "onboard_model_tab_local": {
+    "message": "Neste computador"
+  },
+  "onboard_model_tab_key": {
+    "message": "Chave de API"
+  },
+  "onboard_model_local_none": {
+    "message": "Nenhum servidor de modelos local está rodando ainda. Para rodar modelos com privacidade e de graça:"
+  },
+  "onboard_model_local_install": {
+    "message": "Instale o Ollama em ollama.com e abra-o."
+  },
+  "onboard_model_local_pull": {
+    "message": "No Terminal, baixe um modelo adequado a este computador:"
+  },
+  "onboard_model_local_looking": {
+    "message": "Procurando Ollama e LM Studio…"
+  },
+  "onboard_model_local_watching": {
+    "message": "Aguardando: isto se atualiza sozinho alguns segundos depois que ele iniciar. O LM Studio também funciona, com o servidor local ligado."
+  },
+  "onboard_model_local_orKey": {
+    "message": "Ou use uma chave de API"
+  },
+  "onboard_model_local_use": {
+    "message": "Usar $1"
+  },
+  "onboard_model_local_connected": {
+    "message": "$1 está conectado."
+  },
+  "onboard_model_local_model": {
+    "message": "Modelo"
+  },
+  "onboard_model_local_pick": {
+    "message": "Escolha um modelo…"
+  },
+  "onboard_model_local_empty": {
+    "message": "$1 está rodando, mas ainda não tem modelos. Baixe um:"
+  },
+  "onboard_model_local_noChat": {
+    "message": "Conectado, mas nenhum dos modelos conversa. Baixe um modelo de chat e escolha-o aqui."
+  },
+  "onboard_model_key_provider": {
+    "message": "Provedor"
+  },
+  "onboard_model_key_show": {
+    "message": "Mostrar chave"
+  },
+  "onboard_model_key_hide": {
+    "message": "Ocultar chave"
+  },
+  "onboard_model_key_connect": {
+    "message": "Verificar e conectar"
+  },
+  "onboard_model_key_checking": {
+    "message": "Verificando a chave com o provedor…"
+  },
+  "onboard_model_key_ok": {
+    "message": "A chave funciona. $1 lista: $2."
+  },
+  "onboard_model_key_missing": {
+    "message": "Cole a chave de API primeiro."
+  },
+  "onboard_model_key_badUrl": {
+    "message": "Digite o endereço do provedor, começando com https://"
+  },
+  "onboard_model_key_noList": {
+    "message": "Este endereço respondeu, mas não lista modelos. Adicione-o em Modelos e uso com o nome de um modelo."
+  },
+  "onboard_model_more": {
+    "message": "Mais provedores e ajustes em Modelos e uso"
+  },
+  "onboard_model_needed": {
+    "message": "Conecte um modelo para continuar, ou pule por enquanto."
+  },
+  "onboard_model_owed": {
+    "message": "Concluir configuração"
+  },
+  "onboard_welcome_body": {
+    "message": "Conecte um modelo para começar: um rodando neste computador ou a chave de API de um provedor."
+  },
+  "onboard_welcome_button": {
+    "message": "Conectar um modelo"
   }
 }

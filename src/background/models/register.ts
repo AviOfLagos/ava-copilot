@@ -24,6 +24,8 @@ import {
   checkSavedOrDraft,
   checkSchema,
   lightRouteSchema,
+  localProbe,
+  localProbeSchema,
   localReport,
   localReportSchema,
   testModel,
@@ -201,6 +203,10 @@ registerCommand('models_test_model', testModelSchema, (input, context) =>
 
 registerCommand('models_local_report', localReportSchema, (_input, context) =>
   answer(context, 'models_local_reported', () => localReport()),
+);
+
+registerCommand('models_local_probe', localProbeSchema, (_input, context) =>
+  answer(context, 'models_local_probed', () => localProbe()),
 );
 
 registerCommand('models_light_route', lightRouteSchema, (_input, context) =>
