@@ -8,7 +8,7 @@ vi.mock('@extension/i18n', () => ({
 }));
 import { isVoiceActivity, shouldEndIdle } from '../idle';
 import { parseVoiceManifest } from '../models';
-import { chooseEconomyEngines, SETUP_COMMAND } from '../options';
+import { chooseEconomyEngines, modelsNeeded, SETUP_COMMAND } from '../options';
 import { toJsonSchema, voiceToolSet } from '../tools';
 
 const settings = (changes: Partial<typeof DEFAULT_VOICE_ENGINE_SETTINGS> = {}) => ({
@@ -151,5 +151,49 @@ describe('idle end', () => {
     expect(isVoiceActivity({ type: 'voice_status', status: 'off' })).toBe(false);
     expect(isVoiceActivity({ type: 'tts_ended' })).toBe(false);
     expect(isVoiceActivity(null)).toBe(false);
+  });
+});
+
+describe('modelsNeeded', () => {
+  const base = {
+    settings: { ...DEFAULT_VOICE_ENGINE_SETTINGS },
+    tts: { engine: 'system', engineChosen: false },
+    installed: {},
+    hasGeminiKey: false,
+    geminiSpeechToText: false,
+  };
+
+  it('asks for Moonshine tiny and KittenTTS before the first conversation on the device', () => {
+    expect(modelsNeeded('talk', base)).toEqual({ required: ['moonshine-tiny'], optional: ['kitten'] });
+  });
+
+  it('asks for nothing once they are here, or when the conversation goes to Gemini Live', () => {
+    const installed = { 'moonshine-tiny': { bytes: 1 }, kitten: { bytes: 1 } };
+    expect(modelsNeeded('talk', { ...base, installed })).toEqual({ required: [], optional: [] });
+    // Automatic with a Gemini key and nothing downloaded: Live, as before
+    expect(modelsNeeded('talk', { ...base, hasGeminiKey: true })).toEqual({ required: [], optional: [] });
+    expect(
+      modelsNeeded('talk', { ...base, hasGeminiKey: true, settings: { ...base.settings, mode: 'economy' } }),
+    ).toEqual({ required: ['moonshine-tiny'], optional: ['kitten'] });
+  });
+
+  it('follows the engines chosen: the system voices picked need no voice download', () => {
+    expect(modelsNeeded('talk', { ...base, tts: { engine: 'system', engineChosen: true } }).optional).toEqual([]);
+    expect(modelsNeeded('talk', { ...base, tts: { engine: 'kokoro', engineChosen: true } }).optional).toEqual([
+      'kokoro',
+    ]);
+    expect(modelsNeeded('talk', { ...base, settings: { ...base.settings, stt: 'whisper' } }).required).toEqual([
+      'whisper-base',
+    ]);
+  });
+
+  it('dictation needs a recogniser unless Gemini writes it down; the wake word needs Vosk', () => {
+    expect(modelsNeeded('dictation', base)).toEqual({ required: ['moonshine-tiny'], optional: [] });
+    expect(modelsNeeded('dictation', { ...base, geminiSpeechToText: true })).toEqual({ required: [], optional: [] });
+    expect(modelsNeeded('wake', base)).toEqual({ required: ['vosk'], optional: [] });
+    expect(modelsNeeded('wake', { ...base, installed: { vosk: { bytes: 1 } } })).toEqual({
+      required: [],
+      optional: [],
+    });
   });
 });

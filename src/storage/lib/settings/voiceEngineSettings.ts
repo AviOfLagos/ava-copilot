@@ -7,7 +7,8 @@ import type { TtsSettingsConfig } from './ttsSettings';
 /**
  * Settings › Voice engines: which engines hear and speak, and whether a conversation runs on Gemini Live (audio
  * to the cloud) or in economy mode (speech recognised on the device, a text model answers, a local voice speaks).
- * The model files come from `node scripts/voice-models-setup.mjs` into the extension's own `voice/` folder.
+ * The model files are downloaded on first use (`@extension/shared` voice-models), or packed into a dev build by
+ * `node scripts/voice-models-setup.mjs`.
  */
 
 // Live: Gemini hears, thinks and speaks. Economy: audio never leaves the device; only text goes to a model.
@@ -98,13 +99,15 @@ export function migrateVoiceEngineSettings(
   return merged;
 }
 
-/** The model folders `scripts/voice-models-setup.mjs` can install, and the wake word's Vosk model. */
+/** The local voice models (downloaded on first use, or packed by the setup scripts), and the wake word's Vosk model. */
 export type VoiceModelId = 'kitten' | 'kokoro' | 'moonshine-tiny' | 'moonshine-base' | 'whisper-base' | 'vosk';
 
 export interface InstalledVoiceModel {
   bytes: number;
   // Moonshine's float weights for the GPU are there too
   webgpu?: boolean;
+  // Downloaded on first use into the extension's own storage, rather than packed into the build
+  downloaded?: boolean;
 }
 
 export type InstalledVoiceModels = Partial<Record<VoiceModelId, InstalledVoiceModel>>;

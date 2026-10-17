@@ -2332,7 +2332,7 @@
     }
   },
   "settings_wake_failed": {
-    "message": "聆聽未啟動。請執行 node scripts/wake-word-setup.mjs，重新建置並重新載入。"
+    "message": "聆聽未啟動。請在「設定 › 語音引擎」確認喚醒詞模型已下載，然後再開啟一次。"
   },
   "nav_home": {
     "message": "首頁"
@@ -5003,7 +5003,7 @@
     "message": "你的語音會在這台電腦上聽取並念出，由你的聊天模型回答，所以不需要金鑰。只有在缺少語音檔案且已設定 Gemini 金鑰時，才會使用 Gemini Live。"
   },
   "voice_engine_local_missing": {
-    "message": "不用 Gemini 金鑰交談，需要 Nex Copilot 附帶的語音檔案，而這個版本沒有。請打開「設定 › 語音引擎」查看缺少什麼，或在「設定」中加入 Gemini 金鑰，改用 Gemini 交談。"
+    "message": "不用 Gemini 金鑰交談，需要這台電腦上的語音檔案，但還沒下載。請到「設定 › 語音引擎」下載，或在「設定」中加入 Gemini 金鑰，改用 Gemini 交談。"
   },
   "voice_engine_dictation_missing": {
     "message": "聽寫需要 Gemini 語音轉文字模型，或這台電腦上的語音檔案，但兩者都還沒設定。請打開「設定 › 語音引擎」，或在「設定」中加入 Gemini 金鑰。"
@@ -5115,7 +5115,7 @@
     "message": "Kokoro 82M"
   },
   "voice_engine_models_installed": {
-    "message": "已安裝 · $MB$ MB",
+    "message": "已下載 · $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5124,7 +5124,7 @@
     }
   },
   "voice_engine_models_notInstalled": {
-    "message": "未安裝 · 約 $MB$ MB",
+    "message": "未下載 · 約 $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5136,19 +5136,13 @@
     "message": "未安裝"
   },
   "voice_engine_models_hint": {
-    "message": "模型只下載一次、經過驗證，並與擴充功能一起打包：說話時不會再下載任何東西。請在擴充功能的資料夾執行這個指令，然後重新建置。"
+    "message": "在第一次需要時下載一次，以固定的校驗碼驗證，並保存在這台電腦上：說話時不會再下載任何東西。"
   },
   "voice_engine_models_copy": {
     "message": "複製指令"
   },
   "voice_engine_models_missing": {
-    "message": "這台電腦沒有安裝語音模型。請執行 $COMMAND$，然後重新建置擴充功能。",
-    "placeholders": {
-      "command": {
-        "content": "$1",
-        "example": "node scripts/voice-models-setup.mjs"
-      }
-    }
+    "message": "這台電腦上還沒有語音模型。請到「設定 › 語音引擎」下載。"
   },
   "voice_engine_test_button": {
     "message": "說句話"
@@ -7910,5 +7904,106 @@
   },
   "onboard_welcome_button": {
     "message": "連接模型"
+  },
+  "voice_models_card_title": {
+    "message": "下載語音（約 $MB$ MB，只需一次）",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_titleWake": {
+    "message": "下載喚醒詞模型（約 $MB$ MB，只需一次）",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_body": {
+    "message": "你的語音會在這台電腦上辨識和朗讀，不需要金鑰。檔案來自 Hugging Face，經過驗證後保存在這裡，所以只需下載一次。"
+  },
+  "voice_models_card_bodyWake": {
+    "message": "喚醒詞只在這台電腦上聆聽。模型來自 alphacephei.com，經過驗證後保存在這裡，所以只需下載一次。"
+  },
+  "voice_models_progress": {
+    "message": "$DONE$ / $TOTAL$ MB · $PERCENT$%",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "60"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "20"
+      }
+    }
+  },
+  "voice_models_download": {
+    "message": "下載"
+  },
+  "voice_models_notNow": {
+    "message": "稍後再說"
+  },
+  "voice_models_cancel": {
+    "message": "取消"
+  },
+  "voice_models_retry": {
+    "message": "再試一次"
+  },
+  "voice_models_remove": {
+    "message": "移除"
+  },
+  "voice_models_download_named": {
+    "message": "下載 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_cancel_named": {
+    "message": "停止下載 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_remove_named": {
+    "message": "從這台電腦移除 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_state_failed": {
+    "message": "下載失敗"
+  },
+  "voice_models_state_packed": {
+    "message": "已隨這個版本打包"
+  },
+  "voice_models_error_network": {
+    "message": "下載中斷了。請檢查網路連線後再試一次：已下載的部分會保留。"
+  },
+  "voice_models_error_checksum": {
+    "message": "有一個檔案與固定的校驗碼不符，已被捨棄。請再試一次。"
+  },
+  "voice_models_error_space": {
+    "message": "磁碟空間不足，無法存放語音檔案。"
+  },
+  "voice_models_error_other": {
+    "message": "無法下載語音檔案。請再試一次。"
   }
 }

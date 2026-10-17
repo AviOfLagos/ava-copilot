@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import {
   KITTEN_VOICES,
@@ -17,7 +17,16 @@ import type {
 } from '@extension/storage';
 import { Switch } from '../components/ui/switch';
 import type { PanelApi } from '../registry';
-import { setupCommand } from './command';
+import { DownloadBar, progressText } from '../voice-models/VoiceModelsCard';
+import {
+  bytesFor,
+  cancelDownload,
+  clearDownloadError,
+  megabytes,
+  removeDownloaded,
+  startDownload,
+  useDownloadState,
+} from '../voice-models/downloads';
 
 const SELECT_CLASS = 'glass w-full rounded-lg px-2 py-1.5 text-[13px] text-foreground outline-none';
 const ROW = 'flex flex-col gap-1.5 px-3 py-2.5';
@@ -62,7 +71,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState<'speak' | 'listen' | 'unload' | null>(null);
   const [result, setResult] = useState<{ text: string; error?: boolean } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const download = useDownloadState();
 
   useEffect(() => {
     const load = () => void voiceEngineSettingsStore.getSettings().then(setSettings);
@@ -88,13 +97,17 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
 
   // Which engines an economy conversation would use depends on the settings: ask again when they change
   useEffect(refresh, [refresh, settings, ttsEngine]);
+  // And when a download ends, here or in another window
+  useEffect(() => {
+    if (download.phase !== 'downloading') refresh();
+  }, [refresh, download.phase]);
 
   if (!settings) return null;
   const update = (changes: Partial<Settings>) => void voiceEngineSettingsStore.updateSettings(changes);
   const installed = status?.installed ?? {};
   const has = (id: VoiceModelId) => Boolean(installed[id]);
   const missing = (id: VoiceModelId) => (status && !has(id) ? ` · ${t('voice_engine_notInstalled_short')}` : '');
-  const command = setupCommand(settings, ttsEngine, installed);
+  const changed = () => api.request({ type: 'voice_models_changed' });
 
   const run = async (kind: 'speak' | 'listen' | 'unload') => {
     setBusy(kind);
@@ -131,11 +144,13 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
     }
   };
 
-  const copy = () => {
-    void navigator.clipboard.writeText(command).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+  const modelState = (id: VoiceModelId) => {
+    const mine = download.ids.includes(id);
+    if (mine && download.phase === 'downloading') return 'downloading';
+    if (mine && download.phase === 'failed') return 'failed';
+    if (!status) return 'unknown';
+    if (has(id)) return installed[id]?.downloaded ? 'downloaded' : 'packed';
+    return 'missing';
   };
 
   const economyLine = status?.economy
@@ -319,29 +334,72 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
 
       <div className={ROW}>
         <div className="text-[13px]">{t('voice_engine_models_title')}</div>
-        <ul className="flex flex-col gap-1" aria-label={t('voice_engine_models_title')}>
-          {MODEL_ROWS.map(({ id, label }) => (
-            <li key={id} className="flex items-center justify-between gap-2 text-[12px]">
-              <span className="min-w-0 truncate">{t(label)}</span>
-              <span className={has(id) ? 'text-foreground' : 'text-muted-foreground'}>
-                {!has(id)
-                  ? t('voice_engine_models_notInstalled', [String(status?.sizesMb[id] ?? '?')])
-                  : installed[id]?.bytes
-                    ? t('voice_engine_models_installed', [String(Math.round((installed[id]?.bytes ?? 0) / 1e6))])
-                    : t('voice_engine_installed_short')}
-              </span>
-            </li>
-          ))}
+        <ul className="flex flex-col gap-1.5" aria-label={t('voice_engine_models_title')}>
+          {MODEL_ROWS.map(({ id, label }) => {
+            const state = modelState(id);
+            const name = t(label);
+            return (
+              <li key={id} className="flex flex-col gap-1 text-[12px]" data-testid={`voice-model-${id}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate">{name}</span>
+                  <span
+                    data-testid={`voice-model-${id}-state`}
+                    className={
+                      state === 'failed'
+                        ? 'text-destructive'
+                        : state === 'downloaded' || state === 'packed'
+                          ? 'text-foreground'
+                          : 'text-muted-foreground'
+                    }>
+                    {state === 'unknown'
+                      ? '…'
+                      : state === 'downloading'
+                        ? progressText(download)
+                        : state === 'failed'
+                          ? t('voice_models_state_failed')
+                          : state === 'missing'
+                            ? t('voice_engine_models_notInstalled', [String(megabytes(bytesFor([id])))])
+                            : state === 'packed'
+                              ? t('voice_models_state_packed')
+                              : t('voice_engine_models_installed', [String(megabytes(installed[id]?.bytes ?? 0))])}
+                  </span>
+                  {state === 'downloading' ? (
+                    <button
+                      type="button"
+                      className={BUTTON}
+                      onClick={cancelDownload}
+                      aria-label={t('voice_models_cancel_named', [name])}>
+                      {t('voice_models_cancel')}
+                    </button>
+                  ) : state === 'missing' || state === 'failed' ? (
+                    <button
+                      type="button"
+                      className={BUTTON}
+                      disabled={download.phase === 'downloading'}
+                      aria-label={t('voice_models_download_named', [name])}
+                      onClick={() => {
+                        clearDownloadError();
+                        void startDownload([id], changed);
+                      }}>
+                      {t(state === 'failed' ? 'voice_models_retry' : 'voice_models_download')}
+                    </button>
+                  ) : state === 'downloaded' ? (
+                    <button
+                      type="button"
+                      className={BUTTON}
+                      disabled={download.phase === 'downloading'}
+                      aria-label={t('voice_models_remove_named', [name])}
+                      onClick={() => void removeDownloaded(id, changed).then(refresh)}>
+                      {t('voice_models_remove')}
+                    </button>
+                  ) : null}
+                </div>
+                {state === 'downloading' && <DownloadBar download={download} label={name} />}
+              </li>
+            );
+          })}
         </ul>
         <p className={HINT}>{t('voice_engine_models_hint')}</p>
-        <div className="flex items-center gap-1.5">
-          <code className="glass min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 font-mono text-[11.5px]">
-            {command}
-          </code>
-          <button type="button" className={BUTTON} onClick={copy} aria-label={t('voice_engine_models_copy')}>
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          </button>
-        </div>
       </div>
 
       <div className={ROW}>

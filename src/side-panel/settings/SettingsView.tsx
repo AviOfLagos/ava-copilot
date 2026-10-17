@@ -157,7 +157,9 @@ export default function SettingsView({ onBack, onOpenThread, api }: SettingsView
   const setWakeWord = async (on: boolean) => {
     setWakeError('');
     setMeeting({ ...meeting, wakeWord: on });
-    setWakeError(await switchWakeWord(on));
+    const error = await switchWakeWord(on, api.request);
+    if (error === null) setMeeting(current => ({ ...current, wakeWord: false }));
+    setWakeError(error ?? '');
   };
 
   // A valid name is saved when the field is left; an invalid one shows why and is not

@@ -2,8 +2,8 @@ import { requestMicStream } from '@extension/shared';
 
 /**
  * Listens for "Hey Ava" on the device, with the Vosk recogniser in a worker and a grammar of that one
- * phrase: nothing leaves the machine until it is heard. The worker and model come from
- * scripts/wake-word-setup.mjs. A one-phrase grammar forces the decoder to fit almost anything that
+ * phrase: nothing leaves the machine until it is heard. The worker is packed (public/vosk); the model is the one
+ * downloaded when the wake word was turned on, or packed by scripts/wake-word-setup.mjs. A one-phrase grammar forces the decoder to fit almost anything that
  * starts like "hey..." into "hey ava" ("hey", "hey there", "hey everyone" all used to wake it), so a
  * candidate from that grammar is not trusted on its own: it is checked by decoding the phrase window
  * once more, as a single final result, on a second recogniser in the same worker whose grammar also
@@ -177,7 +177,7 @@ export class WakeListener {
     if (this.worker) return;
     this.wakeWords = words.length ? words : DEFAULT_WORDS;
     this.micDeviceId = micDeviceId;
-    const worker = new Worker(chrome.runtime.getURL('wake/vosk-worker.js'));
+    const worker = new Worker(chrome.runtime.getURL('vosk/vosk-worker.js'));
     this.worker = worker;
     // Quiet the model's own startup chatter (Kaldi "LOG (VoskAPI:…)" lines, printed as console
     // warnings) before it loads: the worker defers its native SetLogLevel call to load time, so

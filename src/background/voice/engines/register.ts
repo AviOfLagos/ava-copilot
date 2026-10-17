@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { t } from '@extension/i18n';
 import {
   db,
+  llmProviderStore,
   localSttChoice,
+  speechToTextModelStore,
   ttsSettingsStore,
   VOICE_MODEL_SIZES_MB,
   voiceEngineSettingsStore,
@@ -21,7 +23,8 @@ import { isVoiceActivity, shouldEndIdle } from './idle';
 import { localSpeaking, speakLocally } from './localTts';
 import { forgetInstalledVoiceModels, installedVoiceModels } from './models';
 import { askVoiceOffscreen, toVoiceOffscreen } from './offscreen';
-import { chooseEconomyEngines, SETUP_COMMAND } from './options';
+import { chooseEconomyEngines, modelsNeeded } from './options';
+import { hasGeminiSpeechToText } from '../dictation';
 import { economyTurnRequest, systemSayRequest } from './protocol';
 import type { EconomyTurnReply } from './protocol';
 import type { VoiceEngineRuntimeStatus } from './wire';
@@ -83,7 +86,6 @@ registerCommand('voice_engine_status', requestOnly('voice_engine_status'), async
     ttsEngine: voiceTtsEngine(tts.engine),
     economy: 'engines' in economy ? economy.engines : null,
     economyError: 'error' in economy ? economy.error : null,
-    setupCommand: SETUP_COMMAND,
     runtime,
   });
 });
@@ -114,7 +116,7 @@ registerCommand('voice_engine_test', requestOnly('voice_engine_test'), async (_i
 registerCommand('voice_engine_listen_test', requestOnly('voice_engine_listen_test'), async (_input, context) => {
   try {
     const stt = localSttChoice(await voiceEngineSettingsStore.getSettings(), await installedVoiceModels());
-    if (!stt) throw new Error(t('voice_engine_models_missing', [SETUP_COMMAND]));
+    if (!stt) throw new Error(t('voice_engine_models_missing'));
     const reply = await toVoiceOffscreen<{ ok?: boolean; error?: string; text?: string; ms?: number; loadMs?: number }>(
       { type: 'stt_listen_once', stt, timeoutMs: 15_000 },
     );
@@ -123,6 +125,40 @@ registerCommand('voice_engine_listen_test', requestOnly('voice_engine_listen_tes
   } catch (error) {
     context.reply({ type: 'error', requestId: context.requestId, error: toAppError(error).message });
   }
+});
+
+// What a feature still needs downloaded before it starts (the panel offers the download, then starts it)
+registerCommand(
+  'voice_models_needed',
+  z.object({
+    type: z.literal('voice_models_needed'),
+    requestId: z.string().optional(),
+    feature: z.enum(['talk', 'dictation', 'wake']),
+  }),
+  async (input, context) => {
+    forgetInstalledVoiceModels();
+    const [settings, tts, installed, providers, sttModel] = await Promise.all([
+      voiceEngineSettingsStore.getSettings(),
+      ttsSettingsStore.getSettings(),
+      installedVoiceModels(),
+      llmProviderStore.getAllProviders(),
+      speechToTextModelStore.getSpeechToTextModel(),
+    ]);
+    const needed = modelsNeeded(input.feature, {
+      settings,
+      tts,
+      installed,
+      hasGeminiKey: Object.entries(providers).some(([id, p]) => (p.type ?? id) === 'gemini' && Boolean(p.apiKey)),
+      geminiSpeechToText: hasGeminiSpeechToText(sttModel, providers),
+    });
+    context.reply({ type: 'voice_models_needed', requestId: context.requestId, ...needed });
+  },
+);
+
+// A download finished or a model was removed in a page: what is installed is read again
+registerCommand('voice_models_changed', requestOnly('voice_models_changed'), async (_input, context) => {
+  forgetInstalledVoiceModels();
+  context.reply({ type: 'voice_models_changed', requestId: context.requestId });
 });
 
 registerCommand('voice_engine_unload', requestOnly('voice_engine_unload'), async (_input, context) => {

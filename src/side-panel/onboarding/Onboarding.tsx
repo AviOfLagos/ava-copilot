@@ -9,6 +9,7 @@ import { LiveOrb } from '../components/ui/live-orb';
 import { displayPhrase, useAssistantName, useWakeChoice } from '../hooks/useAssistant';
 import { NameInput, WakeNote, nameError } from './AssistantName';
 import { setWakeWord } from './wake';
+import VoiceModelsCard from '../voice-models/VoiceModelsCard';
 import ModelSetup from './ModelSetup';
 import type { ModelsRequest } from '../models/useProviders';
 
@@ -132,7 +133,9 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
   const toggleWake = async (on: boolean) => {
     setWakeOn(on);
     setWakeError('');
-    setWakeError(await setWakeWord(on));
+    const error = await setWakeWord(on, request, 'onboarding');
+    if (error === null) setWakeOn(false);
+    setWakeError(error ?? '');
   };
 
   if (!showDialog) {
@@ -282,6 +285,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
                 onChange={value => void toggleWake(value)}
               />
             </div>
+            <VoiceModelsCard placement="onboarding" />
             {wakeError && (
               <p role="alert" className="text-destructive text-[11.5px]">
                 {wakeError}

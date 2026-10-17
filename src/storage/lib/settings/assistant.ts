@@ -1,6 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
+import { modelFetch } from '../../../shared/lib/voice-models/resolve';
 
 /**
  * What the user calls the assistant, and the wake phrase that follows from it.
@@ -12,8 +13,8 @@ import type { BaseStorage } from '../base/types';
  * see, so "hey <unknown name>" quietly becomes "hey" (checked against hey-ava.wav: the grammar
  * ["hey zorblax", "[unk]"] decodes it as "hey [unk] [unk]") and would wake on any sentence starting
  * with it. The phrase therefore follows the name only when every word of
- * it is in the vocabulary (`public/wake/words.txt`, written by scripts/wake-word-setup.mjs from the
- * model's own word list); otherwise it stays "hey ava".
+ * it is in the vocabulary (`wake/words.txt`, made from the model's own word list when it is
+ * downloaded, or by scripts/wake-word-setup.mjs); otherwise it stays "hey ava".
  */
 
 export const DEFAULT_ASSISTANT_NAME = 'Ava';
@@ -92,9 +93,9 @@ export function parseVocabulary(text: string): Set<string> {
 
 let vocabulary: Promise<Set<string> | null> | null = null;
 
-/** The wake model's vocabulary, read once from the extension's files; null when it is not installed. */
+/** The wake model's vocabulary, read once (downloaded copy, else packed); null when it is not there yet. */
 export function loadWakeVocabulary(): Promise<Set<string> | null> {
-  vocabulary ??= fetch(chrome.runtime.getURL('wake/words.txt'))
+  vocabulary ??= modelFetch(chrome.runtime.getURL('wake/words.txt'))
     .then(async response => (response.ok ? parseVocabulary(await response.text()) : null))
     .catch(() => null)
     .then(result => {

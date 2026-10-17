@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 /**
- * Puts the on-device "Hey Ava" listener's files in public/wake/ (git-ignored, about 45 MB):
+ * Puts the on-device "Hey Ava" listener's model in public/wake/ (git-ignored, about 41 MB) for a dev build. The
+ * extension downloads the same pinned zip on first use when the wake word is turned on (see
+ * src/shared/lib/voice-models/catalog.ts), so a normal install does not need this.
  *
- * - vosk-worker.js: the Vosk speech recogniser (vosk-browser 0.0.8, Apache-2.0), taken out of the
- *   blob worker it ships as (extension pages may not start blob workers) and made eval-free (they may
- *   not run `new Function` either), using Emscripten's own non-eval forms of the three embind helpers.
  * - model.tar.gz: vosk-model-small-en-us-0.15 (Apache-2.0), repacked from zip to the tar.gz Vosk reads.
  *
  * - words.txt: the model's vocabulary, one word per line, read from the symbol table inside its
  *   graph/Gr.fst. The panel and background use it to tell whether "hey <assistant name>" can be the
  *   wake phrase: Vosk silently drops grammar words it does not know.
+ *
+ * The recogniser itself, public/vosk/vosk-worker.js, is code, so it is packed with the extension and kept in git
+ * (an extension may not run code it downloads): the Vosk speech recogniser (vosk-browser 0.0.8, Apache-2.0), taken
+ * out of the blob worker it ships as (extension pages may not start blob workers) and made eval-free (they may not
+ * run `new Function` either), using Emscripten's own non-eval forms of the three embind helpers, with a prelude that
+ * reads the model from the downloaded copy when there is one. `--worker` rebuilds only that file.
  *
  * Both downloads are checked against pinned SHA-256 sums. Run: node scripts/wake-word-setup.mjs
  * (`--words` writes only words.txt, from a model.tar.gz already in place.)
@@ -19,9 +24,11 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const OUT = path.resolve(import.meta.dirname, '../public/wake');
-const SOURCES = {
+const WORKER_OUT = path.resolve(import.meta.dirname, '../public/vosk/vosk-worker.js');
+export const SOURCES = {
   worker: {
     url: 'https://registry.npmjs.org/vosk-browser/-/vosk-browser-0.0.8.tgz',
     sha256: 'fd16fc7e64c935d7a79cf07c8f67d84232b6485376a59144af8a234979a9a4b4',
@@ -60,6 +67,32 @@ const NO_EVAL = {
   __emval_get_method_caller: `function __emval_get_method_caller(argCount,argTypes){var types=__emval_lookupTypes(argCount,argTypes);var retType=types[0];var invokerFunction=function(handle,name,destructors,args){var offset=0;var list=new Array(argCount-1);for(var i=0;i<argCount-1;++i){list[i]=types[i+1].readValueFromPointer(args+offset);offset+=types[i+1]["argPackAdvance"]}var rv=handle[name].apply(handle,list);for(var i=0;i<argCount-1;++i){if(types[i+1]["deleteObject"]){types[i+1].deleteObject(list[i])}}if(!retType.isVoid){return retType.toWireType(destructors,rv)}};return __emval_addMethodCaller(invokerFunction)}`,
 };
 
+// Runs before the recogniser: the model URL it is given (wake/model.tar.gz) is answered from the copy the extension
+// downloaded on first use (OPFS voice-models/vosk/, once its .ready.json is there), else from the package
+export const OPFS_PRELUDE = `// Nex Copilot: wake/model.tar.gz from the model downloaded on first use, when there is one (data, never code)
+(function () {
+  var packed = self.fetch.bind(self);
+  self.fetch = function (input, init) {
+    var url = String(input && input.url ? input.url : input);
+    var match = /^chrome-extension:\\/\\/[^/]+\\/wake\\/(model\\.tar\\.gz)$/.exec(url);
+    var storage = self.navigator && self.navigator.storage;
+    if (!match || !storage || !storage.getDirectory) return packed(input, init);
+    return storage
+      .getDirectory()
+      .then(function (root) { return root.getDirectoryHandle('voice-models'); })
+      .then(function (dir) { return dir.getDirectoryHandle('vosk'); })
+      .then(function (dir) {
+        return dir.getFileHandle('.ready.json').then(function () { return dir.getFileHandle(match[1]); });
+      })
+      .then(function (handle) { return handle.getFile(); })
+      .then(
+        function (file) { return new Response(file, { headers: { 'Content-Length': String(file.size) } }); },
+        function () { return packed(input, init); }
+      );
+  };
+})();
+`;
+
 const MODEL_DIR = 'vosk-model-small-en-us-0.15';
 // OpenFst's symbol table magic number, which starts the word list embedded in Gr.fst
 const SYMBOL_TABLE_MAGIC = 2125658996;
@@ -95,29 +128,37 @@ function writeVocabulary() {
   console.log(`Vocabulary: ${words.length} words`);
 }
 
+/** The recogniser: vosk-browser's worker, out of its blob wrapper, eval-free, with the prelude. */
+async function writeWorker(work) {
+  console.log('Downloading the recogniser…');
+  await download(SOURCES.worker, path.join(work, 'vosk.tgz'));
+  execFileSync('tar', ['xzf', 'vosk.tgz'], { cwd: work });
+  const bundle = fs.readFileSync(path.join(work, 'package/dist/vosk.js'), 'utf8');
+  const base64 = /createBase64WorkerFactory\('([A-Za-z0-9+/=]+)'/.exec(bundle)?.[1];
+  if (!base64) throw new Error('The worker was not found in vosk.js');
+  const source = Buffer.from(base64, 'base64').toString('latin1');
+  // The loader drops the first line, a comment from the bundler, the same way
+  let worker = source.slice(source.indexOf('\n', 10) + 1);
+  for (const [name, replacement] of Object.entries(NO_EVAL)) worker = replaceFunction(worker, name, replacement);
+  if (/new Function|new_\(Function|\beval\(/.test(worker)) throw new Error('The worker still builds code from strings');
+  fs.mkdirSync(path.dirname(WORKER_OUT), { recursive: true });
+  fs.writeFileSync(WORKER_OUT, OPFS_PRELUDE + worker, 'latin1');
+}
+
 async function main() {
-  fs.mkdirSync(OUT, { recursive: true });
   if (process.argv.includes('--words')) {
     writeVocabulary();
     return;
   }
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'wake-'));
   try {
-    console.log('Downloading the recogniser…');
-    await download(SOURCES.worker, path.join(work, 'vosk.tgz'));
-    execFileSync('tar', ['xzf', 'vosk.tgz'], { cwd: work });
-    const bundle = fs.readFileSync(path.join(work, 'package/dist/vosk.js'), 'utf8');
-    const base64 = /createBase64WorkerFactory\('([A-Za-z0-9+/=]+)'/.exec(bundle)?.[1];
-    if (!base64) throw new Error('The worker was not found in vosk.js');
-    const source = Buffer.from(base64, 'base64').toString('latin1');
-    // The loader drops the first line, a comment from the bundler, the same way
-    let worker = source.slice(source.indexOf('\n', 10) + 1);
-    for (const [name, replacement] of Object.entries(NO_EVAL)) worker = replaceFunction(worker, name, replacement);
-    if (/new Function|new_\(Function|\beval\(/.test(worker))
-      throw new Error('The worker still builds code from strings');
-    fs.writeFileSync(path.join(OUT, 'vosk-worker.js'), worker, 'latin1');
-
-    console.log('Downloading the English model (40 MB)…');
+    if (process.argv.includes('--worker')) {
+      await writeWorker(work);
+      console.log(`Done: ${WORKER_OUT}`);
+      return;
+    }
+    fs.mkdirSync(OUT, { recursive: true });
+    console.log('Downloading the English model (41 MB)…');
     await download(SOURCES.model, path.join(work, 'model.zip'));
     execFileSync('unzip', ['-q', 'model.zip'], { cwd: work });
     // Without macOS's ._ metadata files, which would be unpacked as model files
@@ -132,7 +173,10 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error(error.message);
-  process.exit(1);
-});
+// Run as a script (also from install.sh's copy); imported by the tests that compare it with the extension's list
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}

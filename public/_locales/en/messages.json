@@ -2332,7 +2332,7 @@
     }
   },
   "settings_wake_failed": {
-    "message": "Listening did not start. Run node scripts/wake-word-setup.mjs, rebuild and reload."
+    "message": "Listening did not start. Check that the wake word model is downloaded in Settings › Voice engines, then turn it on again."
   },
   "nav_home": {
     "message": "Home"
@@ -5003,7 +5003,7 @@
     "message": "Your speech is heard and spoken on this computer, and your chat model answers, so no key is needed. Gemini Live is used only when the speech files are missing and a Gemini key is set."
   },
   "voice_engine_local_missing": {
-    "message": "Talking without a Gemini key needs the speech files that come with Nex Copilot, and this copy has none. Open Settings › Voice engines to see what is missing, or add a Gemini key in Settings to talk through Gemini."
+    "message": "Talking without a Gemini key needs the speech files on this computer, and they are not downloaded yet. Download them in Settings › Voice engines, or add a Gemini key in Settings to talk through Gemini."
   },
   "voice_engine_dictation_missing": {
     "message": "Dictation needs either a Gemini speech-to-text model or the speech files on this computer, and neither is set up. Open Settings › Voice engines, or add a Gemini key in Settings."
@@ -5115,7 +5115,7 @@
     "message": "Kokoro 82M"
   },
   "voice_engine_models_installed": {
-    "message": "Installed · $MB$ MB",
+    "message": "Downloaded · $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5124,7 +5124,7 @@
     }
   },
   "voice_engine_models_notInstalled": {
-    "message": "Not installed · about $MB$ MB",
+    "message": "Not downloaded · about $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5136,19 +5136,13 @@
     "message": "not installed"
   },
   "voice_engine_models_hint": {
-    "message": "Models are downloaded once, checked, and packed with the extension: nothing is fetched while you talk. Run this in the extension’s folder, then rebuild it."
+    "message": "Downloaded once when first needed, checked against pinned checksums, and kept on this computer: nothing is fetched while you talk."
   },
   "voice_engine_models_copy": {
     "message": "Copy the command"
   },
   "voice_engine_models_missing": {
-    "message": "No speech model is installed on this computer. Run $COMMAND$, then rebuild the extension.",
-    "placeholders": {
-      "command": {
-        "content": "$1",
-        "example": "node scripts/voice-models-setup.mjs"
-      }
-    }
+    "message": "No speech model is on this computer yet. Download one in Settings › Voice engines."
   },
   "voice_engine_test_button": {
     "message": "Say something"
@@ -7910,5 +7904,106 @@
   },
   "onboard_welcome_button": {
     "message": "Connect a model"
+  },
+  "voice_models_card_title": {
+    "message": "Download voice (≈$MB$ MB, once)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_titleWake": {
+    "message": "Download the wake word (≈$MB$ MB, once)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_body": {
+    "message": "Your speech is heard and spoken on this computer, so no key is needed. The files come from Hugging Face, are checked, and are kept here, so this happens once."
+  },
+  "voice_models_card_bodyWake": {
+    "message": "The wake word is listened for on this computer only. The model comes from alphacephei.com, is checked, and is kept here, so this happens once."
+  },
+  "voice_models_progress": {
+    "message": "$DONE$ of $TOTAL$ MB · $PERCENT$%",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "60"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "20"
+      }
+    }
+  },
+  "voice_models_download": {
+    "message": "Download"
+  },
+  "voice_models_notNow": {
+    "message": "Not now"
+  },
+  "voice_models_cancel": {
+    "message": "Cancel"
+  },
+  "voice_models_retry": {
+    "message": "Try again"
+  },
+  "voice_models_remove": {
+    "message": "Remove"
+  },
+  "voice_models_download_named": {
+    "message": "Download $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_cancel_named": {
+    "message": "Stop downloading $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_remove_named": {
+    "message": "Remove $NAME$ from this computer",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_state_failed": {
+    "message": "Download failed"
+  },
+  "voice_models_state_packed": {
+    "message": "Packed with this build"
+  },
+  "voice_models_error_network": {
+    "message": "The download stopped. Check the connection and try again: what was already downloaded is kept."
+  },
+  "voice_models_error_checksum": {
+    "message": "A file did not match its pinned checksum, so it was thrown away. Try again."
+  },
+  "voice_models_error_space": {
+    "message": "There is not enough free disk space for the voice files."
+  },
+  "voice_models_error_other": {
+    "message": "The voice files could not be downloaded. Try again."
   }
 }

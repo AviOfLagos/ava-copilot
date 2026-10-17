@@ -10,9 +10,10 @@
  * - --webgpu        adds the float weights Moonshine needs on WebGPU (tiny ~75 MB, base ~154 MB)
  *
  * Every file comes from a pinned revision and is checked against a pinned SHA-256; files already in place
- * with the right sum are kept. The extension never downloads anything at run time: it reads these files from
- * its own package (the speech runtime's WebAssembly is bundled by the build). KittenTTS's voices.npz is
- * unpacked into one raw float32 file per voice, so the extension needs no zip reader.
+ * with the right sum are kept. This packs the models into a dev build. A normal install needs none of it: the
+ * extension downloads the same pinned files on first use (src/shared/lib/voice-models/catalog.ts, kept equal to
+ * COMPONENTS below by its test) into its own storage. KittenTTS's voices.npz is unpacked into one raw float32
+ * file per voice, so the extension's runtime needs no zip reader.
  *
  * Run: node scripts/voice-models-setup.mjs [--moonshine-base] [--whisper] [--kokoro] [--webgpu] [--all]
  *      node scripts/voice-models-setup.mjs --list
@@ -21,6 +22,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 
 const OUT = path.resolve(import.meta.dirname, '../public/voice');
@@ -57,7 +59,7 @@ const KOKORO_VOICES = {
  * Each component: files as `target path → [repo@revision, source path, bytes, sha256]`. `webgpu` lists the
  * extra float weights for running on the GPU.
  */
-const COMPONENTS = {
+export const COMPONENTS = {
   kitten: {
     label: 'KittenTTS nano (local voice)',
     license: 'Apache-2.0',
@@ -412,7 +414,10 @@ async function main() {
   console.log(`Done: ${OUT}\nRebuild the extension (pnpm build) so the files are packed with it.`);
 }
 
-main().catch(error => {
-  console.error(error.message);
-  process.exit(1);
-});
+// Run as a script (also from install.sh's copy); imported by the test that compares it with the extension's list
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
