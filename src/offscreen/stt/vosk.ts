@@ -1,8 +1,8 @@
 /**
  * Dictation with Vosk, the recogniser "Hey Ava" already uses: the same worker and English model (downloaded
- * with the wake word, or packed by `node scripts/wake-word-setup.mjs`), but a recogniser with no grammar, so it writes down any words. A second
- * worker of its own, so the wake word listener is never disturbed. Smaller and faster than Moonshine, less
- * accurate.
+ * with the wake word, or packed by `node scripts/wake-word-setup.mjs`), but a recogniser with no grammar, so it
+ * writes down any words. A second worker of its own, so the wake word listener is never disturbed. Smaller and
+ * faster than Moonshine, less accurate.
  */
 
 const RATE = 16_000;

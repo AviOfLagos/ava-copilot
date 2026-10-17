@@ -1,11 +1,12 @@
 import { modelFetch } from '../../shared/lib/voice-models/resolve';
 
 /**
- * How transformers.js runs inside the extension: models only from the extension itself (never the Hugging Face hub):
- * the copy downloaded on first use into its private storage, else its packed `voice/` folder (`modelFetch`), no copy into Cache Storage (the files are already local), and onnxruntime-web's WebAssembly
- * from the file the build packs next to the worker, never the CDN transformers.js points at by default. No eval:
- * transformers.js, onnxruntime-web's bundle and the eSpeak phonemizer build no code from strings, and the
- * extension's CSP only lets WebAssembly compile ('wasm-unsafe-eval').
+ * How transformers.js runs inside the extension: models only from the extension itself (never the Hugging Face
+ * hub): the copy downloaded on first use into its private storage, else its packed `voice/` folder (`modelFetch`);
+ * no copy into Cache Storage (the files are already local); and onnxruntime-web's WebAssembly from the file the
+ * build packs next to the worker, never the CDN transformers.js points at by default. No eval: transformers.js,
+ * onnxruntime-web's bundle and the eSpeak phonemizer build no code from strings, and the extension's CSP only lets WebAssembly compile ('wasm-unsafe-eval'). Model bytes reach them as Responses
+ * (data), never as code.
  */
 
 interface TransformersEnv {
