@@ -3,10 +3,12 @@
  * The local voices, in a worker of the offscreen document: KittenTTS nano and Kokoro, both StyleTTS 2 models run
  * by transformers.js on onnxruntime-web (WebAssembly). Text becomes phonemes with eSpeak NG (the `phonemizer`
  * WebAssembly build inside kitten-tts-js), then token ids, then speech, one sentence at a time so the first
- * sentence plays while the next is made. Model files come from the extension's own `voice/` folder.
+ * sentence plays while the next is made. Model files come from the copy downloaded on first use, else the
+ * extension's packed `voice/` folder (`modelFetch`).
  */
 import { AutoTokenizer, env, StyleTextToSpeech2Model, Tensor } from '@huggingface/transformers';
 import { phonemize, TextCleaner, TextPreprocessor } from 'kitten-tts-js';
+import { modelFetch } from '../../shared/lib/voice-models/resolve';
 import { configureTransformers } from '../stt/runtime';
 import type { FromTtsWorker, LocalVoiceEngine, ToTtsWorker } from './protocol';
 import {
@@ -56,7 +58,7 @@ let queue: Promise<void> = Promise.resolve();
 const post = (message: FromTtsWorker, transfer: Transferable[] = []) => scope.postMessage(message, transfer);
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${base}${path}`);
+  const response = await modelFetch(`${base}${path}`);
   if (!response.ok) throw new Error(`${path} is missing (HTTP ${response.status})`);
   return (await response.json()) as T;
 }
@@ -65,7 +67,7 @@ async function fetchJson<T>(path: string): Promise<T> {
 function voiceTable(path: string): Promise<Float32Array> {
   let table = voiceCache.get(path);
   if (!table) {
-    table = fetch(`${base}${path}`).then(async response => {
+    table = modelFetch(`${base}${path}`).then(async response => {
       if (!response.ok) throw new Error(`The voice ${path} is not installed`);
       return new Float32Array(await response.arrayBuffer());
     });

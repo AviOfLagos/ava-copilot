@@ -2332,7 +2332,7 @@
     }
   },
   "settings_wake_failed": {
-    "message": "A escuta não começou. Rode node scripts/wake-word-setup.mjs, recompile e recarregue."
+    "message": "A escuta não começou. Verifique se o modelo da palavra de ativação foi baixado em Configurações › Motores de voz e ative-a de novo."
   },
   "nav_home": {
     "message": "Início"
@@ -5003,7 +5003,7 @@
     "message": "Sua fala é ouvida e respondida em voz neste computador, e o seu modelo de chat responde, então nenhuma chave é necessária. O Gemini Live só é usado quando faltam os arquivos de fala e há uma chave do Gemini."
   },
   "voice_engine_local_missing": {
-    "message": "Conversar sem uma chave do Gemini precisa dos arquivos de fala que vêm com o Nex Copilot, e esta cópia não os tem. Abra Configurações › Motores de voz para ver o que falta, ou adicione uma chave do Gemini nas Configurações para conversar pelo Gemini."
+    "message": "Conversar sem uma chave do Gemini precisa dos arquivos de fala neste computador, e eles ainda não foram baixados. Baixe-os em Configurações › Motores de voz, ou adicione uma chave do Gemini nas Configurações para conversar pelo Gemini."
   },
   "voice_engine_dictation_missing": {
     "message": "O ditado precisa de um modelo de fala para texto do Gemini ou dos arquivos de fala neste computador, e nenhum dos dois está configurado. Abra Configurações › Motores de voz, ou adicione uma chave do Gemini nas Configurações."
@@ -5115,7 +5115,7 @@
     "message": "Kokoro 82M"
   },
   "voice_engine_models_installed": {
-    "message": "Instalado · $MB$ MB",
+    "message": "Baixado · $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5124,7 +5124,7 @@
     }
   },
   "voice_engine_models_notInstalled": {
-    "message": "Não instalado · cerca de $MB$ MB",
+    "message": "Não baixado · cerca de $MB$ MB",
     "placeholders": {
       "mb": {
         "content": "$1",
@@ -5136,19 +5136,13 @@
     "message": "não instalado"
   },
   "voice_engine_models_hint": {
-    "message": "Os modelos são baixados uma vez, verificados e empacotados com a extensão: nada é buscado enquanto você fala. Rode isto na pasta da extensão e depois recompile-a."
+    "message": "Baixados uma vez quando necessários pela primeira vez, verificados com somas fixadas e guardados neste computador: nada é buscado enquanto você fala."
   },
   "voice_engine_models_copy": {
     "message": "Copiar o comando"
   },
   "voice_engine_models_missing": {
-    "message": "Nenhum modelo de fala está instalado neste computador. Rode $COMMAND$ e recompile a extensão.",
-    "placeholders": {
-      "command": {
-        "content": "$1",
-        "example": "node scripts/voice-models-setup.mjs"
-      }
-    }
+    "message": "Ainda não há nenhum modelo de fala neste computador. Baixe um em Configurações › Motores de voz."
   },
   "voice_engine_test_button": {
     "message": "Diga algo"
@@ -7910,5 +7904,106 @@
   },
   "onboard_welcome_button": {
     "message": "Conectar um modelo"
+  },
+  "voice_models_card_title": {
+    "message": "Baixar a voz (≈$MB$ MB, uma vez)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_titleWake": {
+    "message": "Baixar a palavra de ativação (≈$MB$ MB, uma vez)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
+  },
+  "voice_models_card_body": {
+    "message": "Sua fala é ouvida e falada neste computador, então nenhuma chave é necessária. Os arquivos vêm do Hugging Face, são verificados e ficam guardados aqui, então isso acontece só uma vez."
+  },
+  "voice_models_card_bodyWake": {
+    "message": "A palavra de ativação é ouvida apenas neste computador. O modelo vem de alphacephei.com, é verificado e fica guardado aqui, então isso acontece só uma vez."
+  },
+  "voice_models_progress": {
+    "message": "$DONE$ de $TOTAL$ MB · $PERCENT$%",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "12"
+      },
+      "total": {
+        "content": "$2",
+        "example": "60"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "20"
+      }
+    }
+  },
+  "voice_models_download": {
+    "message": "Baixar"
+  },
+  "voice_models_notNow": {
+    "message": "Agora não"
+  },
+  "voice_models_cancel": {
+    "message": "Cancelar"
+  },
+  "voice_models_retry": {
+    "message": "Tentar de novo"
+  },
+  "voice_models_remove": {
+    "message": "Remover"
+  },
+  "voice_models_download_named": {
+    "message": "Baixar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_cancel_named": {
+    "message": "Parar de baixar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_remove_named": {
+    "message": "Remover $NAME$ deste computador",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "voice_models_state_failed": {
+    "message": "O download falhou"
+  },
+  "voice_models_state_packed": {
+    "message": "Incluído nesta versão"
+  },
+  "voice_models_error_network": {
+    "message": "O download parou. Verifique a conexão e tente de novo: o que já foi baixado é mantido."
+  },
+  "voice_models_error_checksum": {
+    "message": "Um arquivo não correspondeu à soma de verificação fixada, então foi descartado. Tente de novo."
+  },
+  "voice_models_error_space": {
+    "message": "Não há espaço livre suficiente no disco para os arquivos de voz."
+  },
+  "voice_models_error_other": {
+    "message": "Não foi possível baixar os arquivos de voz. Tente de novo."
   }
 }

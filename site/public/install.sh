@@ -15,9 +15,11 @@
 #   --dir PATH         Install into PATH instead of the default per-OS location.
 #   --browser NAME     brave | chrome | edge | chromium — which browser's extensions page to try to
 #                       open and whose name to print in the instructions. Default: auto-detect.
-#   --with-voices      Also fetch the local voice and wake-word models (~70 MB) into the installed
-#                       folder, from the same pinned sources and SHA-256s the project's own setup
-#                       scripts use. Needs Node.js on PATH; skipped with a warning if it's missing.
+#   --with-voices      Optional. Pre-fetch the local voice and wake-word models (~100 MB) into the
+#                       installed folder, from the same pinned sources and SHA-256s the project's own
+#                       setup scripts use. Not needed: without it the extension downloads the same
+#                       pinned files itself, the first time you talk, dictate or turn on the wake word.
+#                       Needs Node.js on PATH; skipped with a warning if it's missing.
 #   --uninstall        Remove the installed folder and exit.
 #   --version          Print the latest available version (and the installed one, if any) and exit.
 #   --yes, -y          Don't ask for confirmation (used by --uninstall).
@@ -219,9 +221,11 @@ Options:
   --dir PATH         Install into PATH instead of the default per-OS location.
   --browser NAME     brave | chrome | edge | chromium - which browser's extensions page to try to
                       open and whose name to print in the instructions. Default: auto-detect.
-  --with-voices      Also fetch the local voice and wake-word models (~70 MB) into the installed
-                      folder, from the same pinned sources and SHA-256s the project's own setup
-                      scripts use. Needs Node.js on PATH; skipped with a warning if it's missing.
+  --with-voices      Optional. Pre-fetch the local voice and wake-word models (~100 MB) into the
+                      installed folder, from the same pinned sources and SHA-256s the project's own
+                      setup scripts use. Not needed: without it the extension downloads the same
+                      pinned files itself, the first time you talk, dictate or turn on the wake word.
+                      Needs Node.js on PATH; skipped with a warning if it's missing.
   --uninstall        Remove the installed folder and exit.
   --version          Print the latest available version (and the installed one, if any) and exit.
   --yes, -y          Don't ask for confirmation (used by --uninstall).
@@ -337,7 +341,7 @@ do_uninstall() {
 install_voices() { # install_voices LATEST_JSON_FILE
   latest_json="$1"
   if ! command -v node >/dev/null 2>&1; then
-    warn "--with-voices needs Node.js on PATH; skipping. Install it from https://nodejs.org, then re-run with --with-voices."
+    warn "--with-voices needs Node.js on PATH; skipping. The extension downloads the voices itself the first time you talk."
     return 0
   fi
 
@@ -353,7 +357,7 @@ install_voices() { # install_voices LATEST_JSON_FILE
     return 0
   fi
 
-  info "Fetching the local voice and wake-word models (downloads roughly 70 MB from Hugging Face, npm and alphacephei.com)..."
+  info "Fetching the local voice and wake-word models (downloads roughly 100 MB from Hugging Face, npm and alphacephei.com)..."
   voices_work="$(mktemp -d)"
   mkdir -p "$voices_work/scripts" "$voices_work/public"
 

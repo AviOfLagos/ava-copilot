@@ -130,8 +130,12 @@ The actual voice/wake model **weights** (`public/wake/`, `public/voice/`, ~70 MB
 `scripts/wake-word-setup.mjs` and `scripts/voice-models-setup.mjs`) are git-ignored and never enter the zip at all:
 `scripts/release.mjs` builds from a clean `git worktree`, which only ever contains tracked files, so they can't end
 up in `dist/` by accident. The Store submission is the same `dist/` the install script ships — 16.9 MB, voice
-features inert until the user opts in (in-app, or `install.sh --with-voices`, which fetches them directly from
-their pinned sources afterward). Chrome Web Store has no hard package size limit this project comes close to
+features download on first use: the first Talk, dictation or wake-word toggle that needs a model shows a
+download card (Moonshine tiny + KittenTTS ≈60 MB, the Vosk wake model ≈41 MB), and the extension fetches the same
+pinned files the setup scripts use, checks each SHA-256 and keeps them in its private storage (OPFS;
+`src/shared/lib/voice-models`). `install.sh --with-voices` is optional now: it only puts them in place before the
+first run. The Vosk recogniser itself (`public/vosk/vosk-worker.js`, ~4.3 MB of code) is tracked and ships in the
+zip, because an extension may not run code it downloads. Chrome Web Store has no hard package size limit this project comes close to
 either way; keeping the model weights out of the base package is about install speed for everyone who doesn't use
 voice, not a store limit.
 
@@ -152,12 +156,8 @@ is a PowerShell equivalent — same shape (download, verify SHA-256, unpack to a
 "Load unpacked" steps) — written but genuinely **untested**: there is no Windows machine in this environment to run
 it on. Treat it as a draft until someone runs it for real; its own header says so. It does not implement
 `--with-voices`: the model setup scripts shell out to `tar` and `unzip`, and `unzip` isn't a default part of
-Windows. There is no real fallback for a non-developer on Windows today — `Settings › Voice engines`
-(`src/side-panel/voice-engines/command.ts`) only ever prints a `node scripts/voice-models-setup.mjs` command,
-which needs a repo checkout and a rebuild to take effect, so it's a developer-workflow affordance, not something
-an end user installing from a zip can use either. Worth a real fix later (an in-extension download into the
-installed folder, for every OS) rather than something this plan can wave away; until then, say so plainly on the
-site rather than implying voices "just work" on Windows. Once the Chrome Web Store
+Windows. It does not need to any more: the extension downloads the voice models itself on first use, on every OS
+(Settings › Voice engines shows each one and downloads the others). Once the Chrome Web Store
 listing exists, Windows users installing from the store need none of this — the install script and `.ps1` only
 matter for the sideload path.
 

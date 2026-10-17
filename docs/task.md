@@ -1771,6 +1771,69 @@ a chat runs through it; a refused key (not saved) then a working key (`mock.keye
 skip → welcome → model step alone → Models & usage → pill → model step. `models`, `shell` E2E green.
 `launchExtension(mock, { model: false })` starts with no model.
 
+### Voice models download on first use (2026-10-17)
+
+Voice was local by default, but the model files only existed in a dev build (`public/voice`, `public/wake`, git-
+ignored; `release.mjs` refuses to ship them), so a normal install had no local voice. Now they download the first
+time a feature needs them.
+
+- **Catalog** `src/shared/lib/voice-models/catalog.ts`: the same pinned URLs, sizes and SHA-256s as
+  `scripts/voice-models-setup.mjs` (now exports `COMPONENTS`, runs `main()` only as a script) and
+  `wake-word-setup.mjs` (`SOURCES`). The scripts stay self-contained because `install.sh --with-voices` fetches each
+  on its own, so `__tests__/catalog.test.ts` compares the lists instead of sharing one. A test catalog on
+  `globalThis.__nexVoiceModelsCatalog` is honoured only when every URL is `http://127.0.0.1|localhost`.
+- **Store** `store.ts`: OPFS `voice-models/<component>/` in the packed folder layout. Each file goes to `<name>.part`
+  (committed every 8 MB), resumed with `Range` (a 200 starts over), `withRetry` on lost connections, SHA-256 checked,
+  then `move()`d to its name; a mismatch deletes it and is never retried. `.ready.json` (the file sums) is written
+  only after every file is in and unpacked; a component is ready only with it. Web Lock across pages;
+  `navigator.storage.persist()` is asked. Unpacking in the browser with its own streams (`unpack.ts`):
+  KittenTTS `voices.npz` → `voices/<key>.bin` + `voices.json` + `config.json` (archive removed); the Vosk zip →
+  `model.tar.gz` (ustar + `CompressionStream('gzip')`, entry by entry) + `words.txt` from `graph/Gr.fst`.
+- **Loaders** `resolve.ts` `modelFetch`: the packed URLs the runtimes always used (`voice/<id>/…`, `wake/model.tar.gz`,
+  `wake/words.txt`) are answered from OPFS when ready, else the package, else a 404 ("not downloaded").
+  transformers.js gets it as `env.fetch` (`stt/runtime.ts`), the TTS worker for `voices.json` and voice tables, the
+  wake vocabulary (`assistant.ts`) too. Workers have no `chrome.runtime`: the base comes from `location.origin`.
+  Vosk's worker is not our code, so `wake-word-setup.mjs --worker` prepends a prelude that answers
+  `wake/model.tar.gz` from OPFS; the worker (4.3 MB, Apache-2.0, eval-free) is now **tracked** in
+  `public/vosk/vosk-worker.js` (`-text` in `.gitattributes`: it has CRLFs in its strings; in `.prettierignore`)
+  because an extension may not run code it downloads; only data is downloaded. CSP unchanged: model bytes are
+  Responses, never scripts. Background `installedVoiceModels` = packed + downloaded (`installed.ts`).
+- **Commands** (`voice/engines/register.ts`): `voice_models_needed {feature: talk|dictation|wake}` →
+  `{required, optional}` (`modelsNeeded` in `options.ts`: a device conversation needs the chosen recogniser, Moonshine
+  tiny by default, and KittenTTS unless the system voices were picked; one going to Live needs nothing; dictation
+  nothing when Gemini writes it down; wake needs Vosk); `voice_models_changed` forgets the 30 s cache.
+- **UI** `src/side-panel/voice-models/`: `gate.ts` `ensureVoiceModels` before Talk (`SidePanel.toggleVoice`),
+  dictation (`gatedSpeech`) and the wake toggle (`onboarding/wake.ts`, from Settings and the onboarding step, whose
+  card renders inside the dialog); `VoiceModelsCard` "Download voice (≈60 MB, once)" / "Download the wake word
+  (≈41 MB, once)", progress (MB, %), Cancel (keeps what came, nothing starts), Not now (an optional voice is not
+  offered again this session; the feature still starts), Try again with the reason; then the feature starts by
+  itself. `downloads.ts` runs the download in the page, shares progress over a BroadcastChannel.
+  Settings › Voice engines rows: Not downloaded · about N MB [Download] / x of N MB · % [Cancel] / Downloaded · N MB
+  [Remove] / Packed with this build / Download failed [Try again]; the setup command and copy button are gone.
+  Messages no longer say "run node scripts/… and rebuild".
+- **Sizes** (the real hosts, measured in Brave): Talk = Moonshine tiny 32.1 MB + KittenTTS 27.6 MB ≈ 60 MB
+  (13 s + 7 s here); wake word = Vosk zip 41.2 MB (12 s, 43 MB on disk as tar.gz). Kokoro 97 MB, Moonshine base
+  67 MB, Whisper base 81 MB only from Settings. No WebGPU weights are downloaded (packed builds still use them).
+- **Hosts**: huggingface.co (redirects to us.aws.cdn.hf.co) and alphacephei.com, covered by the existing
+  `<all_urls>`; no new permission. Only on the user's click (the card or a Settings row).
+- **Release**: the guard is unchanged (no `dist/voice`, `dist/wake`); the zip now carries `vosk/vosk-worker.js`.
+  `install.sh --with-voices` and the site's Local voices text say it is optional; `docs/distribution.md` updated.
+
+Tests: unit `shared/lib/voice-models/__tests__/store.test.ts` (15: download + ready, checksum mismatch rejected and
+not retried, cut-off resumed with Range, stop keeps a partial that is not ready and the next run resumes, Range
+ignored, revision change, remove, npz unpack, Vosk zip → tar.gz + words, symbol table, URL mapping,
+OPFS-then-packed-then-404, partly downloaded never served, packed + downloaded listing, loopback-only test catalog),
+`catalog.test.ts` (3, equal to the scripts), `side-panel/voice-models/__tests__/gate.test.ts` (4), `engines.test.ts`
+(+4 `modelsNeeded`); full suite 1517 (the known-flaky `workflows/engine.test.ts` passes alone). E2E Brave
+`e2e/voice-download.e2e.mjs` (3, build without `public/voice`/`public/wake`, files from a 127.0.0.1 server made from
+`VOICE_MODELS_SOURCE`): Talk → card → progress → Cancel at 30 % → Talk → Download resumes with Range → Moonshine
+hears, the text model answers, KittenTTS speaks, no Live, nothing off the computer, no CSP violation; reload →
+Talk starts with no card and no download, Settings shows Downloaded; wake toggle → card → Vosk model → "Hey Ava"
+starts a conversation. `voice-engines` (6, now "Packed with this build"), `wake`, `dictation`, `onboarding`,
+`voice`, `wake-negative` green with packed models. `e2e/manual/voice-download-real.mjs` downloads all three from the
+real hosts with the real sums. Under heavy machine load the KittenTTS playback level in `voice-engines` and the wake
+detection can time out (the same on `feat/restyle`).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

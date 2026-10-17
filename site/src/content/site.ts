@@ -744,7 +744,8 @@ export const install = {
     badge: 'Optional',
     body: [
       'Voices and speech recognition that run on your computer, for free: KittenTTS to speak and Moonshine to listen, about 60 MB together. Kokoro and Whisper are there if you want more.',
-      'Add them with the same command and one option. It needs Node.js; then reload the extension and choose them in the panel, under Settings › Voice engines.',
+      'Nothing to do: the first time you talk, dictate or turn on “Hey Ava”, the panel offers to download what that needs, once, checked against pinned checksums. Settings › Voice engines shows each model and downloads the others.',
+      'To have them in place before the first run (offline use), add one option to the install command. It needs Node.js; then reload the extension.',
     ],
     command: installCommandWith('--with-voices'),
   },

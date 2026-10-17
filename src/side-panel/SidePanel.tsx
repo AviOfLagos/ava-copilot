@@ -49,6 +49,8 @@ import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
 import AutoNotesCard from './meetings/AutoNotesCard';
+import VoiceModelsCard from './voice-models/VoiceModelsCard';
+import { ensureVoiceModels } from './voice-models/gate';
 import KnowledgeView from './kb/KnowledgeView';
 import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
@@ -381,6 +383,14 @@ const SidePanel = () => {
         }
       }),
   };
+  // Dictation that would be written down on the device offers the speech files' download before it listens
+  const gatedSpeech = {
+    ...speech,
+    toggle: async () => {
+      if (speech.status === 'idle' && !(await ensureVoiceModels('dictation', panelApi.request))) return;
+      await speech.toggle();
+    },
+  };
   // Ava opens places and Settings sections here (open_place); the voice screen steps aside to show them
   useAvaNavigation({
     go: next => panelApi.go(next),
@@ -515,6 +525,8 @@ const SidePanel = () => {
       return;
     }
     endedAtRef.current = 0;
+    // On the device and its speech files not downloaded yet: the download card first, then the conversation
+    if (!(await ensureVoiceModels('talk', panelApi.request))) return;
     setVoiceHidden(false);
     setVoiceStatus('connecting');
     post({ type: 'voice_start', windowId: await currentWindowId() });
@@ -739,7 +751,7 @@ const SidePanel = () => {
         onSendMessage={(text, attachments) => void handleSend(text, attachments)}
         onAttachProblem={message => setBanner(message)}
         onStopTask={handleStop}
-        speech={speech}
+        speech={gatedSpeech}
         setTranscriptSink={setTranscriptSink}
         disabled={isBusy || sending}
         showStopButton={isBusy}
@@ -824,6 +836,7 @@ const SidePanel = () => {
       )}
 
       <AutoNotesCard recording={recording} api={panelApi} onOpen={id => openMeeting(id)} />
+      <VoiceModelsCard />
 
       {view === 'consent' && consent && (
         <ConsentDialog

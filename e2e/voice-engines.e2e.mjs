@@ -232,16 +232,17 @@ test('Settings › Voice engines: KittenTTS says something, and the speech is he
   await session.openAccountMenu();
   await session.click('Settings');
   await panel.waitForSelector('#voice-engine-tts', { timeout: 15_000 });
-  // The models show as installed, with the command that installs the others
-  await panel.waitForFunction(() => /KittenTTS nano\s*Installed/.test(document.body.innerText), {
+  // The packed models show as packed; the others offer their download (no developer command)
+  await panel.waitForFunction(() => /KittenTTS nano\s*Packed with this build/.test(document.body.innerText), {
     polling: 300,
     timeout: 15_000,
   });
   const text = await panel.evaluate(() => document.body.innerText);
   // Section titles are set in capitals by the stylesheet
   assert.match(text, /Voice engines/i);
-  assert.match(text, /Moonshine tiny\s*Installed/);
-  assert.match(text, /node scripts\/voice-models-setup\.mjs/);
+  assert.match(text, /Moonshine tiny\s*Packed with this build/);
+  assert.match(text, /Kokoro[^\n]*\s*Not downloaded · about 97 MB/);
+  assert.doesNotMatch(text, /node scripts\//);
 
   await panel.select('#voice-engine-tts', 'kitten');
   await waitFor(async () => (await extension.getStorage('tts-settings'))?.engine === 'kitten', 'KittenTTS chosen');

@@ -4,13 +4,20 @@ import {
   localSttChoice,
   resolveVoiceMode,
   localVoice,
+  sttModelId,
   personalityRateOf,
   personalityVoiceFor,
   ttsSettingsStore,
   voiceEngineSettingsStore,
   voiceTtsEngine,
 } from '@extension/storage';
-import type { InstalledVoiceModels, Personality, TtsSettingsConfig, VoiceEngineSettings } from '@extension/storage';
+import type {
+  InstalledVoiceModels,
+  Personality,
+  TtsSettingsConfig,
+  VoiceEngineSettings,
+  VoiceModelId,
+} from '@extension/storage';
 import { AppError } from '@extension/shared';
 import { installedVoiceModels } from './models';
 import type { EconomyEngines } from './wire';
@@ -21,6 +28,55 @@ import type { EconomyEngines } from './wire';
  */
 
 export const SETUP_COMMAND = 'node scripts/voice-models-setup.mjs';
+
+export type VoiceFeature = 'talk' | 'dictation' | 'wake';
+
+export interface ModelsNeeded {
+  // Without these the feature cannot run on the device
+  required: VoiceModelId[];
+  // Better with these (KittenTTS instead of the system voices); the feature runs without them
+  optional: VoiceModelId[];
+}
+
+/**
+ * The local models a feature still needs before it can start, so the panel can offer the download first: a
+ * conversation on the device needs a recogniser (the one chosen, Moonshine tiny by default) and gets KittenTTS
+ * unless the system voices were picked; one that would go to Gemini Live needs nothing. Dictation needs a
+ * recogniser unless Gemini writes it down. The wake word needs the Vosk model.
+ */
+export function modelsNeeded(
+  feature: VoiceFeature,
+  {
+    settings,
+    tts,
+    installed,
+    hasGeminiKey,
+    geminiSpeechToText,
+  }: {
+    settings: VoiceEngineSettings;
+    tts: { engine: string; engineChosen?: boolean };
+    installed: InstalledVoiceModels;
+    hasGeminiKey: boolean;
+    geminiSpeechToText: boolean;
+  },
+): ModelsNeeded {
+  const none: ModelsNeeded = { required: [], optional: [] };
+  if (feature === 'wake') return installed.vosk ? none : { required: ['vosk'], optional: [] };
+  const sttReady = localSttChoice(settings, installed) !== null;
+  const stt: VoiceModelId[] = sttReady
+    ? []
+    : [sttModelId(settings.stt === 'gemini' ? 'moonshine' : settings.stt, settings.moonshineSize)];
+  if (feature === 'dictation') return geminiSpeechToText ? none : { required: stt, optional: [] };
+  if (resolveVoiceMode(settings, { hasGeminiKey, localReady: sttReady }) === 'live') return none;
+  const engine = voiceTtsEngine(tts.engine);
+  const chosen = tts.engineChosen ?? true;
+  let voice: VoiceModelId | null = null;
+  if ((engine === 'kitten' || engine === 'kokoro') && !installed[engine]) voice = engine;
+  else if (engine !== 'kokoro' && !(engine === 'system' && chosen) && !installed.kitten && !installed.kokoro) {
+    voice = 'kitten';
+  }
+  return { required: stt, optional: voice ? [voice] : [] };
+}
 
 /**
  * The engines for an economy conversation, or why there are none: a plain sentence with the fix.
