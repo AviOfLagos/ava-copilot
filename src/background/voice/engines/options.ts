@@ -1,6 +1,8 @@
+import { t } from '@extension/i18n';
 import {
   economyTts,
   localSttChoice,
+  resolveVoiceMode,
   localVoice,
   personalityRateOf,
   personalityVoiceFor,
@@ -26,16 +28,15 @@ export const SETUP_COMMAND = 'node scripts/voice-models-setup.mjs';
 export function chooseEconomyEngines(
   settings: VoiceEngineSettings,
   // The stored engine is checked here: TtsEngineId may not list the local engines yet
-  tts: Pick<TtsSettingsConfig, 'voice' | 'rate'> & { engine: string },
+  tts: Pick<TtsSettingsConfig, 'voice' | 'rate'> & { engine: string; engineChosen?: boolean },
   installed: InstalledVoiceModels,
 ): { engines: EconomyEngines } | { error: string } {
   const stt = localSttChoice(settings, installed);
   if (!stt) {
-    return {
-      error: `Economy voice needs a speech model on this computer. Run ${SETUP_COMMAND}, then rebuild the extension.`,
-    };
+    return { error: t('voice_engine_local_missing') };
   }
-  const voice = economyTts(voiceTtsEngine(tts.engine), installed);
+  // The untouched default (the system voices) gives way to KittenTTS when it is installed
+  const voice = economyTts(voiceTtsEngine(tts.engine), installed, tts.engineChosen ?? true);
   return {
     engines: {
       stt,
@@ -49,17 +50,22 @@ export function chooseEconomyEngines(
 }
 
 /**
- * The offscreen options that make a voice conversation an economy one, or null for Gemini Live. Spread over the
- * Live options in VoiceManager.start; `instructions` and `tools` stay the manager's own.
+ * The offscreen options that make a voice conversation an economy one, or null for Gemini Live (see
+ * resolveVoiceMode: on the device by default, Live only when picked and a key is there, or when the speech files
+ * are missing and a key is there). Spread over the Live options in VoiceManager.start; `instructions` and `tools`
+ * stay the manager's own.
  *
- * @throws AppError when economy mode is chosen but no local speech model is installed
+ * @throws AppError when the conversation must run on the device but its speech files are missing
  */
 export async function economyVoiceOptions(
   // The conversation's personality: its voice and pace, when set, replace the voice settings
   personality?: Pick<Personality, 'voice' | 'rate'> | null,
+  hasGeminiKey = false,
 ): Promise<{ mode: 'economy'; economy: EconomyEngines } | null> {
   const stored = await voiceEngineSettingsStore.getSettings();
-  if (stored.mode !== 'economy') return null;
+  const installed = await installedVoiceModels();
+  const mode = resolveVoiceMode(stored, { hasGeminiKey, localReady: localSttChoice(stored, installed) !== null });
+  if (mode === 'live') return null;
   const tts = await ttsSettingsStore.getSettings();
   const voice = personality?.voice?.trim() ?? '';
   const settings = {
@@ -74,7 +80,7 @@ export async function economyVoiceOptions(
       voice: personalityVoiceFor('system', personality) ?? tts.voice,
       rate: personalityRateOf(personality) ?? tts.rate,
     },
-    await installedVoiceModels(),
+    installed,
   );
   if ('error' in choice) throw new AppError('not_found', choice.error);
   return { mode: 'economy', economy: choice.engines };

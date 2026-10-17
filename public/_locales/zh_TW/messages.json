@@ -4996,6 +4996,18 @@
   "voice_engine_mode_economy_hint": {
     "message": "你的語音會在這台電腦上轉成文字，由文字模型用同樣的工具回答，再由本機語音念出。音訊絕不離開電腦；使用本機模型時，什麼都不會離開。"
   },
+  "voice_engine_mode_auto": {
+    "message": "自動（在這台電腦上，不需要金鑰）"
+  },
+  "voice_engine_mode_auto_hint": {
+    "message": "你的語音會在這台電腦上聽取並念出，由你的聊天模型回答，所以不需要金鑰。只有在缺少語音檔案且已設定 Gemini 金鑰時，才會使用 Gemini Live。"
+  },
+  "voice_engine_local_missing": {
+    "message": "不用 Gemini 金鑰交談，需要 Nex Copilot 附帶的語音檔案，而這個版本沒有。請打開「設定 › 語音引擎」查看缺少什麼，或在「設定」中加入 Gemini 金鑰，改用 Gemini 交談。"
+  },
+  "voice_engine_dictation_missing": {
+    "message": "聽寫需要 Gemini 語音轉文字模型，或這台電腦上的語音檔案，但兩者都還沒設定。請打開「設定 › 語音引擎」，或在「設定」中加入 Gemini 金鑰。"
+  },
   "voice_engine_economy_uses": {
     "message": "節省模式的對話用 $STT$ 聆聽，用 $TTS$ 說話。",
     "placeholders": {

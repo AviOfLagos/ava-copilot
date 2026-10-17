@@ -155,14 +155,21 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           id="voice-engine-mode"
           className={SELECT_CLASS}
           value={settings.mode}
-          onChange={event => update({ mode: event.target.value as Settings['mode'] })}>
-          <option value="live">{t('voice_engine_mode_live')}</option>
+          onChange={event => update({ mode: event.target.value as Settings['mode'], modeChosen: true })}>
+          <option value="auto">{t('voice_engine_mode_auto')}</option>
           <option value="economy">{t('voice_engine_mode_economy')}</option>
+          <option value="live">{t('voice_engine_mode_live')}</option>
         </select>
         <p className={HINT}>
-          {t(settings.mode === 'economy' ? 'voice_engine_mode_economy_hint' : 'voice_engine_mode_live_hint')}
+          {t(
+            settings.mode === 'economy'
+              ? 'voice_engine_mode_economy_hint'
+              : settings.mode === 'auto'
+                ? 'voice_engine_mode_auto_hint'
+                : 'voice_engine_mode_live_hint',
+          )}
         </p>
-        {settings.mode === 'economy' && economyLine && (
+        {settings.mode !== 'live' && economyLine && (
           <p className={HINT} data-testid="voice-engine-economy">
             {economyLine}
           </p>
@@ -192,7 +199,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
             {missing('vosk')}
           </option>
         </select>
-        {settings.stt === 'gemini' && settings.mode === 'economy' && (
+        {settings.stt === 'gemini' && settings.mode !== 'live' && (
           <p className={HINT}>{t('voice_engine_stt_gemini_hint')}</p>
         )}
       </div>

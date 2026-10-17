@@ -5,6 +5,8 @@ import {
   getProviderTypeByProviderId,
   isLocalProvider,
   llmProviderStore,
+  localSttChoice,
+  resolveVoiceMode,
   meetingSettingsStore,
   modelHealthStore,
   ProviderTypeEnum,
@@ -20,6 +22,7 @@ import { discoveryHost } from '../models/discovery';
 import { openHosts } from '../models/breakers';
 import { liveTokenFromSettings, usesLiveTokens } from '../models/liveToken';
 import { classifyError } from './model-check';
+import { installedVoiceModels } from '../voice/engines/models';
 import type { ModelOption, ModelProbe, ModelUse } from './model-check';
 
 /**
@@ -62,7 +65,9 @@ async function pingLive(voiceRunning: boolean): Promise<ModelProbe> {
     llmProviderStore.getAllProviders(),
   ]);
   const base = { use: 'voice' as const, providerId: 'gemini', model: settings.liveModel };
-  if (engines.mode === 'economy') {
+  const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
+  const localReady = localSttChoice(engines, await installedVoiceModels()) !== null;
+  if (resolveVoiceMode(engines, { hasGeminiKey: Boolean(gemini), localReady }) === 'economy') {
     return {
       ...base,
       model: 'economy voice',
@@ -83,7 +88,6 @@ async function pingLive(voiceRunning: boolean): Promise<ModelProbe> {
       note: 'working: this conversation runs on it now.',
     };
   }
-  const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
   if (!gemini) return { ...base, ok: false, latencyMs: null, errorKind: 'not_set', error: 'No Gemini key.' };
   const started = Date.now();
   try {

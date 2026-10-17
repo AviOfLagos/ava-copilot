@@ -75,6 +75,8 @@ before(async () => {
         gemini: { name: 'Gemini', type: 'gemini', apiKey: 'test-key', modelNames: ['gemini-3.8-flash'], createdAt: 1 },
       },
     },
+    // These run on Gemini Live (the mock's): picked, since a conversation is on the device by default
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
     'meeting-settings': {
       liveModel: 'gemini-3.8-live',
       autoNotes: false,

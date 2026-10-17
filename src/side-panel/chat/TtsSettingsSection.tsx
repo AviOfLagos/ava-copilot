@@ -61,7 +61,7 @@ export default function TtsSettingsSection() {
           id="tts-engine"
           className={SELECT_CLASS}
           value={settings.engine}
-          onChange={event => update({ engine: event.target.value as TtsEngineId })}>
+          onChange={event => update({ engine: event.target.value as TtsEngineId, engineChosen: true })}>
           <option value="system">{t('speak_settings_engine_system')}</option>
           <option value="kitten">{t('voice_engine_tts_kitten')}</option>
           <option value="kokoro">{t('voice_engine_tts_kokoro')}</option>

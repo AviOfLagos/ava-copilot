@@ -10,8 +10,10 @@ import type { TtsSettingsConfig } from './ttsSettings';
  * The model files come from `node scripts/voice-models-setup.mjs` into the extension's own `voice/` folder.
  */
 
-// Live: Gemini hears, thinks and speaks. Economy: audio never leaves the device; only text goes to a model
-export type VoiceMode = 'live' | 'economy';
+// Live: Gemini hears, thinks and speaks. Economy: audio never leaves the device; only text goes to a model.
+// Auto (the default): economy whenever the on-device speech files are there, so talking needs no key; Gemini Live
+// only when they are not and a Gemini key is. Live is used first only when the user picked it (see resolveVoiceMode)
+export type VoiceMode = 'auto' | 'live' | 'economy';
 
 // Who turns speech into text. Gemini only in a Live conversation; the others run on the device
 export type SttEngineId = 'gemini' | 'moonshine' | 'whisper' | 'vosk';
@@ -28,6 +30,8 @@ export type EconomyModelRole = 'fast' | 'local';
 
 export interface VoiceEngineSettings {
   mode: VoiceMode;
+  // The user picked the mode in Settings › Voice engines (an older stored "live" may just be the old default)
+  modeChosen: boolean;
   stt: SttEngineId;
   moonshineSize: MoonshineSize;
   // Recognise speech on the graphics card (WebGPU) when its weights are installed; else on the processor
@@ -52,8 +56,9 @@ export const KOKORO_VOICES = [
 ] as const;
 
 export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
-  mode: 'live',
-  stt: 'gemini',
+  mode: 'auto',
+  modeChosen: false,
+  stt: 'moonshine',
   moonshineSize: 'tiny',
   sttGpu: true,
   kittenVoice: 'Bella',
@@ -61,6 +66,37 @@ export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
   economyModel: 'fast',
   idleEndMinutes: 3,
 };
+
+/**
+ * What a conversation runs on now. Economy needs no key; Live needs a Gemini key and is used first only when the
+ * user picked it. Auto prefers the device and falls back to Live only when the speech files are missing and a key is
+ * there. Without either, economy is answered, and starting it says plainly which files are missing.
+ */
+export function resolveVoiceMode(
+  settings: Pick<VoiceEngineSettings, 'mode'>,
+  { hasGeminiKey, localReady }: { hasGeminiKey: boolean; localReady: boolean },
+): 'live' | 'economy' {
+  if (settings.mode === 'economy') return 'economy';
+  if (settings.mode === 'live') return hasGeminiKey ? 'live' : 'economy';
+  return !localReady && hasGeminiKey ? 'live' : 'economy';
+}
+
+/**
+ * Stored settings as they are meant now. Before 'auto' existed every save wrote the default 'live', so a stored
+ * 'live' the user never picked (no `modeChosen`) is the old default and becomes 'auto'; 'economy' was always a
+ * choice and stays. A mode picked in Settings carries `modeChosen` and is kept as it is.
+ */
+export function migrateVoiceEngineSettings(
+  stored: Partial<VoiceEngineSettings> | null | undefined,
+): VoiceEngineSettings {
+  const merged = { ...DEFAULT_VOICE_ENGINE_SETTINGS, ...(stored ?? {}) };
+  if (!stored?.modeChosen) {
+    if (merged.mode === 'live') merged.mode = 'auto';
+    merged.modeChosen = merged.mode === 'economy';
+  }
+  if (!['auto', 'live', 'economy'].includes(merged.mode)) merged.mode = 'auto';
+  return merged;
+}
 
 /** The model folders `scripts/voice-models-setup.mjs` can install, and the wake word's Vosk model. */
 export type VoiceModelId = 'kitten' | 'kokoro' | 'moonshine-tiny' | 'moonshine-base' | 'whisper-base' | 'vosk';
@@ -129,9 +165,14 @@ export function economyStt(settings: VoiceEngineSettings, installed: InstalledVo
  * Who speaks in an economy conversation: a local voice chosen and installed, else KittenTTS when installed, else
  * the system's voices. Never Gemini: economy mode sends nothing to a paid voice.
  */
-export function economyTts(engine: VoiceTtsEngineId, installed: InstalledVoiceModels): 'kitten' | 'kokoro' | 'system' {
+export function economyTts(
+  engine: VoiceTtsEngineId,
+  installed: InstalledVoiceModels,
+  // The user picked this engine (the system voices are also the untouched default, which a conversation improves on)
+  chosen = true,
+): 'kitten' | 'kokoro' | 'system' {
   if ((engine === 'kitten' || engine === 'kokoro') && installed[engine]) return engine;
-  if (engine === 'system') return 'system';
+  if (engine === 'system' && chosen) return 'system';
   return installed.kitten ? 'kitten' : 'system';
 }
 
@@ -164,7 +205,7 @@ const storage = createStorage<VoiceEngineSettings>('voice-engine-settings', DEFA
 export const voiceEngineSettingsStore: VoiceEngineSettingsStorage = {
   ...storage,
   async getSettings() {
-    return { ...DEFAULT_VOICE_ENGINE_SETTINGS, ...(await storage.get()) };
+    return migrateVoiceEngineSettings(await storage.get());
   },
   async updateSettings(changes) {
     await storage.set({ ...(await voiceEngineSettingsStore.getSettings()), ...changes });
@@ -175,6 +216,6 @@ export const voiceEngineSettingsStore: VoiceEngineSettingsStorage = {
   async setTtsEngine(engine) {
     const current = await ttsSettingsStore.getSettings();
     // TtsEngineId in ttsSettings.ts lists only WS2's two engines until it is widened to VoiceTtsEngineId
-    await ttsSettingsStore.set({ ...current, engine } as unknown as TtsSettingsConfig);
+    await ttsSettingsStore.set({ ...current, engine, engineChosen: true } as unknown as TtsSettingsConfig);
   },
 };

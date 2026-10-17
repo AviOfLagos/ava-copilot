@@ -21,6 +21,8 @@ const {
   economyTts,
   localSttChoice,
   localVoice,
+  migrateVoiceEngineSettings,
+  resolveVoiceMode,
   sttModelId,
   voiceEngineSettingsStore,
   voiceTtsEngine,
@@ -36,12 +38,27 @@ describe('voiceEngineSettingsStore', () => {
     for (const key of Object.keys(store)) delete store[key];
   });
 
-  it('starts in Live mode with Gemini hearing and KittenTTS Bella as the local voice', async () => {
+  it('starts on the device (auto) with Moonshine hearing and KittenTTS Bella as the local voice', async () => {
     const value = await voiceEngineSettingsStore.getSettings();
     expect(value).toEqual(DEFAULT_VOICE_ENGINE_SETTINGS);
-    expect(value.mode).toBe('live');
-    expect(value.stt).toBe('gemini');
+    expect(value.mode).toBe('auto');
+    expect(value.modeChosen).toBe(false);
+    expect(value.stt).toBe('moonshine');
     expect(value.idleEndMinutes).toBe(3);
+  });
+
+  it('moves an install that never picked a mode to auto, and keeps a mode that was picked', async () => {
+    // Every save before 'auto' wrote the old default 'live', whatever the user changed
+    store['voice-engine-settings'] = { ...DEFAULT_VOICE_ENGINE_SETTINGS, mode: 'live', modeChosen: undefined };
+    expect((await voiceEngineSettingsStore.getSettings()).mode).toBe('auto');
+    // Economy was never a default: it was picked
+    store['voice-engine-settings'] = { mode: 'economy' };
+    expect(await voiceEngineSettingsStore.getSettings()).toMatchObject({ mode: 'economy', modeChosen: true });
+    // Live picked in Settings stays Live
+    store['voice-engine-settings'] = { mode: 'live', modeChosen: true };
+    expect((await voiceEngineSettingsStore.getSettings()).mode).toBe('live');
+    expect(migrateVoiceEngineSettings({ mode: 'nonsense' as never }).mode).toBe('auto');
+    expect(migrateVoiceEngineSettings(null)).toEqual(DEFAULT_VOICE_ENGINE_SETTINGS);
   });
 
   it('merges changes into what is saved, and fills fields saved before they existed', async () => {
@@ -50,6 +67,7 @@ describe('voiceEngineSettingsStore', () => {
     expect(store['voice-engine-settings']).toEqual({
       ...DEFAULT_VOICE_ENGINE_SETTINGS,
       mode: 'economy',
+      modeChosen: true,
       stt: 'moonshine',
     });
   });
@@ -130,6 +148,21 @@ describe('engine choice for economy conversations', () => {
     expect(economyTts('gemini', { kitten: { bytes: 1 } })).toBe('kitten');
     expect(economyTts('gemini', {})).toBe('system');
     expect(economyTts('system', { kitten: { bytes: 1 } })).toBe('system');
+    // The system voices left at their default give way to KittenTTS in a conversation
+    expect(economyTts('system', { kitten: { bytes: 1 } }, false)).toBe('kitten');
+    expect(economyTts('system', {}, false)).toBe('system');
+  });
+
+  it('talks on the device by default, and through Gemini Live only when picked and a key is there', () => {
+    const ready = { hasGeminiKey: true, localReady: true };
+    expect(resolveVoiceMode({ mode: 'auto' }, ready)).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: false, localReady: true })).toBe('economy');
+    // Auto falls back to Live only when the speech files are missing and a key is there
+    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: true, localReady: false })).toBe('live');
+    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: false, localReady: false })).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'live' }, ready)).toBe('live');
+    expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: false, localReady: true })).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'economy' }, ready)).toBe('economy');
   });
 
   it("keeps a voice only when it is one of the engine's", () => {

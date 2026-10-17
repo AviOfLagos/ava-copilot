@@ -11,6 +11,8 @@ export type TtsEngineId = 'system' | 'gemini' | 'kitten' | 'kokoro';
 export interface TtsSettingsConfig {
   readAloud: ReadAloudMode;
   engine: TtsEngineId;
+  // The user picked the engine; until then a voice conversation speaks with KittenTTS when it is installed
+  engineChosen: boolean;
   // A voice name from the chosen engine; '' uses its default
   voice: string;
   // Speaking rate; 1 is normal speed
@@ -22,6 +24,7 @@ export interface TtsSettingsConfig {
 export const DEFAULT_TTS_SETTINGS: TtsSettingsConfig = {
   readAloud: 'voice',
   engine: 'system',
+  engineChosen: false,
   voice: '',
   rate: 1,
   lastSpokenMessageId: null,

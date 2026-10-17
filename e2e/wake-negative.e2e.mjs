@@ -34,6 +34,8 @@ after(async () => {
 
 test('"hey" without "Ava", said on a loop, never starts a conversation', { skip: !ready }, async () => {
   await extension.setStorage({
+    // These run on Gemini Live (the mock's): picked, since a conversation is on the device by default
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
     'meeting-settings': {
       autoNotes: false,
       wakeWord: true,

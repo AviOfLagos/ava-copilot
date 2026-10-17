@@ -4996,6 +4996,18 @@
   "voice_engine_mode_economy_hint": {
     "message": "Your speech is turned into text on this computer, a text model answers with the same tools, and a local voice reads it. Audio never leaves the computer; with a local model nothing does."
   },
+  "voice_engine_mode_auto": {
+    "message": "Automatic (on this computer, no key needed)"
+  },
+  "voice_engine_mode_auto_hint": {
+    "message": "Your speech is heard and spoken on this computer, and your chat model answers, so no key is needed. Gemini Live is used only when the speech files are missing and a Gemini key is set."
+  },
+  "voice_engine_local_missing": {
+    "message": "Talking without a Gemini key needs the speech files that come with Nex Copilot, and this copy has none. Open Settings › Voice engines to see what is missing, or add a Gemini key in Settings to talk through Gemini."
+  },
+  "voice_engine_dictation_missing": {
+    "message": "Dictation needs either a Gemini speech-to-text model or the speech files on this computer, and neither is set up. Open Settings › Voice engines, or add a Gemini key in Settings."
+  },
   "voice_engine_economy_uses": {
     "message": "Economy conversations use $STT$ to hear and $TTS$ to speak.",
     "placeholders": {
