@@ -183,6 +183,18 @@ export async function startMockLlm(scenarios) {
       );
     }
 
+    // A provider that checks its key, for the first-run setup: /keyed/v1 lists one model for any key but a "bad" one
+    // (its chats are answered like every other /chat/completions)
+    if (req.method === 'GET' && req.url.startsWith('/keyed/v1/models')) {
+      const auth = String(req.headers.authorization ?? '');
+      if (!auth || /bad/i.test(auth)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: { message: 'Incorrect API key provided' } }));
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ object: 'list', data: [{ id: 'scripted', object: 'model' }] }));
+    }
+
     if (req.method === 'POST' && req.url.endsWith('/chat/completions')) {
       let body = '';
       for await (const chunk of req) body += chunk;
@@ -527,6 +539,8 @@ export async function startMockLlm(scenarios) {
   return {
     port,
     baseUrl: `http://127.0.0.1:${port}/v1`,
+    // The provider that checks its key (see /keyed/v1/models)
+    keyedBaseUrl: `http://127.0.0.1:${port}/keyed/v1`,
     fixtureUrl: `http://127.0.0.1:${port}/fixture.html`,
     /** The run of the scenario started last. */
     get run() {
@@ -547,5 +561,52 @@ export async function startMockLlm(scenarios) {
       this.run.failures.push({ status, headers });
     },
     close: () => new Promise(resolve => server.close(resolve)),
+  };
+}
+
+/**
+ * A stand-in for Ollama on its own port (11434), for the first-run setup: it lists a chat model and an embedding
+ * model, says what each can do, and passes chats on to the mock model. Start it only where nothing else listens.
+ */
+export async function startMockOllama(mock, { port = 11434, models = ['qwen3:4b', 'nomic-embed-text'] } = {}) {
+  const server = http.createServer(async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    if (req.method === 'OPTIONS') return res.writeHead(204).end();
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    const json = value => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(value));
+    };
+    if (req.url.startsWith('/api/tags')) return json({ models: models.map(name => ({ name, model: name, size: 1 })) });
+    if (req.url.startsWith('/api/ps')) return json({ models: [] });
+    if (req.url.startsWith('/api/show')) {
+      const name = String(JSON.parse(body || '{}').model ?? '');
+      return json({ capabilities: /embed/.test(name) ? ['embedding'] : ['completion', 'tools'], model_info: {} });
+    }
+    if (req.url.startsWith('/v1/')) {
+      // Chats go to the mock model, which answers by the scenario the task names
+      const upstream = await fetch(`http://127.0.0.1:${mock.port}${req.url}`, {
+        method: req.method,
+        headers: { 'content-type': 'application/json' },
+        body: req.method === 'GET' ? undefined : body,
+      });
+      res.writeHead(upstream.status, { 'Content-Type': 'application/json' });
+      return res.end(await upstream.text());
+    }
+    res.writeHead(404).end();
+  });
+  // Every address, so both localhost (::1) and 127.0.0.1 reach it
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, resolve);
+  });
+  return {
+    close: () =>
+      new Promise(resolve => {
+        server.close(resolve);
+        server.closeAllConnections();
+      }),
   };
 }

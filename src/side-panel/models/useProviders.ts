@@ -85,7 +85,7 @@ function errorText(error: unknown): string {
 }
 
 /** The settings a save sends: everything but the key, which travels on its own. */
-function shareable(config: ProviderConfig) {
+export function shareable(config: ProviderConfig) {
   return {
     name: config.name,
     type: config.type ?? ProviderTypeEnum.CustomOpenAI,

@@ -1696,6 +1696,36 @@ For the lead (files not owned): the one-line import in `src/background/registers
 `capabilities/catalog.ts`, the built-in list in `skills/__tests__/skills.test.ts`. The confirm card does not show a
 request's `intent`; showing it would put "Share 'Q3 plan' with ada@x.com as editor" on the card word for word.
 
+### Onboarding needs one working model (2026-10-17)
+
+Rule: the product needs an API key or a connected local model, and first-run setup must leave one working.
+
+- Model step (`side-panel/onboarding/ModelSetup.tsx`) is an inline setup with two tabs. *On this computer*: asks
+  `models_local_probe` (new; `probeLocalServers` now, recorded only when it changed) every 3 s while open, offers
+  "Use Ollama/LM Studio" in one click, then a model picker; with nothing running, install + `ollama pull <the chat
+  model recommendLocalModels picks for this computer>` and it notices the server by itself. *API key*: provider
+  (Gemini, OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, NVIDIA, OpenAI-compatible with an address), key → tried
+  with `models_provider_check` first (a refused key is never saved, the hint says why), then saved to the vault.
+- Next/Done is disabled until the panel's own ready check passes (Enter too). Skip/Esc still end the setup, but the
+  model stays owed: a "Finish setup" pill (hidden on the welcome screen, which has its own "Connect a model" button)
+  opens the model step alone until a model works. The panel's ready state rechecks on every provider/agent-model
+  storage change, and counts any key-optional provider (`providerIsUsable`: Ollama, LM Studio, custom).
+- `applyGeminiDefaults` → `applyRoleDefaults` (`storage/lib/models/roleDefaults.ts`), used by `saveProvider` for every
+  provider: cloud gets its best smart (Planner) and fast (Navigator) model from the listed active models (Gemini keeps
+  its pair), local gets one chat model for both. It writes an agent only when it has no model or its provider is gone
+  or keyless, and the smart/fast role only alongside such an agent and when unmapped. A provider whose saved names
+  are all missing from its list gets `defaultActiveModels` turned on first. Nothing is assigned on a refused key or a
+  server that did not answer.
+- The onboarding dialog background is opaque now: the welcome orb's canvas showed through the 95% glass.
+
+Tests: unit `storage/lib/models/__tests__/roleDefaults.test.ts` (7), `background/models/__tests__/commands.test.ts`
+(+4: OpenAI defaults with reseeding, Ollama both agents and a later provider leaves them, unreachable assigns
+nothing, `models_local_probe`); full suite 1458 green. E2E Brave `e2e/onboarding.e2e.mjs` (5): the two old tests, a
+fresh install where Next is blocked → a stand-in Ollama (`startMockOllama`, port 11434) is found → added → ready →
+a chat runs through it; a refused key (not saved) then a working key (`mock.keyedBaseUrl`) → ready → a chat runs;
+skip → welcome → model step alone → Models & usage → pill → model step. `models`, `shell` E2E green.
+`launchExtension(mock, { model: false })` starts with no model.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

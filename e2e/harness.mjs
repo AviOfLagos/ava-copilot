@@ -35,9 +35,10 @@ function findChrome() {
 
 /**
  * Starts a browser with the built extension loaded and its model pointed at the mock. The first-run
- * setup is marked done unless `{ onboarding: true }` asks to see it.
+ * setup is marked done unless `{ onboarding: true }` asks to see it; `{ model: false }` starts with no model at all,
+ * as a fresh install does.
  */
-export async function launchExtension(mock, { onboarding = false } = {}) {
+export async function launchExtension(mock, { onboarding = false, model = true } = {}) {
   if (!fs.existsSync(path.join(dist, 'manifest.json'))) {
     throw new Error('dist/ is missing. Run `pnpm build` first.');
   }
@@ -86,13 +87,9 @@ export async function launchExtension(mock, { onboarding = false } = {}) {
   const options = await browser.newPage();
   await options.goto(`${origin}/options.html`);
   await options.evaluate(
-    async (baseUrl, onboarding) => {
+    async (baseUrl, onboarding, withModel) => {
       const model = { provider: 'mock', modelName: 'scripted' };
-      await chrome.storage.local.set({
-        // The first-run setup would cover the panel; only the onboarding test sees it
-        ...(onboarding ? {} : { onboarding: { completedAt: 1 } }),
-        // No morning brief of its own in the middle of a test; the brief test makes one
-        'brief-settings': { enabled: false },
+      const models = {
         'llm-api-keys': {
           providers: {
             mock: {
@@ -106,10 +103,18 @@ export async function launchExtension(mock, { onboarding = false } = {}) {
           },
         },
         'agent-models': { agents: { navigator: model, planner: model } },
+      };
+      await chrome.storage.local.set({
+        // The first-run setup would cover the panel; only the onboarding test sees it
+        ...(onboarding ? {} : { onboarding: { completedAt: 1 } }),
+        // No morning brief of its own in the middle of a test; the brief test makes one
+        'brief-settings': { enabled: false },
+        ...(withModel ? models : {}),
       });
     },
     mock.baseUrl,
     onboarding,
+    model,
   );
 
   return {

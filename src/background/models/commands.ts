@@ -1,13 +1,18 @@
 import { z } from 'zod';
 import {
-  applyGeminiDefaults,
+  applyRoleDefaults,
   db,
+  defaultActiveModels,
   getProviderTypeByProviderId,
+  isLocalProvider,
   llmProviderStore,
   modelHealthStore,
+  providerIsUsable,
   ProviderTypeEnum,
+  savedModelEntries,
+  savedNames,
 } from '@extension/storage';
-import type { ProviderConfig, ProviderHealth } from '@extension/storage';
+import type { AppliedDefaults, ModelCatalogEntry, ProviderConfig, ProviderHealth } from '@extension/storage';
 import { AppError, toAppError } from '@extension/shared';
 import type { CommandContext } from '../registry';
 import { createLogger } from '../log';
@@ -15,7 +20,7 @@ import { generatePlainText } from '../llm/generate';
 import { userMessage } from '../llm/messages';
 import { createChatModel } from '../llm/providers';
 import { meterModel } from '../usage/meter';
-import { applyCheck, checkProvider } from './catalog';
+import { applyCheck, checkProvider, probeLocalServers } from './catalog';
 import { ollamaRoot } from './discovery';
 import { fetchJson } from './http';
 
@@ -144,32 +149,61 @@ export async function saveProvider(input: z.infer<typeof saveSchema>): Promise<R
   });
 
   let health: ProviderHealth | null = null;
-  let listed: string[] = [];
+  let entries: ModelCatalogEntry[] = [];
   const saved = await llmProviderStore.getProvider(id);
   if (saved && input.check !== false) {
     const check = await checkProvider(id, saved, { retryPolicy: INTERACTIVE_RETRY });
     await applyCheck(check);
     await modelHealthStore.setProviders({ [id]: check.health });
     health = check.health;
-    listed = check.entries.map(entry => entry.model);
+    entries = check.entries;
   }
 
-  // Agents without a model get Gemini's defaults, so a Gemini key is enough to start; a refused key gets none,
-  // and only models this key can call are used (a key that could not be checked keeps the saved list)
-  let assigned: Record<string, unknown> = {};
-  if (config.type === ProviderTypeEnum.Gemini && saved?.apiKey && health?.hint !== 'key_rejected') {
-    const names = saved.modelNames ?? [];
-    const usable = health?.status === 'ok' ? names.filter(name => listed.includes(name)) : names;
-    assigned = await applyGeminiDefaults(id, usable);
+  // Agents and roles without a working model get this provider's defaults, so one key or one local server is
+  // enough to start; a refused key or a server that did not answer gets none
+  let assigned: AppliedDefaults['agents'] = {};
+  if (saved && providerIsUsable(saved, id) && health?.status !== 'error') {
+    assigned = (await assignDefaults(id, saved, entries)).agents;
   }
   const summary = (await llmProviderStore.getProviderSummaries())[id];
   return {
     providerId: id,
     hasKey: Boolean(summary?.hasKey),
     keyLast4: summary?.keyLast4 ?? '',
-    ...(health ? checkReply(health, listed) : { health: null }),
+    ...(health
+      ? checkReply(
+          health,
+          entries.map(entry => entry.model),
+        )
+      : { health: null }),
     assigned,
   };
+}
+
+/**
+ * Role defaults for a provider just saved, chosen from its active models. A provider whose saved names are all
+ * missing from what it lists (old suggestions) gets the registry's sensible few turned on first; a provider that
+ * was not listed (no model list, or not checked) offers the names saved with it.
+ */
+async function assignDefaults(
+  id: string,
+  saved: ProviderConfig,
+  listed: ModelCatalogEntry[],
+): Promise<AppliedDefaults> {
+  const type = saved.type ?? getProviderTypeByProviderId(id);
+  const local = isLocalProvider({ ...saved, type });
+  let names = savedNames(id, saved);
+  let candidates: ModelCatalogEntry[];
+  if (listed.length) {
+    if (type !== ProviderTypeEnum.AzureOpenAI && names.length && !listed.some(entry => names.includes(entry.model))) {
+      names = defaultActiveModels(listed, local);
+      if (names.length) await llmProviderStore.setModelNames(id, names);
+    }
+    candidates = listed.filter(entry => !names.length || names.includes(entry.model));
+  } else {
+    candidates = savedModelEntries({ [id]: saved }, []);
+  }
+  return applyRoleDefaults(id, candidates, { type, local });
 }
 
 export async function checkSavedOrDraft(input: z.infer<typeof checkSchema>): Promise<Record<string, unknown>> {
@@ -265,3 +299,22 @@ export async function localReport(): Promise<Record<string, unknown>> {
 }
 
 export const lightRouteSchema = z.object({ type: z.literal('models_light_route'), requestId });
+
+export const localProbeSchema = z.object({ type: z.literal('models_local_probe'), requestId });
+
+/**
+ * Looks for Ollama and LM Studio on this machine now, for the first-run setup that waits for one to start.
+ * What it finds is recorded only when it changed, so asking every few seconds rewrites nothing.
+ */
+export async function localProbe(): Promise<Record<string, unknown>> {
+  const [found, health] = await Promise.all([probeLocalServers(), modelHealthStore.getHealth()]);
+  for (const probe of found) {
+    const before = health.local[probe.kind];
+    const same =
+      before?.status === probe.status &&
+      before.baseUrl === probe.baseUrl &&
+      before.models.join('\n') === probe.models.join('\n');
+    if (!same) await modelHealthStore.setLocal(probe);
+  }
+  return { local: found };
+}

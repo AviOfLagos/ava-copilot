@@ -7802,5 +7802,101 @@
         "example": "Q3 plan"
       }
     }
+  },
+  "onboard_model_intro": {
+    "message": "$1 需要一個模型來思考：在這台電腦上執行的模型，或某個供應商的 API 金鑰。選一個並連接。"
+  },
+  "onboard_model_readyTitle": {
+    "message": "已就緒。"
+  },
+  "onboard_model_using": {
+    "message": "使用 $2 的 $1。可隨時在「模型與用量」中更改。"
+  },
+  "onboard_model_choose": {
+    "message": "連接模型的方式"
+  },
+  "onboard_model_tab_local": {
+    "message": "在這台電腦上"
+  },
+  "onboard_model_tab_key": {
+    "message": "API 金鑰"
+  },
+  "onboard_model_local_none": {
+    "message": "目前沒有執行中的本機模型伺服器。若要私密且免費地執行模型："
+  },
+  "onboard_model_local_install": {
+    "message": "從 ollama.com 安裝 Ollama 並開啟它。"
+  },
+  "onboard_model_local_pull": {
+    "message": "在終端機中下載適合這台電腦的模型："
+  },
+  "onboard_model_local_looking": {
+    "message": "正在尋找 Ollama 與 LM Studio…"
+  },
+  "onboard_model_local_watching": {
+    "message": "正在等待：啟動後幾秒內這裡會自動更新。LM Studio 開啟本機伺服器後也可以使用。"
+  },
+  "onboard_model_local_orKey": {
+    "message": "或改用 API 金鑰"
+  },
+  "onboard_model_local_use": {
+    "message": "使用 $1"
+  },
+  "onboard_model_local_connected": {
+    "message": "$1 已連接。"
+  },
+  "onboard_model_local_model": {
+    "message": "模型"
+  },
+  "onboard_model_local_pick": {
+    "message": "選擇模型…"
+  },
+  "onboard_model_local_empty": {
+    "message": "$1 正在執行，但還沒有模型。下載一個："
+  },
+  "onboard_model_local_noChat": {
+    "message": "已連接，但其中沒有可對話的模型。請下載對話模型，再在這裡選擇。"
+  },
+  "onboard_model_key_provider": {
+    "message": "供應商"
+  },
+  "onboard_model_key_show": {
+    "message": "顯示金鑰"
+  },
+  "onboard_model_key_hide": {
+    "message": "隱藏金鑰"
+  },
+  "onboard_model_key_connect": {
+    "message": "檢查並連接"
+  },
+  "onboard_model_key_checking": {
+    "message": "正在向供應商檢查金鑰…"
+  },
+  "onboard_model_key_ok": {
+    "message": "金鑰可用。$1 列出：$2。"
+  },
+  "onboard_model_key_missing": {
+    "message": "請先貼上 API 金鑰。"
+  },
+  "onboard_model_key_badUrl": {
+    "message": "請輸入供應商的網址，以 https:// 開頭"
+  },
+  "onboard_model_key_noList": {
+    "message": "此網址有回應，但沒有列出模型。請在「模型與用量」中加入並填寫模型名稱。"
+  },
+  "onboard_model_more": {
+    "message": "更多供應商與設定請見「模型與用量」"
+  },
+  "onboard_model_needed": {
+    "message": "連接模型後才能繼續，或先略過。"
+  },
+  "onboard_model_owed": {
+    "message": "完成設定"
+  },
+  "onboard_welcome_body": {
+    "message": "連接一個模型即可開始：在這台電腦上執行的模型，或某個供應商的 API 金鑰。"
+  },
+  "onboard_welcome_button": {
+    "message": "連接模型"
   }
 }
