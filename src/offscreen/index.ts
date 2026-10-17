@@ -33,6 +33,20 @@ const wake = new WakeListener(() => {
 let currentMicId: string | null = null;
 let currentSpeakerId: string | null = null;
 
+// Dictation in the side panel's chat box has the microphone: the conversation hears nothing and "Hey Ava" is not
+// listened for. Given back when dictation ends, or after this long whatever happens (a panel that closed mid-way)
+const DICTATION_HOLD_MAX_MS = 3 * 60 * 1000;
+let dictationHeld = false;
+let dictationTimer: ReturnType<typeof setTimeout> | null = null;
+
+function holdForDictation(on: boolean): void {
+  if (dictationTimer) clearTimeout(dictationTimer);
+  dictationTimer = on ? setTimeout(() => holdForDictation(false), DICTATION_HOLD_MAX_MS) : null;
+  dictationHeld = on;
+  voice?.holdMic(on);
+  wake.hold(on);
+}
+
 function applyAudioDeviceSettings(micId: string | null, speakerId: string | null): void {
   currentMicId = micId;
   currentSpeakerId = speakerId;
@@ -117,10 +131,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
           },
         );
+        // Known at once, so a second start (or the minute check of the wake word) sees a conversation on
+        voice = next;
+        if (dictationHeld) next.holdMic(true);
         try {
           await next.start();
         } catch (error) {
           next.stop();
+          if (voice === next) voice = null;
           wake.resume();
           return {
             ok: false,
@@ -128,7 +146,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             micDenied: error instanceof DOMException && error.name === 'NotAllowedError',
           };
         }
-        voice = next;
+        // Ended while it started: voice_stop already closed it, and the background undoes the rest
         return { ok: true };
       }
       case 'voice_stop':
@@ -142,7 +160,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // A new assistant name: listen again for its phrase
           if (wake.running && words && words.join(' ') !== wake.words.join(' ')) wake.stop();
           await wake.start(words, currentMicId);
-          if (!voice) wake.resume();
+          // Only a listener left paused with nothing in hand: never a wake that is starting a conversation
+          if (!voice) wake.resumeIfIdle();
           return { ok: true };
         } catch (error) {
           return {
@@ -153,6 +172,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       case 'wake_stop':
         wake.stop();
+        return { ok: true };
+      // Dictation in the chat box started or ended (see holdForDictation)
+      case 'dictation_hold':
+        holdForDictation(message.on === true);
+        return { ok: true };
+      case 'voice_mic_hold':
+        voice?.holdMic(message.on === true);
+        return { ok: voice !== null };
+      case 'wake_pause':
+        wake.hold(message.on === true);
         return { ok: true };
       case 'wake_running':
         return { running: wake.running };

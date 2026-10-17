@@ -25,8 +25,8 @@ const RATE = 16000;
 export const WAKE_PHRASE = 'hey ava';
 const DEFAULT_WORDS = ['ava'];
 // Audio kept from before the phrase was recognised: only the phrase itself, which ends a moment
-// before the recogniser reports it; anything older is never sent
-const PHRASE_SECONDS = 1.2;
+// before the recogniser reports it; anything older is never sent. Wide enough for a slow "Hey... Ava"
+const PHRASE_SECONDS = 1.8;
 // Audio kept after the phrase, while the conversation connects
 const CAPTURE_SECONDS = 12;
 const CAPTURE_EXPIRES_MS = 15_000;
@@ -130,9 +130,13 @@ export class WakeListener {
   // The microphone this is listening with, or null for the system default; see switchMic()
   private micDeviceId: string | null = null;
   private input: AudioContext | null = null;
-  private readonly recognizerId = crypto.randomUUID();
+  // The main recogniser; replaced by a fresh one after every candidate, so what it half-heard before does not
+  // linger in its partial results (see resetRecognizer)
+  private recognizerId = crypto.randomUUID();
   private readonly ring = new AudioRing(RATE * PHRASE_SECONDS);
   private paused = false;
+  // Dictation in the chat box has the microphone: the phrase means nothing meanwhile (see hold)
+  private held = false;
   private lastWake = 0;
   // After the phrase: what the user goes on to say, kept for the conversation it starts
   private capture: Float32Array[] | null = null;
@@ -205,7 +209,8 @@ export class WakeListener {
       });
       worker.addEventListener('message', event => this.handle(event.data as WorkerMessage));
 
-      this.mic = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
+      // The microphone chosen in Settings › Voice devices, not just the system default
+      this.mic = await requestMicStream(navigator.mediaDevices, this.micDeviceId, MIC_CONSTRAINTS);
       this.input = new AudioContext({ sampleRate: RATE });
       await this.input.audioWorklet.addModule(chrome.runtime.getURL('pcm-worklet.js'));
       const node = new AudioWorkletNode(this.input, 'pcm-capture', { channelCount: 1, channelCountMode: 'explicit' });
@@ -264,6 +269,51 @@ export class WakeListener {
     this.paused = false;
     this.capture = null;
     this.resetVerification();
+    this.resetRecognizer();
+  }
+
+  /** Whether listening is paused (a conversation is on, or starting). */
+  get isPaused(): boolean {
+    return this.paused;
+  }
+
+  /**
+   * Resumes only a listener left paused with nothing in hand: no wake waiting for its conversation, no candidate
+   * being checked, no dictation holding the microphone. The minute check uses this, so it never throws away a
+   * "Hey Ava" that is just starting a conversation.
+   */
+  resumeIfIdle(): boolean {
+    if (!this.paused || this.held || this.capture || this.verifying) return false;
+    this.resume();
+    return true;
+  }
+
+  /** Dictation in the chat box holds the microphone: the phrase is not listened for until it is given back. */
+  hold(on: boolean): void {
+    if (this.held === on) return;
+    this.held = on;
+    this.ring.take();
+    if (!this.capture) this.resetVerification();
+    if (!on) this.resetRecognizer();
+  }
+
+  get isHeld(): boolean {
+    return this.held;
+  }
+
+  /** A fresh main recogniser: the old one's half-decoded words (often "hey ava" itself) go with it. */
+  private resetRecognizer(): void {
+    const worker = this.worker;
+    if (!worker) return;
+    const old = this.recognizerId;
+    this.recognizerId = crypto.randomUUID();
+    worker.postMessage({ action: 'remove', recognizerId: old });
+    worker.postMessage({
+      action: 'create',
+      recognizerId: this.recognizerId,
+      sampleRate: RATE,
+      grammar: JSON.stringify(wakeGrammars(this.wakeWords).listen),
+    });
   }
 
   /** Drops any candidate that was mid-verification, e.g. a pause landing during its tail window. */
@@ -301,7 +351,7 @@ export class WakeListener {
         return;
       }
     }
-    if (this.paused) return;
+    if (this.paused || this.held) return;
     if (this.verifying) {
       // Not fed to the main recogniser while a candidate is being checked (see module doc). Once
       // the decode itself has started (`deciding`), later audio is simply dropped rather than
@@ -344,7 +394,8 @@ export class WakeListener {
       this.verifyWaiting.shift()?.(message);
       return;
     }
-    if (message.recognizerId !== this.recognizerId || this.paused || this.capture || this.verifying) return;
+    if (message.recognizerId !== this.recognizerId || this.paused || this.held || this.capture || this.verifying)
+      return;
     const result = message.result as { partial?: string; text?: string } | undefined;
     const text = message.event === 'partialresult' ? result?.partial : message.event === 'result' ? result?.text : '';
     if (
@@ -370,6 +421,8 @@ export class WakeListener {
     this.deciding = false;
     this.decidingAudio = [];
     this.decidingSize = 0;
+    // Either way the main recogniser starts clean: its partials still hold the candidate's "hey ava"
+    this.resetRecognizer();
     if (!accepted) {
       // Rejected: resume listening at once, but not so eagerly that an ordinary sentence starting
       // with "hey" re-triggers verification on almost every chunk while it keeps going.
@@ -377,7 +430,7 @@ export class WakeListener {
       return;
     }
     // A pause (or another wake) could have landed while this was decoding; respect it.
-    if (this.paused || this.capture || Date.now() - this.lastWake < COOLDOWN_MS) return;
+    if (this.paused || this.held || this.capture || Date.now() - this.lastWake < COOLDOWN_MS) return;
     this.lastWake = Date.now();
     this.capture = [...ring, ...tail, ...said];
     this.captured = this.capture.reduce((sum, chunk) => sum + chunk.length, 0);

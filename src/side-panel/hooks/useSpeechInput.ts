@@ -40,9 +40,15 @@ export function meterLevel(samples: Float32Array): number {
 
 /**
  * Records from the microphone and hands the audio to `send` as a data URL, for the background to write down.
- * Asks for microphone permission in a small window the first time.
+ * Asks for microphone permission in a small window the first time. `hold` is told when the microphone is the
+ * dictation's (true) and when it is given back (false): a voice conversation and the wake word must not hear the
+ * dictated words too, or Ava answers them as well as the chat.
  */
-export function useSpeechInput(send: (audio: string) => void, onError: (message: string) => void): SpeechInput {
+export function useSpeechInput(
+  send: (audio: string) => void,
+  onError: (message: string) => void,
+  hold: (on: boolean) => void = () => {},
+): SpeechInput {
   const [status, setStatusState] = useState<SpeechStatus>('idle');
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const statusRef = useRef<SpeechStatus>('idle');
@@ -57,8 +63,22 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
   // The latest callbacks, for the recorder's events
   const sendRef = useRef(send);
   const onErrorRef = useRef(onError);
+  const holdRef = useRef(hold);
+  // Whether the microphone is held for dictation now, so it is given back exactly once
+  const heldRef = useRef(false);
   sendRef.current = send;
   onErrorRef.current = onError;
+  holdRef.current = hold;
+
+  const setHeld = useCallback((on: boolean) => {
+    if (heldRef.current === on) return;
+    heldRef.current = on;
+    try {
+      holdRef.current(on);
+    } catch {
+      // The panel's connection is gone; the background gives the microphone back when it notices
+    }
+  }, []);
 
   // Read through a call: the status changes while start() awaits
   const statusNow = useCallback((): SpeechStatus => statusRef.current, []);
@@ -75,8 +95,9 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
     }
   };
 
-  /** Stops the microphone and the meter. */
+  /** Stops the microphone and the meter, and gives the microphone back to the conversation. */
   const release = useCallback(() => {
+    setHeld(false);
     clearTimer(maxTimerRef);
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
@@ -87,7 +108,7 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
       void meter.context.close().catch(() => {});
     }
     level.current = 0;
-  }, []);
+  }, [setHeld]);
 
   /** Follows the microphone's loudness. Only feedback: dictation works without it. */
   const startMeter = useCallback((stream: MediaStream) => {
@@ -153,11 +174,14 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
         return;
       }
 
+      // From here the microphone is the dictation's: the conversation and the wake word stop hearing it
+      setHeld(true);
       const micDeviceId = (await audioDeviceSettingsStore.getSettings()).mic?.deviceId ?? null;
       const stream = await requestMicStream(navigator.mediaDevices, micDeviceId, {});
       // Stopped while the microphone was starting
       if (statusNow() !== 'starting') {
         stream.getTracks().forEach(track => track.stop());
+        setHeld(false);
         return;
       }
       streamRef.current = stream;
@@ -214,7 +238,7 @@ export function useSpeechInput(send: (audio: string) => void, onError: (message:
       }
       onErrorRef.current(message);
     }
-  }, [finish, release, setStatus, startMeter, statusNow]);
+  }, [finish, release, setHeld, setStatus, startMeter, statusNow]);
 
   const toggle = useCallback(async () => {
     if (statusRef.current === 'idle') await start();

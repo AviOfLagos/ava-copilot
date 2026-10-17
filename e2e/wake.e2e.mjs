@@ -37,6 +37,8 @@ before(async () => {
         },
       },
     },
+    // The conversation runs on the mock's Gemini Live: picked, since one is on the device by default
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
   });
 });
 
@@ -76,4 +78,14 @@ test('"Hey Ava" starts a conversation with the panel closed, only once listening
   // The words said right after the phrase reach the copilot, ahead of the live microphone
   await waitFor(() => session.audioBytes > 0, 'audio in the conversation', 10000);
   await waitFor(() => mock.live.toolResponses.length > 0, 'the copilot to act on the request', 20000);
+  // The server's turn detection is tuned for a conversation
+  assert.deepEqual(session.setups[0].realtimeInputConfig, {
+    automaticActivityDetection: {
+      startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+      endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+      prefixPaddingMs: 200,
+      silenceDurationMs: 600,
+    },
+    activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+  });
 });

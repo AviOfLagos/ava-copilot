@@ -206,6 +206,8 @@ const SidePanel = () => {
   const speech = useSpeechInput(
     useCallback(audio => postRef.current({ type: 'speech_to_text', audio }), []),
     useCallback((message: string) => setBanner(message), []),
+    // While dictating, a voice conversation and "Hey Ava" do not hear the microphone, so the words are answered once
+    useCallback((on: boolean) => postRef.current({ type: 'dictation_hold', on }), []),
   );
   const { done: speechDone } = speech;
   const setTranscriptSink = useCallback((sink: (words: string) => void) => {

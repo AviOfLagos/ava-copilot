@@ -204,4 +204,115 @@ describe('WakeListener verification', () => {
     await wake.answer('hey ava');
     expect(wake.wakes).toHaveLength(0);
   });
+
+  it('starts every candidate decision on a fresh main recogniser, so the old partials cannot wake it again', async () => {
+    const wake = listen();
+    const internals = wake.listener as unknown as { recognizerId: string; handle: (m: object) => void };
+    const first = internals.recognizerId;
+    wake.candidate();
+    wake.feed(0.2, 3);
+    await wake.answer('hey [unk]');
+    expect(internals.recognizerId).not.toBe(first);
+    expect(wake.sent.some(message => message.action === 'remove' && message.recognizerId === first)).toBe(true);
+    const created = wake.sent.filter(
+      message => message.action === 'create' && message.recognizerId === internals.recognizerId,
+    );
+    expect(JSON.parse(created[0]?.grammar ?? '[]')).toEqual(['hey ava', '[unk]']);
+    // A late "hey ava" from the old recogniser is ignored
+    internals.handle({ event: 'partialresult', recognizerId: first, result: { partial: 'hey ava' } });
+    const verifiers = () =>
+      wake.sent.filter(message => message.action === 'create' && message.grammar?.includes('"ava"'));
+    const before = verifiers().length;
+    await new Promise(resolve => setTimeout(resolve, 600));
+    wake.feed(0.2, 3);
+    expect(verifiers().length).toBe(before);
+  });
+
+  it('the minute check never throws away a wake that is starting a conversation', async () => {
+    const wake = listen();
+    wake.candidate();
+    wake.feed(0.2, 3);
+    await wake.answer('hey ava');
+    expect(wake.wakes).toHaveLength(1);
+    // The conversation has not taken the capture yet: nothing is resumed and the capture stays
+    expect(wake.listener.resumeIfIdle()).toBe(false);
+    expect(wake.capture()).not.toBeNull();
+    // Taken: listening pauses for the conversation, and a paused listener with nothing in hand resumes
+    expect(wake.listener.takeCapture()).toBeDefined();
+    expect(wake.listener.isPaused).toBe(true);
+    expect(wake.listener.resumeIfIdle()).toBe(true);
+    expect(wake.listener.isPaused).toBe(false);
+    // Not paused: nothing to do
+    expect(wake.listener.resumeIfIdle()).toBe(false);
+  });
+
+  it('listens to nothing while dictation holds the microphone, and the minute check does not undo that', () => {
+    const wake = listen();
+    wake.listener.hold(true);
+    const before = wake.mainChunks().length;
+    wake.feed(0.2, 5);
+    wake.candidate();
+    wake.feed(0.2, 5);
+    expect(wake.mainChunks().length).toBe(before);
+    expect(wake.verifier()).toBeUndefined();
+    wake.listener.pause();
+    expect(wake.listener.resumeIfIdle()).toBe(false);
+    wake.listener.hold(false);
+    wake.listener.resume();
+    wake.feed(0.2, 2);
+    expect(wake.mainChunks().length).toBe(before + 2);
+  });
+});
+
+describe('WakeListener microphone', () => {
+  it('listens on the microphone chosen in Settings, not the default one', async () => {
+    const getUserMedia = vi.fn(async () => ({ getTracks: () => [] }) as unknown as MediaStream);
+    class FakeWorker {
+      private listeners: ((event: { data: unknown }) => void)[] = [];
+      addEventListener(type: string, listener: (event: { data: unknown }) => void) {
+        if (type === 'message') this.listeners.push(listener);
+      }
+      removeEventListener() {}
+      postMessage(message: { action: string }) {
+        if (message.action === 'load')
+          setTimeout(() => this.listeners.forEach(l => l({ data: { event: 'load', result: true } })));
+      }
+      terminate() {}
+    }
+    class FakeContext {
+      audioWorklet = { addModule: async () => {} };
+      destination = {};
+      createMediaStreamSource() {
+        return { connect: () => {}, disconnect: () => {} };
+      }
+      createGain() {
+        return { gain: { value: 1 }, connect: (next: unknown) => next };
+      }
+      close = async () => {};
+    }
+    class FakeNode {
+      port = { onmessage: null };
+      connect(next: unknown) {
+        return next;
+      }
+    }
+    vi.stubGlobal('Worker', FakeWorker);
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.stubGlobal('AudioWorkletNode', FakeNode);
+    vi.stubGlobal('chrome', { runtime: { getURL: (path: string) => `chrome-extension://x/${path}` } });
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+    try {
+      const listener = new WakeListener(() => {});
+      await listener.start(['ava'], 'usb-mic');
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      const constraints = (getUserMedia.mock.calls[0] as unknown as [MediaStreamConstraints])[0];
+      expect(JSON.stringify(constraints.audio)).toContain('usb-mic');
+      // Choosing the same microphone again changes nothing
+      await listener.switchMic('usb-mic');
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      listener.stop();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

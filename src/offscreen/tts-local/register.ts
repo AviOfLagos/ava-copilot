@@ -2,6 +2,7 @@ import { OFFSCREEN_VOICE_TARGET } from '../../background/voice/engines/wire';
 import type { EconomyEngines, VoiceEngineRuntimeStatus } from '../../background/voice/engines/wire';
 import { heardLately, listenOnce } from '../stt/listen';
 import { sttStatus, unloadStt } from '../stt/pool';
+import { transcribeRecording } from '../stt/transcribe';
 import type { LocalVoiceEngine } from './protocol';
 import { localTts } from './shared';
 
@@ -72,6 +73,15 @@ async function handle(message: Message): Promise<unknown> {
           error: error instanceof Error ? error.message : String(error),
           micDenied: error instanceof DOMException && error.name === 'NotAllowedError',
         };
+      }
+    // A recording written down on the device (the chat box's dictation without Gemini speech-to-text)
+    case 'stt_transcribe':
+      try {
+        const started = performance.now();
+        const text = await transcribeRecording(message.stt as EconomyEngines['stt'], String(message.audio ?? ''));
+        return { ok: true, text, ms: Math.round(performance.now() - started) };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     default:
       return { ok: false, error: `Unknown command ${String(message.type)}` };

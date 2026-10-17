@@ -1696,6 +1696,51 @@ For the lead (files not owned): the one-line import in `src/background/registers
 `capabilities/catalog.ts`, the built-in list in `skills/__tests__/skills.test.ts`. The confirm card does not show a
 request's `intent`; showing it would put "Share 'Q3 plan' with ada@x.com as editor" on the card word for word.
 
+### Voice basics: turn-taking, wake word, local by default (2026-10-17)
+
+Complaints: Ava talked over the user and replied late; "Hey Ava" sometimes missed; dictating into the chat box got an
+answer from Ava; voice needed a Gemini key although the local engines ship.
+
+- **Ava hearing herself** (`offscreen/vad.ts`, `voice.ts`, `turns.ts`): the speech gate is playback-aware. While her
+  voice is audible (queued until `playAt`, plus output latency and a 200 ms tail) speech must pass 0.04 (not 0.012)
+  for 300 ms before the gate opens; its lead-in is kept, so a real barge-in still goes up whole. She counts as
+  speaking until the queue has played out, not at `turnComplete`. The noise floor no longer locks: if nothing in 3 s
+  is below the threshold, the quietest level of that window pulls the floor up, so a raised hum closes the gate.
+- **Notices cutting in**: `TurnTaking` holds system notices and the tab-context line until the user is not speaking,
+  their last words got an answer (or 1.5 s passed), no tool runs and her voice has drained; a 200 ms settle loop
+  sends them then.
+- **Latency**: `setup.realtimeInputConfig` = start sensitivity LOW, end HIGH, prefix 200 ms, silence 600 ms,
+  `START_OF_ACTIVITY_INTERRUPTS` (field names checked against `ai.google.dev/api/live`); our gate hold is 700 ms, so the
+  server decides the end of a turn, and `audioStreamEnd` stays.
+- **Dictation answered by Ava**: the panel posts `dictation_hold {on}` when dictation takes the mic and again when it
+  is given back (stop, cancel, error, unmount; the background also releases on the panel port's disconnect). The
+  offscreen document then drops the session's mic audio (typed turns still go; an open utterance is ended with
+  `audioStreamEnd`) and holds the wake listener, with a 3-minute safety release. The dictated words reach the chat
+  once, through the composer.
+- **Wake word**: listens on the chosen mic (`requestMicStream`), a fresh main recogniser after every candidate
+  decision and on resume, phrase window 1.8 s. The minute alarm's `wake_start` only resumes a paused listener with
+  no capture, candidate or dictation hold (`resumeIfIdle`); `voice` is set before `await start()`. `wakePrefix`
+  unchanged.
+- **Economy**: an utterance heard over the answer that did not stop it (barge-in counts loud audio only, 400 ms on
+  top of the gate's 300 ms) is dropped as echo. KittenTTS already speaks sentence by sentence in its worker.
+- **Local by default**: `VoiceMode` gains `'auto'` (default; `stt` default `moonshine`). `resolveVoiceMode`: economy
+  unless Live was picked and a Gemini key exists; auto falls back to Live only when the speech files are missing and a
+  key exists. Migration: a stored `live` without `modeChosen` (every old save wrote it) reads as auto; `economy` and
+  anything picked in Settings are kept. A conversation speaks with KittenTTS when the TTS engine was never picked
+  (`engineChosen`). Composer dictation without Gemini STT is transcribed on the device (`stt_transcribe`: decode,
+  cut at pauses, `localSttChoice`). Missing files give a plain sentence pointing to Settings › Voice engines.
+
+Tests: unit `vad.test.ts` (+4: hum closes, echo vs playback threshold, held-then-open barge-in, reset),
+`turns.test.ts` (7, incl. the setup config), `wake.test.ts` (+4: recogniser reset, `resumeIfIdle` keeps a capture,
+hold, chosen mic), `economy.test.ts` (+3, barge-in test updated), `transcribe.test.ts` (3), `dictation.test.ts` (7),
+`voiceEngineSettings.test.ts` (migration, auto resolution, KittenTTS default), `engines.test.ts`. Full suite 1480
+green. E2E in Brave: `voice` (6, + no notice while the user speaks, `realtimeInputConfig`), `dictation` (5, + a
+hidden Live session gets no mic audio while dictating, one answer; fails with the hold removed), `wake` (1),
+`ava-hub` (4), `voice-thread`, `wake-negative`, `identity` (8), `voice-engines` (6, + Talk with no Gemini key and
+untouched settings runs Moonshine → text model → KittenTTS; dictation transcribed on the device). Live-mode E2E now
+pick `mode: 'live'` explicitly. Not testable here: real acoustic echo and a real room; tune `playbackLevel` (0.04)
+and `REPLY_WAIT_MS` with the user's own mic and speakers.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
