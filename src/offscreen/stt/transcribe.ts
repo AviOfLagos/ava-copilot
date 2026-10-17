@@ -1,6 +1,6 @@
 import type { EconomyEngines } from '../../background/voice/engines/wire';
 import { acquireStt, releaseStt } from './pool';
-import { hasWords, UtteranceCollector } from './utterances';
+import { isRequest, UtteranceCollector } from './utterances';
 
 /**
  * Writes down a recording on the device: the chat box's dictation when no Gemini speech-to-text is set up. The
@@ -55,7 +55,7 @@ export async function transcribeRecording(
     const words: string[] = [];
     for (const part of parts) {
       const text = (await engine.transcribe(part)).trim();
-      if (hasWords(text)) words.push(text);
+      if (isRequest(text)) words.push(text);
     }
     return words.join(' ');
   } finally {

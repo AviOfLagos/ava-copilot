@@ -126,3 +126,34 @@ export class UtteranceCollector {
 export function hasWords(text: string): boolean {
   return /[\p{L}\p{N}]/u.test(text.replace(/\[unk\]/gi, ''));
 }
+
+// What speech recognisers commonly make of noise, breathing or a cough: never something the user asked
+// Only junk, so a short real answer ("yeah", "okay", "bye") always gets through
+const NOISE_PHRASES = new Set([
+  'you',
+  'thank you',
+  'thanks for watching',
+  'thank you for watching',
+  'uh',
+  'um',
+  'hmm',
+  'mm',
+  'ah',
+  'huh',
+  'the',
+  'i',
+]);
+
+const plainWords = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/\[unk\]/g, ' ')
+    .replace(/[^\p{L}\p{N}' ]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** Whether a transcript is something said to the copilot, not noise turned into a filler word. */
+export function isRequest(text: string): boolean {
+  const words = plainWords(text);
+  return hasWords(words) && !NOISE_PHRASES.has(words);
+}

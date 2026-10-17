@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { concat, hasWords, UtteranceCollector, voicedSamples } from '../utterances';
+import { concat, hasWords, isRequest, UtteranceCollector, voicedSamples } from '../utterances';
 
 // What the PCM worklet hands over: about a quarter second at 16 kHz
 const CHUNK = 4096;
@@ -75,5 +75,26 @@ describe('helpers', () => {
     expect(hasWords('')).toBe(false);
     expect(hasWords(' . ')).toBe(false);
     expect(hasWords('[unk]')).toBe(false);
+  });
+});
+
+describe('isRequest', () => {
+  it('drops what recognisers make of noise', () => {
+    for (const noise of ['you', 'You.', 'Thank you.', ' thanks for watching! ', 'Hmm...', '[unk]', '.', ''])
+      expect(isRequest(noise)).toBe(false);
+  });
+
+  it('keeps anything the user asked, however short', () => {
+    for (const asked of [
+      "What's on today?",
+      'Stop',
+      'open gmail',
+      'thank you, that is all',
+      'yes',
+      'Yeah.',
+      'okay',
+      'bye',
+    ])
+      expect(isRequest(asked)).toBe(true);
   });
 });

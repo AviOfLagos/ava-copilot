@@ -7,7 +7,7 @@ import type { TurnImage, VoiceEvents, VoiceOptions, VoiceStatus, VoiceTool } fro
 import type { SttEngine } from './engines';
 import { recordHeard } from './listen';
 import { acquireStt, releaseStt } from './pool';
-import { hasWords, UtteranceCollector } from './utterances';
+import { isRequest, UtteranceCollector } from './utterances';
 import { level } from '../vad';
 
 /**
@@ -201,7 +201,9 @@ export class EconomySession {
     try {
       const started = performance.now();
       const text = (await this.stt.transcribe(audio)).trim();
-      if (!this.stopped && hasWords(text)) {
+      // Noise the recogniser turned into "you" or "thank you" is not a question: answering it would make the
+      // copilot talk on its own and keep the conversation from ever going idle
+      if (!this.stopped && isRequest(text)) {
         recordHeard(text, Math.round(performance.now() - started));
         this.heardQueue.push(text);
       }

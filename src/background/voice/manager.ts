@@ -572,6 +572,10 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         if (key === before) continue;
         this.announced.set(thread.id, key);
         if (before === undefined && thread.status === 'idle') continue;
+        // A routine's or the brief's chat speaks up only when it waits for the user's click (an agent's is announced:
+        // that is how a hand-off's answer is heard)
+        const background = thread.origin === 'workflow' || thread.origin === 'brief';
+        if (background && thread.status !== 'waiting_confirm') continue;
         const last = thread.status === 'idle' ? (await threadStore.messages(thread.id)).pop()?.content : undefined;
         const notice = noticeFor(thread, last);
         if (notice) await toOffscreen({ type: 'voice_say', text: notice });
