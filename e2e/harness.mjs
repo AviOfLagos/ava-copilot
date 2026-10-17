@@ -58,6 +58,9 @@ export async function launchExtension(mock, { onboarding = false, model = true }
       '--no-first-run',
       '--enable-unsafe-extension-debugging',
       '--autoplay-policy=no-user-gesture-required',
+      // Silent by default: the voice tests speak scripted answers ("All clear today.") that would otherwise come out of
+      // the machine's speakers. Pages still produce the audio, so playback checks still measure it. E2E_AUDIBLE=1 to hear.
+      ...(process.env.E2E_AUDIBLE ? [] : ['--mute-audio']),
       // A fake microphone for the voice tests; it breaks tab capture, so only those tests use it
       ...(process.env.E2E_FAKE_MIC ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] : []),
       // A recording played as the microphone, on a loop: the wake word test says "Hey Ava" with it

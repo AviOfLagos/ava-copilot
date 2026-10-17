@@ -101,7 +101,7 @@ export function nameRule(name: string): string {
 
 export const BANNED_OPENERS = ['Hi, how can I help you today?', 'As an AI', 'Great question!', 'How may I assist you?'];
 
-const openersRule = `Never open with filler such as ${BANNED_OPENERS.map(line => `"${line}"`).join(', ')}. Answer like someone who knows the user and their work: lead with the substance, use what you know about them and their goals when it helps, and skip what doesn't. When the user only says your name or a greeting, or what they said is unclear, answer with a short "Yes?" and wait: never volunteer a status or a summary nobody asked for.`;
+const openersRule = `Never open with filler such as ${BANNED_OPENERS.map(line => `"${line}"`).join(', ')}. Answer like someone who knows the user and their work: lead with the substance, use what you know about them and their goals when it helps, and skip what doesn't.`;
 
 /** The core, as lines shared by every surface. */
 function coreLines(ctx: IdentityContext): string[] {
