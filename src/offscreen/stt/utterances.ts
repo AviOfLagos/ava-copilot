@@ -1,4 +1,5 @@
 import { SpeechGate } from '../vad';
+import type { PushOptions } from '../vad';
 
 /**
  * Cuts the microphone into utterances for a local recogniser: the speech gate decides when someone speaks, and
@@ -67,14 +68,20 @@ export class UtteranceCollector {
     this.frame = Math.round((FRAME_MS / 1000) * sampleRate);
   }
 
+  /** The level speech must pass now (higher while the copilot's voice plays). */
+  threshold(playing = false): number {
+    return this.gate.threshold(playing);
+  }
+
   /** Whether someone is speaking right now. */
   get speaking(): boolean {
     return this.gate.speaking;
   }
 
-  push(samples: Float32Array): UtteranceStep {
+  /** `playing`: the copilot's voice is playing, so its echo must not be taken for speech (see SpeechGate). */
+  push(samples: Float32Array, options: PushOptions = {}): UtteranceStep {
     const wasSpeaking = this.gate.speaking;
-    const { send, ended } = this.gate.push(samples);
+    const { send, ended } = this.gate.push(samples, options);
     const speechStarted = !wasSpeaking && this.gate.speaking;
     for (const chunk of send) this.add(chunk);
     if (ended || this.size >= this.maxSamples) return { speechStarted, utterance: this.take() };
@@ -86,6 +93,12 @@ export class UtteranceCollector {
     if (!chunks.length) return;
     this.gate.force();
     for (const chunk of chunks) this.add(chunk);
+  }
+
+  /** Drops whatever was being collected and closes the gate, without an utterance (the microphone was held). */
+  cancel(): void {
+    this.gate.reset();
+    this.reset();
   }
 
   /** Drops whatever was being collected. */

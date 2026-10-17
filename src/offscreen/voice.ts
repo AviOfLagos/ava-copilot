@@ -1,5 +1,6 @@
 import { pcm16Base64 } from './live';
 import { SpeechGate } from './vad';
+import { TurnTaking } from './turns';
 import { liveSocketUrl } from './liveAuth';
 import type { LiveOptions } from './live';
 import { requestMicStream, setAudioSinkId } from '@extension/shared';
@@ -15,6 +16,25 @@ export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
 
 export const OUTPUT_RATE = 24_000;
 const INPUT_RATE = 16_000;
+// The copilot's voice still reaches the microphone a moment after the last sample is scheduled (output latency, room)
+const ECHO_TAIL_MS = 200;
+// How often held notices and the "speaking" status are looked at again
+const SETTLE_MS = 200;
+
+/**
+ * Gemini's own voice activity detection, tuned for a conversation: slow to decide the user started (so a cough,
+ * a click or a trace of the copilot's echo does not count), quick to decide they finished (a short pause ends
+ * the turn, so the answer comes sooner), and the user starting to speak cuts the copilot off.
+ */
+export const REALTIME_INPUT_CONFIG = {
+  automaticActivityDetection: {
+    startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+    endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+    prefixPaddingMs: 200,
+    silenceDurationMs: 600,
+  },
+  activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+} as const;
 
 export interface VoiceTool {
   name: string;
@@ -60,6 +80,7 @@ export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
         ...(options.speechConfig ? { speechConfig: options.speechConfig } : {}),
       },
       systemInstruction: { parts: [{ text: options.instructions }] },
+      realtimeInputConfig: REALTIME_INPUT_CONFIG,
       inputAudioTranscription: {},
       outputAudioTranscription: {},
       tools: [{ functionDeclarations: options.tools }],
@@ -127,10 +148,14 @@ export class VoiceSession {
   private playAt = 0;
   private heard = '';
   private said = '';
-  // Things to say, held until the copilot is not speaking
+  // Things to say, held until the floor is free (see TurnTaking)
   private notices: string[] = [];
-  // The latest quiet context (the tab in front), waiting for the copilot to stop speaking
+  // The latest quiet context (the tab in front), held the same way
   private context: string | null = null;
+  private readonly turns = new TurnTaking();
+  // Dictation in the chat box has the microphone: nothing heard goes to the conversation meanwhile
+  private micHeld = false;
+  private settleTimer: ReturnType<typeof setInterval> | null = null;
   // Messages typed in the chat, held until the session is ready
   private typed: ReturnType<typeof typedTurn>[] = [];
   private speaking = false;
@@ -150,6 +175,11 @@ export class VoiceSession {
       noiseSuppression: true,
       autoGainControl: true,
     });
+    // Ended while the microphone opened: it closes again, and nothing connects
+    if (this.stopped) {
+      this.mic.getTracks().forEach(track => track.stop());
+      return;
+    }
     this.output = new AudioContext({ sampleRate: OUTPUT_RATE });
     void setAudioSinkId(this.output, this.options.speakerDeviceId ?? null);
     this.input = new AudioContext({ sampleRate: INPUT_RATE });
@@ -163,6 +193,7 @@ export class VoiceSession {
     mute.gain.value = 0;
     node.connect(mute).connect(this.input.destination);
     this.usageTimer = setInterval(() => this.reportUsage(), 60_000);
+    this.settleTimer = setInterval(() => this.settle(), SETTLE_MS);
     this.connect();
   }
 
@@ -192,6 +223,7 @@ export class VoiceSession {
     this.stopped = true;
     this.reportUsage();
     if (this.usageTimer) clearInterval(this.usageTimer);
+    if (this.settleTimer) clearInterval(this.settleTimer);
     this.socket?.close(1000);
     this.mic?.getTracks().forEach(track => track.stop());
     void this.input?.close().catch(() => {});
@@ -199,7 +231,25 @@ export class VoiceSession {
     this.events.onStatus('off');
   }
 
-  /** Something for the copilot to tell the user, said once it is not speaking. */
+  /**
+   * Holds the microphone (dictation in the chat box has it) or gives it back. While held, nothing heard goes up:
+   * an utterance under way ends there, and typed turns still work.
+   */
+  holdMic(on: boolean): void {
+    if (this.micHeld === on) return;
+    this.micHeld = on;
+    if (!on) return;
+    const wasOpen = this.gate.speaking;
+    this.gate.reset();
+    if (wasOpen) {
+      this.turns.userEnded(performance.now());
+      if (this.ready && this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+      }
+    }
+  }
+
+  /** Something for the copilot to tell the user, said once the floor is free. */
   say(notice: string): void {
     this.notices.push(notice);
     this.flushNotices();
@@ -244,12 +294,36 @@ export class VoiceSession {
    * silence stays here. When speech stops, the model is told the stream paused, so it answers at once.
    */
   private fromMic(samples: Float32Array): void {
-    if (!this.ready || this.stopped) return;
-    const { send, ended } = this.gate.push(samples);
+    if (!this.ready || this.stopped || this.micHeld) return;
+    const now = performance.now();
+    const wasOpen = this.gate.speaking;
+    // While the copilot's voice plays the gate asks for more, so its own echo is not taken for the user
+    const { send, ended } = this.gate.push(samples, { playing: this.turns.playing(now) });
+    if (!wasOpen && this.gate.speaking) this.turns.userStarted();
     for (const chunk of send) this.send(chunk);
-    if (ended && this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+    if (ended) {
+      this.turns.userEnded(now);
+      if (this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+      }
     }
+  }
+
+  /** The copilot stops counting as speaking once its voice has played out; held notices go when the floor is free. */
+  private settle(): void {
+    if (this.stopped || !this.ready) return;
+    const now = performance.now();
+    if (this.speaking && !this.turns.speaking(now)) {
+      this.speaking = false;
+      this.status('listening');
+    }
+    this.flushContext();
+    this.flushNotices();
+  }
+
+  /** Whether held client content may go now: see TurnTaking. */
+  private floorFree(): boolean {
+    return !this.speaking && this.turns.floorFree(performance.now());
   }
 
   /** Reports how the conversation is going, but never after it ended: a late message must not reopen it. */
@@ -269,14 +343,16 @@ export class VoiceSession {
   }
 
   private flushContext(): void {
-    if (!this.ready || this.speaking || !this.context || this.socket?.readyState !== WebSocket.OPEN) return;
+    if (!this.ready || !this.context || this.socket?.readyState !== WebSocket.OPEN || !this.floorFree()) return;
     const text = this.context;
     this.context = null;
     this.socket.send(JSON.stringify(contextTurn(text)));
   }
 
   private flushNotices(): void {
-    if (!this.ready || this.speaking || this.notices.length === 0) return;
+    if (!this.ready || this.notices.length === 0 || this.socket?.readyState !== WebSocket.OPEN || !this.floorFree()) {
+      return;
+    }
     const text = this.notices.splice(0).join('\n');
     this.socket?.send(
       JSON.stringify({
@@ -300,6 +376,9 @@ export class VoiceSession {
     this.playAt = Math.max(this.playAt, this.output.currentTime);
     source.start(this.playAt);
     this.playAt += buffer.duration;
+    // Heard until the queue runs out, plus the device's own delay and the room's
+    const latency = (this.output.outputLatency || 0) + (this.output.baseLatency || 0);
+    this.turns.playUntil(performance.now() + (this.playAt - this.output.currentTime + latency) * 1000 + ECHO_TAIL_MS);
     this.outputSeconds += buffer.duration;
     this.playing.push(source);
     source.onended = () => {
@@ -312,6 +391,7 @@ export class VoiceSession {
     for (const source of this.playing) source.stop();
     this.playing = [];
     this.playAt = 0;
+    this.turns.stopPlayback(performance.now());
   }
 
   private reportUsage(): void {
@@ -363,10 +443,15 @@ export class VoiceSession {
       if (message.setupComplete) {
         this.ready = true;
         this.status('listening');
+        // A new (or resumed) session: a turn cut off by the old socket is over
+        this.turns.modelEnded();
         // What followed "Hey Ava" is speech already: it goes up, and the gate stays open for the rest
         const preroll = this.options.preroll?.splice(0) ?? [];
         for (const chunk of preroll) this.send(chunk);
-        if (preroll.length) this.gate.force();
+        if (preroll.length) {
+          this.gate.force();
+          this.turns.userStarted();
+        }
         this.flushTyped();
         this.flushContext();
         this.flushNotices();
@@ -376,6 +461,7 @@ export class VoiceSession {
       if (content?.outputTranscription?.text) this.said += content.outputTranscription.text;
       for (const part of content?.modelTurn?.parts ?? []) {
         if (part.inlineData?.data) {
+          this.turns.modelStarted();
           if (!this.speaking) {
             this.speaking = true;
             this.status('speaking');
@@ -383,22 +469,27 @@ export class VoiceSession {
           this.play(part.inlineData.data);
         }
       }
-      if (content?.interrupted) this.silence();
+      if (content?.interrupted) {
+        this.silence();
+        this.turns.interrupted(performance.now());
+      }
       if (content?.turnComplete) {
         if (this.heard.trim() || this.said.trim()) this.events.onTurn(this.heard.trim(), this.said.trim());
         this.heard = '';
         this.said = '';
-        this.speaking = false;
-        this.status('listening');
-        this.flushContext();
-        this.flushNotices();
+        this.turns.modelEnded();
+        // Still "speaking" until the voice already queued has played out: settle() says "listening" then
+        this.settle();
       }
       for (const call of message.toolCall?.functionCalls ?? []) {
         let response: unknown;
+        this.turns.toolStarted();
         try {
           response = { result: await this.events.onTool(call.name, call.args ?? {}, this.heard) };
         } catch (error) {
           response = { error: String(error) };
+        } finally {
+          this.turns.toolEnded();
         }
         socket.send(
           JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response }] } }),

@@ -4996,6 +4996,18 @@
   "voice_engine_mode_economy_hint": {
     "message": "Sua fala vira texto neste computador, um modelo de texto responde com as mesmas ferramentas e uma voz local lê a resposta. O áudio nunca sai do computador; com um modelo local, nada sai."
   },
+  "voice_engine_mode_auto": {
+    "message": "Automático (neste computador, sem chave)"
+  },
+  "voice_engine_mode_auto_hint": {
+    "message": "Sua fala é ouvida e respondida em voz neste computador, e o seu modelo de chat responde, então nenhuma chave é necessária. O Gemini Live só é usado quando faltam os arquivos de fala e há uma chave do Gemini."
+  },
+  "voice_engine_local_missing": {
+    "message": "Conversar sem uma chave do Gemini precisa dos arquivos de fala que vêm com o Nex Copilot, e esta cópia não os tem. Abra Configurações › Motores de voz para ver o que falta, ou adicione uma chave do Gemini nas Configurações para conversar pelo Gemini."
+  },
+  "voice_engine_dictation_missing": {
+    "message": "O ditado precisa de um modelo de fala para texto do Gemini ou dos arquivos de fala neste computador, e nenhum dos dois está configurado. Abra Configurações › Motores de voz, ou adicione uma chave do Gemini nas Configurações."
+  },
   "voice_engine_economy_uses": {
     "message": "As conversas econômicas usam $STT$ para ouvir e $TTS$ para falar.",
     "placeholders": {

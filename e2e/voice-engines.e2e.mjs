@@ -93,6 +93,12 @@ async function startTextModel() {
       allowEnd = true;
       return userTurns;
     },
+    // Starts the script over: the next thing heard calls get_status, and nothing ends the conversation
+    restart: () => {
+      userTurns = 0;
+      allowEnd = false;
+      requests.length = 0;
+    },
     close: () => new Promise(resolve => server.close(resolve)),
   };
 }
@@ -337,6 +343,88 @@ test(
     const messages = await readMessages(panel, thread.id);
     assert.ok(messages.some(message => message.actor === 'user' && /calendar|ava/i.test(message.content)));
     assert.ok(messages.some(message => message.actor === 'planner' && message.content === ANSWER));
+  },
+);
+
+test(
+  'with no Gemini key and the voice settings never touched, Talk runs on the device and KittenTTS answers',
+  { skip: SKIP },
+  async () => {
+    const { panel } = session;
+    // An install from before "auto": every save wrote the old default Live and Gemini hearing, never picked;
+    // the read-aloud voice left at the system default. There is no Gemini key in this profile.
+    await extension.setStorage({
+      'voice-engine-settings': { mode: 'live', stt: 'gemini', moonshineSize: 'tiny', economyModel: 'fast' },
+      'tts-settings': { readAloud: 'voice', engine: 'system', voice: '', rate: 1, lastSpokenMessageId: null },
+    });
+    const keys = await extension.getStorage('llm-api-keys');
+    assert.ok(!Object.values(keys.providers).some(provider => provider.type === 'gemini'), 'no Gemini key');
+    textModel.restart();
+    const spokenBefore = (await command(panel, { type: 'voice_engine_status' })).runtime?.tts.requests ?? 0;
+    const sessionsBefore = mock.live.sessions.length;
+
+    await panel.goto(`${extension.origin}/sidepanel.html`);
+    await panel.waitForSelector('textarea');
+    await panel.bringToFront();
+    await session.click('Talk to Ava');
+
+    // Heard on the device (Moonshine), answered by the text model with a tool, then spoken by KittenTTS
+    await waitFor(() => textModel.requests.length >= 2, 'the text model to answer', 90_000);
+    const heard = textModel.requests
+      .flatMap(request => request.messages.filter(message => message.role === 'user').map(message => message.content))
+      .join(' ');
+    assert.match(heard, /calendar|ava/i, 'the recognised words reached the model');
+    let runtime = null;
+    await waitFor(
+      async () => {
+        ({ runtime } = await command(panel, { type: 'voice_engine_status' }));
+        return runtime?.tts.requests > spokenBefore && runtime.tts.peakRms > 0.01;
+      },
+      'the answer to be spoken',
+      60_000,
+    );
+    assert.equal(runtime.tts.engine, 'kitten', 'a conversation speaks with KittenTTS when the voice was never picked');
+    assert.equal(mock.live.sessions.length, sessionsBefore, 'no Live session: nothing needed a key');
+    // The old stored "live" was never picked: it reads as auto now
+    const settings = await panel.evaluate(() =>
+      chrome.storage.local.get('voice-engine-settings').then(items => items['voice-engine-settings']),
+    );
+    assert.notEqual(settings?.modeChosen, true);
+
+    textModel.allowEnd();
+    await waitFor(
+      async () =>
+        !(await panel.evaluate(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'voice_running' })))
+          ?.running,
+      'the conversation to end',
+      60_000,
+    );
+  },
+);
+
+test(
+  'dictation in the chat box is written down on the device when there is no Gemini key',
+  { skip: SKIP },
+  async () => {
+    const { panel } = session;
+    const wav = fs.readFileSync(path.resolve(import.meta.dirname, 'hey-ava.wav')).toString('base64');
+    const reply = await panel.evaluate(
+      audio =>
+        new Promise((resolve, reject) => {
+          const port = chrome.runtime.connect({ name: 'side-panel-connection' });
+          const timer = setTimeout(() => reject(new Error('speech_to_text timed out')), 120_000);
+          port.onMessage.addListener(message => {
+            if (message.type !== 'speech_to_text_result' && message.type !== 'speech_to_text_error') return;
+            clearTimeout(timer);
+            port.disconnect();
+            resolve(message);
+          });
+          port.postMessage({ type: 'speech_to_text', audio: `data:audio/wav;base64,${audio}` });
+        }),
+      wav,
+    );
+    assert.equal(reply.type, 'speech_to_text_result', JSON.stringify(reply));
+    assert.match(reply.text, /calendar/i);
   },
 );
 

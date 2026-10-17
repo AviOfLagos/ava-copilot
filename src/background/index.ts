@@ -1,8 +1,8 @@
 import 'webextension-polyfill';
-import { db, generalSettingsStore, llmProviderStore, meetingStore, threadStore } from '@extension/storage';
+import { db, generalSettingsStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
-import { SpeechToTextService } from './services/speechToText';
+import { holdForDictation, releaseDictation, transcribeSpeech } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
@@ -304,11 +304,9 @@ async function teach(threadId: string): Promise<string> {
   return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
 }
 
+/** Gemini speech-to-text when it is set up, else the recogniser on this computer (see voice/dictation.ts). */
 async function transcribe(audio: string, mediaType?: string): Promise<string> {
-  const providers = await llmProviderStore.getAllProviders();
-  const speechToTextService = await SpeechToTextService.create(providers);
-  // Remove the data URL prefix if present
-  return speechToTextService.transcribeAudio(audio.startsWith('data:') ? audio.split(',')[1] : audio, mediaType);
+  return transcribeSpeech(audio, mediaType);
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -320,6 +318,9 @@ chrome.runtime.onConnect.addListener(port => {
     port.disconnect();
     return;
   }
+
+  // A panel that closes while dictating gives the microphone back to the conversation and the wake word
+  port.onDisconnect.addListener(() => releaseDictation(port));
 
   port.onMessage.addListener(async message => {
     const threadId = typeof message?.threadId === 'string' ? message.threadId : null;
@@ -455,6 +456,10 @@ chrome.runtime.onConnect.addListener(port => {
         case 'kb_delete':
           if (typeof message.itemId === 'string') await kb.remove(message.itemId);
           return;
+
+        // Dictation in the chat box started or ended: the conversation and "Hey Ava" stop hearing the mic meanwhile
+        case 'dictation_hold':
+          return holdForDictation(message.on === true, port);
 
         case 'speech_to_text': {
           if (!message.audio) {

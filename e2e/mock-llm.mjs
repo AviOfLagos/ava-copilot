@@ -385,6 +385,8 @@ export async function startMockLlm(scenarios) {
     frames: [],
     // Quiet context lines (turnComplete false), e.g. the tab the user switched to
     context: [],
+    // Each notice, and whether the user was mid-utterance when it came (audio since the last audioStreamEnd)
+    noticeTimings: [],
   };
   server.on('upgrade', (req, socket) => {
     if (!req.url.includes('BidiGenerateContent')) return socket.destroy();
@@ -444,6 +446,12 @@ export async function startMockLlm(scenarios) {
         if (opcode === 0x8) return socket.end();
         if (opcode !== 0x1) continue;
         const message = JSON.parse(payload.toString());
+        // Whether the user is speaking: audio goes up only while they do, and audioStreamEnd says they stopped
+        if (message.realtimeInput?.audio) {
+          session.userSpeaking = true;
+          session.lastAudioAt = Date.now();
+        }
+        if (message.realtimeInput?.audioStreamEnd) session.userSpeaking = false;
         if (message.setup) {
           session.setups.push(message.setup);
           session.voice = Boolean(message.setup.tools);
@@ -477,6 +485,7 @@ export async function startMockLlm(scenarios) {
             send({ serverContent: { outputTranscription: { text: 'Got your message.' }, turnComplete: true } });
           } else {
             live.notices.push(parts[0].text);
+            live.noticeTimings.push({ text: parts[0].text, userSpeaking: Boolean(session.userSpeaking) });
             send({ serverContent: { outputTranscription: { text: 'Heads up.' }, turnComplete: true } });
           }
         } else if (session.voice && message.realtimeInput?.video) {

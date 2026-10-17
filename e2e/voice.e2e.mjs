@@ -43,6 +43,8 @@ before(async () => {
         },
       },
     },
+    // These run on Gemini Live (the mock's): picked, since a conversation is on the device by default
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
     'meeting-settings': {
       liveModel: 'gemini-3.8-live',
       autoNotes: false,
@@ -159,6 +161,22 @@ test('a spoken request runs a browser task, and the copilot says when it is done
     () => mock.live.notices.some(n => n.includes('voice-task') && n.includes('is done')),
     'the done notice',
   );
+  // ...but never while the user is mid-sentence (the recording as the microphone keeps talking)
+  assert.deepEqual(
+    mock.live.noticeTimings.filter(notice => notice.userSpeaking),
+    [],
+    'no notice cut into the user speaking',
+  );
+  // The server's turn detection is tuned for a conversation: slow to start, quick to end, and talking interrupts
+  assert.deepEqual(voiceSession.setups[0].realtimeInputConfig, {
+    automaticActivityDetection: {
+      startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+      endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+      prefixPaddingMs: 200,
+      silenceDurationMs: 600,
+    },
+    activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+  });
 
   // The conversation is kept in its own thread
   const voiceThread = (await readThreads(session.panel)).find(t => t.tags.includes('voice'));

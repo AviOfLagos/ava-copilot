@@ -2,7 +2,7 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { startMockLlm } from './mock-llm.mjs';
-import { launchExtension, openSession, sleep, waitForThread } from './harness.mjs';
+import { launchExtension, openSession, readThreads, sleep, waitForThread } from './harness.mjs';
 
 /**
  * Dictation in the chat box, with a recording played as the microphone: while it listens the mic is a stop
@@ -181,4 +181,96 @@ test('Esc drops a recording without sending it anywhere', async () => {
   assert.equal(mock.dictation.recordings.length, 3, 'nothing was sent to be written down');
   assert.equal(await panel().evaluate(() => document.querySelector('textarea').value), 'Keep me');
   assert.deepEqual(session.panelErrors, []);
+});
+
+/** Every message, straight from the extension's IndexedDB. */
+const readMessages = page =>
+  page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const all = open.result.transaction('messages').objectStore('messages').getAll();
+          all.onsuccess = () =>
+            resolve(all.result.map(({ threadId, actor, content }) => ({ threadId, actor, content })));
+          all.onerror = () => reject(all.error);
+        };
+      }),
+  );
+
+/** A command to the background over a panel connection of its own, as the panel sends it; waits for `reply`. */
+const panelCommand = (message, reply) =>
+  panel().evaluate(
+    async (message, reply) => {
+      const port = chrome.runtime.connect({ name: 'side-panel-connection' });
+      const answered = new Promise(resolve => {
+        port.onMessage.addListener(answer => answer.type === reply && resolve(answer));
+        setTimeout(resolve, reply ? 30_000 : 500);
+      });
+      port.postMessage({ ...message, windowId: (await chrome.windows.getCurrent()).id });
+      const answer = await answered;
+      port.disconnect();
+      return answer ?? null;
+    },
+    message,
+    reply,
+  );
+
+test('dictating while a voice conversation runs in another chat: the conversation hears none of it, and the words are answered once', async () => {
+  // A Gemini Live conversation (the mock's) started from the panel, while the panel shows a different chat
+  await extension.setStorage({
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
+    'meeting-settings': {
+      liveModel: 'gemini-3.8-live',
+      autoNotes: false,
+      liveEndpoint: `ws://127.0.0.1:${mock.port}/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent`,
+    },
+  });
+  // A harmless tool for the mock to call once it has heard a second of the microphone
+  mock.live.voiceTool = { name: 'get_status', args: {} };
+  const started = await panelCommand({ type: 'voice_start' }, 'voice_started');
+  assert.equal(started?.ok, true, JSON.stringify(started));
+  await waitFor(() => mock.live.sessions.some(s => s.voice && s.setups.length), 'the voice conversation', 30000);
+  const voice = mock.live.sessions.find(s => s.voice);
+  // It hears the microphone (the recording plays on a loop)
+  await waitFor(() => voice.audioBytes > 0, 'the conversation to hear the microphone', 20000);
+
+  await panel().bringToFront();
+  await typeText('');
+  mock.dictation.text = 'Run the scripted scenario dictated.';
+  mock.start('dictated');
+  await press('Start voice input');
+  await waitFor(async () => (await stripStatus()) === 'listening', 'listening');
+  // The hold reaches the offscreen document a moment after the microphone opens
+  await sleep(600);
+  const heardBefore = voice.audioBytes;
+  // Longer than the recording's longest pause (about 3.5 s), so speech plays while it waits
+  await sleep(4500);
+  assert.equal(voice.audioBytes, heardBefore, 'no microphone audio reached the conversation while dictating');
+
+  await press('Stop: the words go in the box to edit');
+  await waitFor(async () => (await stripStatus()) === null, 'the words to arrive');
+  assert.equal(
+    await panel().evaluate(() => document.querySelector('textarea').value),
+    'Run the scripted scenario dictated.',
+  );
+  // Dictation over: the conversation hears the microphone again
+  const after = voice.audioBytes;
+  await waitFor(() => voice.audioBytes > after, 'the conversation to hear the microphone again', 20000);
+
+  const userMessages = async () =>
+    (await readMessages(panel())).filter(m => m.actor === 'user' && m.content === 'Run the scripted scenario dictated.')
+      .length;
+  const before = await userMessages();
+  await session.send('Run the scripted scenario dictated.');
+  await waitFor(() => mock.run.navigatorCalls.length > 0, 'the chat to run the words', 30000);
+  await sleep(1500);
+  // One answer: the chat on screen ran the words once, and nothing went to the conversation, typed or spoken
+  assert.equal((await userMessages()) - before, 1);
+  assert.equal(mock.live.typed.length, 0, 'the dictated words were not sent to the conversation');
+  const voiceThread = (await readThreads(panel())).find(t => t.tags?.includes('voice'));
+  const voiceUser = (await readMessages(panel())).filter(m => m.threadId === voiceThread?.id && m.actor === 'user');
+  assert.ok(!voiceUser.some(m => /scenario dictated/.test(m.content)), 'the conversation never heard the words');
+  await panelCommand({ type: 'voice_stop' });
 });

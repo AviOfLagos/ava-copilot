@@ -150,10 +150,11 @@ export class VoiceManager {
     // The personality of the conversation's workspace (or the active one): how it talks, and its voice and pace
     const personality = await personalityStore.resolve(previous?.workspaceId).catch(() => null);
     this.personalityWorkspaceId = previous?.workspaceId ?? null;
-    // Economy mode (Settings › Voice engines): speech is recognised and spoken on the device, no Gemini key needed
-    const economy = await economyVoiceOptions(personality);
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
+    // On the device unless Live was picked (Settings › Voice engines): speech is recognised and spoken here, and
+    // the chat model answers, so no Gemini key is needed
+    const economy = await economyVoiceOptions(personality, Boolean(gemini));
     if (!gemini && !economy) throw new Error(t('voice_needsGemini'));
     if (await this.overCap()) throw new Error(t('usage_capReached_short'));
 

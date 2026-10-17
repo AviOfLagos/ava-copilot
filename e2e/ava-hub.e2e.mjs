@@ -33,6 +33,8 @@ before(async () => {
         },
       },
     },
+    // These run on Gemini Live (the mock's): picked, since a conversation is on the device by default
+    'voice-engine-settings': { mode: 'live', modeChosen: true },
     'meeting-settings': {
       liveModel: 'gemini-3.8-live',
       autoNotes: false,
@@ -152,7 +154,10 @@ test('switching tabs reaches the conversation at once, with the tab before it, a
 
 test('check_audio names the devices, hears the fake microphone, and plays a test tone', async () => {
   await withTool('Can you hear me? Check my mic.', { name: 'check_audio', args: {} }, async response => {
-    assert.match(response, /Microphone: System default \(opened: Fake Default Audio Input\)\. Speaker: System default\./);
+    assert.match(
+      response,
+      /Microphone: System default \(opened: Fake Default Audio Input\)\. Speaker: System default\./,
+    );
     assert.match(response, /I can hear you: the mic level went up to \d+ of 100|The mic hears only a little/);
     assert.match(response, /A short test tone just played/);
   });

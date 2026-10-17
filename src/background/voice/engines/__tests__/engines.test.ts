@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_VOICE_ENGINE_SETTINGS } from '@extension/storage';
+import en from '../../../../../public/_locales/en/messages.json';
+
+// The English sentences, so what the user reads is what is checked
+vi.mock('@extension/i18n', () => ({
+  t: (key: string) => (en as Record<string, { message: string }>)[key]?.message ?? key,
+}));
 import { isVoiceActivity, shouldEndIdle } from '../idle';
 import { parseVoiceManifest } from '../models';
 import { chooseEconomyEngines, SETUP_COMMAND } from '../options';
@@ -13,9 +19,19 @@ const settings = (changes: Partial<typeof DEFAULT_VOICE_ENGINE_SETTINGS> = {}) =
 const tts = { engine: 'system', voice: 'Samantha', rate: 1.1 };
 
 describe('chooseEconomyEngines', () => {
-  it('says how to install a speech model when none is there', () => {
+  it('says plainly, with where to look, when no speech model is there (no developer command)', () => {
     const choice = chooseEconomyEngines(settings(), tts, { kitten: { bytes: 1 } });
-    expect(choice).toEqual({ error: expect.stringContaining(SETUP_COMMAND) });
+    expect(choice).toEqual({ error: expect.stringContaining('Voice engines') });
+    expect(JSON.stringify(choice)).not.toContain(SETUP_COMMAND);
+  });
+
+  it('speaks a conversation with KittenTTS when the system voices were never picked', () => {
+    const choice = chooseEconomyEngines(
+      settings(),
+      { ...tts, engineChosen: false },
+      { 'moonshine-tiny': { bytes: 1 }, kitten: { bytes: 1 } },
+    );
+    expect(choice).toMatchObject({ engines: { tts: { engine: 'kitten', voice: 'Bella' } } });
   });
 
   it('hears with Moonshine on the GPU and speaks with KittenTTS when chosen', () => {

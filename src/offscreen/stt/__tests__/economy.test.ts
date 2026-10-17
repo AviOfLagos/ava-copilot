@@ -111,7 +111,8 @@ describe('EconomySession', () => {
     t.say('tell me everything');
     await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalled());
 
-    // Under half a second of speech is not enough (a cough, an echo)
+    // Over the answer, half a second of speech is not enough (a cough, an echo): the gate wants it to last
+    t.mic(speech());
     t.mic(speech());
     expect(t.deps.stopSpeaking).not.toHaveBeenCalled();
     t.mic(speech());
@@ -204,5 +205,58 @@ describe('EconomySession', () => {
     t.session.say('A notice.');
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(t.deps.ask).not.toHaveBeenCalled();
+  });
+
+  it('never answers its own echo: sound heard over the answer that did not stop it is dropped', async () => {
+    const t = setup(() => ({ said: 'Here is a long answer.' }));
+    await t.session.start();
+    t.say('tell me something');
+    await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalledTimes(1));
+    const transcribed = (t.stt.transcribe as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    // Quiet echo never opens the gate while the answer plays
+    const echo = () => new Float32Array(CHUNK).fill(0.025);
+    for (let i = 0; i < 8; i++) t.mic(echo());
+    // A louder burst opens it but stops before it is a barge-in: an echo peak, not the user
+    t.mic(speech());
+    t.mic(speech());
+    for (let i = 0; i < 4; i++) t.mic(quiet());
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(t.stt.transcribe).toHaveBeenCalledTimes(transcribed);
+    expect(t.deps.stopSpeaking).not.toHaveBeenCalled();
+    expect(t.deps.ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers what the user said over the answer once it stopped the answer', async () => {
+    const replies = [{ said: 'Here is a long answer.' }, { said: 'Okay.' }];
+    const t = setup(() => replies.shift() ?? { said: '' });
+    await t.session.start();
+    t.say('tell me something');
+    await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalledTimes(1));
+    t.say('stop, do something else', 6);
+    expect(t.deps.stopSpeaking).toHaveBeenCalled();
+    await vi.waitFor(() => expect(t.deps.ask).toHaveBeenCalledTimes(2));
+    expect(t.deps.ask.mock.calls[1][0].heard).toBe('stop, do something else');
+  });
+
+  it('hears nothing while the microphone is held for dictation, and listens again after', async () => {
+    const t = setup(() => ({ said: 'Sure.' }));
+    await t.session.start();
+    t.session.holdMic(true);
+    for (let i = 0; i < 6; i++) t.mic(speech());
+    for (let i = 0; i < 4; i++) t.mic(quiet());
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(t.stt.transcribe).not.toHaveBeenCalled();
+    // Typed turns still work while held
+    t.session.sendText('a typed question');
+    await vi.waitFor(() => expect(t.deps.ask).toHaveBeenCalledTimes(1));
+    expect(t.deps.ask.mock.calls[0][0]).toMatchObject({ heard: 'a typed question', typed: true });
+    t.finish();
+    t.session.holdMic(false);
+    await vi.waitFor(() => expect(t.statuses().at(-1)).toBe('listening'));
+    await new Promise(resolve => setTimeout(resolve, 350));
+    t.say('and now spoken');
+    await vi.waitFor(() => expect(t.deps.ask).toHaveBeenCalledTimes(2));
+    expect(t.deps.ask.mock.calls[1][0].heard).toBe('and now spoken');
   });
 });
