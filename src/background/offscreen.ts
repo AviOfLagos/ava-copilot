@@ -7,14 +7,33 @@ import { offscreenBusyAnywhere } from './registry';
 
 const OFFSCREEN_URL = 'offscreen.html';
 
+// One creation at a time: two callers at once (the wake word turned on while a voice session starts) would both
+// see no document and both create one, and Chrome refuses the second ("Only a single offscreen document…")
+let creating: Promise<void> | null = null;
+
 export async function ensureOffscreen(): Promise<void> {
+  if (!creating) {
+    creating = createOffscreen().finally(() => {
+      creating = null;
+    });
+  }
+  return creating;
+}
+
+async function createOffscreen(): Promise<void> {
   const open = await chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT] });
   if (open.length === 0) {
-    await chrome.offscreen.createDocument({
-      url: OFFSCREEN_URL,
-      reasons: [chrome.offscreen.Reason.USER_MEDIA, chrome.offscreen.Reason.AUDIO_PLAYBACK],
-      justification: 'Records meetings and holds the voice conversation with the copilot',
-    });
+    try {
+      await chrome.offscreen.createDocument({
+        url: OFFSCREEN_URL,
+        reasons: [chrome.offscreen.Reason.USER_MEDIA, chrome.offscreen.Reason.AUDIO_PLAYBACK],
+        justification: 'Records meetings and holds the voice conversation with the copilot',
+      });
+    } catch (error) {
+      // Another context of this extension opened it meanwhile: the document is there, which is all that was asked
+      if (!/single offscreen document/i.test(error instanceof Error ? error.message : String(error))) throw error;
+      return;
+    }
     // The chosen microphone/speaker (Settings › Voice devices): read here, not in the offscreen
     // document itself, which must stay free of @extension/storage imports (see src/offscreen/index.ts
     // for why) — pushed once right after creation, before anything else is asked to start.
