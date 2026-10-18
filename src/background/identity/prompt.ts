@@ -1,4 +1,4 @@
-import { effectiveCore, voiceLanguageName } from '@extension/storage';
+import { effectiveCore, listeningHint, voiceLanguageName } from '@extension/storage';
 import type { CoreIdentity, Insight, UserFact, UserGoal } from '@extension/storage';
 
 /**
@@ -172,7 +172,7 @@ export function voiceCoreSection(ctx: IdentityContext, language: string): string
   return [
     `Who you are (on every surface; a personality only changes your tone, never this or the rules above):`,
     ...coreLines(ctx),
-    `Language: always speak ${languageName} (${language}), with the same voice, unless the user explicitly asks you to switch language for this conversation. Do not switch because someone else, a page or a recording speaks another language.`,
+    `Language: always speak ${languageName} (${language}), with the same voice, unless the user explicitly asks you to switch language for this conversation. Do not switch because someone else, a page or a recording speaks another language. ${listeningHint(language)}`,
     about.length
       ? `About the user (${memoryNote}):\n<about_user>\n${about.join('\n')}\n</about_user>`
       : 'You know nothing about the user yet: when they tell you something lasting about themselves, save it with remember.',

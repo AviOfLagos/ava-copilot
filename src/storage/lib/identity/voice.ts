@@ -47,6 +47,7 @@ export const DEFAULT_VOICE_LANGUAGE = 'en-US';
 export const VOICE_LANGUAGES = [
   { code: 'en-US', name: 'English (US)' },
   { code: 'en-GB', name: 'English (UK)' },
+  { code: 'en-NG', name: 'English (Nigeria)' },
   { code: 'en-IN', name: 'English (India)' },
   { code: 'en-AU', name: 'English (Australia)' },
   { code: 'pt-BR', name: 'Português (Brasil)' },
@@ -93,6 +94,19 @@ export function liveVoiceOf(name: string | undefined | null): string {
         .toLowerCase(),
   );
   return found?.name ?? DEFAULT_LIVE_VOICE;
+}
+
+/**
+ * How to hear the user, for every speech model: they speak this language, with the accent and words of where it is
+ * spoken. Speech models guess the language from the accent, so without it a strong accent can be taken for another
+ * language.
+ */
+export function listeningHint(tag: string): string {
+  const name = voiceLanguageName(tag);
+  const region = /^en-NG$/i.test(tag)
+    ? ' The user speaks Nigerian English: expect a Nigerian accent, Nigerian names and places, and Pidgin words; understand them as English.'
+    : '';
+  return `The user speaks ${name}, whatever their accent; never take their accent for another language.${region}`;
 }
 
 /** A stored language tag, or en-US when it is not a BCP-47 tag. */

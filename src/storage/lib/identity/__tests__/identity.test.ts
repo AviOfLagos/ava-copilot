@@ -12,7 +12,7 @@ import {
   updateFact,
 } from '../memory';
 import { FACTS_MAX, GOALS_PER_WORKSPACE_MAX } from '../types';
-import { acceptsLanguageCode, liveSpeechConfig, liveVoiceOf, voiceLanguageOf } from '../voice';
+import { acceptsLanguageCode, listeningHint, liveSpeechConfig, liveVoiceOf, voiceLanguageOf } from '../voice';
 
 const input = (text: string, extra = {}) => ({
   text,
@@ -108,5 +108,17 @@ describe('voice and language', () => {
     expect(liveVoiceOf('nobody')).toBe('Aoede');
     expect(voiceLanguageOf('english please')).toBe('en-US');
     expect(voiceLanguageOf('cmn-CN')).toBe('cmn-CN');
+  });
+});
+
+describe('listeningHint', () => {
+  it('tells every speech model the user speaks the language whatever their accent', () => {
+    expect(listeningHint('en-US')).toMatch(/speaks English \(US\), whatever their accent/);
+    expect(listeningHint('en-US')).not.toMatch(/Nigerian/);
+  });
+
+  it('knows Nigerian English', () => {
+    expect(voiceLanguageOf('en-NG')).toBe('en-NG');
+    expect(listeningHint('en-NG')).toMatch(/Nigerian accent.*Pidgin.*understand them as English/);
   });
 });

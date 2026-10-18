@@ -1,5 +1,11 @@
 import { createLogger } from '../log';
-import { type ProviderConfig, speechToTextModelStore } from '@extension/storage';
+import {
+  listeningHint,
+  type ProviderConfig,
+  speechToTextModelStore,
+  voiceIdentityStore,
+  voiceLanguageOf,
+} from '@extension/storage';
 import { t } from '@extension/i18n';
 import type { ChatModel } from '../llm/types';
 import { generatePlainText } from '../llm/generate';
@@ -42,11 +48,14 @@ export class SpeechToTextService {
   async transcribeAudio(base64Audio: string, mediaType = 'audio/webm'): Promise<string> {
     try {
       logger.info('Starting audio transcription...');
+      // The user's own language and accent (Settings › Voice and language), so an accent is never heard as another
+      // language
+      const { language } = await voiceIdentityStore.getSettings();
 
       // Create transcription message with audio data
       const transcriptionMessage = userMessage([
         textPart(
-          'Transcribe this audio. Return only the transcribed text without any additional formatting or explanations.',
+          `Transcribe this audio. ${listeningHint(voiceLanguageOf(language))} Write it in that language as it was said. Return only the transcribed text without any additional formatting or explanations.`,
         ),
         { type: 'file', mediaType, data: base64Audio },
       ]);
