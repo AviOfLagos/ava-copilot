@@ -351,7 +351,9 @@ export class NavigatorAgent extends BaseAgent<z.ZodType<NavigatorOutput>, Naviga
           throw error;
         }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(
+        // The page changed under the step (a stale index, a closed menu): the model sees it and tries again, so this is
+        // not an extension error
+        logger.info(
           'doAction error',
           actionName,
           JSON.stringify(actionArgs, null, 2),

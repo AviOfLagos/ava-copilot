@@ -283,15 +283,19 @@ export class Executor {
       }
       return planOutput;
     } catch (error) {
-      logger.error(`Failed to execute planner: ${error}`);
+      // A stopped or replaced task is not an error: the extension's Errors page only gets real failures
+      if (error instanceof RequestCancelledError) {
+        logger.info('Planner stopped: the task was cancelled');
+        throw error;
+      }
       if (
         error instanceof ChatModelAuthError ||
         error instanceof ChatModelBadRequestError ||
         error instanceof ChatModelForbiddenError ||
         error instanceof URLNotAllowedError ||
-        error instanceof RequestCancelledError ||
         error instanceof ExtensionConflictError
       ) {
+        logger.error(`Failed to execute planner: ${error}`);
         throw error;
       }
       context.consecutiveFailures++;
@@ -325,15 +329,18 @@ export class Executor {
         return true;
       }
     } catch (error) {
-      logger.error(`Failed to execute step: ${error}`);
+      if (error instanceof RequestCancelledError) {
+        logger.info('Step stopped: the task was cancelled');
+        throw error;
+      }
       if (
         error instanceof ChatModelAuthError ||
         error instanceof ChatModelBadRequestError ||
         error instanceof ChatModelForbiddenError ||
         error instanceof URLNotAllowedError ||
-        error instanceof RequestCancelledError ||
         error instanceof ExtensionConflictError
       ) {
+        logger.error(`Failed to execute step: ${error}`);
         throw error;
       }
       context.consecutiveFailures++;
