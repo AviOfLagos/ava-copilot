@@ -1,6 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { dispatchCommand, registerCommand, registerRecovery, runRecoveries } from '../index';
+import { answerOneOff, dispatchCommand, registerCommand, registerRecovery, runRecoveries } from '../index';
+
+describe('answerOneOff', () => {
+  const ask = (message: Record<string, unknown>) =>
+    new Promise<unknown[]>(resolve => {
+      const answers: unknown[] = [];
+      expect(answerOneOff(message, answer => answers.push(answer))).toBe(true);
+      setTimeout(() => resolve(answers), 10);
+    });
+
+  it('answers a one-off message exactly once on every path', async () => {
+    registerCommand('oneoff_ok', z.object({ type: z.literal('oneoff_ok') }), (_input, context) =>
+      context.reply({ type: 'oneoff_ok', requestId: context.requestId }),
+    );
+    registerCommand('oneoff_throws', z.object({ type: z.literal('oneoff_throws') }), async () => {
+      throw new Error('broke');
+    });
+    registerCommand('oneoff_silent', z.object({ type: z.literal('oneoff_silent') }), () => {});
+
+    expect(await ask({ type: 'oneoff_ok', requestId: 'a' })).toEqual([{ type: 'oneoff_ok', requestId: 'a' }]);
+    expect(await ask({ type: 'oneoff_throws', requestId: 'b' })).toEqual([
+      { type: 'error', requestId: 'b', error: 'broke' },
+    ]);
+    expect(await ask({ type: 'oneoff_silent' })).toEqual([{ type: 'done', requestId: null }]);
+    expect(await ask({ type: 'oneoff_nobody' })).toEqual([
+      { type: 'error', requestId: null, error: 'Unknown request.' },
+    ]);
+  });
+});
 
 describe('registerCommand / dispatchCommand', () => {
   it('runs a registered command with checked input, refuses bad input, and leaves unknown ones', async () => {

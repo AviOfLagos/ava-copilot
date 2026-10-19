@@ -2,7 +2,7 @@ import 'webextension-polyfill';
 import { db, generalSettingsStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
-import { holdForDictation, releaseDictation, transcribeSpeech } from './voice/dictation';
+import { holdForDictation, releaseDictation, sttErrorMessage, transcribeSpeech } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { MeetingManager } from './meetings/manager';
@@ -118,9 +118,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === 'kb_vault_remove' && Array.isArray(message.paths)) {
-    void kb
-      .removeVaultNotes(message.paths.filter((path: unknown) => typeof path === 'string'))
-      .then(() => sendResponse(true));
+    void kb.removeVaultNotes(message.paths.filter((path: unknown) => typeof path === 'string')).then(
+      () => sendResponse(true),
+      () => sendResponse(false),
+    );
     return true;
   }
   return;
@@ -452,10 +453,8 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio) });
           } catch (error) {
             logger.error('Speech-to-text failed:', error);
-            return port.postMessage({
-              type: 'speech_to_text_error',
-              error: error instanceof Error ? error.message : t('bg_cmd_stt_failed'),
-            });
+            // A plain sentence; the panel keeps the recording and offers to try again
+            return port.postMessage({ type: 'speech_to_text_error', error: sttErrorMessage(error), retryable: true });
           }
         }
 
@@ -471,12 +470,18 @@ chrome.runtime.onConnect.addListener(port => {
       }
     } catch (error) {
       logger.error('Error handling panel message:', error);
-      port.postMessage({
-        type: 'error',
-        threadId,
-        clientId: message?.clientId,
-        error: error instanceof Error ? error.message : t('errors_unknown'),
-      });
+      try {
+        port.postMessage({
+          type: 'error',
+          threadId,
+          clientId: message?.clientId,
+          // A registered command's request gets its answer, rather than waiting for the panel's time-out
+          requestId: typeof message?.requestId === 'string' ? message.requestId : undefined,
+          error: error instanceof Error ? error.message : t('errors_unknown'),
+        });
+      } catch {
+        // The panel closed before the answer came
+      }
     }
   });
 });

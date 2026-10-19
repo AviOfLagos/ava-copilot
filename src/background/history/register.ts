@@ -7,7 +7,7 @@ import type { HistoryImport } from '@extension/storage';
 import { toAppError } from '@extension/shared';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
-import { dispatchCommand, registerAgentAction, registerCommand, registerRecovery } from '../registry';
+import { answerOneOff, registerAgentAction, registerCommand, registerRecovery } from '../registry';
 import { services } from '../registry/services';
 import { createWorkspaceContextAction, WORKSPACE_CONTEXT_PROMPT } from './action';
 import { BATCH_SIZE, conversationSchema, importBatch } from './importer';
@@ -150,9 +150,6 @@ registerAgentAction({ prompt: WORKSPACE_CONTEXT_PROMPT, create: createWorkspaceC
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
   if (typeof message?.type !== 'string' || !message.type.startsWith('history_')) return;
-  const requestId = typeof message.requestId === 'string' ? message.requestId : null;
-  void dispatchCommand(message, { reply: sendResponse, requestId }).then(handled => {
-    if (!handled) sendResponse({ type: 'error', requestId, error: 'Unknown request.' });
-  });
-  return true;
+  // Answers on every path, a handler that throws too
+  return answerOneOff(message, sendResponse);
 });

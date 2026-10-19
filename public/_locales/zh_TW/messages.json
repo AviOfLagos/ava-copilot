@@ -5356,6 +5356,15 @@
   "chat_stt_timeout": {
     "message": "轉成文字花了太久，請再試一次。"
   },
+  "chat_stt_unanswered": {
+    "message": "這次無法轉成文字。錄音已保留：請按「再試一次」。"
+  },
+  "chat_stt_retry": {
+    "message": "再試一次"
+  },
+  "chat_send_kept": {
+    "message": "未送出。您的訊息已放回輸入框。"
+  },
   "chat_stt_hint": {
     "message": "停止可先編輯 · 傳送會在轉好後送出 · Esc 捨棄"
   },

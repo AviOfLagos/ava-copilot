@@ -25,8 +25,13 @@ export interface SpeechInput {
   toggle: () => Promise<void>;
   // Drops the recording without writing it down
   cancel: () => void;
-  // The background answered (the words, or an error)
-  done: () => void;
+  // The background answered: with the words (true), or it could not write them down (false), which keeps the
+  // recording for `retry`
+  done: (ok?: boolean) => void;
+  // Whether a recording that could not be written down is kept, ready to try again
+  canRetry: boolean;
+  // Sends the kept recording to be written down again
+  retry: () => void;
 }
 
 /** Loudness of the samples on a 0–1 scale that follows how loud it sounds: -60 dB is silence, -10 dB is full. */
@@ -40,13 +45,15 @@ export function meterLevel(samples: Float32Array): number {
 
 /**
  * Records from the microphone and hands the audio to `send` as a data URL, for the background to write down.
- * Asks for microphone permission in a small window the first time. `hold` is told when the microphone is the
+ * Asks for microphone permission in a small window the first time. A recording that could not be written down
+ * (no answer in time, the background could not answer) is kept until the next one, so `retry` loses nothing; such
+ * failures reach `onError` with `retryable` true. `hold` is told when the microphone is the
  * dictation's (true) and when it is given back (false): a voice conversation and the wake word must not hear the
  * dictated words too, or Ava answers them as well as the chat.
  */
 export function useSpeechInput(
   send: (audio: string) => void,
-  onError: (message: string) => void,
+  onError: (message: string, retryable?: boolean) => void,
   hold: (on: boolean) => void = () => {},
 ): SpeechInput {
   const [status, setStatusState] = useState<SpeechStatus>('idle');
@@ -60,6 +67,9 @@ export function useSpeechInput(
   const discardRef = useRef(false);
   const maxTimerRef = useRef<number | null>(null);
   const transcribeTimerRef = useRef<number | null>(null);
+  // The last recording sent to be written down, until its words arrive
+  const audioRef = useRef<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
   // The latest callbacks, for the recorder's events
   const sendRef = useRef(send);
   const onErrorRef = useRef(onError);
@@ -134,6 +144,32 @@ export function useSpeechInput(
     }
   }, []);
 
+  /** Sends a recording to be written down, and gives up waiting after a while; the recording stays for a retry. */
+  const transcribe = useCallback(
+    (audio: string) => {
+      setCanRetry(false);
+      setStatus('transcribing');
+      clearTimer(transcribeTimerRef);
+      transcribeTimerRef.current = window.setTimeout(() => {
+        transcribeTimerRef.current = null;
+        if (statusRef.current !== 'transcribing') return;
+        setStatus('idle');
+        setCanRetry(true);
+        onErrorRef.current(t('chat_stt_timeout'), true);
+      }, TRANSCRIBE_TIMEOUT_MS);
+      try {
+        sendRef.current(audio);
+      } catch {
+        // The background cannot be reached right now (it is restarting): the recording is kept
+        clearTimer(transcribeTimerRef);
+        setStatus('idle');
+        setCanRetry(true);
+        onErrorRef.current(t('chat_stt_unanswered'), true);
+      }
+    },
+    [setStatus],
+  );
+
   /** Finishes listening: the recording is written down, or dropped when `discard`. */
   const finish = useCallback(
     (discard: boolean) => {
@@ -154,6 +190,9 @@ export function useSpeechInput(
 
   const start = useCallback(async () => {
     if (statusNow() !== 'idle') return;
+    // A new recording replaces one kept for a retry
+    audioRef.current = null;
+    setCanRetry(false);
     setStatus('starting');
     try {
       const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
@@ -205,21 +244,15 @@ export function useSpeechInput(
           return;
         }
         setStatus('transcribing');
-        transcribeTimerRef.current = window.setTimeout(() => {
-          transcribeTimerRef.current = null;
-          if (statusRef.current !== 'transcribing') return;
-          setStatus('idle');
-          onErrorRef.current(t('chat_stt_timeout'));
-        }, TRANSCRIBE_TIMEOUT_MS);
         const reader = new FileReader();
         reader.onloadend = () => {
-          try {
-            sendRef.current(reader.result as string);
-          } catch {
-            clearTimer(transcribeTimerRef);
+          if (typeof reader.result !== 'string') {
             setStatus('idle');
             onErrorRef.current(t('chat_stt_processingFailed'));
+            return;
           }
+          audioRef.current = reader.result;
+          transcribe(reader.result);
         };
         reader.readAsDataURL(new Blob(chunksRef.current, { type: 'audio/webm' }));
       };
@@ -238,7 +271,7 @@ export function useSpeechInput(
       }
       onErrorRef.current(message);
     }
-  }, [finish, release, setHeld, setStatus, startMeter, statusNow]);
+  }, [finish, release, setHeld, setStatus, startMeter, statusNow, transcribe]);
 
   const toggle = useCallback(async () => {
     if (statusRef.current === 'idle') await start();
@@ -249,10 +282,21 @@ export function useSpeechInput(
     if (statusRef.current === 'starting' || statusRef.current === 'listening') finish(true);
   }, [finish]);
 
-  const done = useCallback(() => {
-    clearTimer(transcribeTimerRef);
-    if (statusRef.current === 'transcribing') setStatus('idle');
-  }, [setStatus]);
+  const done = useCallback(
+    (ok = true) => {
+      clearTimer(transcribeTimerRef);
+      if (statusRef.current === 'transcribing') setStatus('idle');
+      if (ok) audioRef.current = null;
+      setCanRetry(!ok && audioRef.current !== null);
+    },
+    [setStatus],
+  );
+
+  const retry = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || statusRef.current !== 'idle') return;
+    transcribe(audio);
+  }, [transcribe]);
 
   // Closing the panel drops a recording under way
   useEffect(
@@ -265,5 +309,5 @@ export function useSpeechInput(
     [release],
   );
 
-  return { status, startedAt, level, toggle, cancel, done };
+  return { status, startedAt, level, toggle, cancel, done, canRetry, retry };
 }

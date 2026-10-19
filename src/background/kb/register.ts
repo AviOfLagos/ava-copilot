@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { toAppError } from '@extension/shared';
 import { Action } from '../agent/actions/builder';
 import { createLogger } from '../log';
-import { dispatchCommand, registerAgentAction, registerCommand } from '../registry';
+import { answerOneOff, registerAgentAction, registerCommand } from '../registry';
 import { services } from '../registry/services';
 import { SHARE_WITH_TEAM_PROMPT, shareWithTeamAction, shareWithTeamActionSchema } from './action';
 
@@ -44,9 +44,6 @@ registerAgentAction({
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
   if (typeof message?.type !== 'string' || !message.type.startsWith('memory_')) return;
-  const requestId = typeof message.requestId === 'string' ? message.requestId : null;
-  void dispatchCommand(message, { reply: sendResponse, requestId }).then(handled => {
-    if (!handled) sendResponse({ type: 'error', requestId, error: 'Unknown request.' });
-  });
-  return true;
+  // Answers on every path, a handler that throws too
+  return answerOneOff(message, sendResponse);
 });

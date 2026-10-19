@@ -56,6 +56,7 @@ import KnowledgeView from './kb/KnowledgeView';
 import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
+import { PendingSends } from './chat/pendingSends';
 
 // A thread tag: the user answered "Save as skill?" for this chat
 const SKILL_OFFERED_TAG = 'skill:offered';
@@ -84,7 +85,7 @@ type PanelMessage =
   | { type: 'voice_text_sent'; clientId: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | { type: 'speech_to_text_result'; text: string }
-  | { type: 'speech_to_text_error'; error: string }
+  | { type: 'speech_to_text_error'; error: string; retryable?: boolean }
   | { type: 'heartbeat_ack' };
 
 const SidePanel = () => {
@@ -141,6 +142,10 @@ const SidePanel = () => {
   const transcriptSinkRef = useRef<((words: string) => void) | null>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
+  // The words of every send the background has not taken yet: they go back in the composer if it refuses
+  const unconfirmedRef = useRef(new PendingSends());
+  // Dictation that could not be written down; its recording is kept and the alert offers to try again
+  const [sttError, setSttError] = useState<string | null>(null);
   // Questions about a meeting waiting for their answer
   const pendingAsksRef = useRef(new Map<string, () => void>());
   // Requests from registered places waiting for their reply
@@ -222,12 +227,27 @@ const SidePanel = () => {
   }, []);
 
   const speech = useSpeechInput(
-    useCallback(audio => postRef.current({ type: 'speech_to_text', audio }), []),
-    useCallback((message: string) => setBanner(message), []),
+    useCallback(audio => {
+      setSttError(null);
+      postRef.current({ type: 'speech_to_text', audio });
+    }, []),
+    useCallback((message: string, retryable?: boolean) => (retryable ? setSttError(message) : setBanner(message)), []),
     // While dictating, a voice conversation and "Hey Ava" do not hear the microphone, so the words are answered once
     useCallback((on: boolean) => postRef.current({ type: 'dictation_hold', on }), []),
   );
-  const { done: speechDone } = speech;
+  const { done: speechDone, status: speechStatus } = speech;
+  const speechStatusRef = useRef(speechStatus);
+  speechStatusRef.current = speechStatus;
+
+  /** Puts the words of a send that did not go through back in the composer, and says so. */
+  const keepUnsent = useCallback((text: string | null, why?: string) => {
+    if (text === null) {
+      if (why) setBanner(why);
+      return;
+    }
+    setInputTextRef.current?.(text);
+    setBanner([why, t('chat_send_kept')].filter(Boolean).join(' '));
+  }, []);
   const setTranscriptSink = useCallback((sink: (words: string) => void) => {
     transcriptSinkRef.current = sink;
   }, []);
@@ -248,6 +268,7 @@ const SidePanel = () => {
       }
       switch (message.type) {
         case 'thread_started':
+          unconfirmedRef.current.confirm(message.clientId);
           if (pendingSendsRef.current.delete(message.clientId)) {
             setThreadId(message.threadId);
             setSending(false);
@@ -284,6 +305,7 @@ const SidePanel = () => {
           if (message.status !== 'off') setVoiceStatus(message.status);
           break;
         case 'voice_text_sent':
+          unconfirmedRef.current.confirm(message.clientId);
           setSending(false);
           break;
         case 'meeting_answer':
@@ -316,19 +338,23 @@ const SidePanel = () => {
             pendingSendsRef.current.delete(message.clientId);
             setSending(false);
           }
-          setBanner(message.error || t('errors_unknown'));
+          // A refused send keeps its words: they go back in the composer
+          keepUnsent(unconfirmedRef.current.fail(message.clientId), message.error || t('errors_unknown'));
           break;
         case 'speech_to_text_result':
+          setSttError(null);
           transcriptSinkRef.current?.(message.text ?? '');
-          speechDone();
+          speechDone(true);
           break;
         case 'speech_to_text_error':
-          setBanner(message.error || t('chat_stt_recognitionFailed'));
-          speechDone();
+          // The recording is kept; the alert offers to write it down again
+          speechDone(false);
+          if (message.retryable) setSttError(message.error || t('chat_stt_unanswered'));
+          else setBanner(message.error || t('chat_stt_recognitionFailed'));
           break;
       }
     },
-    [speechDone],
+    [speechDone, keepUnsent],
   );
 
   // One connection for the life of the panel; it reconnects if the background restarts
@@ -340,6 +366,16 @@ const SidePanel = () => {
     port.onMessage.addListener(onPortMessage);
     port.onDisconnect.addListener(() => {
       portRef.current = null;
+      // The background restarted: what it was given and did not answer is not lost
+      keepUnsent(unconfirmedRef.current.failAll());
+      if (pendingSendsRef.current.size) {
+        pendingSendsRef.current.clear();
+        setSending(false);
+      }
+      if (speechStatusRef.current === 'transcribing') {
+        speechDone(false);
+        setSttError(t('chat_stt_unanswered'));
+      }
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
@@ -354,7 +390,7 @@ const SidePanel = () => {
     }, HEARTBEAT_MS);
     portRef.current = port;
     return port;
-  }, [onPortMessage]);
+  }, [onPortMessage, keepUnsent, speechDone]);
 
   const post = useCallback((message: Record<string, unknown>) => connect().postMessage(message), [connect]);
 
@@ -429,16 +465,23 @@ const SidePanel = () => {
 
   const handleSend = async (text: string, attachments: OutgoingAttachment[] = []) => {
     const trimmed = text.trim();
-    if ((!trimmed && attachments.length === 0) || isBusy || sending) return;
+    // The words as typed or dictated, without the attached files' contents: what goes back in the box if refused
+    const words = trimmed.replace(/\s*<nano_attached_files>[\s\S]*<\/nano_attached_files>$/, '');
+    if (!trimmed && attachments.length === 0) return;
+    if (isBusy || sending) {
+      keepUnsent(words || null);
+      return;
+    }
     setBanner(null);
     const clientId = crypto.randomUUID();
+    unconfirmedRef.current.add(clientId, words);
     if (voiceLiveHere) {
       setSending(true);
       try {
         post({ type: 'voice_text', clientId, threadId, text: trimmed, attachments });
       } catch (error) {
         setSending(false);
-        setBanner(error instanceof Error ? error.message : String(error));
+        keepUnsent(unconfirmedRef.current.fail(clientId), error instanceof Error ? error.message : String(error));
       }
       return;
     }
@@ -461,7 +504,7 @@ const SidePanel = () => {
     } catch (error) {
       pendingSendsRef.current.delete(clientId);
       setSending(false);
-      setBanner(error instanceof Error ? error.message : String(error));
+      keepUnsent(unconfirmedRef.current.fail(clientId), error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -738,6 +781,25 @@ const SidePanel = () => {
           role="alert"
           className="border-destructive/40 bg-destructive/10 mb-2 rounded-xl border px-3 py-2 text-[12.5px]">
           {banner}
+        </div>
+      )}
+      {sttError && (
+        <div
+          role="alert"
+          data-testid="stt-error"
+          className="border-destructive/40 bg-destructive/10 mb-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-[12.5px]">
+          <span className="min-w-0 flex-1">{sttError}</span>
+          {speech.canRetry && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setSttError(null);
+                speech.retry();
+              }}>
+              {t('chat_stt_retry')}
+            </Button>
+          )}
         </div>
       )}
       {notice && (

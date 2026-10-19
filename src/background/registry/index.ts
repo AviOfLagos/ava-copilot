@@ -49,6 +49,34 @@ export async function dispatchCommand(message: { type?: unknown }, context: Comm
   return true;
 }
 
+/**
+ * Runs a command that came as a one-off `chrome.runtime.sendMessage` and answers it exactly once, on every path:
+ * the handler's reply, an error when it throws or the command is unknown, and a plain `done` when it finished
+ * without replying. A listener that returns true and never answers is what Chrome reports to the sender as "the
+ * message channel closed before a response was received". Return its result from the listener.
+ */
+export function answerOneOff(message: { type?: unknown; requestId?: unknown }, sendResponse: (reply: unknown) => void) {
+  const requestId = typeof message?.requestId === 'string' ? message.requestId : null;
+  let answered = false;
+  const reply = (answer: Record<string, unknown>) => {
+    if (answered) return;
+    answered = true;
+    try {
+      sendResponse(answer);
+    } catch {
+      // The page that asked closed before the answer came
+    }
+  };
+  dispatchCommand(message, { reply, requestId }).then(
+    handled => reply(handled ? { type: 'done', requestId } : { type: 'error', requestId, error: 'Unknown request.' }),
+    error => {
+      logger.warning(`Command ${String(message?.type)} failed`, error);
+      reply({ type: 'error', requestId, error: error instanceof Error ? error.message : String(error) });
+    },
+  );
+  return true as const;
+}
+
 // ── Startup recovery ──────────────────────────────────────────────────────────────────────────────
 
 const recoveries: { name: string; run: () => Promise<void> }[] = [];

@@ -6,6 +6,7 @@ import { SpeechToTextService } from '../services/speechToText';
 import { installedVoiceModels } from './engines/models';
 import { toVoiceOffscreen } from './engines/offscreen';
 import { toOffscreen } from '../offscreen';
+import { registerOffscreenBusy } from '../registry';
 
 /**
  * Dictation in the chat box: writing the words down, and keeping the voice conversation and "Hey Ava" out of the
@@ -49,15 +50,53 @@ const browserDeps: DictationDeps = {
   },
 };
 
+// Recordings being written down on this computer now. The offscreen document does the work, so it must not be
+// closed meanwhile: the wake word's minute check and the end of a conversation close it when nothing uses it, and
+// closing it mid-way is what Chrome reports as "the message channel closed before a response was received".
+let writing = 0;
+
+/** Whether a recording is being written down in the offscreen document now. */
+export function dictationBusy(): boolean {
+  return writing > 0;
+}
+
+registerOffscreenBusy('dictation', async () => dictationBusy());
+
+/** Whether an error is Chrome's messaging failing (the other side went away), not the recogniser's own. */
+export function isChannelError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /message channel closed|message port closed|Receiving end does not exist|Extension context invalidated/i.test(
+    message,
+  );
+}
+
+/** What the panel shows when dictation fails: a plain sentence, never Chrome's internal wording. */
+export function sttErrorMessage(error: unknown): string {
+  if (isChannelError(error)) return t('chat_stt_unanswered');
+  if (error instanceof Error && error.message) return error.message;
+  return t('bg_cmd_stt_failed');
+}
+
 /**
  * Writes down a recording: with Gemini when its speech-to-text is set up, else on this computer with the local
- * recogniser, so dictation works with no key at all.
+ * recogniser, so dictation works with no key at all. Writing down is pure work on the recording, so when the
+ * offscreen document went away under it, it is asked once more.
  */
 export async function transcribeSpeech(audio: string, mediaType = 'audio/webm', deps = browserDeps): Promise<string> {
   // Remove the data URL prefix if present
   const base64 = audio.startsWith('data:') ? audio.split(',')[1] : audio;
   if (await deps.geminiReady()) return deps.gemini(base64, mediaType);
-  return deps.local(base64);
+  writing++;
+  try {
+    try {
+      return await deps.local(base64);
+    } catch (error) {
+      if (!isChannelError(error)) throw error;
+      return await deps.local(base64);
+    }
+  } finally {
+    writing--;
+  }
 }
 
 // The panel connection dictating now; its closing gives the microphone back

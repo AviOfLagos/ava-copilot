@@ -1,5 +1,6 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { startMockLlm } from './mock-llm.mjs';
 import { launchExtension, openSession, readThreads, sleep, waitForThread } from './harness.mjs';
@@ -15,6 +16,15 @@ process.env.E2E_FAKE_MIC = '1';
 process.env.E2E_FAKE_AUDIO_FILE = path.resolve(import.meta.dirname, 'hey-ava.wav');
 
 const scenarios = { dictated: [() => [{ done: { text: 'Scripted steps complete.', success: true } }]] };
+
+// Writing down on the device needs the local speech model in the build (node scripts/voice-models-setup.mjs, then
+// pnpm build); without it those tests are skipped
+const root = path.resolve(import.meta.dirname, '..');
+const LOCAL_SKIP = (() => {
+  const file = path.join(root, 'dist/voice/manifest.json');
+  const components = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')).components : null;
+  return components?.['moonshine-tiny'] ? false : 'the build has no local speech model';
+})();
 
 let mock;
 let extension;
@@ -150,6 +160,12 @@ test('Send while listening sends the words as soon as they are written down', as
   assert.equal(thread.title, 'Run the scripted scenario dictated.');
   mock.dictation.delayMs = 0;
   assert.equal(mock.dictation.recordings.length, 2);
+  // Sent once, and no error on the way
+  const sent = (await readMessages(panel())).filter(
+    m => m.threadId === thread.id && m.actor === 'user' && m.content === 'Run the scripted scenario dictated.',
+  );
+  assert.equal(sent.length, 1);
+  assert.equal(await alertText(), null);
 });
 
 test('a transcription that fails sends nothing and keeps what was typed', async () => {
@@ -167,6 +183,23 @@ test('a transcription that fails sends nothing and keeps what was typed', async 
   const value = await panel().evaluate(() => document.querySelector('textarea').value);
   assert.equal(value, 'Keep me');
   assert.equal(mock.dictation.recordings.length, 3);
+
+  // The recording is kept: Try again writes it down, and the words join what was typed
+  mock.dictation.text = 'and this';
+  await panel().evaluate(() => {
+    const button = [...document.querySelectorAll('[data-testid="stt-error"] button')].find(
+      b => b.innerText.trim() === 'Try again',
+    );
+    if (!button) throw new Error('No Try again');
+    button.click();
+  });
+  await waitFor(
+    async () => (await panel().evaluate(() => document.querySelector('textarea')?.value)) === 'Keep me and this',
+    'the retried words',
+  );
+  assert.equal(mock.dictation.recordings.length, 4);
+  assert.equal(await alertText(), null, 'the error went away');
+  await typeText('Keep me');
 });
 
 test('Esc drops a recording without sending it anywhere', async () => {
@@ -178,10 +211,68 @@ test('Esc drops a recording without sending it anywhere', async () => {
   );
   await waitFor(async () => (await stripStatus()) === null, 'the strip to close');
   await sleep(1000);
-  assert.equal(mock.dictation.recordings.length, 3, 'nothing was sent to be written down');
+  assert.equal(mock.dictation.recordings.length, 4, 'nothing was sent to be written down');
   assert.equal(await panel().evaluate(() => document.querySelector('textarea').value), 'Keep me');
   assert.deepEqual(session.panelErrors, []);
 });
+
+/** The text of an error shown above the composer, or null. */
+const alertText = () =>
+  panel().evaluate(() => {
+    const alert = document.querySelector('[role="alert"]');
+    return alert ? alert.textContent.trim() : null;
+  });
+
+test(
+  'Send when transcribed, written down on this computer: no error, even when the offscreen document is asked to close meanwhile, and one message',
+  { skip: LOCAL_SKIP },
+  async () => {
+    // No Gemini speech-to-text: the recogniser on this computer writes it down
+    await extension.setStorage({ 'speech-to-text-model': { speechToTextModel: null } });
+    await panel().bringToFront();
+    await waitFor(() => panel().evaluate(() => !!document.querySelector('textarea:not([disabled])')), 'the composer');
+    await typeText('');
+    mock.start('dictated');
+    const spoken = async () =>
+      (await readMessages(panel())).filter(m => m.actor === 'user' && /calendar/i.test(m.content));
+    const spokenBefore = (await spoken()).length;
+    await press('Start voice input');
+    await waitFor(async () => (await stripStatus()) === 'listening', 'listening', 30000);
+    await sleep(3000);
+    await session.web.bringToFront();
+    await press('Send when transcribed');
+    // While it writes the words down, ask the background to close the offscreen document if nothing uses it, as
+    // the wake word's minute check does: the dictation must count as using it
+    let asked = 0;
+    while ((await stripStatus()) === 'transcribing' && asked < 200) {
+      await panel().evaluate(() => chrome.runtime.sendMessage({ type: 'wake_sync' }).catch(() => null));
+      asked++;
+      await sleep(100);
+    }
+    assert.ok(asked > 0, 'the close was asked for while it wrote the words down');
+    await waitFor(async () => (await stripStatus()) === null, 'the words', 120000);
+    assert.equal(await alertText(), null, 'no error');
+    // The words were sent, once, and the chat ran them to the end
+    await waitFor(
+      async () => {
+        const sent = await spoken();
+        if (sent.length <= spokenBefore) return false;
+        const thread = (await readThreads(panel())).find(t => t.id === sent.at(-1).threadId);
+        return thread?.status === 'idle' && mock.run.navigatorCalls.length > 0;
+      },
+      'the dictated words to be sent and answered',
+      60000,
+    );
+    await sleep(1000);
+    assert.equal((await spoken()).length - spokenBefore, 1, 'one message sent');
+    assert.equal(await alertText(), null, 'no error');
+    assert.deepEqual(session.panelErrors, []);
+    // Gemini writes the words down again for the tests that follow
+    await extension.setStorage({
+      'speech-to-text-model': { speechToTextModel: { provider: 'gemini', modelName: 'gemini-3.8-flash' } },
+    });
+  },
+);
 
 /** Every message, straight from the extension's IndexedDB. */
 const readMessages = page =>

@@ -57,8 +57,17 @@ export function handleSettingsPort(port: chrome.runtime.Port, dispatch = dispatc
       },
       requestId: typeof message?.requestId === 'string' ? message.requestId : null,
     };
-    if (!allowedOnSettingsPort(type) || !(await dispatch(message, context))) {
-      context.reply({ type: 'error', requestId: context.requestId, error: 'Unknown request.' });
+    try {
+      if (!allowedOnSettingsPort(type) || !(await dispatch(message, context))) {
+        context.reply({ type: 'error', requestId: context.requestId, error: 'Unknown request.' });
+      }
+    } catch (error) {
+      // A handler that throws still answers, so the page is not left waiting for its time-out
+      context.reply({
+        type: 'error',
+        requestId: context.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   });
 }

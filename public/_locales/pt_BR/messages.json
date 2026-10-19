@@ -5356,6 +5356,15 @@
   "chat_stt_timeout": {
     "message": "A transcrição demorou demais. Tente de novo."
   },
+  "chat_stt_unanswered": {
+    "message": "Não foi possível transcrever desta vez. A gravação foi guardada: toque em Tentar de novo."
+  },
+  "chat_stt_retry": {
+    "message": "Tentar de novo"
+  },
+  "chat_send_kept": {
+    "message": "Não enviada. Sua mensagem voltou para a caixa."
+  },
   "chat_stt_hint": {
     "message": "Parar para editar · Enviar envia quando pronto · Esc descarta"
   },

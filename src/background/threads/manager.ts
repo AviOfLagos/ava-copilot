@@ -11,7 +11,7 @@ import {
 import type { MessageAttachment, ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
 import type BrowserContext from '../browser/context';
 import type { Executor } from '../agent/executor';
-import { ExecutionState } from '../agent/event/types';
+import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentEvent } from '../agent/event/types';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
@@ -33,6 +33,10 @@ export const RESUME_WINDOW_MS = 10 * 60 * 1000;
 const MAX_PARKED = 5;
 // Calling an extension API this often keeps the service worker alive while threads run
 const KEEP_ALIVE_MS = 20_000;
+// How long a stopped run gets to wind down before a new message to its thread is refused as busy
+const WIND_DOWN_MS = 5_000;
+// How long handing the tabs back may take before the run is recorded as ended anyway
+const CLEANUP_MS = 5_000;
 
 const RESUME_NOTE =
   'This task was interrupted and is now resumed. The page may have changed, so read it again before acting. Any action that was waiting for confirmation did not happen.';
@@ -51,6 +55,10 @@ interface Runner {
   stopReason: StopReason | null;
   cancelled: boolean;
   failure: string | null;
+  // Set once the executor has returned: from then on only the run's own end writes the thread's state
+  ended: boolean;
+  // The events still being recorded, in order; the run's end waits for them
+  records: Promise<void>;
 }
 
 type Parked = Pick<Runner, 'executor' | 'browserContext' | 'binding' | 'modelKey'>;
@@ -130,6 +138,7 @@ export class ThreadManager {
         agentId: request.agentId ?? null,
         ...request.fields,
       }));
+    await this.windDown(thread.id);
     if (this.running.has(thread.id)) {
       throw new Error(t('threads_busy'));
     }
@@ -211,6 +220,7 @@ export class ThreadManager {
    * an interrupted task.
    */
   async continueThread(threadId: string, windowId?: number): Promise<void> {
+    await this.windDown(threadId);
     const thread = await this.store.get(threadId);
     if (!thread || this.running.has(threadId)) {
       return;
@@ -236,6 +246,7 @@ export class ThreadManager {
    * asks for the click again, so nothing goes out twice without the user.
    */
   async retry(threadId: string, windowId?: number): Promise<void> {
+    await this.windDown(threadId);
     const thread = await this.store.get(threadId);
     if (!thread || this.running.has(threadId)) return;
     const lastRequest = (await this.store.messages(threadId)).filter(message => message.actor === 'user').at(-1);
@@ -251,15 +262,45 @@ export class ThreadManager {
     await this.start(threadId, task, binding, false, await this.mediaFor(thread, lastRequest?.attachments ?? []));
   }
 
-  /** Stops a thread's run. */
+  /**
+   * Stops a thread's run. Safe to call any number of times: the first call stops the run, and the run's end
+   * settles the thread. A thread that still looks busy with no run behind it is settled here, so Stop
+   * always gives the chat back.
+   */
   async cancel(threadId: string, reason: StopReason | null = null): Promise<void> {
     const runner = this.running.get(threadId);
     if (!runner) {
+      const thread = await this.store.get(threadId);
+      if (
+        !this.running.has(threadId) &&
+        thread &&
+        (thread.status === 'running' || thread.status === 'waiting_confirm')
+      ) {
+        await this.store.update(
+          threadId,
+          { status: 'idle', activity: '', pendingRequest: null, runStartedAt: null, activeTask: null },
+          true,
+        );
+      }
+      return;
+    }
+    // A later reason, e.g. the tab closing while the stop winds down, does not replace the first
+    runner.stopReason ??= reason;
+    if (runner.cancelled || runner.ended) {
       return;
     }
     runner.cancelled = true;
-    runner.stopReason = reason;
     await runner.executor.cancel();
+  }
+
+  /**
+   * Waits a moment for a run that was told to stop or is writing its end, so a message sent right after Stop
+   * is not refused as busy.
+   */
+  private async windDown(threadId: string): Promise<void> {
+    const runner = this.running.get(threadId);
+    if (!runner || !(runner.cancelled || runner.ended)) return;
+    await Promise.race([runner.done, new Promise(resolve => setTimeout(resolve, WIND_DOWN_MS))]);
   }
 
   /** Stops every running thread. */
@@ -295,13 +336,19 @@ export class ThreadManager {
       return false;
     }
     const subject = request.target || request.intent;
-    // A note on the run, not a new request: the chat shows it as a step
-    await this.store.addMessage(
+    // Both writes are issued now, before the agent resumes. A refusal can end the run at once, and the run's
+    // end must be the last word on the thread's state: written after it, 'running' would leave the chat stuck
+    // busy with the Stop button showing.
+    const note = this.store.addMessage(
       threadId,
       'system',
       approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
     );
-    await this.store.update(threadId, { pendingRequest: null, status: 'running' });
+    const state =
+      this.running.get(threadId) === runner && !runner.ended
+        ? this.store.update(threadId, { pendingRequest: null, status: 'running' })
+        : Promise.resolve(false);
+    await Promise.all([note, state]);
     return true;
   }
 
@@ -492,9 +539,14 @@ export class ThreadManager {
       stopReason: null,
       cancelled: false,
       failure: null,
+      ended: false,
+      records: Promise.resolve(),
     };
     executor.clearExecutionEvents();
-    executor.subscribeExecutionEvents(event => this.record(runner, event));
+    // One at a time and in order: two events recorded at once could land in the wrong order
+    executor.subscribeExecutionEvents(
+      event => (runner.records = runner.records.then(() => this.record(runner, event))),
+    );
     this.running.set(threadId, runner);
     this.updateKeepAlive();
     runner.done = this.drive(runner);
@@ -507,27 +559,38 @@ export class ThreadManager {
       runner.failure = error instanceof Error ? error.message : String(error);
       await this.store.addMessage(runner.threadId, 'system', t('exec_task_fail', [runner.failure]));
     } finally {
-      // Detaching the debugger hands the tab back to the user
-      await runner.executor.cleanup();
-      this.running.delete(runner.threadId);
-      this.updateKeepAlive();
+      runner.ended = true;
+      // The last events (the executor reports its end without waiting) are recorded before the end is written
+      await runner.records;
+      // Detaching the debugger hands the tab back to the user; a hung detach must not leave the chat busy
+      await Promise.race([
+        runner.executor.cleanup().catch(error => logger.warning('Cleanup failed', error)),
+        new Promise(resolve => setTimeout(resolve, CLEANUP_MS)),
+      ]);
       if (!runner.cancelled) {
         this.park(runner);
       }
       const error = runner.stopReason ?? (runner.failure ? { kind: 'failed' as const, message: runner.failure } : null);
-      await this.store.update(
-        runner.threadId,
-        {
-          status: error ? 'error' : 'idle',
-          error,
-          activity: '',
-          activeTask: error ? runner.executor.currentTask : null,
-          runStartedAt: null,
-          pendingRequest: null,
-          boundTabIds: runner.binding.tabIds,
-        },
-        true,
-      );
+      try {
+        await this.store.update(
+          runner.threadId,
+          {
+            status: error ? 'error' : 'idle',
+            error,
+            activity: '',
+            activeTask: error ? runner.executor.currentTask : null,
+            runStartedAt: null,
+            pendingRequest: null,
+            boundTabIds: runner.binding.tabIds,
+          },
+          true,
+        );
+      } finally {
+        // Only now is the thread free: a message sent while the end was being written waits for it (see send)
+        // instead of starting a run that this write would then mark idle
+        this.running.delete(runner.threadId);
+        this.updateKeepAlive();
+      }
     }
   }
 
@@ -537,9 +600,17 @@ export class ThreadManager {
       if (event.state === ExecutionState.TASK_FAIL) {
         runner.failure = event.data.details;
       }
+      // The task stopped itself, e.g. the user cancelled a commit on the card: its agent is stopped for good (its
+      // requests are aborted), so it is not kept for a follow-up, which would end at once as cancelled
+      if (event.actor === Actors.SYSTEM && event.state === ExecutionState.TASK_CANCEL) {
+        runner.cancelled = true;
+      }
       if (effect.message) {
         await this.store.addMessage(runner.threadId, effect.message.actor, effect.message.content);
       }
+      // After the run ended, or once it is told to stop, nothing may make the thread look busy again
+      if (runner.ended || this.running.get(runner.threadId) !== runner) return;
+      if (runner.cancelled && (effect.request || effect.activity)) return;
       if (effect.request) {
         await this.store.addMessage(
           runner.threadId,
