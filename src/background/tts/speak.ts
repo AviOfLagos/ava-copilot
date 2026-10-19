@@ -10,6 +10,7 @@ import type { Speaker } from '../personalities/voices';
 import { services } from '../registry/services';
 import * as chromeEngine from './chromeEngine';
 import * as geminiEngine from './geminiEngine';
+import { missingVoiceFiles } from './missing';
 import { toSpeakableText } from './markdown';
 import type { SpeakOptions, TtsEngine } from './types';
 import { localTtsEngine, stopLocalSpeech } from '../voice/engines/localTts';
@@ -54,12 +55,22 @@ export async function speak(
   const speaker = context.speaker ?? (await agentSpeaker(thread?.agentId).catch(() => null));
   const spoken = context.speaker ? spokenLine(context.speaker, said) : said;
   await ttsSpeakingStore.set({ threadId: context.threadId, messageId: context.messageId });
+  const voiceOptions = (engine: string): SpeakOptions => ({
+    voice:
+      personalityVoiceFor(engine, speaker ?? personality) ??
+      (engine === settings.engine ? settings.voice || undefined : undefined),
+    rate: speaker?.rate ?? personalityRateOf(personality) ?? settings.rate,
+    ...options,
+  });
   try {
-    await engineFor(settings.engine).speak(spoken, {
-      voice: personalityVoiceFor(settings.engine, speaker ?? personality) ?? (settings.voice || undefined),
-      rate: speaker?.rate ?? personalityRateOf(personality) ?? settings.rate,
-      ...options,
-    });
+    try {
+      await engineFor(settings.engine).speak(spoken, voiceOptions(settings.engine));
+    } catch (error) {
+      // An on-device voice whose files are not downloaded (or failed to load): the answer is still said, with the
+      // computer's own voice, and Settings › Voice offers the download
+      if ((settings.engine !== 'kitten' && settings.engine !== 'kokoro') || !missingVoiceFiles(error)) throw error;
+      await chromeEngine.speak(spoken, voiceOptions('system'));
+    }
   } finally {
     await ttsSpeakingStore.set({ threadId: null, messageId: null });
   }

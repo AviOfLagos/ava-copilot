@@ -18,6 +18,8 @@ const EXPECTED_GONE_TARGET_PATTERNS = [
   /No frame with id/i,
   /Frame with ID .* was removed/i,
   /The tab was closed/i,
+  // The tab shows the browser's own error page (no connection, a refused site): nothing of ours can run there
+  /Frame with ID \d+ is showing error page/i,
 ];
 
 export function isExpectedGoneTargetError(err: unknown): boolean {
