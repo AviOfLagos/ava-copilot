@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { graphStore, normalizeName, threadStore } from '@extension/storage';
+import { graphStore, kbStore, normalizeName } from '@extension/storage';
 import type { GraphNode } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import type { ActionSchema } from '../agent/actions/schemas';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
+import { canSee, canSeeNode, memoryScopeForThread } from '../kb/scope';
 
 export const lookUpGraphActionSchema = {
   name: 'look_up_graph',
@@ -38,19 +39,23 @@ export function describeNode(node: GraphNode, links: { node: GraphNode; kind: st
 
 /**
  * Handles look_up_graph: the best matching nodes in the task's workspace (and those in none), each
- * with its links. Never another workspace's.
+ * with its links. Never another workspace's, and only what the chat's memory scope may read: a node or a
+ * link shows only when a source the caller may see names it, so another agent's private notes never leak
+ * through the graph.
  */
 export async function lookUpGraphAction(
   context: AgentContext,
   input: z.infer<typeof lookUpGraphActionSchema.schema>,
 ): Promise<ActionResult> {
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || `Looking up "${input.name}"`);
-  const workspaceId = (await threadStore.get(context.taskId).catch(() => undefined))?.workspaceId ?? null;
+  const scope = await memoryScopeForThread(context.taskId);
+  const workspaceId = scope.workspaceId;
+  const visible = new Set((await kbStore.items()).filter(item => canSee(scope, item)).map(item => item.id));
   const wanted = normalizeName(input.name);
   // In a workspace: its own and unassigned nodes; in none: all of them
   const nodes = await graphStore.nodes(workspaceId ?? undefined);
   const found = nodes
-    .filter(node => wanted && normalizeName(node.label).includes(wanted))
+    .filter(node => wanted && normalizeName(node.label).includes(wanted) && canSeeNode(node, visible))
     .sort((a, b) => a.label.length - b.label.length)
     .slice(0, 3);
   if (found.length === 0) {
@@ -63,7 +68,12 @@ export async function lookUpGraphAction(
   const parts: string[] = [];
   for (const node of found) {
     const links = (await graphStore.neighbors(node.id))
-      .filter(link => !workspaceId || !link.node.workspaceId || link.node.workspaceId === workspaceId)
+      .filter(
+        link =>
+          (!workspaceId || !link.node.workspaceId || link.node.workspaceId === workspaceId) &&
+          visible.has(link.edge.sourceItemId) &&
+          canSeeNode(link.node, visible),
+      )
       .map(link => ({ node: link.node, kind: link.edge.kind, outgoing: link.outgoing }));
     parts.push(describeNode(node, links));
   }

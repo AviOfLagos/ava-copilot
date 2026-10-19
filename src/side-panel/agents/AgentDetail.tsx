@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AppWindow, ArrowLeft, BookOpen, Check, Network, Pause, Pencil, Play, Square, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db, localDay } from '@extension/storage';
-import type { AgentProfile, JobRecord, KnowledgeItem, RunRecord, UsageEvent } from '@extension/storage';
+import type { AgentProfile, JobRecord, RunRecord, UsageEvent } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { diffProfiles, fieldsOf } from '@src/background/agents/profile';
 import type { ProfileField } from '@src/background/agents/profile';
@@ -30,6 +30,7 @@ import {
   STATE_LABEL,
   triggerText,
 } from './meta';
+import { AgentMemory } from '../kb/MemoryScope';
 import { RunLog } from './RunLog';
 
 type MessageKey = Parameters<typeof t>[0];
@@ -164,7 +165,6 @@ export default function AgentDetail({ id, api, onBack }: AgentDetailProps) {
   );
   const jobs = useLive(() => db.jobs.where('kind').equals('agent-schedule').toArray(), [], [] as JobRecord[]);
   const usage = useLive(() => db.usageEvents.where('agentId').equals(id).toArray(), [id], [] as UsageEvent[]);
-  const knowledge = useLive(() => db.kbItems.where('agentId').equals(id).toArray(), [id], [] as KnowledgeItem[]);
   const workspaces = useWorkspaces();
   const [openRunId, setOpenRunId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -534,24 +534,7 @@ export default function AgentDetail({ id, api, onBack }: AgentDetailProps) {
               </Button>
             </span>
           }>
-          {knowledge.length ? (
-            <ul className="flex flex-col gap-0.5 px-1">
-              <li className="text-muted-foreground text-[11.5px]">
-                {t('agents_knowledge_count', [String(knowledge.length)])}
-              </li>
-              {[...knowledge]
-                .sort((a, b) => b.sourceDate - a.sourceDate)
-                .slice(0, 5)
-                .map(item => (
-                  <li key={item.id} className="truncate text-[12px]">
-                    {item.title}
-                    <span className="text-muted-foreground"> · {relativeTime(item.sourceDate)}</span>
-                  </li>
-                ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground px-1 text-[12px]">{t('agents_knowledge_none')}</p>
-          )}
+          <AgentMemory agentId={agent.id} />
         </Section>
       )}
 

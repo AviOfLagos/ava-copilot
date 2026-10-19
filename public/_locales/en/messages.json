@@ -8053,5 +8053,71 @@
   },
   "models_fallback_reason_timeout": {
     "message": "too slow"
+  },
+  "kb_scope_noAnswer": {
+    "message": "The background did not answer."
+  },
+  "kb_scope_failed": {
+    "message": "That did not work. Try again."
+  },
+  "kb_scope_team": {
+    "message": "Team"
+  },
+  "kb_scope_private": {
+    "message": "Private"
+  },
+  "kb_scope_team_hint": {
+    "message": "Team memory: every agent reads it"
+  },
+  "kb_scope_private_hint": {
+    "message": "Private to $AGENT$: only that agent, Ava and you read it",
+    "placeholders": {
+      "agent": {
+        "content": "$1",
+        "example": "Scout"
+      }
+    }
+  },
+  "kb_scope_anAgent": {
+    "message": "an agent"
+  },
+  "kb_scope_toTeam": {
+    "message": "Move \"$TITLE$\" to the team memory",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_toPrivate": {
+    "message": "Make \"$TITLE$\" private to its agent",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_showAll": {
+    "message": "Show all $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "kb_scope_privateList": {
+    "message": "Private memory"
+  },
+  "kb_scope_privateNone": {
+    "message": "Nothing private yet. What this agent saves or finds in its runs stays here."
+  },
+  "kb_scope_teamList": {
+    "message": "Team memory"
+  },
+  "kb_scope_teamNone": {
+    "message": "Nothing shared with the team yet."
   }
 }

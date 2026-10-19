@@ -8053,5 +8053,71 @@
   },
   "models_fallback_reason_timeout": {
     "message": "lento demais"
+  },
+  "kb_scope_noAnswer": {
+    "message": "O serviço em segundo plano não respondeu."
+  },
+  "kb_scope_failed": {
+    "message": "Não funcionou. Tente de novo."
+  },
+  "kb_scope_team": {
+    "message": "Equipe"
+  },
+  "kb_scope_private": {
+    "message": "Privado"
+  },
+  "kb_scope_team_hint": {
+    "message": "Memória da equipe: todos os agentes leem"
+  },
+  "kb_scope_private_hint": {
+    "message": "Privado de $AGENT$: só esse agente, a Ava e você leem",
+    "placeholders": {
+      "agent": {
+        "content": "$1",
+        "example": "Scout"
+      }
+    }
+  },
+  "kb_scope_anAgent": {
+    "message": "um agente"
+  },
+  "kb_scope_toTeam": {
+    "message": "Mover \"$TITLE$\" para a memória da equipe",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_toPrivate": {
+    "message": "Tornar \"$TITLE$\" privado do seu agente",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_showAll": {
+    "message": "Mostrar todos os $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "kb_scope_privateList": {
+    "message": "Memória privada"
+  },
+  "kb_scope_privateNone": {
+    "message": "Nada privado ainda. O que este agente salva ou encontra nas execuções fica aqui."
+  },
+  "kb_scope_teamList": {
+    "message": "Memória da equipe"
+  },
+  "kb_scope_teamNone": {
+    "message": "Nada compartilhado com a equipe ainda."
   }
 }

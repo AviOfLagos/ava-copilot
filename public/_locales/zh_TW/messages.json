@@ -8053,5 +8053,71 @@
   },
   "models_fallback_reason_timeout": {
     "message": "太慢"
+  },
+  "kb_scope_noAnswer": {
+    "message": "背景服務沒有回應。"
+  },
+  "kb_scope_failed": {
+    "message": "沒有成功，請再試一次。"
+  },
+  "kb_scope_team": {
+    "message": "團隊"
+  },
+  "kb_scope_private": {
+    "message": "私人"
+  },
+  "kb_scope_team_hint": {
+    "message": "團隊記憶：每個代理都能讀取"
+  },
+  "kb_scope_private_hint": {
+    "message": "$AGENT$ 的私人記憶：只有該代理、Ava 和你能讀取",
+    "placeholders": {
+      "agent": {
+        "content": "$1",
+        "example": "Scout"
+      }
+    }
+  },
+  "kb_scope_anAgent": {
+    "message": "一個代理"
+  },
+  "kb_scope_toTeam": {
+    "message": "將「$TITLE$」移到團隊記憶",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_toPrivate": {
+    "message": "將「$TITLE$」設為其代理的私人記憶",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Launch checklist"
+      }
+    }
+  },
+  "kb_scope_showAll": {
+    "message": "顯示全部 $COUNT$ 項",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "kb_scope_privateList": {
+    "message": "私人記憶"
+  },
+  "kb_scope_privateNone": {
+    "message": "還沒有私人記憶。這個代理在執行中儲存或找到的內容會留在這裡。"
+  },
+  "kb_scope_teamList": {
+    "message": "團隊記憶"
+  },
+  "kb_scope_teamNone": {
+    "message": "還沒有與團隊分享的內容。"
   }
 }

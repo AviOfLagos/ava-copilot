@@ -27,6 +27,24 @@ const scenarios = {
     () => [{ search_knowledge: { intent: 'Look in my notes', query: 'quote request gate fixture page' } }],
     () => [{ done: { text: 'Scripted steps complete.', success: true } }],
   ],
+  // Private and team memory: agent A keeps a note to itself, agent B and Ava look for it
+  'mem-a-save': [
+    () => [
+      {
+        save_to_knowledge: {
+          intent: 'Keep it to myself',
+          note: 'The Falcon launch codename is bluebird-e2e.',
+          title: 'Falcon codename',
+          team: false,
+        },
+      },
+    ],
+    () => [{ done: { text: 'Scripted steps complete.', success: true } }],
+  ],
+  'mem-search': [
+    () => [{ search_knowledge: { intent: 'Look in memory', query: 'Falcon launch codename' } }],
+    () => [{ done: { text: 'Scripted steps complete.', success: true } }],
+  ],
 };
 
 let mock;
@@ -448,5 +466,116 @@ test('the morning brief comes as a chat with the priorities first, made from the
   );
   const brief = (await readStore(session.panel, 'threads')).find(thread => thread.tags.includes('brief'));
   assert.ok(brief, 'the brief is kept as a chat');
+  await session.close();
+});
+
+/** Starts a run of an agent the way Run now does, over a port of its own from the panel page. */
+function runAgent(page, id) {
+  return page.evaluate(
+    id =>
+      new Promise((resolve, reject) => {
+        const port = chrome.runtime.connect({ name: 'side-panel-connection' });
+        const requestId = crypto.randomUUID();
+        port.onMessage.addListener(message => {
+          if (message.requestId !== requestId) return;
+          port.disconnect();
+          if (message.type === 'error') reject(new Error(message.error));
+          else resolve(message.runId);
+        });
+        port.postMessage({ type: 'agents_run', id, requestId });
+      }),
+    id,
+  );
+}
+
+async function untilRunEnds(page, runId, timeout = 90000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const run = (await readStore(page, 'runs')).find(entry => entry.id === runId);
+    if (run && ['succeeded', 'failed', 'cancelled', 'interrupted'].includes(run.status)) return run;
+    await sleep(500);
+  }
+  throw new Error(`Run ${runId} never ended`);
+}
+
+test("an agent's private note: another agent's run cannot find it, Ava can, and sharing it with the team does", async () => {
+  const session = await openSession(extension, mock);
+  const now = Date.now();
+  const agent = (id, name, scenario) => ({
+    id,
+    name,
+    avatar: name[0],
+    instructions: `Run the scripted scenario ${scenario}.`,
+    skills: [],
+    connectors: [],
+    domains: ['127.0.0.1'],
+    modelRole: 'fast',
+    workspaceId: null,
+    executor: 'browser',
+    triggers: [{ type: 'manual' }],
+    subscribes: [],
+    publishes: [],
+    budget: { dailyUsd: null, maxStepsPerRun: 20, runsPerDay: 20 },
+    startUrl: mock.fixtureUrl,
+    owns: [],
+    enabled: true,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+  });
+  await writeStore(session.panel, 'agents', [
+    agent('mem-agent-a', 'Memo A', 'mem-a-save'),
+    agent('mem-agent-b', 'Memo B', 'mem-search'),
+  ]);
+  // What the model was sent while `work` ran, whichever scripted run the mock filed it under: search results
+  // quote earlier chats that name other scenarios, which the mock follows
+  const seenDuring = async work => {
+    const all = () => [...mock.runs.values()].flatMap(run => run.requests);
+    const before = new Set(all());
+    await work();
+    return all()
+      .filter(request => !before.has(request))
+      .join('\n');
+  };
+  const runB = () =>
+    seenDuring(async () => {
+      mock.start('mem-search');
+      const run = await untilRunEnds(session.panel, await runAgent(session.panel, 'mem-agent-b'));
+      assert.equal(run.status, 'succeeded');
+    });
+
+  // A keeps a note to itself: private, filed under A
+  mock.start('mem-a-save');
+  const saved = await untilRunEnds(session.panel, await runAgent(session.panel, 'mem-agent-a'));
+  assert.equal(saved.status, 'succeeded');
+  const note = await waitForItem(session.panel, entry => entry.title === 'Falcon codename');
+  assert.equal(note.agentId, 'mem-agent-a');
+  assert.equal(note.scope, 'private');
+
+  // B's run searches for it and finds nothing of A's
+  const byB = await runB();
+  assert.match(byB, /Knowledge base results for|has nothing matching/);
+  assert.doesNotMatch(byB, /bluebird-e2e/, "B never reads A's private note");
+
+  // Ava, in the user's own chat, reads it
+  const byAva = await seenDuring(async () => {
+    mock.start('mem-search');
+    await session.send('Run the scripted scenario mem-search.');
+    await session.waitForEnd();
+  });
+  assert.match(byAva, /bluebird-e2e/, "Ava reads every agent's memory");
+
+  // The user moves it to the team from the Knowledge base
+  await openKnowledge(session);
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('[role="tab"]')].find(tab => tab.innerText.startsWith('Saved')).click(),
+  );
+  await session.panel.waitForSelector('[data-scope="private"]', { timeout: 10000 });
+  await session.click('Move "Falcon codename" to the team memory');
+  await waitForItem(session.panel, entry => entry.id === note.id && entry.scope === 'team');
+  await session.panel.waitForSelector('[data-scope="team"]', { timeout: 10000 });
+
+  // Now B's run finds it
+  assert.match(await runB(), /bluebird-e2e/, "the team memory is every agent's");
   await session.close();
 });

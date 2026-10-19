@@ -227,6 +227,9 @@ export interface KnowledgeItem {
   workspaceId?: string | null;
   // The agent whose work it came from, for knowledge filtered by agent
   agentId?: string | null;
+  // Who may read it (src/background/kb/scope.ts): 'private' to its agent (and Ava and the user), or the whole
+  // 'team'. Absent: private when an agent's work made it, else the user's own, which every agent reads.
+  scope?: 'private' | 'team';
   // An imported AI session: which tool, which project folder, and which import brought it in
   origin?: { tool: string; project: string | null; importId: string } | null;
 }

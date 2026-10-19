@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { kbItemId, kbStore, threadStore, workspaceStore } from '@extension/storage';
+import { kbStore, threadStore, workspaceStore } from '@extension/storage';
 import type { ConfirmRequest, Workspace } from '@extension/storage';
 import { Action } from '../agent/actions/builder';
+import { itemIdFor } from '../kb/scope';
 import type { ActionSchema } from '../agent/actions/schemas';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
@@ -223,7 +224,8 @@ export async function saveToKnowledge(
   const kb = getKnowledgeBase();
   if (!kb) throw new Error('The knowledge base is not available.');
   const sourceId = `drive:${read.ref.id}`;
-  const refreshed = Boolean(await kbStore.item(kbItemId('page', sourceId)).catch(() => undefined));
+  const id = itemIdFor({ sourceType: 'page', sourceId, agentId });
+  const refreshed = Boolean(await kbStore.item(id).catch(() => undefined));
   await kb.saveDocument({ sourceId, title: read.title, url: read.link, text: read.text, workspaceId, agentId });
   return { title: read.title, refreshed };
 }

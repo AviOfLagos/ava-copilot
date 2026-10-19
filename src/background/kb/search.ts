@@ -134,14 +134,17 @@ export class KbIndex {
       workspaceId?: string | null;
       // One agent's knowledge only
       agentId?: string | null;
+      // Which items the caller may read (`canSee` in ./scope); the rest are never candidates
+      visible?: (item: KnowledgeItem) => boolean;
     } = {},
   ): SearchHit[] {
-    const { limit = 8, now = Date.now(), embedModel = null, workspaceId = null, agentId = null } = options;
+    const { limit = 8, now = Date.now(), embedModel = null, workspaceId = null, agentId = null, visible } = options;
     // In a workspace: its own items and those in none, never another workspace's; for an agent: its own only
     const allowed = (chunkId: string) => {
       const item = this.items.get(this.chunks.get(chunkId)?.itemId ?? '');
       const owner = item?.workspaceId;
-      if (agentId && item?.agentId !== agentId) return false;
+      if (!item || (visible && !visible(item))) return false;
+      if (agentId && item.agentId !== agentId) return false;
       return !workspaceId || !owner || owner === workspaceId;
     };
     const scores = new Map<string, number>();

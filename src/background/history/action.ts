@@ -8,6 +8,7 @@ import { wrapUntrustedContent } from '../agent/messages/utils';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { dayLabel, describeSource } from '../kb/answer';
+import { memoryScopeForThread } from '../kb/scope';
 import { getKnowledgeBase } from '../kb/shared';
 import { fingerprintOf, itemsOf, rollupMarkdown, workspaceSummaries } from './summaries';
 
@@ -51,16 +52,20 @@ export async function workspaceContext(
   // Out of date when the workspace's items changed since it was written
   let summary = await workspaceSummaries.get(workspace.id);
   const own = itemsOf(await kbStore.items(), workspace.id);
-  if (summary && own.length && summary.fingerprint !== fingerprintOf(own)) {
+  // A summary is used only while it matches what everyone may read now: an item made private since must not live on
+  // in it. Nothing readable left, or a refresh that did not happen (over budget, model down), means no summary.
+  if (summary && !own.length) summary = null;
+  if (summary && summary.fingerprint !== fingerprintOf(own)) {
     await workspaceSummaries.refresh({ workspaceId: workspace.id });
     summary = await workspaceSummaries.get(workspace.id);
+    if (summary && summary.fingerprint !== fingerprintOf(own)) summary = null;
   }
   const parts = [summary ? summaryText(workspace.name, summary) : `Nothing is in "${workspace.name}" yet.`];
 
   if (input.query.trim()) {
     const kb = getKnowledgeBase();
     // This workspace's own passages only: not another's, and not what belongs to none
-    const hits = (await kb?.search(input.query, 12, workspace.id))?.filter(
+    const hits = (await kb?.search(input.query, 12, await memoryScopeForThread(context.taskId)))?.filter(
       hit => hit.item.workspaceId === workspace.id,
     );
     parts.push(
