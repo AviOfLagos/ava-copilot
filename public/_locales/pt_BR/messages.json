@@ -8005,5 +8005,53 @@
   },
   "voice_models_error_other": {
     "message": "Não foi possível baixar os arquivos de voz. Tente de novo."
+  },
+  "models_fallback": {
+    "message": "Quando a nuvem falha"
+  },
+  "models_fallback_enable": {
+    "message": "Terminar em um modelo local"
+  },
+  "models_fallback_enable_hint": {
+    "message": "Quando a chave, a cota, o limite de uso ou o serviço de um modelo na nuvem falha, a mesma etapa roda de novo em um modelo neste computador. De qualquer forma, nada é enviado sem o seu clique."
+  },
+  "models_fallback_model": {
+    "message": "Modelo local"
+  },
+  "models_fallback_auto": {
+    "message": "Automático ($1)"
+  },
+  "models_fallback_autoNone": {
+    "message": "Automático"
+  },
+  "models_fallback_using": {
+    "message": "Chamadas à nuvem que falham terminam em $1."
+  },
+  "models_fallback_none": {
+    "message": "Nenhum modelo local encontrado ainda. Instale um para continuar trabalhando quando a nuvem falhar."
+  },
+  "models_fallback_install": {
+    "message": "Instalar um"
+  },
+  "models_fallback_note": {
+    "message": "$1 falhou ($2). Terminando com $3 neste computador."
+  },
+  "models_fallback_reason_auth": {
+    "message": "chave recusada"
+  },
+  "models_fallback_reason_quota": {
+    "message": "cota"
+  },
+  "models_fallback_reason_rateLimit": {
+    "message": "limite de uso"
+  },
+  "models_fallback_reason_unavailable": {
+    "message": "serviço fora do ar"
+  },
+  "models_fallback_reason_network": {
+    "message": "sem conexão"
+  },
+  "models_fallback_reason_timeout": {
+    "message": "lento demais"
   }
 }

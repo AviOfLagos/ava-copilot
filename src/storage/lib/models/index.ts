@@ -8,3 +8,4 @@ export * from './active';
 export * from './routing';
 export * from './recommend';
 export * from './roleDefaults';
+export * from './fallback';

@@ -40,6 +40,9 @@ export interface RoleInputs {
   down?: Set<string>;
   // Pick only from active models (./active.ts); the pinned embedding model is kept either way
   activeOnly?: boolean;
+  // A model the caller was set up with by hand (the browser agent's Navigator or Planner): after the agent's and
+  // the workspace's mappings, before everyone's; it is used whether or not it is active, and stood in for when down
+  explicit?: RoleTarget | null;
 }
 
 /** Tags a provider's kind adds to a model's own: every Gemini chat model can search with Google and hear audio. */
@@ -95,6 +98,7 @@ function mappedTarget(inputs: RoleInputs): { target: RoleTarget; source: RoleSou
   if (agent) return { target: agent, source: 'agent' };
   const workspace = inputs.workspaceId ? settings.workspaceRoles?.[inputs.workspaceId]?.[role] : undefined;
   if (workspace) return { target: workspace, source: 'workspace' };
+  if (inputs.explicit) return { target: inputs.explicit, source: 'setting' };
   const everyone = settings.roles?.[role];
   if (everyone) return { target: everyone, source: 'user' };
   if (role === 'embed' && settings.pinnedEmbed) return { target: settings.pinnedEmbed, source: 'pinned' };
@@ -119,7 +123,8 @@ function settingTarget(inputs: RoleInputs): RoleTarget | null {
 
 /**
  * The model for a role, or null when nothing configured can serve it.
- * 1. A mapping the user made (agent, then workspace, then everyone; the pinned embedding model).
+ * 1. A mapping the user made (agent, then workspace, then the caller's `explicit` model, then everyone; the pinned
+ *    embedding model).
  * 2. A model chosen in another setting (Planner → smart, Navigator → fast, speech-to-text → transcribe).
  * 3. The best model the registry found, by capability, health and a score (see `scoreForRole`).
  * A chosen provider that is down is stood in for by a healthy local model if there is one, else by the best
@@ -172,7 +177,8 @@ export function pickRoleModel(inputs: RoleInputs): RoleChoice | null {
   };
 
   const mapped = mappedTarget(inputs);
-  if (mapped && usable(mapped.target.providerId) && (isActive(mapped.target) || mapped.source === 'pinned')) {
+  const kept = mapped && (mapped.source === 'pinned' || mapped.target === inputs.explicit);
+  if (mapped && usable(mapped.target.providerId) && (isActive(mapped.target) || kept)) {
     if (!isDown(mapped.target.providerId) || role === 'embed') return choose(mapped.target, mapped.source);
     return standInFor(mapped.target.providerId) ?? choose(mapped.target, mapped.source);
   }

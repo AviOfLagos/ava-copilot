@@ -4,8 +4,10 @@ import { t } from '@extension/i18n';
 import {
   baseModelName,
   getDefaultDisplayNameFromProviderId,
+  localChatModels,
   memoryEstimate,
   modelSettingsStore,
+  pickFallbackModel,
   platformOf,
   recommendLocalModels,
 } from '@extension/storage';
@@ -14,7 +16,7 @@ import { cn } from '@extension/ui';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
-import { Section, Segmented } from './ui';
+import { inputClass, Section, Segmented } from './ui';
 import type { ModelSettingsState } from './useModelSettings';
 import { useModelTest } from './useModelTest';
 import type { ProvidersState } from './useProviders';
@@ -180,9 +182,111 @@ function LightRouting({
   );
 }
 
+// Provider ids never hold it, so the first one splits a value into provider and model
+const SEPARATOR = '|';
+const RECOMMENDATIONS_ID = 'models-local-recommendations';
+
+/** "When the cloud fails": the local model a failed cloud call finishes on, and the switch for it. */
+function CloudFallback({ state, models }: { state: ProvidersState; models: ModelSettingsState }) {
+  const { settings } = models;
+  const setting = settings.fallbackLocal;
+  const providerName = (id: string) => state.saved[id]?.name || getDefaultDisplayNameFromProviderId(id);
+  const found = useMemo(() => {
+    const seen = new Map<string, { providerId: string; model: string }>();
+    for (const entry of localChatModels({ providers: state.saved, catalog: state.catalog })) {
+      seen.set(`${entry.providerId}${SEPARATOR}${entry.model}`, entry);
+    }
+    return [...seen.values()];
+  }, [state.saved, state.catalog]);
+  const inputs = { providers: state.saved, catalog: state.catalog, health: state.health.providers, activeOnly: true };
+  const automatic = pickFallbackModel(
+    { ...inputs, settings: { ...settings, fallbackLocal: { enabled: true, model: null } } },
+    { ignoreEnabled: true },
+  );
+  const current = pickFallbackModel({ ...inputs, settings }, { ignoreEnabled: true });
+  const chosen = setting.model;
+  const byProvider = new Map<string, string[]>();
+  for (const entry of found)
+    byProvider.set(entry.providerId, [...(byProvider.get(entry.providerId) ?? []), entry.model]);
+  const update = (changes: Partial<typeof setting>) =>
+    void modelSettingsStore.updateSettings({ fallbackLocal: { ...setting, ...changes } });
+  const selectId = 'models-fallback-model';
+
+  return (
+    <Section label={t('models_fallback')}>
+      <div className="flex items-start gap-3 px-3 py-2.5" data-fallback={setting.enabled ? 'on' : 'off'}>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px]">{t('models_fallback_enable')}</p>
+          <p className="text-muted-foreground text-[11.5px]">{t('models_fallback_enable_hint')}</p>
+        </div>
+        <Switch
+          checked={setting.enabled}
+          label={t('models_fallback_enable')}
+          onChange={value => update({ enabled: value })}
+        />
+      </div>
+      {found.length === 0 ? (
+        <div className="px-3 py-2.5" data-fallback-empty>
+          <p className="text-[12px]">{t('models_fallback_none')}</p>
+          <Button
+            size="sm"
+            variant="glass"
+            className="mt-1"
+            onClick={() =>
+              document.getElementById(RECOMMENDATIONS_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }>
+            {t('models_fallback_install')}
+          </Button>
+        </div>
+      ) : (
+        <div className="px-3 py-2.5">
+          <label htmlFor={selectId} className="text-muted-foreground mb-1 block text-[11.5px]">
+            {t('models_fallback_model')}
+          </label>
+          <select
+            id={selectId}
+            value={chosen ? `${chosen.providerId}${SEPARATOR}${chosen.model}` : ''}
+            disabled={!setting.enabled}
+            onChange={event => {
+              const at = event.target.value.indexOf(SEPARATOR);
+              update({
+                model:
+                  at > 0
+                    ? { providerId: event.target.value.slice(0, at), model: event.target.value.slice(at + 1) }
+                    : null,
+              });
+            }}
+            className={inputClass}>
+            <option value="">
+              {automatic
+                ? t('models_fallback_auto', [`${providerName(automatic.providerId)} · ${automatic.model}`])
+                : t('models_fallback_autoNone')}
+            </option>
+            {[...byProvider].map(([providerId, names]) => (
+              <optgroup key={providerId} label={providerName(providerId)}>
+                {[...new Set(names)].sort().map(model => (
+                  <option key={model} value={`${providerId}${SEPARATOR}${model}`}>
+                    {model}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {setting.enabled && current && (
+            <p role="status" className="text-muted-foreground mt-1 text-[11px]" data-fallback-model={current.model}>
+              {t('models_fallback_using', [`${providerName(current.providerId)} · ${current.model}`])}
+            </p>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 /**
- * Local models: where light work goes, and 2–4 models that fit this computer with the command that installs each
- * and a test once installed. Says plainly what a browser cannot see.
+ * Local models: where light work goes, the local model a failed cloud call finishes on, and 2–4 models that fit
+ * this computer with the command that installs each and a test once installed. Says plainly what a browser cannot
+ * see.
  */
 export default function LocalSection({ state, models }: { state: ProvidersState; models: ModelSettingsState }) {
   const browser = useBrowserSpec();
@@ -231,90 +335,98 @@ export default function LocalSection({ state, models }: { state: ProvidersState;
     <>
       <LightRouting state={state} models={models} route={route} checking={checking} recheck={() => void check()} />
 
-      <Section label={t('models_rec')}>
-        <div className="space-y-1.5 px-3 py-2.5" data-spec>
-          <p className="text-[12px]">
-            {browser
-              ? t('models_spec_line', [
-                  memory ? (memory.certain ? `${memory.gb} GB` : `≥ ${memory.gb} GB`) : '?',
-                  browser.cores ? String(browser.cores) : '?',
-                  browser.gpu?.vendor || (browser.webgpu ? 'WebGPU' : t('models_spec_noGpu')),
-                ])
-              : t('models_checking')}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-[11.5px]">{t('models_spec_memory')}</span>
-            <Segmented
-              label={t('models_spec_memory')}
-              value={memoryChoice}
-              onChange={value =>
-                void modelSettingsStore.updateSettings({ localMemoryGb: value ? Number(value) : null })
-              }
-              options={MEMORY_CHOICES.map(value => ({
-                value,
-                label: value ? `${value} GB` : t('models_spec_memoryAuto'),
-              }))}
-            />
-          </div>
-          <p className="text-muted-foreground text-[11px]">{t('models_spec_limits')}</p>
-        </div>
+      <CloudFallback state={state} models={models} />
 
-        {report && !report.running && (
-          <div className="px-3 py-2.5" data-ollama="off">
-            <p className="text-[12px]">{t('models_rec_ollamaOff')}</p>
-            <CopyCommand command="OLLAMA_ORIGINS='chrome-extension://*' ollama serve" />
+      <div id={RECOMMENDATIONS_ID} className="scroll-mt-12">
+        <Section label={t('models_rec')}>
+          <div className="space-y-1.5 px-3 py-2.5" data-spec>
+            <p className="text-[12px]">
+              {browser
+                ? t('models_spec_line', [
+                    memory ? (memory.certain ? `${memory.gb} GB` : `≥ ${memory.gb} GB`) : '?',
+                    browser.cores ? String(browser.cores) : '?',
+                    browser.gpu?.vendor || (browser.webgpu ? 'WebGPU' : t('models_spec_noGpu')),
+                  ])
+                : t('models_checking')}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-[11.5px]">{t('models_spec_memory')}</span>
+              <Segmented
+                label={t('models_spec_memory')}
+                value={memoryChoice}
+                onChange={value =>
+                  void modelSettingsStore.updateSettings({ localMemoryGb: value ? Number(value) : null })
+                }
+                options={MEMORY_CHOICES.map(value => ({
+                  value,
+                  label: value ? `${value} GB` : t('models_spec_memoryAuto'),
+                }))}
+              />
+            </div>
+            <p className="text-muted-foreground text-[11px]">{t('models_spec_limits')}</p>
           </div>
-        )}
 
-        <ul aria-label={t('models_rec')} className="divide-border/60 divide-y">
-          {recommendations.map(rec => {
-            const installedAs = installed.find(name => baseModelName(name) === baseModelName(rec.name)) ?? rec.name;
-            const key = `rec:${rec.name}`;
-            const result = test.results[key];
-            return (
-              <li key={rec.name} className="px-3 py-2.5" data-recommendation={rec.name} data-installed={rec.installed}>
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">{rec.name}</span>
-                  <Badge variant="outline">{t(KIND_LABEL[rec.kind].name)}</Badge>
-                  <span className="text-muted-foreground font-mono text-[11px]">
-                    {t('models_rec_size', [String(rec.sizeGb)])}
-                  </span>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-[11.5px]">{t(KIND_LABEL[rec.kind].why)}</p>
-                {rec.installed ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="default">{t('models_rec_installed')}</Badge>
-                    <span className="flex-1" />
-                    {ollamaId && rec.kind !== 'embed' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={test.busy[key]}
-                        onClick={() => void test.run(ollamaId, installedAs, key)}>
-                        {test.busy[key] ? t('models_checking') : t('models_test')}
-                      </Button>
-                    )}
+          {report && !report.running && (
+            <div className="px-3 py-2.5" data-ollama="off">
+              <p className="text-[12px]">{t('models_rec_ollamaOff')}</p>
+              <CopyCommand command="OLLAMA_ORIGINS='chrome-extension://*' ollama serve" />
+            </div>
+          )}
+
+          <ul aria-label={t('models_rec')} className="divide-border/60 divide-y">
+            {recommendations.map(rec => {
+              const installedAs = installed.find(name => baseModelName(name) === baseModelName(rec.name)) ?? rec.name;
+              const key = `rec:${rec.name}`;
+              const result = test.results[key];
+              return (
+                <li
+                  key={rec.name}
+                  className="px-3 py-2.5"
+                  data-recommendation={rec.name}
+                  data-installed={rec.installed}>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">{rec.name}</span>
+                    <Badge variant="outline">{t(KIND_LABEL[rec.kind].name)}</Badge>
+                    <span className="text-muted-foreground font-mono text-[11px]">
+                      {t('models_rec_size', [String(rec.sizeGb)])}
+                    </span>
                   </div>
-                ) : (
-                  <CopyCommand command={rec.command} />
-                )}
-                {result && (
-                  <p
-                    role={result.ok ? 'status' : 'alert'}
-                    className={cn('mt-0.5 text-[11px]', result.ok ? 'text-muted-foreground' : 'text-destructive')}>
-                    {result.ok ? t('models_test_ok', [String(result.ms)]) : result.error}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {report?.running && report.loaded.length > 0 && (
-          <p className="text-muted-foreground px-3 py-2 text-[11px]">
-            {t('models_rec_loaded', [report.loaded.map(model => model.name).join(', ')])}
-          </p>
-        )}
-      </Section>
+                  <p className="text-muted-foreground mt-0.5 text-[11.5px]">{t(KIND_LABEL[rec.kind].why)}</p>
+                  {rec.installed ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant="default">{t('models_rec_installed')}</Badge>
+                      <span className="flex-1" />
+                      {ollamaId && rec.kind !== 'embed' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={test.busy[key]}
+                          onClick={() => void test.run(ollamaId, installedAs, key)}>
+                          {test.busy[key] ? t('models_checking') : t('models_test')}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <CopyCommand command={rec.command} />
+                  )}
+                  {result && (
+                    <p
+                      role={result.ok ? 'status' : 'alert'}
+                      className={cn('mt-0.5 text-[11px]', result.ok ? 'text-muted-foreground' : 'text-destructive')}>
+                      {result.ok ? t('models_test_ok', [String(result.ms)]) : result.error}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {report?.running && report.loaded.length > 0 && (
+            <p className="text-muted-foreground px-3 py-2 text-[11px]">
+              {t('models_rec_loaded', [report.loaded.map(model => model.name).join(', ')])}
+            </p>
+          )}
+        </Section>
+      </div>
     </>
   );
 }

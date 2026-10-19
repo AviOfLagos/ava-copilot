@@ -19,6 +19,7 @@ import {
   extractJsonFromModelOutput,
   removeThinkTags,
 } from '@src/background/agent/messages/utils';
+import { fallbackReason } from './errors';
 import type { ChatModel } from './types';
 
 export { jsonSchema, zodSchema } from 'ai';
@@ -142,6 +143,46 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * Runs a model call, and when a cloud model's call fails in a way a local model can get round (see
+ * `fallbackReason`), runs the same call once more on the chat model's fallback. After that first switch the
+ * fallback answers every later call of this chat model. The cloud's own error is thrown when there is no
+ * fallback, it is not running, or it fails too. Cancelled calls are never repeated.
+ */
+export async function callWithFallback<R>(
+  chatModel: ChatModel,
+  abortSignal: AbortSignal | undefined,
+  run: (model: ChatModel) => Promise<R>,
+): Promise<R> {
+  const fallback = chatModel.fallback;
+  if (fallback?.active) return run(fallback.active);
+  try {
+    return await run(chatModel);
+  } catch (error) {
+    const reason = fallback && !abortSignal?.aborted ? fallbackReason(error) : null;
+    if (!fallback || !reason) throw error;
+    const label = `${chatModel.provider}/${chatModel.modelName}`;
+    const local = await fallback.resolve().catch(resolveError => {
+      logger.warning(`[${label}] no local model to fall back on`, describeError(resolveError));
+      return null;
+    });
+    if (!local) throw error;
+    logger.warning(`[${label}] failed (${reason}), trying ${local.provider}/${local.modelName}`);
+    let result: R;
+    try {
+      result = await run(local);
+    } catch (localError) {
+      logger.warning(`[${label}] the local model failed too`, describeError(localError));
+      throw error;
+    }
+    if (!fallback.active) {
+      fallback.active = local;
+      fallback.onSwitch(local, reason);
+    }
+    return result;
+  }
+}
+
 export interface GenerateStructuredArgs<T> {
   chatModel: ChatModel;
   messages: ModelMessage[];
@@ -155,10 +196,14 @@ export interface GenerateStructuredArgs<T> {
 }
 
 /**
- * Generate an output matching `schema`, using the model's structured mode.
- * Throws `ResponseParseError` when no valid output can be recovered.
+ * Generate an output matching `schema`, using the model's structured mode, on the local fallback when a cloud
+ * model fails (`callWithFallback`). Throws `ResponseParseError` when no valid output can be recovered.
  */
 export async function generateStructured<T>(args: GenerateStructuredArgs<T>): Promise<{ output: T; rawText?: string }> {
+  return callWithFallback(args.chatModel, args.abortSignal, chatModel => generateStructuredOn({ ...args, chatModel }));
+}
+
+async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise<{ output: T; rawText?: string }> {
   const { chatModel, schema, name, toolName = name, abortSignal } = args;
   abortSignal?.throwIfAborted();
   // Earlier outputs are never replayed as tool calls, which providers validate (e.g. Claude's thinking blocks and
@@ -187,7 +232,7 @@ export async function generateStructured<T>(args: GenerateStructuredArgs<T>): Pr
           // The chat model lives for the whole task, so later calls go straight to tool mode
           logger.warning(`[${label}] structured output is unavailable, falling back to tool mode`);
           chatModel.structuredMode = 'tool';
-          return generateStructured(args);
+          return generateStructuredOn(args);
         }
         if (!NoObjectGeneratedError.isInstance(error)) throw error;
         // e.g. JSON wrapped in code fences or <think> tags
@@ -308,7 +353,7 @@ export async function generateStructured<T>(args: GenerateStructuredArgs<T>): Pr
 }
 
 /**
- * Generate plain text, e.g. for speech-to-text.
+ * Generate plain text, e.g. for speech-to-text, on the local fallback when a cloud model fails.
  */
 export async function generatePlainText(args: {
   chatModel: ChatModel;
@@ -316,6 +361,8 @@ export async function generatePlainText(args: {
   abortSignal?: AbortSignal;
 }): Promise<string> {
   args.abortSignal?.throwIfAborted();
-  const result = await generateText(buildCallArgs(args.chatModel, args.messages, args.abortSignal));
-  return result.text;
+  return callWithFallback(args.chatModel, args.abortSignal, async chatModel => {
+    const result = await generateText(buildCallArgs(chatModel, args.messages, args.abortSignal));
+    return result.text;
+  });
 }

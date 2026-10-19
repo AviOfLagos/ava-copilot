@@ -8005,5 +8005,53 @@
   },
   "voice_models_error_other": {
     "message": "無法下載語音檔案。請再試一次。"
+  },
+  "models_fallback": {
+    "message": "雲端失敗時"
+  },
+  "models_fallback_enable": {
+    "message": "改用本機模型完成"
+  },
+  "models_fallback_enable_hint": {
+    "message": "雲端模型的金鑰、額度、速率限制或服務失敗時，同一步驟會在這台電腦上的模型重新執行。無論如何，沒有你的點擊都不會送出任何內容。"
+  },
+  "models_fallback_model": {
+    "message": "本機模型"
+  },
+  "models_fallback_auto": {
+    "message": "自動（$1）"
+  },
+  "models_fallback_autoNone": {
+    "message": "自動"
+  },
+  "models_fallback_using": {
+    "message": "失敗的雲端呼叫會改由 $1 完成。"
+  },
+  "models_fallback_none": {
+    "message": "尚未找到本機模型。安裝一個，雲端失敗時也能繼續工作。"
+  },
+  "models_fallback_install": {
+    "message": "安裝一個"
+  },
+  "models_fallback_note": {
+    "message": "$1 失敗（$2）。改用這台電腦上的 $3 完成。"
+  },
+  "models_fallback_reason_auth": {
+    "message": "金鑰被拒"
+  },
+  "models_fallback_reason_quota": {
+    "message": "額度用完"
+  },
+  "models_fallback_reason_rateLimit": {
+    "message": "速率限制"
+  },
+  "models_fallback_reason_unavailable": {
+    "message": "服務中斷"
+  },
+  "models_fallback_reason_network": {
+    "message": "無法連線"
+  },
+  "models_fallback_reason_timeout": {
+    "message": "太慢"
   }
 }

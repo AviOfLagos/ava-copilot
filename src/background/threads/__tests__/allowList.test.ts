@@ -13,6 +13,8 @@ vi.mock('../../agent/executor', () => ({ Executor: class {} }));
 vi.mock('../../browser/context', () => ({ default: class {} }));
 vi.mock('../../llm/providers', () => ({ createChatModel: () => ({}) }));
 vi.mock('../../usage/meter', () => ({ meterModel: (model: unknown) => model }));
+vi.mock('../../models/fallback', () => ({ withCloudFallback: (model: unknown) => model }));
+vi.mock('../../models/roles', () => ({ resolveRole: async () => null }));
 
 const { allowListFor } = await import('../factory');
 
