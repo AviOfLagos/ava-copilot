@@ -251,6 +251,12 @@ export async function startMockLlm(scenarios) {
           res.writeHead(503, { 'Content-Type': 'application/json', 'Retry-After': '1' });
           return res.end(JSON.stringify({ error: { message: 'scripted outage' } }));
         }
+        // The final note fails outright (a request the model refuses), so the meeting ends up failed
+        if (meetingKind === 'note' && meeting.failNotes > 0) {
+          meeting.failNotes -= 1;
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: { message: 'scripted note failure' } }));
+        }
         const reply = meetingReply(meetingKind, request);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(
@@ -347,7 +353,7 @@ export async function startMockLlm(scenarios) {
   };
 
   // What the meeting tests see: every audio clip received, and how many lines were handed out
-  const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0 };
+  const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0, failNotes: 0 };
   const meetingReply = (kind, request) => {
     if (kind === 'transcribe') {
       const audio = request.messages

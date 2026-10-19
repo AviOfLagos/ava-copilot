@@ -163,6 +163,12 @@ const SidePanel = () => {
   const activeCount = useLive(() => db.threads.where('status').anyOf('running', 'waiting_confirm').count(), [], 0);
   const recording = useLive(() => db.meetings.where('status').equals('recording').first(), [], undefined);
   const recordingFor = useElapsed(recording);
+  // Whether the meeting has taken anything down yet: until it has, the header does not pulse "recording"
+  const recordingWords = useLive(
+    () => (recording ? db.segments.where('meetingId').equals(recording.id).count() : Promise.resolve(0)),
+    [recording?.id],
+    0,
+  );
 
   const isBusy = thread?.status === 'running' || thread?.status === 'waiting_confirm';
   // After a browsing task that worked, offer once to save what it learned as a skill
@@ -804,6 +810,7 @@ const SidePanel = () => {
         onMenu={() => setDrawerOpen(!drawerOpen)}
         busy={activeCount > 0 || voiceStatus !== 'off'}
         recordingLabel={recording ? clock(recordingFor) : null}
+        recordingIdle={recordingWords === 0}
         onNotes={() => void handleTakeNotes()}
         voiceStatus={voiceStatus}
         // A hidden conversation comes back to the front; otherwise the button starts or ends it
@@ -836,7 +843,12 @@ const SidePanel = () => {
         </div>
       )}
 
-      <AutoNotesCard recording={recording} api={panelApi} onOpen={id => openMeeting(id)} />
+      <AutoNotesCard
+        recording={recording}
+        api={panelApi}
+        onOpen={id => openMeeting(id)}
+        viewing={view === 'meeting' ? meetingId : null}
+      />
       <VoiceModelsCard />
 
       {view === 'consent' && consent && (

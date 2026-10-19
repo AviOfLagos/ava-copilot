@@ -72,11 +72,25 @@ command('meeting_skip_call', z.object({ meetingId }), async input => {
   await services().meetings.stop(input.meetingId);
 });
 
-// Records the call's audio, on a tab the user already invoked the extension on
+// Records the call's audio, on a tab the user already invoked the extension on. Chrome hands the audio
+// over only after a click on the toolbar icon (or the shortcut) on that tab, which a button in the panel
+// cannot stand in for: the call tab comes to the front so that click is one move away.
 command('meeting_add_audio', z.object({ meetingId }), async input => {
   const meeting = await meetingStore.get(input.meetingId);
   if (meeting?.tabId == null) throw new Error(t('meeting_noTab'));
-  if (!(await addAudioOnInvoke(services().meetings, meeting.tabId))) throw new Error(t('meeting_needsInvoke'));
+  if (await addAudioOnInvoke(services().meetings, meeting.tabId)) return;
+  const tab = await chrome.tabs.update(meeting.tabId, { active: true }).catch(() => undefined);
+  if (tab?.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
+  throw new Error(t('meeting_needsInvokeAudio'));
 });
 
 chrome.notifications.onClicked.addListener(id => void onMeetingNotificationClicked(id));
+
+// The call page saw the user leave: notes end now, not at the next check
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message?.type !== 'meeting_call_left' || typeof message.meetingId !== 'string') return;
+  if (sender.id !== chrome.runtime.id) return;
+  void services()
+    .meetings.onCallLeft(message.meetingId, sender.tab?.id)
+    .catch(error => logger.warning('Could not end notes after the call', error));
+});

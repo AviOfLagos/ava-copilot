@@ -2033,6 +2033,90 @@ Install downloads (mock catalog) and only then saves, a recommended model pulled
 progress. Moved UI fixed in `models`, `voice-engines`, `personalities`, `identity`, `companion`, `inbox`, `history`,
 `kb`, `ava-hub`, `voice-download` (skips in a build that packs the models).
 
+### Google Meet notes, made reliable (2026-10-19)
+
+Owner's report: "Sometimes the recorder works if I click to record. The meeting card shows the meeting is recording,
+but it's not actually working." The card read "Taking notes on this call · From the call's captions only", and
+"Record audio" answered "Click the Nex Copilot icon… then press Take notes again".
+
+Root causes, from the code:
+
+- **"Recording" with no source.** Auto-notes start on captions (the tab was never invoked). The captions button was
+  pressed only if its English name was "Turn on captions", the result was never checked, and the reader looked for
+  `div[jsname="tgaKEf"]` or any `[jsname]` inside `[aria-label="Captions"]` (an old class name, and a selector that
+  also matches the speaker's name and every wrapper). Whatever happened, the card, the meeting view and the header
+  said "Taking notes" / "Recording · m:ss". The alert came only after 90 s and only for captions-only meetings.
+- **Non-English Meet.** Being "in the call" was judged by a Leave button named in English. In any other UI language
+  notes never started on their own, and leaving was never noticed.
+- **Audio with no Gemini key.** The transcriber fell from the speech-to-text setting to Gemini Flash to the agent's
+  chat model, which usually cannot take audio: every chunk failed or retried forever, the transcript stayed empty,
+  and nothing alerted (the check skipped audio meetings). The local recogniser (Moonshine/Whisper/Vosk, on by default
+  for voice since 10-17) was never used for meetings.
+- **Lost mid-call.** The caption reader was injected once; a page reload or a lost worker left nothing reading. The
+  tab's audio ending (a reload, a device change) ended the whole meeting even though the user was still in the call.
+- **Record audio could not work.** Chrome hands over a tab's audio only after the user invokes the extension on that
+  tab (toolbar icon or Alt+Shift+M); a button in the panel is not that, and the error told the user to "press Take
+  notes again", which does nothing for a running meeting.
+- **Silent summary failure.** A failed note set `status: 'failed'` and nothing else: no notification, no Inbox item,
+  and with the panel closed the user never knew.
+
+Now:
+
+- **One place for Meet's page** (`meetings/captions.ts` `CALL_DOM`): accessible names in the shipped languages and
+  more (en, pt, es, fr, de, it, zh, ja, ko), Material Symbols icon ligatures that do not change with the language
+  (`closed_caption_off`, `closed_caption`, `call_end`), Meet's "Captions" live region, then class names only as a
+  last resort; old selectors and the Zoom/Teams lines still work. Page functions take it as an argument (they run
+  from source text).
+- **Captions are turned on and checked**: `ensureCaptionsOn` presses the captions button (by name or icon, else
+  Meet's `c` shortcut), waits up to 4 s for them to show, and stores `captionsOn`; if they cannot be turned on the
+  meeting carries `captions_off`. Every 30 s `keepCapturing` reads the page again: puts the reader back after a
+  reload, presses the button again if captions went off, records what it saw.
+- **A reader that keeps up with Meet** (`watchCaptions`): one line per speaker turn (name and words), sent once the
+  turn stops changing; a long turn is sent in parts; Meet dropping the oldest words or revising the last ones
+  continues after the words already sent (`captionDelta`, the same code in the page, checked by a test); a turn that
+  leaves the screen before it settles still counts.
+- **Never "recording" without a source**: the meeting view says "Waiting for the first captions", "Not taking notes:
+  the call's captions are off", or "Recording · m:ss · no words yet"; the card's title is "Not taking notes yet" /
+  "Waiting for the first words" until words arrive; the header pill is grey and still until then (`status.ts`).
+- **Loud alert, sooner, with the reason** (`JoinFlow.checkCapturing`, default `nothingCapturedSeconds` 90 → 45):
+  captions not confirmed on → alert after 45 s; captions on but none → after 2 min (nobody may have spoken); audio
+  with no chunk at all → 45 s; audio whose chunks fail → 45 s. Notification that stays, Inbox alert, Ava. The
+  warning clears when words arrive.
+- **Audio is written down without a key**: `transcriptionRoute` (`meetings/capture.ts`): speech-to-text setting →
+  Gemini Flash (with a key) → the installed local recogniser through the offscreen `stt_transcribe` → the agent's
+  model last.
+- **Audio lost mid-call** → the same meeting goes on from the captions (`audio_lost` warning and alert, "click the
+  icon to record again"); only a closed tab or a tab off the call ends it.
+- **Record audio** that cannot work brings the call tab to the front and says exactly where to click
+  (`meeting_needsInvokeAudio`); the toolbar click or Alt+Shift+M on the tab upgrades the same meeting
+  (`MeetingManager.addAudio`), never a second one.
+- **Leaving ends the notes in seconds**: the page itself reports `meeting_call_left` when Meet shows "You left the
+  meeting" or the Leave button has been gone ~12 s; the background reads the page once more and stops. The 30 s check
+  stays as the backstop (`leftCall`: the left screen at once, else three misses). Notes stop and the summary is written
+  in the background, with the panel closed.
+- **Summary failure is loud and retryable**: `note_failed` warning, a notification that stays, an Inbox alert; the
+  panel shows a card with Retry wherever the user is (for a day), and the meeting view has Retry; a later success
+  clears the warning and marks the alert done. The model call already falls back to the local model
+  (`callWithFallback`).
+
+Tests: unit `meetings/__tests__/capture.test.ts` (14: transcription route incl. local with no Gemini key, local
+clip placement, audio-ended decision, keep plan, leave verdicts), `captions.test.ts` (9: caption delta incl.
+dropped/revised words, the page copy is identical, labels in en/pt/zh, region name exact, left screen),
+`join-flow.test.ts` (+2, reasons), `side-panel/meetings/__tests__/status.test.ts` (2). Full suite 1677 green.
+E2E Brave `e2e/meeting.e2e.mjs` 10/10 on a Meet-shaped fixture (toolbar with icon ligatures, captions OFF at start,
+a "Captions" region with growing speaker turns, "You left the meeting" screen): captions off → the extension turns
+them on once → whole turns arrive once each with the speaker; a call with no captions control → "Not taking notes
+yet", never "Taking notes", alert → toolbar click → audio on the same meeting, words arrive, one meeting; leaving
+with the panel closed → summary with action items in under 30 s; a failing summary → Inbox alert, notification,
+panel card → Retry writes it and the alert is done. `voice` 6/6 (call control uses the new page reader).
+
+Needs a real call to confirm (no Google sign-in was used): Meet's current captions region, block and speaker markup;
+that the captions button carries the `closed_caption_off` ligature and an accessible name in the user's language;
+that a synthetic click turns captions on; how long the Leave button can be missing during layout changes; whether a
+Meet reload ends the tab capture (then `audio_lost` takes over). Meet's caption *language* is Meet's own setting and
+is left alone. Users with saved meeting settings keep their old `nothingCapturedSeconds`. Design for Ava speaking in a
+call: `docs/meet-voice-plan.md` (not built).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

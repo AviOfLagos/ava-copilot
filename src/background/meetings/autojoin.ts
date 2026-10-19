@@ -2,6 +2,10 @@ import { meetingSettingsStore, meetingStore, upcomingEventsStore } from '@extens
 import type { UpcomingEvent } from '@extension/storage';
 import { createLogger } from '../log';
 import { deliverMeetingEvent } from './alerts';
+import { isCallUrl } from './call-url';
+import { CALL_DOM, readCallState } from './captions';
+import type { CallState } from './captions';
+import { leftCall } from './capture';
 import { JoinFlow } from './join-flow';
 import type { MeetingManager } from './manager';
 import { platformOf } from './segments';
@@ -16,20 +20,7 @@ const LEFT_KEY = 'autojoin-left-checks';
 // A calendar event this close to now, without a matching link, is taken to be the call
 const NEAR_MS = 15 * 60 * 1000;
 
-/** Whether an address is a call itself, not a lobby or a home page. */
-export function isCallUrl(url: string): boolean {
-  try {
-    const { hostname, pathname } = new URL(url);
-    if (hostname === 'meet.google.com') return /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}/i.test(pathname);
-    if (hostname === 'zoom.us' || hostname.endsWith('.zoom.us')) return /^\/wc\/(join\/)?\d+/.test(pathname);
-    if (hostname === 'teams.microsoft.com' || hostname === 'teams.live.com') {
-      return /meetup-join|light-meetings|\/meet\//.test(pathname + url);
-    }
-  } catch {
-    // Not an address
-  }
-  return false;
-}
+export { isCallUrl };
 
 /** The calendar event a call belongs to: the one with its link, else one starting about now. */
 export function matchEvent(url: string, events: UpcomingEvent[], now = Date.now()): UpcomingEvent | null {
@@ -54,24 +45,6 @@ export function matchEvent(url: string, events: UpcomingEvent[], now = Date.now(
   return near.length === 1 ? near[0] : null;
 }
 
-/** Runs in the meeting page: whether the user is in the call, judged by its Leave button. */
-export const inCall = (): boolean => {
-  const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
-  return (
-    !!document.querySelector('#hangup-button') ||
-    buttons.some(button => /leave (call|meeting)|end call|hang up/i.test(button.getAttribute('aria-label') || ''))
-  );
-};
-
-/** Runs in a Google Meet page: turns its captions on, which notes are taken from. */
-export const turnOnMeetCaptions = (): boolean => {
-  const buttons = Array.from(document.querySelectorAll('button, [role="button"]')) as HTMLElement[];
-  if (buttons.some(button => /turn off captions/i.test(button.getAttribute('aria-label') || ''))) return true;
-  const on = buttons.find(button => /turn on captions/i.test(button.getAttribute('aria-label') || ''));
-  on?.click();
-  return !!on;
-};
-
 async function sessionList(key: string): Promise<number[]> {
   return (((await chrome.storage.session.get(key))[key] as number[] | undefined) ?? []).slice(-50);
 }
@@ -88,6 +61,13 @@ export function joinFlowFor(meetings: MeetingManager): JoinFlow {
     start: tabId => meetings.start({ tabId, auto: true }),
     meeting: meetingId => meetingStore.get(meetingId),
     segmentCount: async meetingId => (await meetingStore.segments(meetingId)).length,
+    chunkStats: async meetingId => {
+      const chunks = await meetingStore.chunks(meetingId);
+      return {
+        total: chunks.length,
+        troubled: chunks.filter(chunk => chunk.status === 'failed' || chunk.attempts > 0).length,
+      };
+    },
     setTopic: (meetingId, topic, source) => meetings.setTopic(meetingId, topic, source),
     addWarning: (meetingId, warning) => meetingStore.addWarning(meetingId, warning),
     calendarEvent: async url => matchEvent(url, (await upcomingEventsStore.get()).events ?? []),
@@ -154,46 +134,49 @@ export class AutoJoin {
         await this.forget(tabId);
         continue;
       }
-      const [result] = await chrome.scripting.executeScript({ target: { tabId }, func: inCall }).catch(() => []);
-      if (result?.result !== true) continue;
+      const [result] = await chrome.scripting
+        .executeScript({ target: { tabId }, func: readCallState, args: [CALL_DOM, null] })
+        .catch(() => []);
+      if ((result?.result as CallState | undefined)?.inCall !== true) continue;
       await this.join(tabId, tab.url);
       return;
     }
   }
 
   /**
-   * The meeting being recorded: says so when nothing is being caught, and ends it once the user has
-   * left the call (the tab moved off it, or its Leave button has been gone for three checks in a row).
+   * The meeting being recorded: keeps its captions on and its page watched, says so when nothing is
+   * being caught, and ends it once the user has left the call (the tab moved off it, Meet shows its
+   * "you left" screen, or the Leave button has been gone for three checks in a row). The page also says
+   * at once when the user leaves (`meeting_call_left`); this check is for when that message was lost.
    */
   private async watchRecording(graceSeconds: number): Promise<void> {
     const recording = (await meetingStore.active()).find(meeting => meeting.status === 'recording');
     if (!recording) return;
-    await this.flow.checkCapturing(recording.id, graceSeconds);
-    if (recording.tabId === null || !isCallUrl(recording.url)) return;
+    if (recording.tabId === null || !isCallUrl(recording.url)) {
+      await this.flow.checkCapturing(recording.id, graceSeconds);
+      return;
+    }
     const tab = await chrome.tabs.get(recording.tabId).catch(() => undefined);
     if (!tab) return; // A closed tab ends the meeting on its own
     let left = !tab.url || !isCallUrl(tab.url);
     if (!left) {
-      const [result] = await chrome.scripting
-        .executeScript({ target: { tabId: recording.tabId }, func: inCall })
-        .catch(() => []);
+      const state = await this.meetings.keepCapturing(recording.id);
       const misses =
         ((await chrome.storage.session.get(LEFT_KEY))[LEFT_KEY] as Record<string, number> | undefined) ?? {};
-      const count = result?.result === false ? (misses[recording.id] ?? 0) + 1 : 0;
-      await chrome.storage.session.set({ [LEFT_KEY]: { [recording.id]: count } });
-      left = count >= 3;
+      const verdict = leftCall(state, misses[recording.id] ?? 0);
+      await chrome.storage.session.set({ [LEFT_KEY]: { [recording.id]: verdict.misses } });
+      left = verdict.left;
     }
     if (left) {
       logger.info('The user left the call; ending its notes');
       await this.meetings.stop(recording.id);
+      return;
     }
+    await this.flow.checkCapturing(recording.id, graceSeconds);
   }
 
   private async join(tabId: number, url: string): Promise<void> {
     try {
-      if (new URL(url).hostname === 'meet.google.com') {
-        await chrome.scripting.executeScript({ target: { tabId }, func: turnOnMeetCaptions }).catch(() => []);
-      }
       // Tried once per call tab: a failure is said loudly, not retried every half minute
       await this.forget(tabId);
       const result = await this.flow.joined(tabId, url);

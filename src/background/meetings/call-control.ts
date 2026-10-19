@@ -1,6 +1,7 @@
 import { meetingStore } from '@extension/storage';
 import type { MeetingNote, MeetingRecord } from '@extension/storage';
-import { inCall } from './autojoin';
+import { CALL_DOM, readCallState } from './captions';
+import type { CallState } from './captions';
 import type { MeetingManager } from './manager';
 
 export type CallMode = 'leave' | 'end';
@@ -123,8 +124,10 @@ async function callTab(recording: MeetingRecord | undefined): Promise<number | n
   }
   for (const tab of await chrome.tabs.query({ url: 'https://meet.google.com/*' })) {
     if (tab.id === undefined) continue;
-    const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: inCall }).catch(() => []);
-    if (result?.result === true) return tab.id;
+    const [result] = await chrome.scripting
+      .executeScript({ target: { tabId: tab.id }, func: readCallState, args: [CALL_DOM, null] })
+      .catch(() => []);
+    if ((result?.result as CallState | undefined)?.inCall === true) return tab.id;
   }
   return null;
 }

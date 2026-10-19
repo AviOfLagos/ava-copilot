@@ -36,7 +36,14 @@ function meetingRecord(changes: Partial<MeetingRecord> = {}): MeetingRecord {
   };
 }
 
-function setup(options: { start?: () => Promise<string>; event?: UpcomingEvent | null; segments?: number } = {}) {
+function setup(
+  options: {
+    start?: () => Promise<string>;
+    event?: UpcomingEvent | null;
+    segments?: number;
+    chunks?: { total: number; troubled: number };
+  } = {},
+) {
   const meetings = new Map<string, MeetingRecord>();
   const events: MeetingEvent[] = [];
   let now = NOW;
@@ -50,6 +57,7 @@ function setup(options: { start?: () => Promise<string>; event?: UpcomingEvent |
     ),
     meeting: async id => meetings.get(id),
     segmentCount: async () => options.segments ?? 0,
+    chunkStats: async () => options.chunks ?? { total: 1, troubled: 0 },
     setTopic: vi.fn(async (id: string, topic: string, source: 'user' | 'calendar') => {
       const meeting = meetings.get(id);
       if (meeting) meetings.set(id, { ...meeting, topic, topicSource: source });
@@ -134,13 +142,63 @@ describe('JoinFlow', () => {
   it('alerts once when captions-only notes catch nothing in time', async () => {
     const { flow, events, meetings, later } = setup();
     await flow.joined(7, URL);
-    expect(await flow.checkCapturing('m1', 90)).toBe(false);
-    later(91_000);
-    expect(await flow.checkCapturing('m1', 90)).toBe(true);
+    expect(await flow.checkCapturing('m1', 45)).toBe(false);
+    later(46_000);
+    expect(await flow.checkCapturing('m1', 45)).toBe(true);
     expect(meetings.get('m1')?.warnings).toEqual(['nothing_captured']);
-    expect(events.at(-1)).toEqual({ kind: 'nothing_captured', meetingId: 'm1', platform: 'Google Meet' });
+    expect(events.at(-1)).toEqual({
+      kind: 'nothing_captured',
+      meetingId: 'm1',
+      platform: 'Google Meet',
+      reason: 'captions_off',
+    });
     // Once is enough
-    expect(await flow.checkCapturing('m1', 90)).toBe(false);
+    expect(await flow.checkCapturing('m1', 45)).toBe(false);
+  });
+
+  it('gives a call whose captions are on longer, since nobody may have spoken yet', async () => {
+    const { flow, events, meetings, later } = setup({
+      start: async () => {
+        meetings.set('m1', meetingRecord({ captionsOn: true }));
+        return 'm1';
+      },
+    });
+    await flow.joined(7, URL);
+    later(60_000);
+    expect(await flow.checkCapturing('m1', 45)).toBe(false);
+    later(61_000);
+    expect(await flow.checkCapturing('m1', 45)).toBe(true);
+    expect(events.at(-1)).toMatchObject({ kind: 'nothing_captured', reason: 'no_captions' });
+  });
+
+  it('alerts on audio only when nothing is recorded or nothing can be written down', async () => {
+    const audioMeeting = (chunks: { total: number; troubled: number }) => {
+      const flow = setup({
+        chunks,
+        start: async () => {
+          flow.meetings.set('m1', meetingRecord({ source: 'audio' }));
+          return 'm1';
+        },
+      });
+      return flow;
+    };
+    const silent = audioMeeting({ total: 0, troubled: 0 });
+    await silent.flow.joined(7, URL);
+    silent.later(50_000);
+    expect(await silent.flow.checkCapturing('m1', 45)).toBe(true);
+    expect(silent.events.at(-1)).toMatchObject({ reason: 'no_audio' });
+
+    const failing = audioMeeting({ total: 4, troubled: 2 });
+    await failing.flow.joined(7, URL);
+    failing.later(50_000);
+    expect(await failing.flow.checkCapturing('m1', 45)).toBe(true);
+    expect(failing.events.at(-1)).toMatchObject({ reason: 'transcription' });
+
+    // Recorded and waiting its turn to be written down: not an alarm
+    const quiet = audioMeeting({ total: 3, troubled: 0 });
+    await quiet.flow.joined(7, URL);
+    quiet.later(50_000);
+    expect(await quiet.flow.checkCapturing('m1', 45)).toBe(false);
   });
 
   it('stays quiet when captions are coming in, or the audio is recorded', async () => {

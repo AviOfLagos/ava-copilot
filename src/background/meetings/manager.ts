@@ -1,8 +1,11 @@
 import { APICallError } from 'ai';
+import { toAppError } from '@extension/shared';
 import { t } from '@extension/i18n';
 import {
   llmProviderStore,
   localDay,
+  localSttChoice,
+  voiceEngineSettingsStore,
   meetingSettingsStore,
   meetingStore,
   speechToTextModelStore,
@@ -32,7 +35,22 @@ import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE } from '../usage/pricing';
 import { resolveModels } from '../threads/factory';
 import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen';
-import { CAPTION_SELECTORS, pageHasCaptions, stopWatchingCaptions, watchCaptions } from './captions';
+import {
+  CALL_DOM,
+  CAPTION_SELECTORS,
+  pageHasCaptions,
+  readCallState,
+  stopWatchingCaptions,
+  turnOnCaptions,
+  watchCaptions,
+} from './captions';
+import type { CallState } from './captions';
+import { afterAudioEnded, keepPlan, localClip, transcriptionRoute } from './capture';
+import { deliverMeetingEvent } from './alerts';
+import type { MeetingEvent } from './join-flow';
+import { isCallUrl } from './call-url';
+import { installedVoiceModels } from '../voice/engines/models';
+import { toVoiceOffscreen } from '../voice/engines/offscreen';
 import {
   BLOCK_SUMMARY_INSTRUCTIONS,
   blocksOf,
@@ -50,13 +68,17 @@ import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, trans
 
 const logger = createLogger('Meetings');
 
-// Gemini Flash transcribes when no speech-to-text model is set
-const DEFAULT_TRANSCRIBER = 'gemini-3.8-flash';
 // A chunk that failed this many times for a reason other than its audio waits for a retry trigger
 const RETRY_DELAY_MS = 30_000;
 const MAX_QUOTA_USE = 0.8;
 // Roughly how fast captions are spoken, to place a caption line on the timeline
 const CHARS_PER_SECOND = 15;
+// How long to wait for Meet's captions to show after pressing its captions button
+const CAPTIONS_ON_WAIT_MS = 4000;
+
+// Who writes a chunk down: a model that takes audio, or the recogniser on this computer
+type Transcriber =
+  { kind: 'model'; model: ChatModel } | { kind: 'local'; stt: NonNullable<ReturnType<typeof localSttChoice>> };
 
 const isAudioRejected = (error: unknown) =>
   APICallError.isInstance(error) && error.statusCode !== undefined && [400, 413, 415, 422].includes(error.statusCode);
@@ -84,7 +106,14 @@ export class MeetingManager {
   constructor(
     private readonly meetings: MeetingStore = meetingStore,
     private readonly threads: ThreadStore = threadStore,
+    // Where the user hears about a meeting going wrong (notification, Inbox, Ava)
+    private readonly emit: (event: MeetingEvent) => Promise<void> = deliverMeetingEvent,
   ) {}
+
+  private async tell(event: MeetingEvent): Promise<void> {
+    // Telling the user must never stop the notes themselves
+    await this.emit(event).catch(error => logger.warning('Could not tell the user', error));
+  }
 
   /**
    * Starts notes on a tab: the tab's own, or the active tab of the window the user is in.
@@ -138,6 +167,8 @@ export class MeetingManager {
     try {
       if (streamId) {
         await this.startRecorder(meeting.id, streamId, withMic, settings, 0);
+        // The call is watched too, so leaving it ends the notes at once
+        if (isCallUrl(tab.url ?? '')) await this.watchPage(tab.id, meeting.id, false).catch(() => {});
       } else {
         await this.startCaptions(tab.id, meeting.id);
       }
@@ -205,9 +236,11 @@ export class MeetingManager {
     }
     const settings = await meetingSettingsStore.getSettings();
     await this.startRecorder(meeting.id, streamId, meeting.withMic, settings, (Date.now() - meeting.startedAt) / 1000);
-    await chrome.scripting.executeScript({ target: { tabId }, func: stopWatchingCaptions }).catch(() => {});
+    // Captions stop being read (the audio has the same words); the call is still watched for leaving
+    await this.watchPage(tabId, meeting.id, false).catch(() => {});
     await this.meetings.update(meeting.id, { source: 'audio' });
     await this.meetings.clearWarning(meeting.id, 'nothing_captured');
+    await this.meetings.clearWarning(meeting.id, 'captions_off');
     return meeting.id;
   }
 
@@ -263,7 +296,8 @@ export class MeetingManager {
         logger.warning('The recorder did not stop cleanly', error),
       );
       await closeOffscreenIfIdle();
-    } else if (meeting.tabId !== null) {
+    }
+    if (meeting.tabId !== null) {
       await chrome.scripting
         .executeScript({ target: { tabId: meeting.tabId }, func: stopWatchingCaptions })
         .catch(() => {});
@@ -356,13 +390,89 @@ export class MeetingManager {
         };
       }),
     );
+    if (lines.length > 0) await this.heard(meeting);
     await this.maybeSummarize(meetingId);
   }
 
-  /** The recorded tab closed or stopped playing: the meeting ends with a note. */
+  /** Words arrived: whatever said nothing was being taken down no longer holds. */
+  private async heard(meeting: MeetingRecord): Promise<void> {
+    if (meeting.warnings.includes('nothing_captured')) await this.meetings.clearWarning(meeting.id, 'nothing_captured');
+    if (meeting.warnings.includes('captions_off')) await this.meetings.clearWarning(meeting.id, 'captions_off');
+    if (meeting.source === 'captions' && meeting.captionsOn !== true) {
+      await this.meetings.update(meeting.id, { captionsOn: true });
+    }
+  }
+
+  /**
+   * The recorded tab's audio stopped. When the tab is still on the call (Meet reloaded or switched
+   * devices), notes go on from its captions and the user hears how to get the audio back; otherwise the
+   * call is over and the meeting ends with a note.
+   */
   async onSourceEnded(meetingId: string): Promise<void> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.status !== 'recording') return;
+    const tab = meeting.tabId !== null ? await chrome.tabs.get(meeting.tabId).catch(() => undefined) : undefined;
+    if (meeting.source === 'audio' && tab?.id !== undefined && afterAudioEnded(tab, isCallUrl) === 'captions') {
+      try {
+        await this.toOffscreen({ type: 'recorder_stop', meetingId }).catch(() => {});
+        await this.meetings.update(meetingId, { source: 'captions' });
+        await this.startCaptions(tab.id, meetingId);
+        await this.meetings.addWarning(meetingId, 'audio_lost');
+        await this.tell({ kind: 'audio_lost', meetingId, platform: meeting.platform });
+        return;
+      } catch (error) {
+        logger.warning('Could not go on from the captions', error);
+      }
+    }
     await this.meetings.addWarning(meetingId, 'tab_closed');
     await this.stop(meetingId);
+  }
+
+  /**
+   * A periodic look at the call's page while notes run: puts the caption reader or call watcher back
+   * when the page lost it (a reload), turns Meet's captions on again when notes need them, and records
+   * whether captions show.
+   *
+   * @returns what the page showed, or null when it could not be read
+   */
+  async keepCapturing(meetingId: string): Promise<CallState | null> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.status !== 'recording' || meeting.tabId === null) return null;
+    const tabId = meeting.tabId;
+    const state = await this.callState(tabId, meetingId);
+    if (!state) return null;
+    const plan = keepPlan(meeting, state);
+    if (plan.turnOnCaptions) {
+      await this.ensureCaptionsOn(tabId, meetingId);
+    } else if (meeting.source === 'captions' && plan.captionsOn !== (meeting.captionsOn ?? null)) {
+      await this.meetings.update(meetingId, { captionsOn: plan.captionsOn });
+    }
+    if (plan.reinject) {
+      logger.info('Watching the call page again');
+      await this.watchPage(tabId, meetingId, meeting.source === 'captions').catch(() => {});
+    }
+    return state;
+  }
+
+  /**
+   * The call page says the user left. The page is read once more from here, so a page that only looks
+   * like it cannot end notes on its own.
+   */
+  async onCallLeft(meetingId: string, tabId: number | undefined): Promise<boolean> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.status !== 'recording' || meeting.tabId === null || meeting.tabId !== tabId) return false;
+    const state = await this.callState(meeting.tabId, meetingId);
+    if (state && state.inCall) return false;
+    logger.info('The user left the call; ending its notes');
+    await this.stop(meetingId);
+    return true;
+  }
+
+  private async callState(tabId: number, meetingId: string): Promise<CallState | null> {
+    const [found] = await chrome.scripting
+      .executeScript({ target: { tabId }, func: readCallState, args: [CALL_DOM, meetingId] })
+      .catch(() => []);
+    return (found?.result as CallState | undefined) ?? null;
   }
 
   async onTabRemoved(tabId: number): Promise<void> {
@@ -435,11 +545,42 @@ export class MeetingManager {
     return result?.result === true;
   }
 
+  /**
+   * Reads the call's captions into the meeting. On Google Meet it first turns them on (they are off
+   * by default) and checks that they show; when they cannot be turned on, the meeting says so rather
+   * than looking like it records.
+   */
   private async startCaptions(tabId: number, meetingId: string): Promise<void> {
+    const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+    if (platformOf(tab?.url ?? '') === 'Google Meet') await this.ensureCaptionsOn(tabId, meetingId);
+    await this.watchPage(tabId, meetingId, true);
+  }
+
+  /** Presses Meet's captions button when captions are off, waits for them to show, and records the outcome. */
+  private async ensureCaptionsOn(tabId: number, meetingId: string): Promise<boolean | null> {
+    const [pressed] = await chrome.scripting
+      .executeScript({ target: { tabId }, func: turnOnCaptions, args: [CALL_DOM] })
+      .catch(() => []);
+    const until = Date.now() + (pressed?.result === 'on' ? 0 : CAPTIONS_ON_WAIT_MS);
+    let state = await this.callState(tabId, meetingId);
+    while (state?.captionsOn !== true && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      state = await this.callState(tabId, meetingId);
+    }
+    const captionsOn = state?.captionsOn ?? null;
+    await this.meetings.update(meetingId, { captionsOn });
+    if (captionsOn === true) await this.meetings.clearWarning(meetingId, 'captions_off');
+    else await this.meetings.addWarning(meetingId, 'captions_off');
+    logger.info('Meet captions', pressed?.result ?? 'unreadable', captionsOn);
+    return captionsOn;
+  }
+
+  /** Reads the call's captions (or only watches it for leaving) from inside the page. */
+  private async watchPage(tabId: number, meetingId: string, readCaptions: boolean): Promise<void> {
     await chrome.scripting.executeScript({
       target: { tabId },
       func: watchCaptions,
-      args: [meetingId, CAPTION_SELECTORS],
+      args: [meetingId, CALL_DOM, readCaptions],
     });
   }
 
@@ -484,19 +625,30 @@ export class MeetingManager {
       : undefined;
   }
 
-  /** The model that turns audio into text: the speech-to-text setting, or Gemini Flash. */
+  /** The model for the summary and questions: the speech-to-text setting, Gemini Flash, or the agent's model. */
   private async transcriber(scope: UsageScope): Promise<ChatModel> {
     const providers = await llmProviderStore.getAllProviders();
-    const chosen = await speechToTextModelStore.getSpeechToTextModel();
-    if (chosen && providers[chosen.provider]) {
-      return meterModel(createChatModel(providers[chosen.provider], chosen), scope);
+    const route = transcriptionRoute(await speechToTextModelStore.getSpeechToTextModel(), providers, null);
+    if (route.kind === 'model') {
+      return meterModel(createChatModel(providers[route.provider], route), scope);
     }
-    const gemini = Object.entries(providers).find(([id, provider]) => (provider.type ?? id) === 'gemini');
-    if (gemini) {
-      return meterModel(createChatModel(gemini[1], { provider: gemini[0], modelName: DEFAULT_TRANSCRIBER }), scope);
-    }
-    // Any other model has to take audio itself
     return (await resolveModels(null, scope)).navigator;
+  }
+
+  /**
+   * Who writes the audio down: a model that takes audio when one is set up, else the speech-to-text
+   * model on this computer (works with no key), else the agent's model as a last try.
+   */
+  private async audioTranscriber(scope: UsageScope): Promise<Transcriber> {
+    const providers = await llmProviderStore.getAllProviders();
+    const local = await (async () =>
+      localSttChoice(await voiceEngineSettingsStore.getSettings(), await installedVoiceModels()))().catch(() => null);
+    const route = transcriptionRoute(await speechToTextModelStore.getSpeechToTextModel(), providers, local);
+    if (route.kind === 'model') {
+      return { kind: 'model', model: meterModel(createChatModel(providers[route.provider], route), scope) };
+    }
+    if (route.kind === 'local') return { kind: 'local', stt: route.stt };
+    return { kind: 'model', model: (await resolveModels(null, scope)).navigator };
   }
 
   private async overCap(): Promise<boolean> {
@@ -524,9 +676,11 @@ export class MeetingManager {
         return true;
       }
       const settings = await meetingSettingsStore.getSettings();
-      const model = meeting.source === 'audio' ? await this.transcriber(this.scope(meeting)) : null;
+      // A meeting that went on from captions still has the chunks its audio recorded
+      const pending = await this.meetings.pendingChunks(meetingId);
+      const model = pending.length > 0 ? await this.audioTranscriber(this.scope(meeting)) : null;
 
-      for (const chunk of await this.meetings.pendingChunks(meetingId)) {
+      for (const chunk of pending) {
         if (await this.overCap()) {
           // The audio waits in the queue until the cap is raised
           await this.meetings.addWarning(meetingId, 'cap');
@@ -553,7 +707,12 @@ export class MeetingManager {
    *
    * @returns false when the chunk has to be tried again later
    */
-  private async transcribe(model: ChatModel, chunk: AudioChunk, overlap: number, keepAudio: boolean): Promise<boolean> {
+  private async transcribe(
+    transcriber: Transcriber,
+    chunk: AudioChunk,
+    overlap: number,
+    keepAudio: boolean,
+  ): Promise<boolean> {
     const meeting = await this.meetings.get(chunk.meetingId);
     if (!meeting || !chunk.data) {
       return true;
@@ -563,22 +722,10 @@ export class MeetingManager {
     const previous = (await this.meetings.segments(chunk.meetingId, Math.max(0, chunk.tStart - 60))).slice(-3);
 
     try {
-      const { output } = await generateStructured({
-        chatModel: model,
-        schema: clipSchema,
-        name: 'meeting_transcript',
-        messages: [
-          systemMessage(TRANSCRIBE_INSTRUCTIONS),
-          userMessage([
-            textPart(
-              previous.length
-                ? `For context, the meeting just before this clip:\n${transcriptText(previous)}`
-                : 'This clip is the start of the meeting.',
-            ),
-            { type: 'file', mediaType: chunk.mimeType, data: chunk.data },
-          ]),
-        ],
-      });
+      const output =
+        transcriber.kind === 'local'
+          ? { segments: localClip(await this.transcribeHere(transcriber.stt, chunk.data), chunk, overlap) }
+          : await this.transcribeWithModel(transcriber.model, chunk, previous);
       const segments = placeSegments(output.segments, chunk, overlap, isLast).map(segment => ({
         ...segment,
         meetingId: chunk.meetingId,
@@ -586,6 +733,7 @@ export class MeetingManager {
       await this.stitch(chunk, segments);
       await this.meetings.completeChunk(chunk, segments, keepAudio);
       await this.meetings.clearWarning(chunk.meetingId, 'transcription');
+      if (segments.length > 0) await this.heard(meeting);
       return true;
     } catch (error) {
       await this.meetings.updateChunk(chunk.id, { attempts: chunk.attempts + 1 });
@@ -600,6 +748,38 @@ export class MeetingManager {
       await this.meetings.addWarning(chunk.meetingId, 'transcription');
       return false;
     }
+  }
+
+  /** Writes a chunk down on this computer, in the offscreen document. */
+  private async transcribeHere(stt: Extract<Transcriber, { kind: 'local' }>['stt'], audio: string): Promise<string> {
+    const reply = await toVoiceOffscreen<{ ok?: boolean; text?: string; error?: string }>({
+      type: 'stt_transcribe',
+      stt,
+      audio,
+    });
+    if (!reply?.ok) throw new Error(reply?.error || 'The speech-to-text model on this computer failed');
+    return reply.text ?? '';
+  }
+
+  /** Writes a chunk down with a model that takes audio, with the last lines before it as context. */
+  private async transcribeWithModel(model: ChatModel, chunk: AudioChunk, previous: TranscriptSegment[]) {
+    const { output } = await generateStructured({
+      chatModel: model,
+      schema: clipSchema,
+      name: 'meeting_transcript',
+      messages: [
+        systemMessage(TRANSCRIBE_INSTRUCTIONS),
+        userMessage([
+          textPart(
+            previous.length
+              ? `For context, the meeting just before this clip:\n${transcriptText(previous)}`
+              : 'This clip is the start of the meeting.',
+          ),
+          { type: 'file', mediaType: chunk.mimeType, data: chunk.data ?? '' },
+        ]),
+      ],
+    });
+    return output;
   }
 
   /**
@@ -699,6 +879,10 @@ export class MeetingManager {
       const note = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
       const markdown = noteToMarkdown(meeting, note, segments);
       await this.meetings.update(meetingId, { note, markdown, status: 'done', error: null });
+      if (meeting.warnings.includes('note_failed')) {
+        await this.meetings.clearWarning(meetingId, 'note_failed');
+        await this.tell({ kind: 'note_written', meetingId });
+      }
 
       if (meeting.threadId) {
         // The thread gets the note without the transcript, which stays in the meeting
@@ -708,7 +892,11 @@ export class MeetingManager {
       }
     } catch (error) {
       logger.error('Could not write the meeting note', error);
-      await this.meetings.update(meetingId, { status: 'failed', error: String(error) });
+      const reason = toAppError(error).message;
+      await this.meetings.update(meetingId, { status: 'failed', error: reason });
+      // Said out loud, even with the panel closed; Retry in the panel (or its card) tries again later
+      await this.meetings.addWarning(meetingId, 'note_failed');
+      await this.tell({ kind: 'note_failed', meetingId, platform: meeting.platform, reason });
     }
   }
 
