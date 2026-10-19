@@ -6,7 +6,9 @@ import AudioDeviceSettings from './AudioDeviceSettings';
 registerSettingsSection({
   id: 'audio-devices',
   label: 'audio_device_settings_title',
-  // Right after Voice engines (66)
-  order: 67,
+  // After the engines (20)
+  page: 'voice',
+  order: 30,
+  keywords: ['microphone', 'speaker', 'device', 'headphones'],
   Component: AudioDeviceSettings,
 });

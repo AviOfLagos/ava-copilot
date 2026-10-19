@@ -8209,5 +8209,332 @@
   },
   "agents_field_voices": {
     "message": "語音"
+  },
+  "settings_page_general": {
+    "message": "一般"
+  },
+  "settings_page_general_hint": {
+    "message": "名稱、外觀、寫作方式、需要你點擊確認的事，以及可花費的額度。"
+  },
+  "settings_page_models": {
+    "message": "模型"
+  },
+  "settings_page_models_hint": {
+    "message": "供應商與金鑰、各模型的分工、本機模型、雲端備援，以及用量。"
+  },
+  "settings_page_voice": {
+    "message": "語音"
+  },
+  "settings_page_voice_hint": {
+    "message": "它如何聆聽與說話：語言、朗讀、語音轉文字與語音引擎、裝置、喚醒詞。"
+  },
+  "settings_page_personalities": {
+    "message": "個性與代理"
+  },
+  "settings_page_personalities_hint": {
+    "message": "由誰回答你：每個個性都有自己的語氣與聲音。"
+  },
+  "settings_page_memory": {
+    "message": "記憶"
+  },
+  "settings_page_memory_hint": {
+    "message": "它對你的了解、哪些內容會存入記憶、代理的私人與團隊記憶、歷史匯入、匯出與清除。"
+  },
+  "settings_page_connections": {
+    "message": "連線"
+  },
+  "settings_page_connections_hint": {
+    "message": "連接器、你的 Obsidian 筆記庫、行事曆，以及 Mac 上的 Nex Brain。"
+  },
+  "settings_page_meetings": {
+    "message": "會議與晨報"
+  },
+  "settings_page_meetings_hint": {
+    "message": "通話筆記、每日晨報，以及收件匣關注的事項。"
+  },
+  "settings_page_privacy": {
+    "message": "隱私與安全"
+  },
+  "settings_page_privacy_hint": {
+    "message": "它可以或不可造訪的網站，以及它遵循的技能。"
+  },
+  "settings_page_help": {
+    "message": "說明"
+  },
+  "settings_page_help_hint": {
+    "message": "還需要安裝的項目，以及日常操作的方法。"
+  },
+  "settings_pages_label": {
+    "message": "設定頁面"
+  },
+  "settings_search_placeholder": {
+    "message": "搜尋設定"
+  },
+  "settings_search_label": {
+    "message": "搜尋設定"
+  },
+  "settings_search_clear": {
+    "message": "清除搜尋"
+  },
+  "settings_search_results": {
+    "message": "「$QUERY$」的設定",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_search_none": {
+    "message": "沒有符合「$QUERY$」的設定。",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_section_names": {
+    "message": "名稱"
+  },
+  "settings_section_highlights": {
+    "message": "工作時"
+  },
+  "settings_section_agent": {
+    "message": "瀏覽器代理的限制"
+  },
+  "settings_section_wake": {
+    "message": "喚醒詞"
+  },
+  "settings_section_agentMemory": {
+    "message": "代理的記憶"
+  },
+  "settings_section_memoryData": {
+    "message": "匯出、匯入、清除"
+  },
+  "settings_section_failed": {
+    "message": "無法顯示此區塊。請重新載入頁面再試一次。"
+  },
+  "settings_connectors_hint": {
+    "message": "已設定 $COUNT$ 個。新增、登入與其工具都在側邊面板中。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "settings_connectors_open": {
+    "message": "開啟連接器"
+  },
+  "settings_memory_agent": {
+    "message": "代理"
+  },
+  "settings_memory_noAgents": {
+    "message": "還沒有代理。你建立的每個代理都會在此保有自己的私人記憶，與團隊記憶並列。"
+  },
+  "settings_install_title": {
+    "message": "需要安裝的項目"
+  },
+  "settings_install_talk": {
+    "message": "在這台電腦上對話"
+  },
+  "settings_install_wake": {
+    "message": "喚醒詞"
+  },
+  "settings_install_embed": {
+    "message": "在本機依語意搜尋"
+  },
+  "settings_install_brain": {
+    "message": "Mac 上的 Nex Brain"
+  },
+  "settings_install_obsidian": {
+    "message": "Obsidian 的資料夾存取"
+  },
+  "settings_install_ready": {
+    "message": "已就緒"
+  },
+  "settings_install_setUp": {
+    "message": "設定"
+  },
+  "settings_install_named": {
+    "message": "安裝 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_more": {
+    "message": "在設定中查看更多$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_personality": {
+    "message": "目前的個性"
+  },
+  "settings_all": {
+    "message": "所有設定"
+  },
+  "requirement_needs": {
+    "message": "需要 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_needs_sized": {
+    "message": "需要 $NAME$，$SIZE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "size": {
+        "content": "$2",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_body": {
+    "message": "只需下載一次，並保留在這台電腦上。就緒後會儲存你的選擇。"
+  },
+  "requirement_body_manual": {
+    "message": "這項需要你自行設定。就緒後會儲存你的選擇。"
+  },
+  "requirement_install": {
+    "message": "安裝"
+  },
+  "requirement_install_named": {
+    "message": "安裝 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_cancel": {
+    "message": "取消"
+  },
+  "requirement_retry": {
+    "message": "再試一次"
+  },
+  "requirement_checkAgain": {
+    "message": "再次檢查"
+  },
+  "requirement_checking": {
+    "message": "正在檢查 $NAME$…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_notReady": {
+    "message": "尚未就緒。請依步驟操作後再次檢查。"
+  },
+  "requirement_starting": {
+    "message": "正在開始…"
+  },
+  "requirement_progress": {
+    "message": "$GOT$ / $TOTAL$ · $PERCENT$%",
+    "placeholders": {
+      "got": {
+        "content": "$1",
+        "example": "12 MB"
+      },
+      "total": {
+        "content": "$2",
+        "example": "28 MB"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "42"
+      }
+    }
+  },
+  "requirement_option_install": {
+    "message": "安裝"
+  },
+  "requirement_option_installSized": {
+    "message": "安裝（$SIZE$）",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_ollama_step_install": {
+    "message": "安裝 Ollama（ollama.com/download）並開啟。"
+  },
+  "requirement_ollama_step_start": {
+    "message": "讓擴充功能能連上它：結束 Ollama，然後在終端機執行 OLLAMA_ORIGINS='chrome-extension://*' ollama serve。"
+  },
+  "requirement_ollama_step_lmstudio": {
+    "message": "改用 LM Studio？請在它的 Discover 分頁下載模型，並啟動本機伺服器。"
+  },
+  "requirement_ollama_step_pull": {
+    "message": "接著按「再次檢查」：「安裝」會下載 $MODEL$。",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_ollama_step_add": {
+    "message": "在「模型 › 本機」中加入 Ollama（執行後會自動找到）。"
+  },
+  "requirement_ollama_get": {
+    "message": "取得 Ollama"
+  },
+  "requirement_ollama_failed": {
+    "message": "Ollama 無法下載：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "connection refused"
+      }
+    }
+  },
+  "requirement_open_models": {
+    "message": "開啟模型"
+  },
+  "requirement_localChat": {
+    "message": "這台電腦上的模型"
+  },
+  "requirement_localChat_missing": {
+    "message": "目前沒有本機模型回應：語音會告知而不會回答。再次選擇即可安裝一個。"
+  },
+  "requirement_embed_missing": {
+    "message": "本機搜尋需要 Ollama 與 $MODEL$；在那之前，記憶只能以字詞搜尋。",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_brain_step_install": {
+    "message": "在你的 Mac 上安裝 Nex Brain（Nex Copilot 的 companion 資料夾）並啟動。"
+  },
+  "requirement_brain_step_code": {
+    "message": "在「連線 › Nex Brain」輸入代碼與連接埠，然後按「配對」。"
+  },
+  "requirement_brain_open": {
+    "message": "開啟 Nex Brain"
+  },
+  "settings_section_memoryIndex": {
+    "message": "哪些內容會存入記憶"
   }
 }

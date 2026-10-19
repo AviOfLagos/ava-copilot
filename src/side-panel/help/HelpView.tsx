@@ -36,7 +36,14 @@ const TASKS: { id: string; place: Place }[] = [
 type Key = Parameters<typeof t>[0];
 
 /** "How do I…": every everyday task, searchable, with where it lives and a way straight there. */
-export default function HelpView({ onGo }: { onGo: (place: Place) => void }) {
+export default function HelpView({
+  onGo,
+  focusSearch = true,
+}: {
+  onGo: (place: Place) => void;
+  // The panel's Help focuses its search; the full-page Settings has its own
+  focusSearch?: boolean;
+}) {
   const [query, setQuery] = useState('');
   const name = useAssistantName();
   // "Hey Ava", or "Hey <name>" when the wake word follows the name
@@ -54,7 +61,7 @@ export default function HelpView({ onGo }: { onGo: (place: Place) => void }) {
         <Search className="text-muted-foreground size-4 shrink-0" />
         <input
           // eslint-disable-next-line jsx-a11y/no-autofocus
-          autoFocus
+          autoFocus={focusSearch}
           type="search"
           value={query}
           onChange={event => setQuery(event.target.value)}

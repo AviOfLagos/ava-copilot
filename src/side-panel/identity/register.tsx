@@ -7,15 +7,19 @@ import VoiceIdentitySettings from './VoiceIdentitySettings';
 registerSettingsSection({
   id: 'about-you',
   label: 'ava_about_title',
-  // Right after Personalities (10): who Ava is, then what she knows about you
-  order: 11,
+  // What Ava knows about you heads Memory
+  page: 'memory',
+  order: 0,
+  keywords: ['facts', 'goals', 'about me', 'identity'],
   Component: AboutYouSettings,
 });
 
 registerSettingsSection({
   id: 'voice-identity',
   label: 'ava_voice_section',
-  // Before Voice output (65) and Voice engines (66)
-  order: 64,
+  // First on Voice, before Read aloud and the engines
+  page: 'voice',
+  order: 0,
+  keywords: ['language', 'accent', 'voice'],
   Component: VoiceIdentitySettings,
 });

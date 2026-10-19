@@ -6,6 +6,8 @@ import TtsSettingsSection from './TtsSettingsSection';
 registerSettingsSection({
   id: 'tts',
   label: 'speak_settings_title',
-  order: 65,
+  page: 'voice',
+  order: 10,
+  keywords: ['read aloud', 'speak', 'text to speech', 'tts', 'kitten', 'kokoro'],
   Component: TtsSettingsSection,
 });

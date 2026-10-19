@@ -8209,5 +8209,332 @@
   },
   "agents_field_voices": {
     "message": "Voice"
+  },
+  "settings_page_general": {
+    "message": "General"
+  },
+  "settings_page_general_hint": {
+    "message": "Names, look, how it writes, what waits for your click, and what it may spend."
+  },
+  "settings_page_models": {
+    "message": "Models"
+  },
+  "settings_page_models_hint": {
+    "message": "Providers and keys, which model does what, local models, the cloud fallback, and usage."
+  },
+  "settings_page_voice": {
+    "message": "Voice"
+  },
+  "settings_page_voice_hint": {
+    "message": "How it hears and speaks: language, read aloud, speech-to-text and voice engines, devices, the wake word."
+  },
+  "settings_page_personalities": {
+    "message": "Personalities & agents"
+  },
+  "settings_page_personalities_hint": {
+    "message": "Who answers you: each personality has its own tone and its own voice."
+  },
+  "settings_page_memory": {
+    "message": "Memory"
+  },
+  "settings_page_memory_hint": {
+    "message": "What it knows about you, what joins memory, agents’ private and team memory, history imports, export and wipe."
+  },
+  "settings_page_connections": {
+    "message": "Connections"
+  },
+  "settings_page_connections_hint": {
+    "message": "Connectors, your Obsidian vault, your calendar, and Nex Brain on your Mac."
+  },
+  "settings_page_meetings": {
+    "message": "Meetings & brief"
+  },
+  "settings_page_meetings_hint": {
+    "message": "Notes from calls, the morning brief, and what the Inbox watches."
+  },
+  "settings_page_privacy": {
+    "message": "Privacy & safety"
+  },
+  "settings_page_privacy_hint": {
+    "message": "Sites it may or may not visit, and the skills it follows."
+  },
+  "settings_page_help": {
+    "message": "Help"
+  },
+  "settings_page_help_hint": {
+    "message": "What still needs installing, and how to do everyday things."
+  },
+  "settings_pages_label": {
+    "message": "Settings pages"
+  },
+  "settings_search_placeholder": {
+    "message": "Search settings"
+  },
+  "settings_search_label": {
+    "message": "Search settings"
+  },
+  "settings_search_clear": {
+    "message": "Clear the search"
+  },
+  "settings_search_results": {
+    "message": "Settings for “$QUERY$”",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_search_none": {
+    "message": "No setting matches “$QUERY$”.",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_section_names": {
+    "message": "Names"
+  },
+  "settings_section_highlights": {
+    "message": "While it works"
+  },
+  "settings_section_agent": {
+    "message": "Browser agent limits"
+  },
+  "settings_section_wake": {
+    "message": "Wake word"
+  },
+  "settings_section_agentMemory": {
+    "message": "Agents’ memory"
+  },
+  "settings_section_memoryData": {
+    "message": "Export, import, wipe"
+  },
+  "settings_section_failed": {
+    "message": "This section could not be shown. Reload the page to try again."
+  },
+  "settings_connectors_hint": {
+    "message": "$COUNT$ set up. Adding one, signing in and its tools are in the side panel.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "settings_connectors_open": {
+    "message": "Open Connectors"
+  },
+  "settings_memory_agent": {
+    "message": "Agent"
+  },
+  "settings_memory_noAgents": {
+    "message": "No agents yet. Each agent you make keeps its own private memory here, next to the team memory."
+  },
+  "settings_install_title": {
+    "message": "Things to install"
+  },
+  "settings_install_talk": {
+    "message": "Talking on this computer"
+  },
+  "settings_install_wake": {
+    "message": "The wake word"
+  },
+  "settings_install_embed": {
+    "message": "Search by meaning, locally"
+  },
+  "settings_install_brain": {
+    "message": "Nex Brain on your Mac"
+  },
+  "settings_install_obsidian": {
+    "message": "Folder access for Obsidian"
+  },
+  "settings_install_ready": {
+    "message": "Ready"
+  },
+  "settings_install_setUp": {
+    "message": "Set up"
+  },
+  "settings_install_named": {
+    "message": "Install $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_more": {
+    "message": "More about $NAME$ in Settings",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_personality": {
+    "message": "Active personality"
+  },
+  "settings_all": {
+    "message": "All settings"
+  },
+  "requirement_needs": {
+    "message": "Needs $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_needs_sized": {
+    "message": "Needs $NAME$, $SIZE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "size": {
+        "content": "$2",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_body": {
+    "message": "It downloads once and stays on this computer. Your choice is saved when it is ready."
+  },
+  "requirement_body_manual": {
+    "message": "This one you set up yourself. Your choice is saved once it is ready."
+  },
+  "requirement_install": {
+    "message": "Install"
+  },
+  "requirement_install_named": {
+    "message": "Install $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_cancel": {
+    "message": "Cancel"
+  },
+  "requirement_retry": {
+    "message": "Try again"
+  },
+  "requirement_checkAgain": {
+    "message": "Check again"
+  },
+  "requirement_checking": {
+    "message": "Checking for $NAME$…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_notReady": {
+    "message": "It is not there yet. Follow the steps, then check again."
+  },
+  "requirement_starting": {
+    "message": "Starting…"
+  },
+  "requirement_progress": {
+    "message": "$GOT$ of $TOTAL$ · $PERCENT$%",
+    "placeholders": {
+      "got": {
+        "content": "$1",
+        "example": "12 MB"
+      },
+      "total": {
+        "content": "$2",
+        "example": "28 MB"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "42"
+      }
+    }
+  },
+  "requirement_option_install": {
+    "message": "Install"
+  },
+  "requirement_option_installSized": {
+    "message": "Install ($SIZE$)",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_ollama_step_install": {
+    "message": "Install Ollama (ollama.com/download) and open it."
+  },
+  "requirement_ollama_step_start": {
+    "message": "Let the extension reach it: quit Ollama and run OLLAMA_ORIGINS='chrome-extension://*' ollama serve in Terminal."
+  },
+  "requirement_ollama_step_lmstudio": {
+    "message": "Using LM Studio instead? Download the model in its Discover tab and start its local server."
+  },
+  "requirement_ollama_step_pull": {
+    "message": "Then press Check again: Install will pull $MODEL$.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_ollama_step_add": {
+    "message": "Add Ollama in Models › Local (it is found by itself once it runs)."
+  },
+  "requirement_ollama_get": {
+    "message": "Get Ollama"
+  },
+  "requirement_ollama_failed": {
+    "message": "Ollama could not pull it: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "connection refused"
+      }
+    }
+  },
+  "requirement_open_models": {
+    "message": "Open Models"
+  },
+  "requirement_localChat": {
+    "message": "A model on this computer"
+  },
+  "requirement_localChat_missing": {
+    "message": "No local model answers yet: voice will say so instead of answering. Choose it again to install one."
+  },
+  "requirement_embed_missing": {
+    "message": "Local search needs Ollama with $MODEL$; until then memory searches by words only.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_brain_step_install": {
+    "message": "Install Nex Brain on your Mac (the companion folder of Nex Copilot) and start it."
+  },
+  "requirement_brain_step_code": {
+    "message": "Type the code and the port in Connections › Nex Brain, then Pair."
+  },
+  "requirement_brain_open": {
+    "message": "Open Nex Brain"
+  },
+  "settings_section_memoryIndex": {
+    "message": "What joins memory"
   }
 }

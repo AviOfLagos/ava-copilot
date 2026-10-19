@@ -50,11 +50,23 @@ export function registeredPlaces(group: PlaceDefinition['group']): PlaceDefiniti
   return [...places.values()].filter(place => place.group === group).sort((a, b) => a.order - b.order);
 }
 
+/** The pages of the full-page Settings (options.html#<page>); src/side-panel/settings/pages.ts has their names. */
+export type SettingsPageId =
+  'general' | 'models' | 'voice' | 'personalities' | 'memory' | 'connections' | 'meetings' | 'privacy' | 'help';
+
 export interface SettingsSectionDefinition {
+  // Also its anchor: options.html#<page>/<id without the "<page>-" prefix>
   id: string;
   label: MessageKey;
+  // The page it sits on, and its place there
+  page: SettingsPageId;
   order: number;
-  Component: ComponentType<{ api: PanelApi }>;
+  // More words the Settings search finds it by (its label always counts)
+  keywords?: string[];
+  // Drawn without the page's card, for a section that brings its own cards (Models)
+  bare?: boolean;
+  // `anchor` is the rest of the hash when it names no section of the page (e.g. a tab: #models/local)
+  Component: ComponentType<{ api: PanelApi; anchor?: string }>;
 }
 
 const sections = new Map<string, SettingsSectionDefinition>();
@@ -63,8 +75,8 @@ export function registerSettingsSection(section: SettingsSectionDefinition): voi
   sections.set(section.id, section);
 }
 
-export function registeredSettingsSections(): SettingsSectionDefinition[] {
-  return [...sections.values()].sort((a, b) => a.order - b.order);
+export function registeredSettingsSections(page?: SettingsPageId): SettingsSectionDefinition[] {
+  return [...sections.values()].filter(section => !page || section.page === page).sort((a, b) => a.order - b.order);
 }
 
 /** What a chat turn's add-on is given: the chat, the user's message that turn answers, and the panel. */

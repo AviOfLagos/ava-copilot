@@ -6,7 +6,9 @@ import VoiceEngineSettings from './VoiceEngineSettings';
 registerSettingsSection({
   id: 'voice-engines',
   label: 'voice_engine_settings_title',
-  // Right after Voice output (65)
-  order: 66,
+  // Hearing and the engines, after Read aloud (10)
+  page: 'voice',
+  order: 20,
+  keywords: ['speech to text', 'stt', 'moonshine', 'whisper', 'economy', 'live', 'engine'],
   Component: VoiceEngineSettings,
 });

@@ -14,8 +14,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Cards on the settings page are the panel's glass */
-main .rounded-lg.border {
+/* The page reads top-left, at any width (Options.css centres upstream's demo app) */
+html body #app-container {
+  text-align: left;
+  width: auto;
+  height: auto;
+  min-height: 100vh;
+}
+
+/* Upstream's cards (Firewall, Skills) are the panel's glass */
+[data-legacy] .rounded-lg.border {
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   box-shadow:

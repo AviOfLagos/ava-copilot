@@ -13,3 +13,4 @@ import './personalities/register';
 import './audio-devices/register';
 import './identity/register';
 import './capabilities/register';
+import './settings/register';

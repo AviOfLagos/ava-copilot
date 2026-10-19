@@ -6,6 +6,8 @@ import BrainSettings from './BrainSettings';
 registerSettingsSection({
   id: 'brain',
   label: 'brain_settings_title',
-  order: 70,
+  page: 'connections',
+  order: 30,
+  keywords: ['mac', 'companion', 'docker', 'pair'],
   Component: BrainSettings,
 });

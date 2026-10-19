@@ -1972,6 +1972,67 @@ voice changed in Settings is stored), plus `voice`, `personalities`, `agents`, `
 `voice-thread`, `inbox`, `ava-hub` green. Needs ears: the five built-ins and two agents on each engine, the pause
 when Live reconnects, and whether the system-voice picks exist on Avi's Mac.
 
+### Settings on one full page, grouped; install before use (2026-10-19)
+
+Avi: Settings was one long list in the panel (8 built-in sections and 9 registered ones) with a second, different copy
+of half of it on the options page. Now the options page is *the* Settings, and anything that needs installing asks
+first.
+
+- **One full page, by page.** `options.html` has a left nav of pages (General, Models, Voice, Personalities & agents,
+  Memory, Connections, Meetings & brief, Privacy & safety, Help) and hash routes: `#voice`, `#voice/engines` (a
+  section's id without the page prefix), `#models/local` (an anchor no section owns goes to the page's first
+  section: here the Models hub's tab). Back/forward walk pages; a deep link scrolls to the section and focuses it.
+  Content is at most 760 px, section cards in glass, a sticky page title, a search box (labels, page names and a
+  `keywords` field per registration) that shows matching sections from every page; under 768 px the nav becomes a
+  row of chips. `src/options/Options.tsx`, routing `src/side-panel/settings/pages.ts` + `src/options/useSettingsRoute.ts`.
+- **Everything is a registered section.** `registerSettingsSection` gained `page`, `keywords` and `bare`; the nav and
+  each page come from the registry. Settings' own sections are one component per setting in
+  `src/side-panel/settings/sections/` registered from `settings/register.tsx` (names, look, writing style, confirm
+  before, spending, highlights, browser-agent limits, Models, wake word, what joins memory, agents' memory,
+  export/import/wipe, Connectors (a link: they stay in the panel), Obsidian, Calendar, Meetings, Morning brief,
+  Firewall, Skills, Things to install, How do I…). The old `options/components/GeneralSettings.tsx`,
+  `KnowledgeSettings.tsx` and `ModelSettings.tsx` are gone; their settings (max steps, vision, planning interval,
+  page-load wait, replay, summary minutes, keep audio, export/import/wipe) live on in those sections with the same
+  storage keys. The other streams' registrations got their page (About you, AI history → Memory; Voice and language,
+  Read aloud, Voice engines, Audio devices → Voice; Inbox → Meetings & brief; Nex Brain → Connections).
+- **The full page's PanelApi.** `createSettingsApi` (`src/options/settingsApi.ts`) sends over the settings port
+  (`createPortClient` in `side-panel/models/transport.ts`); the background's handler moved from `models/register.ts`
+  to `src/background/settings/port.ts` and takes only the prefixes settings sections send (`models_`,
+  `voice_engine_`, `voice_models_`, `voice_preview`, `audio_devices_`, `brain_`, `identity_`, `memory_`,
+  `history_`, `inbox_watch_now`), only from extension pages (not content scripts, not an extension page framed in
+  a web page). `go`/`openThread` stay on the page for settings places, else open the side panel there (pending place
+  in `storage.session`, `chrome.sidePanel.open` from the click).
+- **Side panel Settings** is five quick ones (wake word, read aloud, active personality, model in use, look), each
+  with "more" to its place on the full page, and "All settings". `openSettingsPage(hash)`
+  (`src/shared/lib/settings-page`) reuses an open Settings tab (moves its hash, focuses it) or opens one. "Manage
+  personalities" and Ava's `open_place` for a section go there too: the panel catalog now sends every registered
+  section with its `hash`, derived from the registry (the hand-copied list is gone).
+- **Install before use.** `src/side-panel/requirements/`: a requirement is `{ id, label, sizeBytes?, isReady(),
+  install?(onProgress, signal), steps?, link? }`; `createRequirementFlow().choose(requirement, save)` saves at once when
+  ready, else asks with a small card ("Needs Kokoro 82M, 97 MB — Install / Cancel"), shows progress with Cancel, and
+  saves only once `isReady()` is true after the install; Cancel (or a later choice) keeps the old one; steps-only
+  requirements get "Check again". Catalog: voice models (the existing downloads), the wake word (what
+  `voice_models_needed` says), Ollama models (`POST /api/pull` streamed from the page, layers summed into one
+  progress; with no server answering: steps to start Ollama or get the model in LM Studio's Discover tab), the
+  embedding model (`nomic-embed-text`, and Ollama added in Models), a local chat model for economy voice, Nex Brain
+  (pairing steps) and Obsidian folder access (the Brave flag). Used by Voice engines (speech-to-text, Moonshine size,
+  text-to-speech, economy text model "On this computer"), Read aloud's engine, the wake word switch (panel and full
+  page), Memory's "search by meaning with Local", Models › Local's recommendations (Install next to the copy
+  command) and Help › Things to install. A choice already saved whose piece is missing says so under it (economy
+  local, local embeddings) instead of failing later. Options that need installing read "· Install (97 MB)".
+
+Tests: unit `side-panel/settings/__tests__/pages.test.ts` (registry by page, hash parse/build, slugs, anchors,
+search), `side-panel/requirements/__tests__/flow.test.ts` (7: ready saves at once, save only after install, cancel
+mid-install, failed install and still-missing, check again, a later choice drops the earlier, failed save shown),
+`requirements/__tests__/ollama.test.ts` (pull lines, summed progress, streamed pull, errors, roots and names),
+`background/settings/__tests__/port.test.ts` (allow-list, senders, refused commands never dispatched). Full suite
+1650 green. E2E Brave `e2e/settings.e2e.mjs`: every page from the nav with its sections and one control each,
+`#voice/engines` deep link with focus, back/forward, `#models/local`, search across pages, 400 px without
+sideways scroll, panel quick settings and "more"/"All settings", Kokoro not installed → card, Cancel keeps System,
+Install downloads (mock catalog) and only then saves, a recommended model pulled from a mock `/api/pull` with
+progress. Moved UI fixed in `models`, `voice-engines`, `personalities`, `identity`, `companion`, `inbox`, `history`,
+`kb`, `ava-hub`, `voice-download` (skips in a build that packs the models).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

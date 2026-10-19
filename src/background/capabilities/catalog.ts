@@ -16,6 +16,8 @@ export interface PanelPlaceEntry {
   id: string;
   // The name the user sees in the panel, in their language
   label: string;
+  // A settings section's place on the full-page Settings (options.html#voice/engines)
+  hash?: string;
 }
 
 export interface CapabilitySources {

@@ -8209,5 +8209,332 @@
   },
   "agents_field_voices": {
     "message": "Voz"
+  },
+  "settings_page_general": {
+    "message": "Geral"
+  },
+  "settings_page_general_hint": {
+    "message": "Nomes, aparência, como escreve, o que espera seu clique e quanto pode gastar."
+  },
+  "settings_page_models": {
+    "message": "Modelos"
+  },
+  "settings_page_models_hint": {
+    "message": "Provedores e chaves, qual modelo faz o quê, modelos locais, o plano B na nuvem e o uso."
+  },
+  "settings_page_voice": {
+    "message": "Voz"
+  },
+  "settings_page_voice_hint": {
+    "message": "Como ouve e fala: idioma, leitura em voz alta, fala para texto e motores de voz, dispositivos, palavra de ativação."
+  },
+  "settings_page_personalities": {
+    "message": "Personalidades e agentes"
+  },
+  "settings_page_personalities_hint": {
+    "message": "Quem responde: cada personalidade tem seu tom e sua voz."
+  },
+  "settings_page_memory": {
+    "message": "Memória"
+  },
+  "settings_page_memory_hint": {
+    "message": "O que sabe sobre você, o que entra na memória, memória privada e de equipe dos agentes, importações, exportar e apagar."
+  },
+  "settings_page_connections": {
+    "message": "Conexões"
+  },
+  "settings_page_connections_hint": {
+    "message": "Conectores, seu cofre do Obsidian, sua agenda e o Nex Brain no seu Mac."
+  },
+  "settings_page_meetings": {
+    "message": "Reuniões e resumo"
+  },
+  "settings_page_meetings_hint": {
+    "message": "Notas de chamadas, o resumo da manhã e o que a Caixa de entrada acompanha."
+  },
+  "settings_page_privacy": {
+    "message": "Privacidade e segurança"
+  },
+  "settings_page_privacy_hint": {
+    "message": "Sites que pode ou não visitar, e as habilidades que segue."
+  },
+  "settings_page_help": {
+    "message": "Ajuda"
+  },
+  "settings_page_help_hint": {
+    "message": "O que ainda precisa ser instalado e como fazer as tarefas do dia a dia."
+  },
+  "settings_pages_label": {
+    "message": "Páginas de configurações"
+  },
+  "settings_search_placeholder": {
+    "message": "Buscar configurações"
+  },
+  "settings_search_label": {
+    "message": "Buscar configurações"
+  },
+  "settings_search_clear": {
+    "message": "Limpar a busca"
+  },
+  "settings_search_results": {
+    "message": "Configurações para “$QUERY$”",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_search_none": {
+    "message": "Nenhuma configuração corresponde a “$QUERY$”.",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "voice"
+      }
+    }
+  },
+  "settings_section_names": {
+    "message": "Nomes"
+  },
+  "settings_section_highlights": {
+    "message": "Enquanto trabalha"
+  },
+  "settings_section_agent": {
+    "message": "Limites do agente do navegador"
+  },
+  "settings_section_wake": {
+    "message": "Palavra de ativação"
+  },
+  "settings_section_agentMemory": {
+    "message": "Memória dos agentes"
+  },
+  "settings_section_memoryData": {
+    "message": "Exportar, importar, apagar"
+  },
+  "settings_section_failed": {
+    "message": "Esta seção não pôde ser exibida. Recarregue a página para tentar de novo."
+  },
+  "settings_connectors_hint": {
+    "message": "$COUNT$ configurados. Adicionar, entrar e as ferramentas ficam no painel lateral.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "settings_connectors_open": {
+    "message": "Abrir Conectores"
+  },
+  "settings_memory_agent": {
+    "message": "Agente"
+  },
+  "settings_memory_noAgents": {
+    "message": "Ainda não há agentes. Cada agente que você criar guarda aqui a própria memória privada, ao lado da memória da equipe."
+  },
+  "settings_install_title": {
+    "message": "Itens para instalar"
+  },
+  "settings_install_talk": {
+    "message": "Conversar neste computador"
+  },
+  "settings_install_wake": {
+    "message": "A palavra de ativação"
+  },
+  "settings_install_embed": {
+    "message": "Busca por significado, local"
+  },
+  "settings_install_brain": {
+    "message": "Nex Brain no seu Mac"
+  },
+  "settings_install_obsidian": {
+    "message": "Acesso a pastas para o Obsidian"
+  },
+  "settings_install_ready": {
+    "message": "Pronto"
+  },
+  "settings_install_setUp": {
+    "message": "Configurar"
+  },
+  "settings_install_named": {
+    "message": "Instalar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_more": {
+    "message": "Mais sobre $NAME$ nas Configurações",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "settings_quick_personality": {
+    "message": "Personalidade ativa"
+  },
+  "settings_all": {
+    "message": "Todas as configurações"
+  },
+  "requirement_needs": {
+    "message": "Precisa de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_needs_sized": {
+    "message": "Precisa de $NAME$, $SIZE$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "size": {
+        "content": "$2",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_body": {
+    "message": "É baixado uma vez e fica neste computador. Sua escolha é salva quando estiver pronto."
+  },
+  "requirement_body_manual": {
+    "message": "Este você mesmo configura. Sua escolha é salva quando estiver pronto."
+  },
+  "requirement_install": {
+    "message": "Instalar"
+  },
+  "requirement_install_named": {
+    "message": "Instalar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_cancel": {
+    "message": "Cancelar"
+  },
+  "requirement_retry": {
+    "message": "Tentar de novo"
+  },
+  "requirement_checkAgain": {
+    "message": "Verificar de novo"
+  },
+  "requirement_checking": {
+    "message": "Verificando $NAME$…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "KittenTTS"
+      }
+    }
+  },
+  "requirement_notReady": {
+    "message": "Ainda não está lá. Siga os passos e verifique de novo."
+  },
+  "requirement_starting": {
+    "message": "Iniciando…"
+  },
+  "requirement_progress": {
+    "message": "$GOT$ de $TOTAL$ · $PERCENT$%",
+    "placeholders": {
+      "got": {
+        "content": "$1",
+        "example": "12 MB"
+      },
+      "total": {
+        "content": "$2",
+        "example": "28 MB"
+      },
+      "percent": {
+        "content": "$3",
+        "example": "42"
+      }
+    }
+  },
+  "requirement_option_install": {
+    "message": "Instalar"
+  },
+  "requirement_option_installSized": {
+    "message": "Instalar ($SIZE$)",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "28 MB"
+      }
+    }
+  },
+  "requirement_ollama_step_install": {
+    "message": "Instale o Ollama (ollama.com/download) e abra-o."
+  },
+  "requirement_ollama_step_start": {
+    "message": "Deixe a extensão acessá-lo: feche o Ollama e rode OLLAMA_ORIGINS='chrome-extension://*' ollama serve no Terminal."
+  },
+  "requirement_ollama_step_lmstudio": {
+    "message": "Usa o LM Studio? Baixe o modelo na aba Discover e inicie o servidor local."
+  },
+  "requirement_ollama_step_pull": {
+    "message": "Depois toque em Verificar de novo: Instalar baixará $MODEL$.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_ollama_step_add": {
+    "message": "Adicione o Ollama em Modelos › Local (ele é encontrado sozinho quando está rodando)."
+  },
+  "requirement_ollama_get": {
+    "message": "Baixar o Ollama"
+  },
+  "requirement_ollama_failed": {
+    "message": "O Ollama não conseguiu baixar: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "connection refused"
+      }
+    }
+  },
+  "requirement_open_models": {
+    "message": "Abrir Modelos"
+  },
+  "requirement_localChat": {
+    "message": "Um modelo neste computador"
+  },
+  "requirement_localChat_missing": {
+    "message": "Nenhum modelo local responde ainda: a voz vai avisar em vez de responder. Escolha de novo para instalar um."
+  },
+  "requirement_embed_missing": {
+    "message": "A busca local precisa do Ollama com $MODEL$; até lá a memória busca só por palavras.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "nomic-embed-text"
+      }
+    }
+  },
+  "requirement_brain_step_install": {
+    "message": "Instale o Nex Brain no seu Mac (a pasta companion do Nex Copilot) e inicie-o."
+  },
+  "requirement_brain_step_code": {
+    "message": "Digite o código e a porta em Conexões › Nex Brain e toque em Parear."
+  },
+  "requirement_brain_open": {
+    "message": "Abrir Nex Brain"
+  },
+  "settings_section_memoryIndex": {
+    "message": "O que entra na memória"
   }
 }

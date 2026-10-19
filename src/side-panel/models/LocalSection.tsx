@@ -14,6 +14,7 @@ import {
 import type { LightRoute, RecommendationKind, SystemSpec } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { Badge } from '../components/ui/badge';
+import { OllamaInstall } from '../requirements/OllamaInstall';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { inputClass, Section, Segmented } from './ui';
@@ -407,7 +408,10 @@ export default function LocalSection({ state, models }: { state: ProvidersState;
                       )}
                     </div>
                   ) : (
-                    <CopyCommand command={rec.command} />
+                    <>
+                      <OllamaInstall model={rec.name} sizeBytes={rec.sizeGb * 1e9} onInstalled={() => void check()} />
+                      <CopyCommand command={rec.command} />
+                    </>
                   )}
                   {result && (
                     <p

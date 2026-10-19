@@ -5,6 +5,7 @@ import './agents/register';
 import './inbox/register';
 import './integrations/register';
 import './models/register';
+import './settings/port';
 import './tts/register';
 import './companion/register';
 import './voice/engines/register';

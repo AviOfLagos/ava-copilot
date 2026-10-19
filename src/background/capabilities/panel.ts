@@ -12,9 +12,15 @@ export const PANEL_CATALOG_KEY = 'capabilities-panel';
 export const PENDING_PLACE_KEY = 'capabilities-pending-place';
 
 const entry = z.object({ id: z.string().min(1).max(60), label: z.string().min(1).max(80) });
+const section = entry.extend({
+  hash: z
+    .string()
+    .regex(/^#[a-z0-9/-]{1,80}$/)
+    .optional(),
+});
 export const panelCatalogSchema = z.object({
   places: z.array(entry).max(60),
-  settingsSections: z.array(entry).max(80),
+  settingsSections: z.array(section).max(80),
 });
 export type PanelCatalog = z.infer<typeof panelCatalogSchema>;
 

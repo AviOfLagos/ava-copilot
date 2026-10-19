@@ -123,6 +123,41 @@ export async function launchExtension(mock, { onboarding = false, model = true }
   return {
     browser,
     origin,
+    // The page the harness set storage up from: the full-page Settings, which the panel's links also reuse
+    options,
+    /** Opens the full-page Settings at a page or section (`#voice/engines`) in a tab of its own. */
+    async openSettings(hash = '', viewport = { width: 1280, height: 900 }) {
+      const page = await browser.newPage();
+      await page.setViewport(viewport);
+      await page.goto(`${origin}/options.html${hash}`);
+      await page.waitForSelector('[data-settings-section]', { timeout: 15000 });
+      return page;
+    },
+    /** The Settings tab a panel link opened (or moved) to `hash`, once it is there and drawn. */
+    async settingsTab(hash, timeout = 10000) {
+      const deadline = Date.now() + timeout;
+      while (Date.now() < deadline) {
+        const pages = await browser.pages();
+        const page = pages.find(item => item.url() === `${origin}/options.html${hash}`);
+        if (page) {
+          await page.waitForSelector('[data-settings-section]', { timeout });
+          return page;
+        }
+        await sleep(150);
+      }
+      throw new Error(`No Settings tab at ${hash}`);
+    },
+    /** Clicks the button whose text or label is `label` on a page. */
+    async clickOn(page, label) {
+      await page.evaluate(label => {
+        const button = [...document.querySelectorAll('button')].find(b => {
+          const text = b.innerText.trim();
+          return text === label || text.startsWith(`${label}\n`) || b.getAttribute('aria-label') === label;
+        });
+        if (!button) throw new Error(`No button "${label}"`);
+        button.click();
+      }, label);
+    },
     /** Sets which commit kinds ask for confirmation. */
     async setConfirm(confirm) {
       await options.evaluate(async confirm => {

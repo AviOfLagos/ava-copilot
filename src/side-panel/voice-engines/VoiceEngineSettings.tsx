@@ -4,6 +4,7 @@ import { t } from '@extension/i18n';
 import {
   KITTEN_VOICES,
   KOKORO_VOICES,
+  sttModelId,
   ttsSettingsStore,
   voiceEngineSettingsStore,
   voiceTtsEngine,
@@ -17,6 +18,8 @@ import type {
 } from '@extension/storage';
 import { Switch } from '../components/ui/switch';
 import type { PanelApi } from '../registry';
+import { localChatRequirement, voiceModelRequirement } from '../requirements/catalog';
+import { RequirementCard, installSuffix, useRequirementFlow } from '../requirements/RequirementCard';
 import { DownloadBar, progressText } from '../voice-models/VoiceModelsCard';
 import {
   bytesFor,
@@ -72,6 +75,10 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
   const [busy, setBusy] = useState<'speak' | 'listen' | 'unload' | null>(null);
   const [result, setResult] = useState<{ text: string; error?: boolean } | null>(null);
   const download = useDownloadState();
+  // Choosing an engine whose model is not here asks to install it first, under the select it came from
+  const { flow, state: flowState } = useRequirementFlow();
+  const [asking, setAsking] = useState<'stt' | 'moonshine' | 'tts' | 'model' | null>(null);
+  const [localChat, setLocalChat] = useState<boolean | null>(null);
 
   useEffect(() => {
     const load = () => void voiceEngineSettingsStore.getSettings().then(setSettings);
@@ -97,6 +104,17 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
 
   // Which engines an economy conversation would use depends on the settings: ask again when they change
   useEffect(refresh, [refresh, settings, ttsEngine]);
+  // Whether a local text model is there for "On this computer"
+  useEffect(() => {
+    let alive = true;
+    void localChatRequirement()
+      .then(requirement => requirement.isReady())
+      .then(ready => alive && setLocalChat(ready))
+      .catch(() => alive && setLocalChat(false));
+    return () => {
+      alive = false;
+    };
+  }, [flowState.phase]);
   // And when a download ends, here or in another window
   useEffect(() => {
     if (download.phase !== 'downloading') refresh();
@@ -106,8 +124,22 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
   const update = (changes: Partial<Settings>) => void voiceEngineSettingsStore.updateSettings(changes);
   const installed = status?.installed ?? {};
   const has = (id: VoiceModelId) => Boolean(installed[id]);
-  const missing = (id: VoiceModelId) => (status && !has(id) ? ` · ${t('voice_engine_notInstalled_short')}` : '');
+  // An option whose model is not here says it installs first, and how much
+  const missing = (id: VoiceModelId) => (status && !has(id) ? installSuffix(bytesFor([id])) : '');
   const changed = () => api.request({ type: 'voice_models_changed' });
+
+  /** Saves a choice that needs `ids`: at once when they are here, else after the install card's Install. */
+  const choose = (where: NonNullable<typeof asking>, ids: VoiceModelId[], save: () => Promise<void> | void) => {
+    if (ids.every(has)) {
+      flow.cancel();
+      void save();
+      return;
+    }
+    setAsking(where);
+    void flow.choose(voiceModelRequirement(ids, api.request), save).then(() => refresh());
+  };
+  const card = (where: NonNullable<typeof asking>) =>
+    asking === where && <RequirementCard flow={flow} state={flowState} />;
 
   const run = async (kind: 'speak' | 'listen' | 'unload') => {
     setBusy(kind);
@@ -199,7 +231,13 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           id="voice-engine-stt"
           className={SELECT_CLASS}
           value={settings.stt}
-          onChange={event => update({ stt: event.target.value as SttEngineId })}>
+          onChange={event => {
+            const stt = event.target.value as SttEngineId;
+            const ids = stt === 'gemini' ? [] : [sttModelId(stt, settings.moonshineSize)];
+            // Either Moonshine size counts until a size is chosen
+            const moonshineHere = stt === 'moonshine' && (has('moonshine-tiny') || has('moonshine-base'));
+            choose('stt', moonshineHere ? [] : ids, () => update({ stt }));
+          }}>
           <option value="gemini">{t('voice_engine_stt_gemini')}</option>
           <option value="moonshine">
             {t('voice_engine_stt_moonshine')}
@@ -218,6 +256,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           <p className={HINT}>{t('voice_engine_stt_gemini_hint')}</p>
         )}
       </div>
+      {card('stt')}
 
       {settings.stt === 'moonshine' && (
         <div className={ROW}>
@@ -228,7 +267,10 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
             id="voice-engine-moonshine"
             className={SELECT_CLASS}
             value={settings.moonshineSize}
-            onChange={event => update({ moonshineSize: event.target.value as Settings['moonshineSize'] })}>
+            onChange={event => {
+              const moonshineSize = event.target.value as Settings['moonshineSize'];
+              choose('moonshine', [sttModelId('moonshine', moonshineSize)], () => update({ moonshineSize }));
+            }}>
             <option value="tiny">
               {t('voice_engine_moonshine_tiny')}
               {missing('moonshine-tiny')}
@@ -240,6 +282,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           </select>
         </div>
       )}
+      {card('moonshine')}
 
       {settings.stt === 'moonshine' &&
         installed[settings.moonshineSize === 'base' ? 'moonshine-base' : 'moonshine-tiny']?.webgpu && (
@@ -264,7 +307,11 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           id="voice-engine-tts"
           className={SELECT_CLASS}
           value={ttsEngine}
-          onChange={event => void voiceEngineSettingsStore.setTtsEngine(event.target.value as VoiceTtsEngineId)}>
+          onChange={event => {
+            const engine = event.target.value as VoiceTtsEngineId;
+            const ids: VoiceModelId[] = engine === 'kitten' || engine === 'kokoro' ? [engine] : [];
+            choose('tts', ids, () => voiceEngineSettingsStore.setTtsEngine(engine));
+          }}>
           <option value="system">{t('voice_engine_tts_system')}</option>
           <option value="kitten">
             {t('voice_engine_tts_kitten')}
@@ -278,6 +325,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
         </select>
         {ttsEngine === 'gemini' && <p className={HINT}>{t('voice_engine_tts_gemini_hint')}</p>}
       </div>
+      {card('tts')}
 
       {(ttsEngine === 'kitten' || ttsEngine === 'kokoro') && (
         <div className={ROW}>
@@ -308,11 +356,29 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           id="voice-engine-model"
           className={SELECT_CLASS}
           value={settings.economyModel}
-          onChange={event => update({ economyModel: event.target.value as Settings['economyModel'] })}>
+          onChange={event => {
+            const economyModel = event.target.value as Settings['economyModel'];
+            if (economyModel !== 'local') {
+              flow.cancel();
+              update({ economyModel });
+              return;
+            }
+            setAsking('model');
+            void localChatRequirement().then(requirement => flow.choose(requirement, () => update({ economyModel })));
+          }}>
           <option value="fast">{t('voice_engine_textModel_fast')}</option>
-          <option value="local">{t('voice_engine_textModel_local')}</option>
+          <option value="local">
+            {t('voice_engine_textModel_local')}
+            {localChat === false ? installSuffix() : ''}
+          </option>
         </select>
+        {settings.economyModel === 'local' && localChat === false && flowState.phase === 'idle' && (
+          <p className="text-destructive text-[11.5px]" data-testid="voice-engine-local-missing">
+            {t('requirement_localChat_missing')}
+          </p>
+        )}
       </div>
+      {card('model')}
 
       <div className={ROW}>
         <label htmlFor="voice-engine-idle" className="text-[13px]">

@@ -45,6 +45,7 @@ import Onboarding from './onboarding/Onboarding';
 import { useAssistantName } from './hooks/useAssistant';
 import TodayView from './today/TodayView';
 import SettingsView from './settings/SettingsView';
+import { openSettingsPage } from '@src/shared/lib/settings-page';
 import ThreadBar from './threads/ThreadBar';
 import MeetingView, { clock, useElapsed } from './meetings/MeetingView';
 import ConsentDialog from './meetings/ConsentDialog';
@@ -811,7 +812,7 @@ const SidePanel = () => {
         activeCount={activeCount}
         onStopAll={() => post({ type: 'thread_cancel_all' })}
         workspaceId={view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace}
-        onPersonalities={() => go('settings')}
+        onPersonalities={() => void openSettingsPage('#personalities')}
       />
 
       {elsewhere?.pendingRequest && (

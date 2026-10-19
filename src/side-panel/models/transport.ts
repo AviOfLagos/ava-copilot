@@ -9,15 +9,20 @@ interface Pending {
 
 /**
  * Requests for pages without the panel's port (the full settings page): a port of their own to the
- * background, which only takes models_ commands on it. Unlike a broadcast message, nothing sent here (a
- * key being saved) reaches any other page.
+ * background, which takes only the commands settings sections send on it (src/background/settings/port.ts).
+ * Unlike a broadcast message, nothing sent here (a key being saved) reaches any other page.
  */
-export function createPortRequest(
+export function createPortRequest(messages?: { timeout: string; disconnected: string }): ModelsRequest {
+  return createPortClient(messages).request;
+}
+
+/** The same port, with `post` for commands that have no reply. */
+export function createPortClient(
   messages: { timeout: string; disconnected: string } = {
     timeout: 'No answer came in time. Try again.',
     disconnected: 'The extension restarted. Try again.',
   },
-): ModelsRequest {
+): { request: ModelsRequest; post: (message: Record<string, unknown>) => void } {
   let port: chrome.runtime.Port | null = null;
   const pending = new Map<string, Pending>();
 
@@ -45,7 +50,7 @@ export function createPortRequest(
     return next;
   };
 
-  return <T = Record<string, unknown>>(message: Record<string, unknown>, timeoutMs = 30_000) =>
+  const request = <T = Record<string, unknown>>(message: Record<string, unknown>, timeoutMs = 30_000) =>
     new Promise<T>((resolve, reject) => {
       const requestId = crypto.randomUUID();
       const timer = setTimeout(() => {
@@ -61,4 +66,12 @@ export function createPortRequest(
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
+  const post = (message: Record<string, unknown>) => {
+    try {
+      connect().postMessage(message);
+    } catch {
+      // The extension restarted; the next request reconnects
+    }
+  };
+  return { request, post };
 }

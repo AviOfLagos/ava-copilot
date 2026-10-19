@@ -163,13 +163,14 @@ test('check_audio names the devices, hears the fake microphone, and plays a test
   });
 });
 
-test('open_place opens a Settings section in the panel and says so', async () => {
+test('open_place opens a Settings section on the full-page Settings and says so', async () => {
   const tool = { name: 'open_place', args: { place: 'audio devices' } };
-  await withTool('Open my audio devices settings', tool, async (response, session) => {
-    assert.match(response, /Opened Settings › Audio devices in the side panel/);
-    // Settings is open, scrolled to the section, with focus on it
+  await withTool('Open my audio devices settings', tool, async response => {
+    assert.match(response, /Opened Settings › Audio devices in the Settings tab/);
+    // The Settings tab is at Voice › Audio devices, scrolled to the section, with focus on it
+    const settings = await extension.settingsTab('#voice/audio-devices');
     await waitFor(
-      () => session.panel.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Audio devices'),
+      () => settings.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Audio devices'),
       'the section in view',
     );
   });
