@@ -1,5 +1,18 @@
 import { chunkText } from './chunk';
 import type { SpeakOptions } from './types';
+import { pickSystemVoice } from '@extension/storage';
+
+// The system voice the last line was spoken with (null: the default), for the voice status and tests
+let lastVoice: string | null = null;
+export const lastSystemVoice = (): string | null => lastVoice;
+
+async function installedNames(): Promise<string[]> {
+  try {
+    return (await listVoices()).map(voice => voice.voiceName ?? '').filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Engine A, the default: the operating system's own voices, spoken straight from the background with
@@ -7,9 +20,13 @@ import type { SpeakOptions } from './types';
  * anything already speaking) because Chrome's own TTS queue lives outside the worker - a queue held
  * in the worker itself would die the moment it goes idle between chunks.
  */
-export function speak(text: string, options: SpeakOptions = {}): Promise<void> {
+export async function speak(text: string, options: SpeakOptions = {}): Promise<void> {
   const chunks = chunkText(text);
-  if (chunks.length === 0) return Promise.resolve();
+  if (chunks.length === 0) return;
+  // A personality's or agent's system voice may name several (the first installed is used), or one this computer
+  // lacks: then the system default speaks rather than nothing
+  const voice = options.voice ? pickSystemVoice(options.voice, await installedNames()) : undefined;
+  lastVoice = voice ?? null;
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -24,7 +41,7 @@ export function speak(text: string, options: SpeakOptions = {}): Promise<void> {
       const last = index === chunks.length - 1;
       chrome.tts.speak(chunk, {
         enqueue: index > 0,
-        voiceName: options.voice || undefined,
+        voiceName: voice,
         rate: options.rate ?? 1,
         onEvent: event => {
           if (event.type === 'error') finish(new Error(event.errorMessage || 'Speech failed'));

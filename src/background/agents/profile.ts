@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { AgentProfile, AgentProfileFields, AgentTrigger } from '@extension/storage';
+import { cleanVoices } from '@extension/storage/lib/personalities/personalities';
 import { checkSchedule, isHttpUrl } from '../workflows/spec';
 import { hostInDomains, LISTEN_PATTERN, normalizeDomain, tabPatternIssue, TOPIC_PATTERN } from './patterns';
 
@@ -72,6 +73,15 @@ export const profileFieldsSchema = z.object({
   inboxResults: z.boolean().default(true),
   owns: z.array(z.string().trim().max(MAX_AREA)).max(MAX_OWNS).default([]),
   charter: z.string().trim().max(MAX_CHARTER).nullable().default(null),
+  personalityId: z.string().trim().max(100).nullable().default(null),
+  voices: z
+    .object({
+      live: z.string().max(200).optional(),
+      kitten: z.string().max(200).optional(),
+      kokoro: z.string().max(200).optional(),
+      system: z.string().max(200).optional(),
+    })
+    .default({}),
 });
 
 export type ProfileCheck = { ok: true; profile: AgentProfileFields } | { ok: false; issues: string[] };
@@ -93,6 +103,8 @@ const FIELD_NAMES: Record<string, string> = {
   startUrl: 'The start page',
   owns: 'The areas it owns',
   charter: 'The charter',
+  personalityId: 'The personality',
+  voices: 'The voice',
 };
 
 function describeIssue(issue: z.core.$ZodIssue): string {
@@ -213,6 +225,8 @@ export function validateProfile(input: unknown, now = Date.now()): ProfileCheck 
       connectors: [...new Set(fields.connectors)],
       owns,
       charter: fields.charter?.trim() || null,
+      personalityId: fields.personalityId?.trim() || null,
+      voices: cleanVoices(fields.voices),
     },
   };
 }
@@ -316,6 +330,8 @@ export function fieldsOf(agent: AgentProfileFields): AgentProfileFields {
     inboxResults: agent.inboxResults ?? true,
     owns: [...(agent.owns ?? [])],
     charter: agent.charter ?? null,
+    personalityId: agent.personalityId ?? null,
+    voices: { ...(agent.voices ?? {}) },
   };
 }
 
@@ -372,6 +388,8 @@ const DIFF_FIELDS: ProfileField[] = [
   'inboxResults',
   'owns',
   'charter',
+  'personalityId',
+  'voices',
 ];
 
 /** A trigger in plain words, for the model and the diff. */
@@ -408,6 +426,13 @@ function fieldText(field: ProfileField, profile: AgentProfileFields | null): str
       return (profile.owns ?? []).join(', ');
     case 'charter':
       return profile.charter ?? '';
+    case 'personalityId':
+      return profile.personalityId ?? '';
+    case 'voices':
+      return Object.entries(profile.voices ?? {})
+        .filter(([, voice]) => voice)
+        .map(([slot, voice]) => `${slot}: ${voice}`)
+        .join(', ');
     default:
       if (Array.isArray(value)) return value.join(', ');
       return value === null || value === undefined ? '' : String(value);

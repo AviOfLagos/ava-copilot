@@ -9,6 +9,15 @@ import { enumerateAudioDevices } from './devices';
 import { measureMic, playTestTone } from './audio-check';
 import { localTts } from './tts-local/shared';
 import './tts-local/register';
+import type { LineTts } from './lines';
+
+/** A voice for a line, checked: an engine and a voice name, a pace within reason. */
+function lineTtsOf(value: unknown): LineTts | null {
+  const tts = value as { engine?: unknown; voice?: unknown; rate?: unknown } | null | undefined;
+  if (tts?.engine !== 'kitten' && tts?.engine !== 'kokoro' && tts?.engine !== 'system') return null;
+  const rate = typeof tts.rate === 'number' && tts.rate >= 0.5 && tts.rate <= 2 ? tts.rate : 1;
+  return { engine: tts.engine, voice: typeof tts.voice === 'string' ? tts.voice.slice(0, 200) : '', rate };
+}
 
 /**
  * The offscreen document holds the meeting's media streams, which a service worker cannot.
@@ -188,6 +197,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'voice_say':
         voice?.say(String(message.text ?? ''));
         return { ok: voice !== null };
+      // An agent's line, in its own voice on the device (see SpokenLines)
+      case 'voice_speak_as': {
+        const tts = lineTtsOf(message.tts);
+        if (!voice || !tts) return { ok: false };
+        voice.speakAs(String(message.text ?? '').slice(0, 4000), tts);
+        return { ok: true };
+      }
+      // The conversation's personality changed: its voice and instructions
+      case 'voice_reconfigure': {
+        if (!voice) return { ok: false };
+        const instructions = typeof message.instructions === 'string' ? message.instructions : undefined;
+        const notice = typeof message.notice === 'string' ? message.notice.slice(0, 2000) : '';
+        if ('sendImage' in voice) {
+          voice.reconfigure(
+            { instructions, speechConfig: message.speechConfig as VoiceOptions['speechConfig'] },
+            notice,
+          );
+        } else {
+          const tts = lineTtsOf(message.economyTts);
+          voice.reconfigure({ instructions, ...(tts ? { tts } : {}) }, notice);
+        }
+        return { ok: true };
+      }
       case 'voice_text': {
         // Typed in the conversation's chat, with any pictures: the user's next turn
         const images = Array.isArray(message.images)

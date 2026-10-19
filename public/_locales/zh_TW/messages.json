@@ -8119,5 +8119,95 @@
   },
   "kb_scope_teamNone": {
     "message": "還沒有與團隊分享的內容。"
+  },
+  "persona_voice_preview_sentence": {
+    "message": "嗨，我是 $NAME$。我的聲音聽起來是這樣。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_preview_busy": {
+    "message": "請先結束語音對話，再試聽語音。"
+  },
+  "persona_voice_preview_notInstalled": {
+    "message": "這個語音尚未下載。請在「設定 › 語音引擎」下載後再試一次。"
+  },
+  "persona_voices_title": {
+    "message": "語音"
+  },
+  "persona_voices_hint": {
+    "message": "每個引擎各一個語音。你聽到哪一個，取決於 Ava 怎麼說話：Gemini Live、這台電腦上的語音，或系統語音。"
+  },
+  "persona_voice_engine_live": {
+    "message": "Gemini（Live 與朗讀）"
+  },
+  "persona_voice_engine_kitten": {
+    "message": "Kitten（這台電腦）"
+  },
+  "persona_voice_engine_kokoro": {
+    "message": "Kokoro（這台電腦）"
+  },
+  "persona_voice_engine_system": {
+    "message": "系統語音"
+  },
+  "persona_voice_preview": {
+    "message": "試聽"
+  },
+  "persona_voice_preview_label": {
+    "message": "試聽 $ENGINE$ 語音",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Kitten"
+      }
+    }
+  },
+  "persona_voice_previewing": {
+    "message": "播放中…"
+  },
+  "persona_voice_several": {
+    "message": "它自己的選擇：這台電腦有的第一個"
+  },
+  "persona_voice_inherit": {
+    "message": "依個性"
+  },
+  "persona_voice_edit": {
+    "message": "$NAME$ 的語音",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_builtInHint": {
+    "message": "內建個性無法編輯，但它們的語音與語速可以由你更改。"
+  },
+  "persona_voice_reset": {
+    "message": "恢復原本的語音"
+  },
+  "agents_edit_personality": {
+    "message": "個性"
+  },
+  "agents_edit_personalityHint": {
+    "message": "它在執行時怎麼思考與說話。"
+  },
+  "agents_edit_personalityNone": {
+    "message": "依工作區"
+  },
+  "agents_edit_voices": {
+    "message": "它的語音"
+  },
+  "agents_edit_voicesHint": {
+    "message": "它的回答會用這個語音說出，並先說它的名字，讓你知道是誰在說話。"
+  },
+  "agents_field_personality": {
+    "message": "個性"
+  },
+  "agents_field_voices": {
+    "message": "語音"
   }
 }

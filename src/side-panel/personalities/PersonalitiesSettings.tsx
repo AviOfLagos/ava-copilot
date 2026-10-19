@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, Pencil, Plus, Trash2, Volume2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import {
   allPersonalities,
+  BUILTIN_PERSONALITIES,
   duplicatePersonality,
-  KITTEN_VOICES,
-  KOKORO_VOICES,
   PERSONALITY_INSTRUCTIONS_MAX,
   personalityStore,
 } from '@extension/storage';
@@ -15,6 +14,7 @@ import { useWorkspaces } from '../workspaces/WorkspacePicker';
 import { personalityDescription, personalityName, usePersonalities } from './usePersonalities';
 import CoreIdentitySection from '../identity/CoreIdentitySection';
 import type { PanelApi } from '../registry';
+import VoicePicker from './VoicePicker';
 
 type MessageKey = Parameters<typeof t>[0];
 
@@ -45,29 +45,101 @@ const blank = (): Personality => ({
   description: '',
   icon: '💬',
   instructions: '',
-  voice: '',
+  voices: {},
   rate: 0,
 });
 
-/** The voices a personality may pick: the system's, then the local engines' ids. */
-function useVoices(): string[] {
-  const [voices, setVoices] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      chrome.tts.getVoices(found =>
-        setVoices(found.map(voice => voice.voiceName).filter((name): name is string => !!name)),
-      );
-    } catch {
-      setVoices([]);
-    }
-  }, []);
-  return voices;
+/** Its voice per engine (with Preview) and its pace. */
+function VoiceFields({
+  api,
+  draft,
+  set,
+}: {
+  api: PanelApi;
+  draft: Personality;
+  set: (changes: Partial<Personality>) => void;
+}) {
+  return (
+    <div className={ROW}>
+      <div className="text-[13px]">{t('persona_voices_title')}</div>
+      <p className={HINT}>{t('persona_voices_hint')}</p>
+      <VoicePicker
+        api={api}
+        idPrefix="persona"
+        voices={draft.voices}
+        onChange={voices => set({ voices })}
+        inheritLabel={t('persona_field_voice_settings')}
+        rate={draft.rate}
+        speaker={draft.name.trim() || 'Ava'}
+      />
+      <div className="flex w-36 flex-col gap-1.5 pt-1">
+        <label htmlFor="persona-rate" className="text-[13px]">
+          {t('persona_field_rate')}
+        </label>
+        <select
+          id="persona-rate"
+          className={INPUT}
+          value={String(draft.rate)}
+          onChange={event => set({ rate: Number(event.target.value) })}>
+          <option value="0">{t('persona_field_voice_settings')}</option>
+          {[...new Set([...RATES, draft.rate].filter(Boolean))]
+            .sort((a, b) => a - b)
+            .map(rate => (
+              <option key={rate} value={String(rate)}>
+                {rate}×
+              </option>
+            ))}
+        </select>
+      </div>
+    </div>
+  );
 }
 
-function Editor({ initial, onDone }: { initial: Personality; onDone: () => void }) {
+/** A built-in's voices: the only thing about it the user changes (or puts back). */
+function BuiltInVoices({ api, initial, onDone }: { api: PanelApi; initial: Personality; onDone: () => void }) {
+  const [draft, setDraft] = useState<Personality>(initial);
+  const set = (changes: Partial<Personality>) => setDraft(current => ({ ...current, ...changes }));
+  const name = personalityName(initial);
+  const shipped = BUILTIN_PERSONALITIES.find(item => item.id === initial.id);
+  return (
+    <form
+      aria-label={t('persona_voice_edit', [name])}
+      className="divide-border/60 divide-y"
+      onSubmit={event => {
+        event.preventDefault();
+        void personalityStore.setBuiltInVoices(initial.id, draft.voices, draft.rate).then(onDone);
+      }}>
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <span aria-hidden="true" className="text-[16px]">
+          {initial.icon}
+        </span>
+        <span className="text-[13px]">{name}</span>
+      </div>
+      <p className={cn(HINT, 'px-3 py-2.5')}>{t('persona_voice_builtInHint')}</p>
+      <VoiceFields api={api} draft={{ ...draft, name }} set={set} />
+      <div className="flex justify-end gap-2 px-3 py-2.5">
+        {shipped && (
+          <button
+            type="button"
+            className={BUTTON}
+            onClick={() => void personalityStore.resetBuiltInVoices(initial.id).then(onDone)}>
+            {t('persona_voice_reset')}
+          </button>
+        )}
+        <button type="button" className={BUTTON} onClick={onDone}>
+          {t('persona_cancel')}
+        </button>
+        <button type="submit" className={cn(BUTTON, 'border-primary/50 bg-primary/15')}>
+          {t('persona_save')}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Editor({ api, initial, onDone }: { api: PanelApi; initial: Personality; onDone: () => void }) {
   const [draft, setDraft] = useState<Personality>(initial);
   const [problems, setProblems] = useState<PersonalityProblem[]>([]);
-  const voices = useVoices();
   const set = (changes: Partial<Personality>) => setDraft(current => ({ ...current, ...changes }));
   const save = async () => {
     const result = await personalityStore.save(draft);
@@ -140,63 +212,7 @@ function Editor({ initial, onDone }: { initial: Personality; onDone: () => void 
           </span>
         </div>
       </div>
-      <div className="flex gap-2 px-3 py-2.5">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label htmlFor="persona-voice" className="text-[13px]">
-            {t('persona_field_voice')}
-          </label>
-          <select
-            id="persona-voice"
-            className={INPUT}
-            value={draft.voice}
-            onChange={event => set({ voice: event.target.value })}>
-            <option value="">{t('persona_field_voice_settings')}</option>
-            {draft.voice && ![...voices, ...KITTEN_VOICES, ...KOKORO_VOICES].includes(draft.voice) && (
-              <option value={draft.voice}>{draft.voice}</option>
-            )}
-            {voices.length > 0 && (
-              <optgroup label={t('persona_field_voice_system')}>
-                {voices.map(voice => (
-                  <option key={voice} value={voice}>
-                    {voice}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label="Kitten">
-              {KITTEN_VOICES.map(voice => (
-                <option key={voice} value={voice}>
-                  {voice}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Kokoro">
-              {KOKORO_VOICES.map(voice => (
-                <option key={voice} value={voice}>
-                  {voice}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
-        <div className="flex w-28 flex-col gap-1.5">
-          <label htmlFor="persona-rate" className="text-[13px]">
-            {t('persona_field_rate')}
-          </label>
-          <select
-            id="persona-rate"
-            className={INPUT}
-            value={String(draft.rate)}
-            onChange={event => set({ rate: Number(event.target.value) })}>
-            <option value="0">{t('persona_field_voice_settings')}</option>
-            {RATES.map(rate => (
-              <option key={rate} value={String(rate)}>
-                {rate}×
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <VoiceFields api={api} draft={draft} set={set} />
       <div className="flex flex-col gap-2 px-3 py-2.5">
         <p className={HINT}>{t('persona_rules_hint')}</p>
         {problems.length > 0 && (
@@ -227,10 +243,12 @@ export default function PersonalitiesSettings({ api }: { api: PanelApi }) {
   const state = usePersonalities();
   const workspaces = useWorkspaces();
   const [editing, setEditing] = useState<Personality | null>(null);
+  const [voicing, setVoicing] = useState<Personality | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const all = allPersonalities(state);
 
-  if (editing) return <Editor initial={editing} onDone={() => setEditing(null)} />;
+  if (editing) return <Editor api={api} initial={editing} onDone={() => setEditing(null)} />;
+  if (voicing) return <BuiltInVoices api={api} initial={voicing} onDone={() => setVoicing(null)} />;
 
   return (
     <>
@@ -278,6 +296,16 @@ export default function PersonalitiesSettings({ api }: { api: PanelApi }) {
                   onClick={() => setEditing(duplicatePersonality({ ...personality, name }, t('persona_copySuffix')))}>
                   <Copy className="size-3.5" />
                 </button>
+                {personality.builtIn && (
+                  <button
+                    type="button"
+                    className={ICON_BUTTON}
+                    aria-label={t('persona_voice_edit', [name])}
+                    title={t('persona_voice_edit', [name])}
+                    onClick={() => setVoicing(personality)}>
+                    <Volume2 className="size-3.5" />
+                  </button>
+                )}
                 {!personality.builtIn && (
                   <>
                     <button

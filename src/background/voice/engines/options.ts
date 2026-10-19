@@ -115,7 +115,7 @@ export function chooseEconomyEngines(
  */
 export async function economyVoiceOptions(
   // The conversation's personality: its voice and pace, when set, replace the voice settings
-  personality?: Pick<Personality, 'voice' | 'rate'> | null,
+  personality?: Pick<Personality, 'voices' | 'rate'> | null,
   hasGeminiKey = false,
 ): Promise<{ mode: 'economy'; economy: EconomyEngines } | null> {
   const stored = await voiceEngineSettingsStore.getSettings();
@@ -123,11 +123,12 @@ export async function economyVoiceOptions(
   const mode = resolveVoiceMode(stored, { hasGeminiKey, localReady: localSttChoice(stored, installed) !== null });
   if (mode === 'live') return null;
   const tts = await ttsSettingsStore.getSettings();
-  const voice = personality?.voice?.trim() ?? '';
+  const kitten = personalityVoiceFor('kitten', personality);
+  const kokoro = personalityVoiceFor('kokoro', personality);
   const settings = {
     ...stored,
-    ...(personalityVoiceFor('kitten', personality) ? { kittenVoice: voice } : {}),
-    ...(personalityVoiceFor('kokoro', personality) ? { kokoroVoice: voice } : {}),
+    ...(kitten ? { kittenVoice: kitten } : {}),
+    ...(kokoro ? { kokoroVoice: kokoro } : {}),
   };
   const choice = chooseEconomyEngines(
     settings,

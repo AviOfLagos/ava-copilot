@@ -1912,6 +1912,66 @@ suite 1557 green. E2E Brave `e2e/kb.e2e.mjs` (8, +1): agent A's run saves a priv
 it; Ava's chat can; the user clicks "Move to the team memory" in the Knowledge base; B's next run finds it.
 `agents.e2e` (3) and `graph.e2e` (2) still green.
 
+### Voices for personalities and agents (2026-10-19)
+
+Avi: "personalities need specific voices so I know who I'm talking to; each agent has its own personality and
+voice." Plan `groovy-herding-matsumoto.md` §4 (stream C).
+
+- **A voice per engine.** `Personality.voices: { live?, kitten?, kokoro?, system? }` replaces the one `voice`
+  (`storage/lib/personalities`). `migrateVoices` puts an old voice in the slot of the engine it names (Kitten,
+  Kokoro, Gemini name, else system) when stored personalities are read or saved. `live` is a Gemini prebuilt voice,
+  used by Live and by Gemini read-aloud (the same 30 voices). `system` may list several names separated by `|`;
+  `chromeEngine.speak` uses the first one this computer has (`pickSystemVoice`), else the default voice rather than
+  failing. `personalityVoiceFor(engine, …)` gives only a voice of that engine.
+- **Built-in voices** (Default keeps Ava's Settings voices: Aoede / Bella / af_heart):
+  engineer Puck · Leo · am_michael · Alex (pace 1.1); accountant Charon · Hugo · bm_george · Daniel; legal eye
+  Gacrux · Luna · bf_emma · Serena; strict auntie Kore · Rosie · af_nicole · Moira (0.95); operator Orus · Bruno ·
+  am_fenrir · Rishi. Each system slot lists Windows and Google fallbacks too. Built-ins stay read-only, but their
+  voices and pace can be changed (`voiceOverrides`, "Voices of …" in Settings › Personalities, "Back to its own
+  voices" undoes it).
+- **Editors** (`side-panel/personalities/VoicePicker.tsx`): one select per engine with **Preview**, in the
+  personality editor and the agent editor. Preview is the `voice_preview` command (`background/personalities/
+  preview.ts`): Gemini voices through Gemini's speech model (needs the Gemini key; this is the same voice Live
+  uses, so no canned sample was needed), Kitten/Kokoro through the local engine (says it is not downloaded yet
+  when it is not), system voices through `chrome.tts`. Refused while a conversation is on.
+- **Live honours it.** `liveSpeechConfig(model, identity, personalityVoice)`: the personality's Live voice, else
+  Ava's Settings voice; the language is always the Settings one, and the voice is fixed for the session.
+  Switching personality mid-conversation (`set_personality`, or the header/Settings, which the manager watches):
+  economy → `voice_reconfigure` changes the instructions and the voice of the next answer; Live → the session
+  starts again in the new voice once the floor is free (a fresh session, since a resumed one keeps its old voice,
+  with the conversation so far in its instructions from the thread; the thread and transcript stay the same). The
+  tool tells the model to say nothing until then, and the new session greets the user first, in the new voice.
+  The voice tool and the settings change for one switch are applied once (`applyPersonality` keyed by personality).
+- **Agents.** `AgentProfileFields.personalityId` and `voices` (validated, diffed, kept through a drafted change).
+  An agent's runs use its personality's prompt (`personalityForThread` in `threads/factory.ts`, by the thread's
+  `agentId`), else the workspace's as before. Its voices: its own, then its personality's, then ones picked from its
+  name that Ava does not use (`personalities/voices.ts`). Starter team: Mail = strict auntie, Social = operator,
+  Research = engineer, Meetings follow-up = legal eye, Calendar = own voices (Leda · Kiki · af_bella); Social watcher
+  and Research scout get their own voices too. No two team members share a voice on any engine.
+- **Agents speak in their own voice, name first.** `VoiceManager.speakAs` → offscreen `voice_speak_as`: the thread
+  watch says an agent run's answer this way (hand-offs and `run_agent`; a run that started and ended between two
+  looks is still heard), `announce(text, speaker)` for Inbox items from an agent. Economy: the session's engine
+  with the agent's voice, queued like a turn and kept in the history as not the user's words. Live (one voice per
+  session): `SpokenLines` plays it on the device with the read-aloud engine (Kitten when installed, else system
+  voices; a local voice that fails falls back to the system one) once the floor is free, holding the microphone and
+  the turn-taking floor while it plays (plus echo tail), then tells Live what was said as quiet context, as data.
+  `run_agent` tells the model not to read the answer out. Read-aloud of an agent's own chat uses its voice.
+  `voice_engine_status.runtime.lastLine` records the last such line and its voice.
+
+Tests: unit `storage/lib/personalities/__tests__/voices.test.ts` (10: migration, per-engine resolution, layering,
+system pick, built-ins distinct and never Ava's, overrides, Live setup voice), `background/voice/__tests__/
+manager-voices.test.ts` (8: Live setup voice from the personality, restart on switch with new instructions and
+once only, no restart for the same voice, economy voice change, agent line in Live and economy, hand-off answer
+from the watch), `background/agents/__tests__/voices.test.ts` (6: agent personality prompt, validation/diff/
+authoring keep, voice layering and fallback, name prefix, templates distinct), `offscreen/__tests__/lines.test.ts`
+(4), `stt/__tests__/economy.test.ts` (+2). Full suite 1552. E2E Brave `e2e/voices.e2e.mjs` (3: Live setup is Puck
+for the engineer, `set_personality` → a fresh session with Charon, the accountant's instructions and a greeting;
+the Research agent from the team template, its editor shows the inherited voices, `run_agent` by voice → the
+answer is played as "Research: …" with Kitten `Leo` and Live gets it as context, not a notice; a built-in's Live
+voice changed in Settings is stored), plus `voice`, `personalities`, `agents`, `voice-engines`, `speak`,
+`voice-thread`, `inbox`, `ava-hub` green. Needs ears: the five built-ins and two agents on each engine, the pause
+when Live reconnects, and whether the system-voice picks exist on Avi's Mac.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

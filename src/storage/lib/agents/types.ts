@@ -1,5 +1,6 @@
 import type { ModelRole } from '../models/types';
 import type { RunStatus } from '../workflows/types';
+import type { PersonalityVoices } from '../personalities/types';
 
 export type AgentTrigger =
   | { type: 'schedule'; cron: string; timezone?: string }
@@ -48,6 +49,10 @@ export interface AgentProfileFields {
   owns?: string[];
   // What it is for, in one line, shown with its areas
   charter?: string | null;
+  // How it thinks and talks (a personality id); missing or null: the workspace's personality, as before
+  personalityId?: string | null;
+  // Its own voice per engine, over its personality's, so the user hears which agent is talking
+  voices?: PersonalityVoices;
 }
 
 /** A proposed version of an agent, waiting for the user's click (Create, or Apply for a change). Drafts never run. */

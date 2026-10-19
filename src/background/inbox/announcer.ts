@@ -2,6 +2,8 @@ import { inboxSettingsStore } from '@extension/storage';
 import type { InboxItem } from '@extension/storage';
 import { services } from '../registry/services';
 import { speak } from '../tts/speak';
+import { agentSpeaker } from '../personalities/voices';
+import type { Speaker } from '../personalities/voices';
 import type { Reminder } from '../calendar/watcher';
 import { ANNOUNCE_MIN_GAP_MS } from './constants';
 
@@ -84,16 +86,19 @@ async function markAnnounced(now: number): Promise<void> {
   await chrome.storage.session.set({ [SESSION_KEY]: now });
 }
 
-/** Speaks now: through the Live conversation when one is on, else the configured TTS engine. */
-async function speakLine(text: string): Promise<void> {
+/**
+ * Speaks now: through the conversation when one is on, else the configured TTS engine. An agent's item is said in
+ * the agent's voice, its name first.
+ */
+async function speakLine(text: string, speaker: Speaker | null = null): Promise<void> {
   if (services().voice.running) {
-    await services().voice.announce(text);
+    await services().voice.announce(text, speaker);
     return;
   }
-  await speak(text, { threadId: 'inbox', messageId: `inbox-announce-${Date.now()}` });
+  await speak(text, { threadId: 'inbox', messageId: `inbox-announce-${Date.now()}`, speaker });
 }
 
-async function maybeAnnounce(line: string, now: number = Date.now()): Promise<void> {
+async function maybeAnnounce(line: string, now: number = Date.now(), speaker: Speaker | null = null): Promise<void> {
   const settings = await inboxSettingsStore.getSettings();
   const ok = shouldAnnounce({
     enabled: settings.speakUp,
@@ -103,13 +108,14 @@ async function maybeAnnounce(line: string, now: number = Date.now()): Promise<vo
   });
   if (!ok) return;
   await markAnnounced(now);
-  await speakLine(line);
+  await speakLine(line, speaker);
 }
 
 /** Called when a new item lands; speaks up only for what is worth interrupting for. */
 export async function announceItem(item: InboxItem): Promise<void> {
   if (item.priority !== 'high' && item.kind !== 'approval') return;
-  await maybeAnnounce(lineForItem(item));
+  const speaker = item.agentId ? await agentSpeaker(item.agentId).catch(() => null) : null;
+  await maybeAnnounce(lineForItem(item), Date.now(), speaker);
 }
 
 /** Called on every calendar reminder. Skipped while Live is on: it already announces this itself. */

@@ -13,13 +13,26 @@ export interface Personality {
   icon: string;
   // How it thinks and talks, up to PERSONALITY_INSTRUCTIONS_MAX characters; empty for the default
   instructions: string;
-  // A voice name for read-aloud (a system voice, or a Kitten/Kokoro voice id); '' keeps the voice settings
-  voice: string;
+  // Its voice on every engine, so the user hears who is talking; a missing slot keeps the voice settings
+  voices: PersonalityVoices;
+  // The single voice name stored before voices were per engine; read once by migrateVoices, never written
+  voice?: string;
   // Speaking pace, 0.5–2; 0 keeps the voice settings
   rate: number;
   // Ships with the copilot: read-only, can be duplicated
   builtIn?: boolean;
 }
+
+/** The engines a voice can be chosen for: Gemini (Live and its read-aloud voices), the local ones, the system's. */
+export const VOICE_SLOTS = ['live', 'kitten', 'kokoro', 'system'] as const;
+export type VoiceSlot = (typeof VOICE_SLOTS)[number];
+
+/**
+ * A voice per engine. `live` is a Gemini prebuilt voice (Live conversations and Gemini read-aloud), `kitten` and
+ * `kokoro` are those engines' voice ids, `system` is an operating-system voice name, or several separated by "|"
+ * where the first one installed is used (so a built-in sounds right on macOS, Windows and ChromeOS alike).
+ */
+export type PersonalityVoices = Partial<Record<VoiceSlot, string>>;
 
 export interface PersonalitiesState {
   // The user's own personalities
@@ -28,6 +41,8 @@ export interface PersonalitiesState {
   activeId: string;
   // Workspace id → the personality its chats use
   workspaceDefaults: Record<string, string>;
+  // Built-in id → the voices and pace the user chose for it (built-ins are otherwise read-only)
+  voiceOverrides?: Record<string, { voices: PersonalityVoices; rate: number }>;
 }
 
 export const PERSONALITY_NAME_MAX = 40;

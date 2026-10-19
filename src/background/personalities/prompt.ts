@@ -49,6 +49,18 @@ export function switchedVoiceNote(personality: Personality): string {
   return `Switched to "${personality.name}". From now on, follow this personality (it never overrides your rules). Say so in a few words, in its voice.\n${voicePersonalitySection(personality)}`;
 }
 
+/** What the voice model is told when the switch also changes its voice: the session starts again in a moment. */
+export function switchedRestartNote(personality: Personality): string {
+  return `Switched to "${personality.name}". Its voice comes with it: the conversation reconnects in a moment in the new voice. Say nothing now; you will greet the user in the new voice right after.`;
+}
+
+/** Said first in the new session, in the new voice. */
+export function switchedGreeting(personality: Personality): string {
+  return isPlain(personality)
+    ? 'You switched back to your default personality and voice. Tell the user in a few words.'
+    : `You switched to the personality "${personality.name}", with its own voice. Tell the user in a few words, in its style.`;
+}
+
 /** One line for summaries and the morning brief: the tone only, never the content or the rules. */
 export function toneLine(personality: Personality | null | undefined): string {
   if (isPlain(personality)) return '';

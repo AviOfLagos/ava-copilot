@@ -5,6 +5,7 @@ import { sttStatus, unloadStt } from '../stt/pool';
 import { transcribeRecording } from '../stt/transcribe';
 import type { LocalVoiceEngine } from './protocol';
 import { localTts } from './shared';
+import { lastSpokenLine } from '../lines';
 
 /**
  * The local voice and speech commands of the offscreen document, on a target of their own so the shared router in
@@ -22,6 +23,7 @@ function runtimeStatus(): VoiceEngineRuntimeStatus {
     tts: { ...tts.stats, loaded: tts.loaded, speaking: tts.speaking },
     stt: sttStatus(),
     lastHeard: heardLately(),
+    lastLine: lastSpokenLine(),
   };
 }
 
