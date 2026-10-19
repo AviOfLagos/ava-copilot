@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import { getDefaultDisplayNameFromProviderId } from '@extension/storage';
 import { cn } from '@extension/ui';
@@ -27,10 +27,23 @@ const TABS: { id: Tab; label: Parameters<typeof t>[0] }[] = [
  * with an "active" switch; which active model does each kind of work; local models that fit this computer and
  * where light work goes; spending and usage.
  */
-export function ModelsHub({ request, wide = false }: { request: ModelsRequest; wide?: boolean }) {
+export function ModelsHub({
+  request,
+  wide = false,
+  initialTab,
+}: {
+  request: ModelsRequest;
+  wide?: boolean;
+  // A tab to open on (the full-page Settings' #models/local)
+  initialTab?: string;
+}) {
   const providers = useProviders(request);
   const models = useModelSettings(providers);
-  const [tab, setTab] = useState<Tab>('models');
+  const [tab, setTab] = useState<Tab>(() => TABS.find(item => item.id === initialTab)?.id ?? 'models');
+  useEffect(() => {
+    const wanted = TABS.find(item => item.id === initialTab)?.id;
+    if (wanted) setTab(wanted);
+  }, [initialTab]);
 
   const smart = models.resolve('smart');
   const providerName = (id: string) => providers.saved[id]?.name || getDefaultDisplayNameFromProviderId(id);

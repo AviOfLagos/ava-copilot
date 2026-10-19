@@ -5,6 +5,8 @@ import HistorySettings from './HistorySettings';
 registerSettingsSection({
   id: 'history',
   label: 'history_section',
-  order: 15,
+  page: 'memory',
+  order: 10,
+  keywords: ['chatgpt', 'claude', 'import', 'history'],
   Component: HistorySettings,
 });

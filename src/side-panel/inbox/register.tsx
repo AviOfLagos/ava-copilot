@@ -16,6 +16,8 @@ registerPlace({
 registerSettingsSection({
   id: 'inbox',
   label: 'inbox_settings_title',
-  order: 45,
+  page: 'meetings',
+  order: 20,
+  keywords: ['inbox', 'approvals', 'whatsapp', 'watch'],
   Component: InboxSettingsSection,
 });

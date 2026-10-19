@@ -7,14 +7,12 @@ import {
   hasPlaintextKeys,
   LLM_PROVIDERS_STORAGE_KEY,
   migrateProviderKeys,
-  MODELS_PORT_NAME,
   modelHealthStore,
   modelSettingsStore,
 } from '@extension/storage';
 import type { ProviderConfig } from '@extension/storage';
 import { toAppError } from '@extension/shared';
-import { dispatchCommand, registerCommand, registerRecovery } from '../registry';
-import type { CommandContext } from '../registry';
+import { registerCommand, registerRecovery } from '../registry';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { pruneUsageEvents } from '../usage/retention';
@@ -217,37 +215,8 @@ registerCommand('models_light_route', lightRouteSchema, (_input, context) =>
   }),
 );
 
-// ── Settings page and offscreen document ──────────────────────────────────────────────────────────
-
-function fromExtensionPage(sender: chrome.runtime.MessageSender | undefined): boolean {
-  return sender?.id === chrome.runtime.id && Boolean(sender.url?.startsWith(chrome.runtime.getURL('')));
-}
-
-// The settings page has no panel port; it reaches the same commands on its own port. Only models_ commands
-// pass, and only from the extension's own pages (never a content script)
-chrome.runtime?.onConnect?.addListener(port => {
-  if (port.name !== MODELS_PORT_NAME) return;
-  if (!fromExtensionPage(port.sender)) {
-    port.disconnect();
-    return;
-  }
-  port.onMessage.addListener(async message => {
-    const type = typeof message?.type === 'string' ? message.type : '';
-    const context: CommandContext = {
-      reply: reply => {
-        try {
-          port.postMessage(reply);
-        } catch {
-          // The page closed before the answer came
-        }
-      },
-      requestId: typeof message?.requestId === 'string' ? message.requestId : null,
-    };
-    if (!type.startsWith('models_') || !(await dispatchCommand(message, context))) {
-      context.reply({ type: 'error', requestId: context.requestId, error: 'Unknown request.' });
-    }
-  });
-});
+// ── Offscreen document ────────────────────────────────────────────────────────────────────────────
+// (The settings page reaches models_ commands on the settings port: ../settings/port.ts.)
 
 // The offscreen document asks for a Live token for each connection, so the key never reaches it
 chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {

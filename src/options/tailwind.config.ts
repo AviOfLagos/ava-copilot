@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 // Tailwind's config loader ignores WXT aliases, so import withUI from source.
 import { withUI } from '../ui/lib/withUI';
-// The Models tab renders the panel's Models page: its colours and its files come along
+// Settings sections are the panel's components: its colours, animations and files come along
 import panel from '../side-panel/tailwind.config';
 
 /*
@@ -22,8 +22,9 @@ export default withUI({
   content: [
     resolve(__dirname, '**/*.{js,ts,jsx,tsx}'),
     `!${resolve(__dirname, 'tailwind.config.ts')}`,
-    resolve(__dirname, '../side-panel/models/**/*.{ts,tsx}'),
-    resolve(__dirname, '../side-panel/components/ui/**/*.{ts,tsx}'),
+    // Settings sections are the panel's components
+    resolve(__dirname, '../side-panel/**/*.{ts,tsx}'),
+    `!${resolve(__dirname, '../side-panel/tailwind.config.ts')}`,
   ],
   theme: {
     extend: {
@@ -59,6 +60,9 @@ export default withUI({
         foreground: 'var(--color-foreground)',
         border: 'var(--color-border)',
       },
+      keyframes: panel.theme?.extend?.keyframes,
+      animation: panel.theme?.extend?.animation,
+      borderColor: panel.theme?.extend?.borderColor,
     },
   },
   plugins: [],

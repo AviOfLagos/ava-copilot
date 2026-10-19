@@ -65,5 +65,5 @@ export const connectionSetup = new ConnectionSetup({
   // Brave marks itself on navigator, in workers too
   isBrave: () => Boolean((navigator as Navigator & { brave?: unknown }).brave),
   providerHasKey: async provider => providerHasKey((await llmProviderStore.getAllProviders())[provider]),
-  modelsPageUrl: () => chrome.runtime.getURL('options.html'),
+  modelsPageUrl: () => chrome.runtime.getURL('options.html#models'),
 });

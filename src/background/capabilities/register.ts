@@ -25,6 +25,7 @@ import { compactCapabilities, findPlace, fullCapabilities, capabilityNames } fro
 import { currentTabLine, currentTarget, tabAllowed, tabTracker } from './instance';
 import { describeModelCheck, isRecommended, recommend } from './model-check';
 import type { Recommendation } from './model-check';
+import { openSettingsPage } from '@src/shared/lib/settings-page';
 import { loadPanelCatalog, openInPanel, panelCatalogSchema, savePanelCatalog } from './panel';
 import { modelOptions, probeModels } from './probes';
 import { currentCapabilities } from './sources';
@@ -131,11 +132,18 @@ async function openPlace(spoken: string): Promise<string> {
       .map(entry => entry.label)
       .join(', ')}.`;
   }
-  const outcome =
-    found.kind === 'place'
-      ? await openInPanel({ place: found.entry.id, label: found.entry.label })
-      : await openInPanel({ place: 'settings', section: found.entry });
-  const name = found.kind === 'place' ? found.entry.label : `Settings › ${found.entry.label}`;
+  if (found.kind === 'section') {
+    // Settings sections live on the full-page Settings, which opens (or comes to the front) at the section
+    const name = `Settings › ${found.entry.label}`;
+    try {
+      await openSettingsPage(found.entry.hash ?? '#general');
+      return `Opened ${name} in the Settings tab.`;
+    } catch {
+      return `Could not open ${name}. The user can open it from the side panel's Settings › All settings.`;
+    }
+  }
+  const outcome = await openInPanel({ place: found.entry.id, label: found.entry.label });
+  const name = found.entry.label;
   return outcome === 'shown'
     ? `Opened ${name} in the side panel.`
     : `The side panel is closed: ${name} opens as soon as the user opens it (the toolbar button).`;
@@ -391,7 +399,7 @@ registerAgentAction({
   // Read each time a prompt is built: the list and the user's tab are current, never fixed at startup
   get prompt() {
     const tab = currentTabLine();
-    return `- what_can_you_do / open_place / check_audio / check_model: you are the user's hub. Never say you cannot do something listed here; when asked what you can do, call what_can_you_do. open_place opens any place or Settings section in the panel. check_model only recommends; a switch is the user's choice (by voice, or in Models & usage).
+    return `- what_can_you_do / open_place / check_audio / check_model: you are the user's hub. Never say you cannot do something listed here; when asked what you can do, call what_can_you_do. open_place opens any place in the panel, or a Settings section on the full-page Settings. check_model only recommends; a switch is the user's choice (by voice, or in Models & usage).
 What you and the voice assistant can do (summary):
 ${compactCapabilities(currentCapabilities())}${tab ? `\n${tab}` : ''}`;
   },

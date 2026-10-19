@@ -1,14 +1,28 @@
 import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import { llmProviderStore, ProviderTypeEnum, ttsSettingsStore } from '@extension/storage';
-import type { ReadAloudMode, TtsEngineId, TtsSettingsConfig } from '@extension/storage';
+import type { InstalledVoiceModels, ReadAloudMode, TtsEngineId, TtsSettingsConfig } from '@extension/storage';
+import type { PanelApi } from '../registry';
+import { installedVoiceModels, voiceModelRequirement } from '../requirements/catalog';
+import { RequirementCard, installSuffix, useRequirementFlow } from '../requirements/RequirementCard';
+import { bytesFor } from '../voice-models/downloads';
 
 const SELECT_CLASS = 'glass w-full rounded-lg px-2 py-1.5 text-[13px] text-foreground outline-none';
 const row = 'flex flex-col gap-1.5 px-3 py-2.5';
 
 /** Settings › Voice output: when answers are read aloud on their own, which engine, voice and rate. */
-export default function TtsSettingsSection() {
+export default function TtsSettingsSection({ api }: { api?: PanelApi }) {
   const [settings, setSettings] = useState<TtsSettingsConfig | null>(null);
+  // A local voice that is not downloaded yet installs before it is chosen
+  const [installed, setInstalled] = useState<InstalledVoiceModels | null>(null);
+  const { flow, state } = useRequirementFlow();
+  const request = api?.request;
+  useEffect(() => {
+    if (request && state.phase === 'idle')
+      void installedVoiceModels(request).then(setInstalled, () => setInstalled(null));
+    // The panel's api is new on every render; asking once per finished choice is enough
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase]);
   const [voices, setVoices] = useState<string[]>([]);
   const [hasGeminiKey, setHasGeminiKey] = useState(true);
 
@@ -36,6 +50,17 @@ export default function TtsSettingsSection() {
 
   if (!settings) return null;
   const update = (changes: Partial<TtsSettingsConfig>) => void ttsSettingsStore.updateSettings(changes);
+  const needs = (engine: 'kitten' | 'kokoro') =>
+    installed && !installed[engine] ? installSuffix(bytesFor([engine])) : '';
+  const chooseEngine = (engine: TtsEngineId) => {
+    const save = () => ttsSettingsStore.updateSettings({ engine, engineChosen: true });
+    if ((engine === 'kitten' || engine === 'kokoro') && request && installed && !installed[engine]) {
+      void flow.choose(voiceModelRequirement([engine], request), save);
+      return;
+    }
+    flow.cancel();
+    void save();
+  };
 
   return (
     <>
@@ -61,16 +86,23 @@ export default function TtsSettingsSection() {
           id="tts-engine"
           className={SELECT_CLASS}
           value={settings.engine}
-          onChange={event => update({ engine: event.target.value as TtsEngineId, engineChosen: true })}>
+          onChange={event => chooseEngine(event.target.value as TtsEngineId)}>
           <option value="system">{t('speak_settings_engine_system')}</option>
-          <option value="kitten">{t('voice_engine_tts_kitten')}</option>
-          <option value="kokoro">{t('voice_engine_tts_kokoro')}</option>
+          <option value="kitten">
+            {t('voice_engine_tts_kitten')}
+            {needs('kitten')}
+          </option>
+          <option value="kokoro">
+            {t('voice_engine_tts_kokoro')}
+            {needs('kokoro')}
+          </option>
           <option value="gemini">{t('speak_settings_engine_gemini')}</option>
         </select>
         {settings.engine === 'gemini' && !hasGeminiKey && (
           <p className="text-muted-foreground text-[11.5px]">{t('speak_settings_gemini_needsKey')}</p>
         )}
       </div>
+      <RequirementCard flow={flow} state={state} />
       {settings.engine === 'system' && (
         <div className={row}>
           <label htmlFor="tts-voice" className="text-[13px]">
