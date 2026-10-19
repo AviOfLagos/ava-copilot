@@ -1297,7 +1297,7 @@
     "message": "Nada está sendo gravado"
   },
   "meeting_alert_nothingBody": {
-    "message": "Ainda não há áudio nem legendas da sua chamada do $1. Clique no ícone do Nex Copilot na chamada para gravar o áudio, ou ative as legendas."
+    "message": "As legendas da sua chamada no $1 estão desativadas e não puderam ser ativadas, então nada está sendo anotado. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio, ou ative as legendas na chamada (o botão CC, ou pressione C)."
   },
   "meeting_alert_recorderBody": {
     "message": "O gravador parou de funcionar na sua chamada do $1: $2"
@@ -8536,5 +8536,56 @@
   },
   "settings_section_memoryIndex": {
     "message": "O que entra na memória"
+  },
+  "meeting_needsInvokeAudio": {
+    "message": "O Chrome só entrega o áudio de uma chamada depois que você clica no ícone do Nex Copilot na barra de ferramentas, na aba da chamada. A aba da chamada está na frente agora: clique no ícone ali (ou pressione Alt+Shift+M) e o áudio entra nestas notas."
+  },
+  "meeting_alert_nothingNoCaptions": {
+    "message": "As legendas estão ativadas na sua chamada no $1, mas nenhuma chegou em 2 minutos. Se as pessoas estão falando, clique no ícone do Nex Copilot na aba da chamada para gravar o áudio."
+  },
+  "meeting_alert_nothingNoAudio": {
+    "message": "Nenhum áudio foi gravado da sua chamada no $1. Clique no ícone do Nex Copilot na aba da chamada para recomeçar."
+  },
+  "meeting_alert_nothingTranscription": {
+    "message": "O áudio da sua chamada no $1 está guardado, mas ainda não pode ser transcrito. Configure a conversão de fala em texto em Configurações › Voz (um modelo neste computador não precisa de chave) ou adicione uma chave do Gemini."
+  },
+  "meeting_alert_audioLostTitle": {
+    "message": "O áudio da chamada parou de ser gravado"
+  },
+  "meeting_alert_audioLostBody": {
+    "message": "O áudio da sua chamada no $1 parou (a aba recarregou ou trocou de dispositivo). As notas continuam pelas legendas. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio de novo."
+  },
+  "meeting_alert_noteFailedTitle": {
+    "message": "Não foi possível escrever as notas da reunião"
+  },
+  "meeting_alert_noteFailedBody": {
+    "message": "O resumo da sua chamada no $1 falhou: $2 Tudo o que foi dito está guardado. Abra o Nex Copilot e pressione Tentar novamente."
+  },
+  "meeting_warning_captionsOff": {
+    "message": "As legendas da chamada estão desativadas e não puderam ser ativadas. Ative-as na chamada (o botão CC, ou pressione C), ou clique no ícone do Nex Copilot na aba da chamada para gravar o áudio."
+  },
+  "meeting_warning_audioLost": {
+    "message": "O áudio da chamada parou no meio (uma recarga ou troca de dispositivo); as notas continuaram pelas legendas."
+  },
+  "meeting_warning_noteFailed": {
+    "message": "Não foi possível escrever as notas. Tudo o que foi dito está guardado: pressione Tentar novamente."
+  },
+  "meeting_status_waitingCaptions": {
+    "message": "Aguardando as primeiras legendas · $1"
+  },
+  "meeting_status_captionsOff": {
+    "message": "Sem anotar: as legendas da chamada estão desativadas · $1"
+  },
+  "meeting_status_noWords": {
+    "message": "Gravando · $1 · nenhuma palavra ainda"
+  },
+  "meeting_auto_waitingTitle": {
+    "message": "Ainda sem anotar"
+  },
+  "meeting_auto_waitingWords": {
+    "message": "Aguardando as primeiras palavras"
+  },
+  "meeting_auto_waitingCaptionsBody": {
+    "message": "As legendas estão ativadas. As notas começam com as primeiras palavras ditas. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio em vez disso."
   }
 }

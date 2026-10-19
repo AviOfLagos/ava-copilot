@@ -7,6 +7,7 @@ import type { MeetingRecord, MeetingWarning } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import { buttonClasses } from '../components/ui/button';
 import { useAssistantName } from '../hooks/useAssistant';
+import { recordingStatus } from './status';
 
 type MeetingTab = 'summary' | 'live' | 'transcript' | 'ask';
 
@@ -32,6 +33,9 @@ const WARNINGS: Record<MeetingWarning, Parameters<typeof t>[0]> = {
   transcription: 'meeting_warning_transcription',
   interrupted: 'meeting_warning_interrupted',
   nothing_captured: 'meeting_warning_nothingCaptured',
+  captions_off: 'meeting_warning_captionsOff',
+  audio_lost: 'meeting_warning_audioLost',
+  note_failed: 'meeting_warning_noteFailed',
 };
 
 const LIVE_STATUS = {
@@ -129,7 +133,7 @@ export default function MeetingView({
 
   const status =
     meeting.status === 'recording'
-      ? t('meeting_status_recording', [clock(elapsed)])
+      ? recordingStatus(meeting, segments.length, clock(elapsed))
       : meeting.status === 'finishing'
         ? t('meeting_status_finishing', [String(meeting.chunksDone), String(meeting.chunksTotal)])
         : meeting.status === 'failed'

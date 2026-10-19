@@ -359,24 +359,62 @@ test('a tab that cannot be recorded and has no captions explains how to allow it
   await web.close();
 });
 
-// A Google Meet call, served in place of the real one: a Leave button (so the user is in the call) and,
-// when asked for, Meet's captions behind its "Turn on captions" button
+// A Google Meet call, served in place of the real one, shaped like Meet's own page (2025–2026): a toolbar
+// whose buttons carry Material Symbols icons (`closed_caption_off`, `call_end`) and accessible names, and,
+// once captions are on, a "Captions" region with one block per speaker turn (a name, then words that
+// arrive a few at a time). Captions start OFF, as in Meet. `captions: false` is a call whose captions
+// cannot be found or turned on. `leaveCall()` shows Meet's "You left the meeting" screen.
 const meetCall = ({ captions }) => `<!doctype html><html lang="en"><head><title>Meet – abc-defg-hij</title></head><body>
-<button aria-label="Leave call">Leave</button>
-${captions ? '<button aria-label="Turn on captions" id="cc">CC</button><div aria-label="Captions" id="region"></div>' : ''}
+<div role="toolbar" id="toolbar">
+${
+  captions
+    ? '<button jsname="r8qRAd" aria-label="Turn on captions (c)" id="cc"><i class="google-symbols" aria-hidden="true">closed_caption_off</i></button>'
+    : ''
+}
+  <button jsname="CQylAd" aria-label="Leave call"><i class="google-symbols" aria-hidden="true">call_end</i></button>
+</div>
 <script>
+  window.ccPresses = 0;
   const cc = document.getElementById('cc');
+  let region = null;
+  let turn = 0;
+  const speak = () => {
+    turn += 1;
+    const block = document.createElement('div');
+    block.className = 'nMcdL bj4p3b';
+    block.innerHTML = '<div class="adE6rb"><img alt=""><div class="KcIKyf jxFHg"><span class="NWpY1d">Ada</span></div></div><div class="ygicle VbkSUe"></div>';
+    region.append(block);
+    // Meet keeps a few turns on screen and drops the oldest
+    while (region.children.length > 2) region.firstElementChild.remove();
+    const words = ['Meet', 'caption', String(turn), 'ok'];
+    let shown = 0;
+    const grow = setInterval(() => {
+      shown += 1;
+      block.querySelector('.ygicle').textContent = words.slice(0, shown).join(' ');
+      if (shown === words.length) {
+        clearInterval(grow);
+        // A pause between turns, longer than the reader waits for a caption to settle
+        setTimeout(speak, 2500);
+      }
+    }, 300);
+  };
   cc?.addEventListener('click', () => {
-    cc.setAttribute('aria-label', 'Turn off captions');
-    const speaker = document.createElement('div');
-    speaker.dataset.speaker = 'Ada';
-    const line = document.createElement('div');
-    line.setAttribute('jsname', 'tgaKEf');
-    speaker.append(line);
-    document.getElementById('region').append(speaker);
-    let n = 0;
-    setInterval(() => { n += 1; line.textContent = 'Meet caption ' + n; }, 2000);
+    window.ccPresses += 1;
+    if (region) return;
+    cc.setAttribute('aria-label', 'Turn off captions (c)');
+    cc.querySelector('i').textContent = 'closed_caption';
+    region = document.createElement('div');
+    region.setAttribute('role', 'region');
+    region.setAttribute('aria-label', 'Captions');
+    region.tabIndex = 0;
+    document.body.append(region);
+    speak();
   });
+  window.leaveCall = () => {
+    document.getElementById('toolbar').remove();
+    region?.remove();
+    document.body.insertAdjacentHTML('beforeend', '<h1>You left the meeting</h1><button>Rejoin</button><button>Return to home screen</button>');
+  };
 </script></body></html>`;
 
 async function joinMeetCall(options) {
@@ -432,14 +470,25 @@ test('joining a call starts notes with no answer; the note is optional and adds 
   assert.ok(Object.keys(notifications).includes(`meeting:${meeting.id}`));
   await shot('meeting-autojoin-prompt');
 
-  // Ignoring it changes nothing: the captions keep coming in
-  await waitFor(
-    async () =>
-      (await readTable('segments')).some(s => s.meetingId === meeting.id && /^Meet caption \d+$/.test(s.text)),
-    'captions in the transcript',
-  );
+  // Meet's captions start off: the extension pressed the captions button itself, once, and saw them show
+  assert.equal(await meet.evaluate(() => window.ccPresses), 1);
+  assert.equal((await latestMeeting()).captionsOn, true);
+  assert.ok(!(await latestMeeting()).warnings.includes('captions_off'));
+
+  // Ignoring it changes nothing: the captions keep coming in, each turn once, with its speaker
+  const lines = await waitFor(async () => {
+    const found = (await readTable('segments')).filter(s => s.meetingId === meeting.id);
+    return found.length >= 3 && found;
+  }, 'captions in the transcript');
+  for (const line of lines) {
+    assert.equal(line.speaker, 'Ada');
+    assert.match(line.text, /^Meet caption \d+ ok$/, 'a whole turn, not a word at a time');
+  }
+  assert.equal(new Set(lines.map(line => line.text)).size, lines.length, 'no turn twice');
   assert.equal((await latestMeeting()).status, 'recording');
   assert.equal((await latestMeeting()).topic, undefined);
+  // With words in, the panel says notes are being taken
+  await waitForText('Taking notes on this call');
 
   // Answering adds the note as context
   await panel.type('#auto-notes-note', 'Hiring plan with Ada');
@@ -469,6 +518,12 @@ test('a call where nothing can be recorded raises a visible alert, and the toolb
   );
   assert.equal(meeting.source, 'captions');
 
+  // Nothing pretends to record: the call's captions could not be turned on, and the panel says so
+  await waitFor(async () => (await latestMeeting()).warnings.includes('captions_off'), 'the captions-off warning');
+  assert.notEqual((await latestMeeting()).captionsOn, true);
+  await waitForText('Not taking notes yet');
+  assert.ok(!(await panelText()).includes('Taking notes on this call'));
+
   // No captions and no audio: the user is told, loudly, everywhere
   const alert = await waitFor(
     async () => (await readTable('inbox')).find(item => item.id === `meetings|nothing:${meeting.id}`),
@@ -488,14 +543,128 @@ test('a call where nothing can be recorded raises a visible alert, and the toolb
   await waitFor(async () => (await latestMeeting()).source === 'audio', 'the audio to be recorded');
   assert.equal((await latestMeeting()).id, meeting.id);
   assert.ok(!(await latestMeeting()).warnings.includes('nothing_captured'));
+  assert.ok(!(await latestMeeting()).warnings.includes('captions_off'));
   await waitFor(
     async () => (await readTable('audioChunks')).some(chunk => chunk.meetingId === meeting.id),
     'audio chunks',
   );
+  // The scripted model writes the audio down: words arrive in the same meeting
+  await waitFor(
+    async () => (await readTable('segments')).some(s => s.meetingId === meeting.id),
+    'words from the audio',
+  );
   await panel.bringToFront();
   await press('Open meeting');
+  await waitForText('Recording ·');
   await click('Stop');
   await waitFor(async () => (await latestMeeting()).status === 'done', 'the meeting to finish', 40000);
+  assert.equal((await readTable('meetings')).length, before + 1, 'one meeting, not two');
   await extension.setStorage({ 'meeting-settings': settings });
   await meet.close();
+});
+
+// Reads a table from an extension page of its own, so it works with the side panel closed
+async function readTableFrom(page, name) {
+  return page.evaluate(
+    name =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('avi-copilot');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const all = open.result.transaction(name).objectStore(name).getAll();
+          all.onsuccess = () => resolve(all.result);
+        };
+      }),
+    name,
+  );
+}
+
+test('leaving the call ends the notes and writes the summary, with the side panel closed', async () => {
+  const before = (await readTable('meetings')).length;
+  const meet = await joinMeetCall({ captions: true });
+  const meeting = await waitFor(
+    async () => (await readTable('meetings')).length > before && (await latestMeeting()),
+    'notes to start on their own',
+  );
+  await waitFor(
+    async () => (await readTable('segments')).filter(s => s.meetingId === meeting.id).length >= 2,
+    'captions in the transcript',
+  );
+
+  // The panel goes away; an ordinary extension page reads the database from here on
+  await panel.close();
+  const reader = await extension.browser.newPage();
+  await reader.goto(`${extension.origin}/options.html`);
+  const notesBefore = mock.meeting.notes;
+  const left = Date.now();
+  await meet.bringToFront();
+  await meet.evaluate(() => window.leaveCall());
+
+  // The page says so at once: no waiting for three half-minute checks
+  const done = await waitFor(
+    async () => {
+      const found = (await readTableFrom(reader, 'meetings')).find(m => m.id === meeting.id);
+      return found?.status === 'done' && found;
+    },
+    'the notes to be written after leaving',
+    40000,
+  );
+  assert.ok(Date.now() - left < 30000, `ended ${Math.round((Date.now() - left) / 1000)} s after leaving`);
+  assert.ok(done.note, 'a summary was written');
+  assert.ok(done.note.actionItems.length > 0, 'with action items');
+  assert.ok(mock.meeting.notes > notesBefore);
+  const messages = (await readTableFrom(reader, 'messages')).filter(m => m.threadId === done.threadId);
+  assert.ok(
+    messages.some(m => m.content.includes('Action items')),
+    'the summary is in the meeting thread',
+  );
+
+  await reader.close();
+  panel = await pressToolbarButton(extension, meet);
+  await panel.waitForSelector('header');
+  await meet.close();
+});
+
+test('a summary that fails says so loudly, and Retry writes it later', async () => {
+  const web = await extension.browser.newPage();
+  await web.goto(`${meetingUrl}?captions=1`);
+  await web.bringToFront();
+  await sleep(500);
+  await panel.bringToFront();
+  await press('Take meeting notes');
+  await waitForText('from the meeting captions');
+  const meeting = await latestMeeting();
+  await waitFor(
+    async () => (await readTable('segments')).some(s => s.meetingId === meeting.id),
+    'captions in the transcript',
+  );
+
+  mock.meeting.failNotes = 1;
+  await click('Stop');
+  const failed = await waitFor(async () => {
+    const found = await latestMeeting();
+    return found.status === 'failed' && found;
+  }, 'the note to fail');
+  assert.ok(failed.warnings.includes('note_failed'));
+  // Said where the user will see it: the Inbox, a notification that stays, and the panel
+  const alert = await waitFor(
+    async () => (await readTable('inbox')).find(item => item.id === `meetings|notes:${meeting.id}`),
+    'the Inbox alert',
+  );
+  assert.equal(alert.kind, 'alert');
+  const notifications = await panel.evaluate(() => chrome.notifications.getAll());
+  assert.ok(Object.keys(notifications).includes(`meeting:notes:${meeting.id}`));
+  await waitForText('Could not write the notes');
+  await shot('meeting-note-failed');
+
+  // Retry, later: the note is written, and the alert is done
+  await click('Retry');
+  await waitFor(async () => (await latestMeeting()).status === 'done', 'the retry to write the note');
+  assert.ok((await latestMeeting()).note);
+  assert.ok(!(await latestMeeting()).warnings.includes('note_failed'));
+  await waitFor(
+    async () => (await readTable('inbox')).find(item => item.id === alert.id)?.status === 'done',
+    'the alert to be done',
+  );
+  await web.close();
 });

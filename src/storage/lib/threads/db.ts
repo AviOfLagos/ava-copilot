@@ -108,7 +108,13 @@ export type MeetingWarning =
   | 'transcription'
   | 'interrupted'
   // Notes started on captions only, and none arrived: nothing is being taken down
-  | 'nothing_captured';
+  | 'nothing_captured'
+  // The call's captions are off and could not be turned on
+  | 'captions_off'
+  // The tab's audio stopped mid-call (a reload, a device change): notes went on from the captions
+  | 'audio_lost'
+  // The note could not be written; Retry tries again
+  | 'note_failed';
 
 export interface ActionItem {
   owner: string;
@@ -165,6 +171,8 @@ export interface MeetingRecord {
   workspaceId?: string | null;
   // The agent that took the notes, when one did
   agentId?: string | null;
+  // Whether the call shows its captions, as last read from the page (null: no captions button found)
+  captionsOn?: boolean | null;
 }
 
 export interface AudioChunk {

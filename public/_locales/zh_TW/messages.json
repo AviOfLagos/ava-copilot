@@ -1297,7 +1297,7 @@
     "message": "目前沒有錄到任何內容"
   },
   "meeting_alert_nothingBody": {
-    "message": "你的 $1 通話目前沒有音訊也沒有字幕。請在通話上點擊 Nex Copilot 圖示以錄製音訊，或開啟通話字幕。"
+    "message": "你的 $1 通話字幕是關閉的，而且無法開啟，所以目前沒有記錄任何內容。在通話分頁上按下 Nex Copilot 圖示來錄下音訊，或在通話中開啟字幕（CC 按鈕，或按 C）。"
   },
   "meeting_alert_recorderBody": {
     "message": "你的 $1 通話錄音器停止運作：$2"
@@ -8536,5 +8536,56 @@
   },
   "settings_section_memoryIndex": {
     "message": "哪些內容會存入記憶"
+  },
+  "meeting_needsInvokeAudio": {
+    "message": "Chrome 只有在你於通話分頁上按下工具列的 Nex Copilot 圖示後，才會交出通話的音訊。通話分頁已移到最前面：在那裡按下圖示（或按 Alt+Shift+M），它的音訊就會加入這份筆記。"
+  },
+  "meeting_alert_nothingNoCaptions": {
+    "message": "你的 $1 通話已開啟字幕，但 2 分鐘內沒有收到任何字幕。如果有人在說話，請在通話分頁上按下 Nex Copilot 圖示來錄下音訊。"
+  },
+  "meeting_alert_nothingNoAudio": {
+    "message": "你的 $1 通話沒有錄到任何音訊。在通話分頁上按下 Nex Copilot 圖示重新開始。"
+  },
+  "meeting_alert_nothingTranscription": {
+    "message": "你的 $1 通話音訊已保留，但目前還無法轉成文字。請在「設定 › 語音」設定語音轉文字（本機模型不需要金鑰），或加入 Gemini 金鑰。"
+  },
+  "meeting_alert_audioLostTitle": {
+    "message": "通話音訊已停止錄製"
+  },
+  "meeting_alert_audioLostBody": {
+    "message": "你的 $1 通話音訊停止了（分頁重新載入或切換了裝置）。筆記會改由字幕繼續。在通話分頁上按下 Nex Copilot 圖示即可再次錄製音訊。"
+  },
+  "meeting_alert_noteFailedTitle": {
+    "message": "無法產生會議筆記"
+  },
+  "meeting_alert_noteFailedBody": {
+    "message": "你的 $1 通話摘要失敗：$2 所有內容都已保留。打開 Nex Copilot 並按下「重試」。"
+  },
+  "meeting_warning_captionsOff": {
+    "message": "通話字幕是關閉的，而且無法開啟。請在通話中開啟字幕（CC 按鈕，或按 C），或在通話分頁上按下 Nex Copilot 圖示來錄下音訊。"
+  },
+  "meeting_warning_audioLost": {
+    "message": "通話音訊在通話中途停止（重新載入或切換裝置）；筆記改由字幕繼續。"
+  },
+  "meeting_warning_noteFailed": {
+    "message": "無法產生筆記。所有內容都已保留：請按「重試」。"
+  },
+  "meeting_status_waitingCaptions": {
+    "message": "等待第一句字幕 · $1"
+  },
+  "meeting_status_captionsOff": {
+    "message": "尚未記錄：通話字幕已關閉 · $1"
+  },
+  "meeting_status_noWords": {
+    "message": "錄製中 · $1 · 尚無文字"
+  },
+  "meeting_auto_waitingTitle": {
+    "message": "尚未開始記錄"
+  },
+  "meeting_auto_waitingWords": {
+    "message": "等待第一句話"
+  },
+  "meeting_auto_waitingCaptionsBody": {
+    "message": "字幕已開啟。筆記會從第一句話開始。也可以在通話分頁上按下 Nex Copilot 圖示改為錄下音訊。"
   }
 }

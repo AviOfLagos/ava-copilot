@@ -23,6 +23,8 @@ interface HeaderProps {
   // Something is running somewhere: the presence orb thinks instead of watching
   busy: boolean;
   recordingLabel: string | null;
+  // Notes run but nothing has been taken down yet: the pill stays grey and still
+  recordingIdle?: boolean;
   onNotes: () => void;
   voiceStatus: VoiceStatus;
   onVoice: () => void;
@@ -75,8 +77,13 @@ export default function Header(props: HeaderProps) {
             type="button"
             onClick={props.onNotes}
             aria-label={t('meeting_openNotes')}
-            className="bg-destructive/80 flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[11px] font-medium text-white">
-            <span className="size-1.5 animate-pulse rounded-full bg-white" />
+            title={props.recordingIdle ? t('meeting_auto_waitingWords') : undefined}
+            className={`flex h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-[11px] font-medium ${
+              props.recordingIdle ? 'bg-muted text-muted-foreground border' : 'bg-destructive/80 text-white'
+            }`}>
+            <span
+              className={`size-1.5 rounded-full ${props.recordingIdle ? 'bg-muted-foreground' : 'animate-pulse bg-white'}`}
+            />
             {props.recordingLabel}
           </button>
         ) : (

@@ -1297,7 +1297,7 @@
     "message": "Nothing is being recorded"
   },
   "meeting_alert_nothingBody": {
-    "message": "No audio and no captions from your $1 call yet. Click the Nex Copilot icon on the call to record its audio, or turn on the call's captions."
+    "message": "The captions of your $1 call are off and could not be turned on, so nothing is being taken down. Click the Nex Copilot icon on the call tab to record its audio, or turn on captions in the call (the CC button, or press C)."
   },
   "meeting_alert_recorderBody": {
     "message": "The recorder stopped working on your $1 call: $2"
@@ -8536,5 +8536,56 @@
   },
   "settings_section_memoryIndex": {
     "message": "What joins memory"
+  },
+  "meeting_needsInvokeAudio": {
+    "message": "Chrome hands over a call's audio only after you click the Nex Copilot icon in the toolbar on the call tab. The call tab is in front now: click the icon there (or press Alt+Shift+M) and its audio joins these notes."
+  },
+  "meeting_alert_nothingNoCaptions": {
+    "message": "Captions are on in your $1 call, but none have arrived for 2 minutes. If people are talking, click the Nex Copilot icon on the call tab to record its audio."
+  },
+  "meeting_alert_nothingNoAudio": {
+    "message": "No audio has been recorded from your $1 call. Click the Nex Copilot icon on the call tab to start it again."
+  },
+  "meeting_alert_nothingTranscription": {
+    "message": "The audio of your $1 call is kept, but it cannot be written down yet. Set up speech-to-text in Settings › Voice (a model on this computer needs no key), or add a Gemini key."
+  },
+  "meeting_alert_audioLostTitle": {
+    "message": "The call audio stopped recording"
+  },
+  "meeting_alert_audioLostBody": {
+    "message": "The audio of your $1 call stopped (the tab reloaded or changed devices). Notes go on from its captions. Click the Nex Copilot icon on the call tab to record the audio again."
+  },
+  "meeting_alert_noteFailedTitle": {
+    "message": "The meeting notes could not be written"
+  },
+  "meeting_alert_noteFailedBody": {
+    "message": "The summary of your $1 call failed: $2 Everything said is kept. Open Nex Copilot and press Retry."
+  },
+  "meeting_warning_captionsOff": {
+    "message": "The call's captions are off and could not be turned on. Turn them on in the call (the CC button, or press C), or click the Nex Copilot icon on the call tab to record its audio."
+  },
+  "meeting_warning_audioLost": {
+    "message": "The call's audio stopped mid-call (a reload or a device change); notes went on from its captions."
+  },
+  "meeting_warning_noteFailed": {
+    "message": "The notes could not be written. Everything said is kept: press Retry."
+  },
+  "meeting_status_waitingCaptions": {
+    "message": "Waiting for the first captions · $1"
+  },
+  "meeting_status_captionsOff": {
+    "message": "Not taking notes: the call's captions are off · $1"
+  },
+  "meeting_status_noWords": {
+    "message": "Recording · $1 · no words yet"
+  },
+  "meeting_auto_waitingTitle": {
+    "message": "Not taking notes yet"
+  },
+  "meeting_auto_waitingWords": {
+    "message": "Waiting for the first words"
+  },
+  "meeting_auto_waitingCaptionsBody": {
+    "message": "Captions are on. Notes start with the first words said. Click the Nex Copilot icon on the call tab to record its audio instead."
   }
 }
