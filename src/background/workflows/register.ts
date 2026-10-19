@@ -5,7 +5,7 @@ import { db } from '@extension/storage';
 import { AppError, toAppError } from '@extension/shared';
 import { registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
-import { dispatchCommand, registerCommand, registerRecovery } from '../registry';
+import { answerOneOff, registerCommand, registerRecovery } from '../registry';
 import { registerWorkflowActions } from './actions';
 import { workflowService } from './instance';
 import { RUN_JOB, SCHEDULE_JOB } from './service';
@@ -137,9 +137,6 @@ chrome.tabs.onRemoved.addListener(tabId => lastSeen.delete(tabId));
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('workflows.html'))) return;
   if (typeof message?.type !== 'string' || !message.type.startsWith('workflow_')) return;
-  const requestId = typeof message.requestId === 'string' ? message.requestId : null;
-  void dispatchCommand(message, { reply: sendResponse, requestId }).then(handled => {
-    if (!handled) sendResponse({ type: 'error', requestId, error: 'Unknown request.' });
-  });
-  return true;
+  // Answers on every path, a handler that throws too
+  return answerOneOff(message, sendResponse);
 });

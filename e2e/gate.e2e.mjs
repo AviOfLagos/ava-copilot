@@ -1,7 +1,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { startMockLlm } from './mock-llm.mjs';
-import { launchExtension, openSession, sleep } from './harness.mjs';
+import { launchExtension, openSession, readThreads, sleep } from './harness.mjs';
 
 /**
  * End-to-end tests of the confirm gate: the real extension in a real browser, acting on the fixture
@@ -75,6 +75,33 @@ const scenarios = {
       },
     ],
     page => [{ click_element: { intent: 'Submit the form', index: page.find('button', 'Request a quote') } }],
+    done,
+  ],
+  // Cancel on the confirm card stops the task; the chat must settle and take the next message
+  'cancel-settles': [
+    page => [{ input_text: { intent: 'Fill the name', index: page.find('input', 'name'), text: 'Ada Lovelace' } }],
+    page => [
+      {
+        click_element: {
+          intent: 'Payment link so clients can pay in one tap',
+          index: page.find('button', 'Request a quote'),
+        },
+      },
+    ],
+    done,
+  ],
+  'after-cancel': [done],
+  // Stop pressed while the agent's questions wait on the card
+  'question-stop': [
+    page => [
+      {
+        fill_form: {
+          intent: 'Payment link so clients can pay in one tap',
+          fields: [{ index: page.find('input', 'name'), value: 'Ada Lovelace' }],
+          questions: ['Which payment link should clients use?'],
+        },
+      },
+    ],
     done,
   ],
   'type-login-email': [
@@ -287,5 +314,86 @@ test('a form is filled in one go, and every question is asked at once', async ()
   await session.answer('Confirm');
   await session.waitForEnd();
   assert.deepEqual(await session.events(), [{ type: 'quote', name: 'Ada Lovelace', notes: 'Two rooms' }]);
+  await finish(session);
+});
+
+/**
+ * Waits until the chat is idle on screen and in the database: the Stop button is the Send button again, no
+ * "Working on the page" line is left, no card is up, and the thread is idle with nothing pending.
+ */
+async function waitSettled(session, title, timeout = 20000) {
+  const deadline = Date.now() + timeout;
+  let last = null;
+  while (Date.now() < deadline) {
+    const screen = await session.panel.evaluate(() => ({
+      stop: !!document.querySelector('button[aria-label="Stop"]'),
+      send: !!document.querySelector('button[type="submit"][aria-label="Send"]'),
+      working: document.body.innerText.includes('Working on the page'),
+      card: !!document.querySelector('[role="alertdialog"]'),
+    }));
+    const thread = (await readThreads(session.panel)).find(item => item.title.includes(title));
+    last = { ...screen, status: thread?.status, activity: thread?.activity, pending: thread?.pendingRequest ?? null };
+    if (
+      !screen.stop &&
+      screen.send &&
+      !screen.working &&
+      !screen.card &&
+      thread?.status === 'idle' &&
+      !thread.activity &&
+      !thread.pendingRequest
+    ) {
+      return thread;
+    }
+    await sleep(300);
+  }
+  throw new Error(`The chat did not settle: ${JSON.stringify(last)}`);
+}
+
+test('Cancel on a confirm card settles the chat: Send is back, nothing is working, and a new message runs', async () => {
+  const session = await run('cancel-settles');
+  const card = await session.waitForCard();
+  assert.match(card, /Confirm: Submit a form/);
+
+  await session.answer('Cancel');
+  await session.waitForEnd();
+  const thread = await waitSettled(session, 'cancel-settles');
+  assert.match(await session.panelText(), /Cancelled: /);
+  // It stays settled: nothing recorded late makes it look busy again
+  await sleep(1500);
+  await waitSettled(session, 'cancel-settles', 2000);
+  assert.deepEqual(await session.events(), [], 'nothing was submitted');
+
+  // The next message right after the cancel runs, in the same chat
+  mock.start('after-cancel');
+  await session.send('Run the scripted scenario after-cancel.');
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline && !(mock.runs.get('after-cancel')?.requests.length > 0)) await sleep(200);
+  assert.ok(
+    mock.runs.get('after-cancel')?.requests.length > 0,
+    `the new message ran. Panel shows: ${(await session.panelText()).slice(-400)}`,
+  );
+  const again = await waitSettled(session, 'cancel-settles', 30000);
+  assert.equal(again.id, thread.id, 'the same chat ran it');
+  await finish(session);
+});
+
+test('Stop while a question waits settles the chat, and Stop again changes nothing', async () => {
+  const session = await run('question-stop');
+  const card = await session.waitForCard();
+  assert.match(card, /Which payment link should clients use\?/);
+
+  await session.click('Stop');
+  await waitSettled(session, 'question-stop');
+  // A second Stop (the button is Send again, so straight to the background) is harmless
+  await session.panel.evaluate(
+    threadId => {
+      const port = chrome.runtime.connect({ name: 'side-panel-connection' });
+      port.postMessage({ type: 'thread_cancel', threadId });
+      setTimeout(() => port.disconnect(), 300);
+    },
+    (await readThreads(session.panel)).find(item => item.title.includes('question-stop')).id,
+  );
+  await sleep(800);
+  await waitSettled(session, 'question-stop', 2000);
   await finish(session);
 });

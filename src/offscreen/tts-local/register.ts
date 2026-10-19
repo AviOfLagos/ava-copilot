@@ -94,6 +94,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
   if (message?.target !== OFFSCREEN_VOICE_TARGET || sender.id !== chrome.runtime.id) return;
   // Extension pages and the background only, never a content script in a web page
   if (sender.tab || !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
-  void handle(message).then(sendResponse);
+  // Every path answers, a command that throws too: a promised reply that never comes is Chrome's "message channel
+  // closed" error at the background
+  void handle(message).then(sendResponse, error =>
+    sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+  );
   return true;
 });

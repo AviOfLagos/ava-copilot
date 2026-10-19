@@ -2117,6 +2117,38 @@ Meet reload ends the tab capture (then `audio_lost` takes over). Meet's caption 
 is left alone. Users with saved meeting settings keep their old `nothingCapturedSeconds`. Design for Ava speaking in a
 call: `docs/meet-voice-plan.md` (not built).
 
+### Cancel settles; dictation never loses its answer (2026-10-19)
+
+**Cancel on a confirm card left the chat stuck** ("Task cancelled", then still "Working on the page" and the red
+Stop). Cause: `ThreadManager.answer` wrote `status: 'running'` *after* awaiting its "Cancelled: …" note, while a
+refusal stops the task at once (`review.ts` → `context.stop()`), so the run's own end (`idle`) could land first and be
+overwritten. Second cause, found by the E2E: a run that stopped itself was parked, so the next message reused the
+stopped agent and ended at once as "Task cancelled". Fix (`threads/manager.ts`): `answer` issues its writes before
+the agent resumes and only while the run is live; events are recorded one at a time and the run's end waits for them
+and is the last write (the thread is released only after it); nothing recorded after the end or after a stop can set
+activity, a request or `waiting_confirm`; a run that reported TASK_CANCEL is never parked; `cancel` is idempotent, and
+settles a thread that looks busy with no run behind it; a message, Continue or Retry sent while a stopped run winds
+down waits for it (≤ 5 s) instead of "busy"; a hung debugger detach no longer holds the end (5 s).
+
+**Dictate-and-send showed Chrome's "message channel closed before a response was received".** Cause: local
+transcription runs in the offscreen document, but nothing told `closeOffscreenIfIdle` it was busy, so the wake word's
+minute check (wake word off), the end of a conversation or an audio check closed the document mid-request. Fix
+(`voice/dictation.ts`): a `dictation` offscreen-busy check while a recording is written down; one retry when the
+messaging channel broke (pure work); `sttErrorMessage` turns Chrome's wording into a plain sentence. The panel keeps
+the recording and offers **Try again** (`useSpeechInput` `retry`/`canRetry`); a send the background refuses or never
+hears (port lost) puts its words back in the composer (`side-panel/chat/pendingSends.ts`). Listener audit: every
+`onMessage` that returns `true` now answers on every path — offscreen router and local-voice listener (a throwing
+command), `kb_vault_remove`, `capabilities_panel`, and the one-off `memory_`/`workflow_`/`history_` commands through
+the new `answerOneOff` (a handler that throws or never replies). The settings port and the panel port answer a
+throwing command too. Locale keys `chat_stt_unanswered`, `chat_stt_retry`, `chat_send_kept`.
+
+Tests: `threads/__tests__/manager.test.ts` (cancel from the card, Stop on a question, late events, double cancel,
+stale busy thread, send right after cancel, fresh agent after a refusal), `voice/__tests__/dictation.test.ts`,
+`registry/__tests__/registry.test.ts`, `side-panel/chat/__tests__/pendingSends.test.ts`. E2E Brave: `gate` 13/13 (new:
+Cancel settles and the next message runs; Stop on a question, twice), `dictation` 6/6 (new: Send when transcribed on
+the device while the close is asked for every 100 ms — fails with the busy check removed; Gemini send-when-transcribed
+asserts one message, no error; Try again after a failed transcription), `voice` 6/6, `threads` 8/8.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

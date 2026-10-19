@@ -292,6 +292,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       default:
         return { ok: false, error: `Unknown command ${message.type}` };
     }
-  })().then(sendResponse);
+  })().then(sendResponse, error =>
+    // A command that throws still answers: a promised reply that never comes reaches the background as Chrome's
+    // "message channel closed before a response was received"
+    sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+  );
   return true;
 });

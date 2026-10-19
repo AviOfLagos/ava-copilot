@@ -57,7 +57,19 @@ class FakeExecutor {
   }
   answerConfirmation(requestId: string, approved: boolean) {
     this.answers.push([requestId, approved]);
+    // Like the real gate: a refusal stops the task, which ends at once and reports without waiting
+    if (!approved && this.stopOnDecline) {
+      this.cancelled = true;
+      void this.emit(Actors.SYSTEM, ExecutionState.TASK_CANCEL, 'Task cancelled');
+      this.finish();
+    }
     return true;
+  }
+  stopOnDecline = false;
+  // Ends the run without reporting first, the way the real executor returns while its last event is still recorded
+  endAbruptly() {
+    void this.emit(Actors.SYSTEM, ExecutionState.TASK_CANCEL, 'Task cancelled');
+    this.finish();
   }
   addFollowUpTask(task: string) {
     this.tasks.push(task);
@@ -339,5 +351,104 @@ describe('ThreadManager', () => {
     expect(lastExecutor().cancelled).toBe(true);
     expect(await store.get(threadId)).toBeUndefined();
     expect(manager.isRunning(threadId)).toBe(false);
+  });
+  describe('cancel settles the thread', () => {
+    const question = (threadId: string, id = 'q1') => ({
+      id,
+      taskId: threadId,
+      mode: 'needs_user',
+      kind: 'questions',
+      intent: 'Payment link so clients can pay in one tap',
+      target: '',
+      questions: ['Which payment link?'],
+    });
+
+    const expectIdle = async (threadId: string) => {
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('idle');
+      expect(thread?.activity).toBe('');
+      expect(thread?.pendingRequest).toBeNull();
+      expect(manager.isRunning(threadId)).toBe(false);
+    };
+
+    it('goes idle when Cancel on a question card stops the task', async () => {
+      browser.open('https://shop.example');
+      const threadId = await manager.send({ text: 'Set up payments' });
+      const executor = lastExecutor();
+      executor.stopOnDecline = true;
+      await executor.emit(Actors.NAVIGATOR, ExecutionState.STEP_START);
+      await executor.emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(question(threadId)));
+      expect((await store.get(threadId))?.status).toBe('waiting_confirm');
+
+      expect(await manager.answer(threadId, 'q1', false)).toBe(true);
+      // The run ends by itself after the refusal; nothing may leave it looking busy
+      await vi.waitFor(() => expect(manager.isRunning(threadId)).toBe(false));
+      await settle();
+      await expectIdle(threadId);
+      const contents = (await store.messages(threadId)).map(m => m.content);
+      expect(contents).toContain('gate_declinedByUser:Payment link so clients can pay in one tap');
+      expect(contents).toContain('Task cancelled');
+      // The next message runs with a fresh agent: the stopped one would end it at once as cancelled
+      await manager.send({ threadId, text: 'Use the Stripe link' });
+      expect(FakeExecutor.created).toHaveLength(2);
+      expect(lastExecutor().tasks).toEqual(['Use the Stripe link']);
+      expect((await store.get(threadId))?.status).toBe('running');
+    });
+
+    it('goes idle when Stop is pressed while a question waits', async () => {
+      browser.open('https://shop.example');
+      const threadId = await manager.send({ text: 'Set up payments' });
+      await lastExecutor().emit(Actors.NAVIGATOR, ExecutionState.STEP_START);
+      await lastExecutor().emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(question(threadId)));
+      await manager.cancel(threadId);
+      await settle();
+      await expectIdle(threadId);
+    });
+
+    it('lets no event recorded late re-open a finished run', async () => {
+      browser.open('https://shop.example');
+      const threadId = await manager.send({ text: 'Set up payments' });
+      const executor = lastExecutor();
+      await executor.emit(Actors.NAVIGATOR, ExecutionState.STEP_START);
+      executor.endAbruptly();
+      // A navigator step that reports after the run ended, and a request shown too late
+      void executor.emit(Actors.NAVIGATOR, ExecutionState.STEP_START);
+      void executor.emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(question(threadId, 'late')));
+      await settle();
+      await settle();
+      await expectIdle(threadId);
+    });
+
+    it('is idempotent: cancelling twice, or a stopped thread, leaves it idle', async () => {
+      browser.open('https://shop.example');
+      const threadId = await manager.send({ text: 'Set up payments' });
+      await Promise.all([manager.cancel(threadId), manager.cancel(threadId)]);
+      await manager.cancel(threadId);
+      await settle();
+      await expectIdle(threadId);
+      expect((await store.messages(threadId)).filter(m => m.content === 'Task cancelled')).toHaveLength(1);
+    });
+
+    it('settles a thread left looking busy with no run behind it', async () => {
+      const thread = await store.create({ status: 'waiting_confirm', activity: 'navigating' });
+      await store.update(thread.id, { pendingRequest: question(thread.id) as never });
+      await manager.cancel(thread.id);
+      await expectIdle(thread.id);
+    });
+
+    it('takes a new message right after a cancel', async () => {
+      browser.open('https://shop.example');
+      const threadId = await manager.send({ text: 'Set up payments' });
+      const executor = lastExecutor();
+      // The run takes a moment to wind down after the stop
+      executor.cancel = async () => {
+        executor.cancelled = true;
+        setTimeout(() => executor.endAbruptly(), 20);
+      };
+      await manager.cancel(threadId);
+      await manager.send({ threadId, text: 'Try again' });
+      expect((await store.get(threadId))?.status).toBe('running');
+      expect(manager.isRunning(threadId)).toBe(true);
+    });
   });
 });

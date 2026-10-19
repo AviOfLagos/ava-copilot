@@ -5,6 +5,7 @@ vi.mock('../../services/speechToText', () => ({ SpeechToTextService: { create: v
 vi.mock('../engines/models', () => ({ installedVoiceModels: vi.fn(async () => ({})) }));
 vi.mock('../engines/offscreen', () => ({ toVoiceOffscreen: vi.fn() }));
 vi.mock('../../offscreen', () => ({ toOffscreen: vi.fn(async () => ({ ok: true })) }));
+vi.mock('../../registry', () => ({ registerOffscreenBusy: vi.fn() }));
 vi.mock('@extension/storage', () => ({
   llmProviderStore: { getAllProviders: vi.fn(async () => ({})) },
   speechToTextModelStore: { getSpeechToTextModel: vi.fn(async () => null) },
@@ -12,7 +13,22 @@ vi.mock('@extension/storage', () => ({
   localSttChoice: vi.fn(() => null),
 }));
 
-const { hasGeminiSpeechToText, holdForDictation, releaseDictation, transcribeSpeech } = await import('../dictation');
+const {
+  dictationBusy,
+  hasGeminiSpeechToText,
+  holdForDictation,
+  isChannelError,
+  releaseDictation,
+  sttErrorMessage,
+  transcribeSpeech,
+} = await import('../dictation');
+const { registerOffscreenBusy } = await import('../../registry');
+// Registered when the module loads, before any test clears the mocks
+const busyChecks = vi.mocked(registerOffscreenBusy).mock.calls.map(call => [...call]);
+
+// What Chrome says when the offscreen document closes while it writes the words down
+const CHANNEL_CLOSED =
+  'A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received';
 const { toOffscreen } = await import('../../offscreen');
 
 describe('dictation: writing the words down', () => {
@@ -35,6 +51,44 @@ describe('dictation: writing the words down', () => {
     expect(await transcribeSpeech('BBBB', 'audio/wav', d)).toBe('from gemini');
     expect(d.gemini).toHaveBeenCalledWith('BBBB', 'audio/wav');
     expect(d.local).not.toHaveBeenCalled();
+  });
+
+  it('keeps the offscreen document open while it writes the words down', async () => {
+    const check = busyChecks.find(call => call[0] === 'dictation')?.[1] as () => Promise<boolean>;
+    expect(check).toBeTypeOf('function');
+    let finish!: (text: string) => void;
+    const d = deps();
+    d.local.mockImplementation(() => new Promise<string>(resolve => (finish = resolve)));
+    const words = transcribeSpeech('AAAA', 'audio/webm', d);
+    await vi.waitFor(() => expect(d.local).toHaveBeenCalled());
+    expect(dictationBusy()).toBe(true);
+    expect(await check()).toBe(true);
+    finish('hello');
+    expect(await words).toBe('hello');
+    expect(dictationBusy()).toBe(false);
+
+    d.local.mockRejectedValue(new Error('broken'));
+    await expect(transcribeSpeech('AAAA', 'audio/webm', d)).rejects.toThrow('broken');
+    expect(dictationBusy()).toBe(false);
+  });
+
+  it('tries once more when the offscreen document went away mid-way, and the words still arrive', async () => {
+    const d = deps();
+    d.local.mockRejectedValueOnce(new Error(CHANNEL_CLOSED)).mockResolvedValueOnce('send the invoice');
+    expect(await transcribeSpeech('AAAA', 'audio/webm', d)).toBe('send the invoice');
+    expect(d.local).toHaveBeenCalledTimes(2);
+  });
+
+  it("says it plainly, never Chrome's words, when the offscreen document cannot answer", async () => {
+    const d = deps();
+    d.local.mockRejectedValue(new Error(CHANNEL_CLOSED));
+    const error = await transcribeSpeech('AAAA', 'audio/webm', d).catch(caught => caught);
+    expect(d.local).toHaveBeenCalledTimes(2);
+    expect(sttErrorMessage(error)).toBe('chat_stt_unanswered');
+    expect(isChannelError(new Error('Could not establish connection. Receiving end does not exist.'))).toBe(true);
+    expect(isChannelError(new Error('The message port closed before a response was received.'))).toBe(true);
+    expect(sttErrorMessage(new Error('Gemini said no'))).toBe('Gemini said no');
+    expect(sttErrorMessage('odd')).toBe('bg_cmd_stt_failed');
   });
 
   it('says plainly what to set up when neither is there', async () => {

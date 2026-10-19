@@ -89,7 +89,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ ok: false });
     return;
   }
-  void savePanelCatalog(parsed.data).then(() => sendResponse({ ok: true }));
+  void savePanelCatalog(parsed.data).then(
+    () => sendResponse({ ok: true }),
+    () => sendResponse({ ok: false }),
+  );
   return true;
 });
 

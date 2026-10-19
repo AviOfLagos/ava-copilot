@@ -5356,6 +5356,15 @@
   "chat_stt_timeout": {
     "message": "Transcribing took too long. Try again."
   },
+  "chat_stt_unanswered": {
+    "message": "Couldn't write that down this time. Your recording is kept: press Try again."
+  },
+  "chat_stt_retry": {
+    "message": "Try again"
+  },
+  "chat_send_kept": {
+    "message": "Not sent. Your message is back in the box."
+  },
   "chat_stt_hint": {
     "message": "Stop to edit first · Send sends when ready · Esc discards"
   },
