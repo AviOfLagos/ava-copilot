@@ -47,6 +47,24 @@ export interface ChatModel {
   jsonOutput?: boolean;
   /** In tool mode, offer the tool with automatic choice: Claude rejects a forced tool choice while thinking */
   autoToolChoice?: boolean;
+  /** For a cloud model: the local model a failed call is tried again on (see `callWithFallback`) */
+  fallback?: ModelFallback;
+}
+
+/** Why a cloud call was given to a local model; the kinds of `AppError` that allow it. */
+export type FallbackReason = 'auth' | 'forbidden' | 'quota' | 'rate_limit' | 'unavailable' | 'network' | 'timeout';
+
+/**
+ * How a cloud model hands a failed call to a local one. After the first switch the local model answers every later
+ * call of the same chat model, so a task does not wait out the cloud's retries again on each step.
+ */
+export interface ModelFallback {
+  /** The metered local model, or null when there is none or its server does not answer */
+  resolve: () => Promise<ChatModel | null>;
+  /** Called once, after the local model's first answer: the note in the chat */
+  onSwitch: (to: ChatModel, reason: FallbackReason) => void;
+  /** Set after the first switch */
+  active?: ChatModel;
 }
 
 export type {

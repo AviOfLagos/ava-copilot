@@ -8,7 +8,7 @@ import {
   pickRoleModel,
   speechToTextModelStore,
 } from '@extension/storage';
-import type { ModelRole, ProviderConfig, RoleChoice } from '@extension/storage';
+import type { ModelRole, ProviderConfig, RoleChoice, RoleTarget } from '@extension/storage';
 import { AppError } from '@extension/shared';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
@@ -16,6 +16,7 @@ import { meterModel } from '../usage/meter';
 import type { UsageScope } from '../usage/meter';
 import { openHosts } from './breakers';
 import { discoveryHost } from './discovery';
+import { withCloudFallback } from './fallback';
 
 /**
  * Every caller asks for a model by role, never by id. `resolveRole` picks one from the user's mapping, the
@@ -26,6 +27,8 @@ import { discoveryHost } from './discovery';
 export interface RoleScope {
   workspaceId?: string | null;
   agentId?: string | null;
+  // A model the caller was set up with by hand, e.g. the browser agent's Navigator (see `RoleInputs.explicit`)
+  explicit?: RoleTarget | null;
 }
 
 /** Providers whose circuit breaker is open: their host keeps failing right now. */
@@ -68,6 +71,7 @@ export async function resolveRole(role: ModelRole, scope: RoleScope = {}): Promi
     speechToText: speechToText ?? null,
     workspaceId: scope.workspaceId ?? null,
     agentId: scope.agentId ?? null,
+    explicit: scope.explicit ?? null,
     down: await downProviders(providers),
     // Only models the user turned on (Models page); a provider with none chosen offers all it lists
     activeOnly: true,
@@ -83,7 +87,8 @@ export async function resolveRole(role: ModelRole, scope: RoleScope = {}): Promi
 
 /**
  * A ready, metered chat model for a role, for callers that generate text (fast, smart, vision, local, search,
- * transcribe). Usage is recorded with the role and the scope's agent, routine, run and workspace.
+ * transcribe). Usage is recorded with the role and the scope's agent, routine, run and workspace. A cloud model
+ * finishes a failed call on the local fallback (./fallback.ts); the embedding model never does.
  */
 export async function createRoleModel(
   role: ModelRole,
@@ -93,9 +98,10 @@ export async function createRoleModel(
   // Decrypted here, in the background
   const provider = await llmProviderStore.getProvider(choice.providerId);
   if (!provider) throw new AppError('not_found', `The provider ${choice.providerId} is no longer set up.`);
-  const chatModel = meterModel(createChatModel(provider, { provider: choice.providerId, modelName: choice.model }), {
+  const metered = meterModel(createChatModel(provider, { provider: choice.providerId, modelName: choice.model }), {
     ...scope,
     role,
   });
-  return { chatModel, choice };
+  const local = choice.local || role === 'embed' || role === 'local';
+  return { chatModel: withCloudFallback(metered, { local, scope, role }), choice };
 }

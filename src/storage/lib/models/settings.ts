@@ -11,6 +11,15 @@ export interface RoleTarget {
 
 export type RoleMap = Partial<Record<ModelRole, RoleTarget>>;
 
+/**
+ * The local model a failed cloud call is tried again on. `model` null means the best local chat model found;
+ * a chosen model that is no longer found is replaced by that best one (see `pickFallbackModel`).
+ */
+export interface FallbackLocalSetting {
+  enabled: boolean;
+  model: RoleTarget | null;
+}
+
 export interface ModelSettingsRecord {
   // The user's choice per role; a role left out is picked from what is available
   roles: RoleMap;
@@ -32,6 +41,8 @@ export interface ModelSettingsRecord {
   lightNoticeAt: number | null;
   // The memory the user says this computer has, in GB: browsers report at most 8
   localMemoryGb: number | null;
+  // When a cloud model's call fails (key, quota, rate limit, outage, network), finish it on a local model
+  fallbackLocal: FallbackLocalSetting;
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettingsRecord = {
@@ -45,6 +56,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettingsRecord = {
   lightCloudAllowed: false,
   lightNoticeAt: null,
   localMemoryGb: null,
+  fallbackLocal: { enabled: true, model: null },
 };
 
 export const MODEL_ROLES: ModelRole[] = [
@@ -76,7 +88,8 @@ const storage = createStorage<ModelSettingsRecord>('model-settings', DEFAULT_MOD
 });
 
 function withDefaults(stored: Partial<ModelSettingsRecord> | null | undefined): ModelSettingsRecord {
-  return { ...DEFAULT_MODEL_SETTINGS, ...(stored ?? {}) };
+  const merged = { ...DEFAULT_MODEL_SETTINGS, ...(stored ?? {}) };
+  return { ...merged, fallbackLocal: { ...DEFAULT_MODEL_SETTINGS.fallbackLocal, ...(merged.fallbackLocal ?? {}) } };
 }
 
 function updateMap(map: RoleMap | undefined, role: ModelRole, target: RoleTarget | null): RoleMap {

@@ -8005,5 +8005,53 @@
   },
   "voice_models_error_other": {
     "message": "The voice files could not be downloaded. Try again."
+  },
+  "models_fallback": {
+    "message": "When the cloud fails"
+  },
+  "models_fallback_enable": {
+    "message": "Finish on a local model"
+  },
+  "models_fallback_enable_hint": {
+    "message": "When a cloud model's key, quota, rate limit or service fails, the same step runs again on a model on this computer. Nothing is sent without your click either way."
+  },
+  "models_fallback_model": {
+    "message": "Local model"
+  },
+  "models_fallback_auto": {
+    "message": "Automatic ($1)"
+  },
+  "models_fallback_autoNone": {
+    "message": "Automatic"
+  },
+  "models_fallback_using": {
+    "message": "Failed cloud calls finish on $1."
+  },
+  "models_fallback_none": {
+    "message": "No local model found yet. Install one to keep working when the cloud fails."
+  },
+  "models_fallback_install": {
+    "message": "Install one"
+  },
+  "models_fallback_note": {
+    "message": "$1 failed ($2). Finishing with $3 on this computer."
+  },
+  "models_fallback_reason_auth": {
+    "message": "key refused"
+  },
+  "models_fallback_reason_quota": {
+    "message": "quota"
+  },
+  "models_fallback_reason_rateLimit": {
+    "message": "rate limit"
+  },
+  "models_fallback_reason_unavailable": {
+    "message": "service down"
+  },
+  "models_fallback_reason_network": {
+    "message": "no connection"
+  },
+  "models_fallback_reason_timeout": {
+    "message": "too slow"
   }
 }

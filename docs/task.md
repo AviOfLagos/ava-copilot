@@ -1834,6 +1834,49 @@ starts a conversation. `voice-engines` (6, now "Packed with this build"), `wake`
 real hosts with the real sums. Under heavy machine load the KittenTTS playback level in `voice-engines` and the wake
 detection can time out (the same on `feat/restyle`).
 
+### A local model when the cloud fails (2026-10-19)
+
+A cloud model that failed mid-task failed the step: the stand-in in `pickRoleModel` only applied when a breaker was
+already open or health said `error`, and the browser agent read `agentModelStore` directly, so it never got one.
+
+- **Setting** `ModelSettingsRecord.fallbackLocal: { enabled, model: RoleTarget | null }`, default
+  `{ enabled: true, model: null }` (filled in for settings saved before it). `null` means the best local chat model;
+  a chosen model that is no longer found is re-picked the same way. Pure pick in
+  `src/storage/lib/models/fallback.ts` (`pickFallbackModel`, `localChatModels`), shared by the background and the
+  Models hub.
+- **On a failed call** `callWithFallback` in `background/llm/generate.ts` wraps `generateStructured` and
+  `generatePlainText`. `fallbackReason` (`llm/errors.ts`) allows auth (401, missing key), forbidden (403), quota (402,
+  or a 429 whose text says quota/RESOURCE_EXHAUSTED/insufficient_quota), rate_limit (429 after the usage meter's own
+  retries), unavailable (5xx), network (no response), timeout (408). Never: cancel or an aborted signal, invalid
+  (400/409/413/422), not_found, budget, unknown, a reply that could not be parsed. The same call runs once on the
+  fallback in that model's own structured mode; after the first switch the fallback answers every later call of
+  that chat model (a task does not wait out the meter's 30 s again on each step). If there is no fallback, its
+  server does not answer (`models/alive.ts`, moved out of `light.ts`), or it fails too, the cloud's error is thrown.
+- **Attached** by `withCloudFallback` (`background/models/fallback.ts`) in `createRoleModel` (never for `embed` or
+  `local`) and in `threads/factory.ts` `resolveModels`, only to cloud models. The fallback is metered as itself, so
+  usage shows the model that answered. The note goes through the scope's `notify` (a run's `ACT_NOTICE`, kept as a
+  system message): "OpenAI failed (quota). Finishing with qwen3:4b on this computer."
+- **Browser agent on roles** `resolveModels`: a thread's own model still serves both agents; otherwise Navigator =
+  `fast`, Planner = `smart` through `resolveRole` with the agent model from settings as `RoleInputs.explicit`
+  (order: agent mapping → workspace mapping → explicit → everyone's mapping → best), so a down provider gets a stand-in
+  and the agent's reasoning effort stays with its own model. With no Navigator set it now picks the best model instead
+  of failing.
+- **UI** "When the cloud fails" card in Models → Local (`LocalSection.tsx`, panel and options page): switch, picker of
+  discovered local models (Automatic shows which), the model in use, and "Install one" scrolling to the
+  recommendations when none is found. Locale keys `models_fallback*` in all three locales.
+- The gate is untouched: only which model thinks changes.
+
+Tests: unit `llm/__tests__/fallback.test.ts` (20: each kind falls back, none on cancel/400/413/budget/parse/404 or an
+aborted signal, sticky switch with one note, structured call in the local model's mode, original error when no or a
+failing fallback), `models/__tests__/fallback.test.ts` (4: OpenRouter 429 quota → meter's 4 retries → Ollama answers,
+the note, usage on `ollama:qwen3:4b`; chosen model; off / server down; none for embed/local),
+`storage/lib/models/__tests__/fallback.test.ts` (7: default, re-pick, off, no embed/cloud, old settings, explicit
+order, explicit stand-in), `threads/__tests__/resolveModels.test.ts` (7). Full suite 1559. E2E Brave
+`e2e/fallback.e2e.mjs` (2: a cloud returning 429 quota on every chat, the Ollama stand-in on 11434 → the task
+finishes, the note shows, usage is Ollama's, the cloud asked ≤ 5 times; the card shows and saves model and switch),
+plus `models`, `agent`, `onboarding`, `threads` green. Not covered: `voice/engines/economy.ts` calls `generateText`
+directly, so Economy voice turns get no fallback yet.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

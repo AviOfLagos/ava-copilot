@@ -4,17 +4,21 @@ import {
   AgentNameEnum,
   firewallStore,
   generalSettingsStore,
+  getProviderTypeByProviderId,
+  isLocalProvider,
   llmProviderStore,
   personalityStore,
   threadStore,
 } from '@extension/storage';
-import type { ModelConfig } from '@extension/storage';
+import type { ModelConfig, RoleTarget } from '@extension/storage';
 import BrowserContext from '../browser/context';
 import { isHostName, siteHost } from '../agents/patterns';
 import { Executor } from '../agent/executor';
 import type { TaskImages } from '../agent/messages/service';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
+import { withCloudFallback } from '../models/fallback';
+import { resolveRole } from '../models/roles';
 import { meterModel } from '../usage/meter';
 import type { UsageScope } from '../usage/meter';
 import type { TabBinding } from './binding';
@@ -26,33 +30,71 @@ export interface RunModels {
   planner: ChatModel;
 }
 
+const sameModel = (a: { provider: string; modelName: string }, b: RoleTarget) =>
+  a.provider === b.providerId && a.modelName === b.model;
+
 /**
- * Builds the models a run uses: the thread's own model for both agents when it has one, otherwise
- * the agent models from settings. Every call is metered against the thread.
+ * Builds the models a run uses. A thread's own model serves both agents. Otherwise the Navigator does the fast
+ * role and the Planner the smart one (`resolveRole`): the agent's or workspace's mapping first, then the agent
+ * models chosen in settings, then everyone's mapping and the best available, with a provider that is down stood in
+ * for. A cloud model finishes a failed call on the local fallback (models/fallback.ts). Every call is metered
+ * against the thread.
  */
 export async function resolveModels(override: ModelConfig | null, scope: UsageScope): Promise<RunModels> {
   const providers = await llmProviderStore.getAllProviders();
   if (Object.keys(providers).length === 0) {
     throw new Error(t('bg_setup_noApiKeys'));
   }
-  await agentModelStore.cleanupLegacyValidatorSettings();
-  const agentModels = await agentModelStore.getAllAgentModels();
-
-  const navigatorConfig = override ?? agentModels[AgentNameEnum.Navigator];
-  if (!navigatorConfig) {
-    throw new Error(t('bg_setup_noNavigatorModel'));
-  }
-  const plannerConfig = override ?? agentModels[AgentNameEnum.Planner] ?? navigatorConfig;
 
   const build = (config: ModelConfig) => {
     const provider = providers[config.provider];
     if (!provider) {
       throw new Error(t('bg_setup_noProvider', [config.provider]));
     }
-    return meterModel(createChatModel(provider, config), scope);
+    return withCloudFallback(meterModel(createChatModel(provider, config), scope), {
+      local: isLocalProvider({ ...provider, type: provider.type ?? getProviderTypeByProviderId(config.provider) }),
+      scope,
+    });
   };
-  const navigator = build(navigatorConfig);
-  return { navigator, planner: plannerConfig === navigatorConfig ? navigator : build(plannerConfig) };
+  if (override) {
+    const model = build(override);
+    return { navigator: model, planner: model };
+  }
+
+  await agentModelStore.cleanupLegacyValidatorSettings();
+  const agentModels = await agentModelStore.getAllAgentModels();
+  const navigatorConfig = agentModels[AgentNameEnum.Navigator];
+  const plannerConfig = agentModels[AgentNameEnum.Planner] ?? navigatorConfig;
+  // An agent's chat uses the agent's and its workspace's mappings
+  const thread =
+    scope.workspaceId === undefined || scope.agentId === undefined
+      ? await threadStore.get(scope.sessionId).catch(() => undefined)
+      : undefined;
+  const roleScope = {
+    workspaceId: scope.workspaceId !== undefined ? scope.workspaceId : (thread?.workspaceId ?? null),
+    agentId: scope.agentId !== undefined ? scope.agentId : (thread?.agentId ?? null),
+  };
+  const target = (config?: ModelConfig): RoleTarget | null =>
+    config ? { providerId: config.provider, model: config.modelName } : null;
+  const navigatorChoice = await resolveRole('fast', { ...roleScope, explicit: target(navigatorConfig) }).catch(
+    () => null,
+  );
+  if (!navigatorChoice) {
+    throw new Error(t('bg_setup_noNavigatorModel'));
+  }
+  const plannerChoice =
+    (await resolveRole('smart', { ...roleScope, explicit: target(plannerConfig) }).catch(() => null)) ??
+    navigatorChoice;
+
+  // The agent's own settings (reasoning effort) stay with its model; another model gets the provider's defaults
+  const configFor = (choice: RoleTarget, own?: ModelConfig): ModelConfig =>
+    own && sameModel(own, choice) ? own : { provider: choice.providerId, modelName: choice.model };
+  const navigatorModel = configFor(navigatorChoice, navigatorConfig);
+  const plannerModel = configFor(plannerChoice, plannerConfig);
+  const navigator = build(navigatorModel);
+  const shared =
+    sameModel(plannerModel, navigatorChoice) && plannerModel.reasoningEffort === navigatorModel.reasoningEffort;
+  return { navigator, planner: shared ? navigator : build(plannerModel) };
 }
 
 // Matches no site: an allow list of it lets nothing through
