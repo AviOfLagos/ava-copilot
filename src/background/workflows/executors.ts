@@ -12,6 +12,7 @@ import {
 import { threadStore, workflowSettingsStore } from '@extension/storage';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { hitsForAgent } from '../kb/answer';
+import { memoryScope } from '../kb/scope';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
@@ -422,7 +423,8 @@ export function memorySearchExecutor(): StepExecutor {
     taints: true,
     async execute({ params, workflow }) {
       const node = params as unknown as NodeOf<'step.memory_search'>;
-      const hits = await services().kb.search(node.query, node.limit, workflow.workspaceId);
+      // A routine reads the team's memory and the user's own, never an agent's private memory
+      const hits = await services().kb.search(node.query, node.limit, memoryScope.routine(workflow.workspaceId));
       return { kind: 'done', output: hitsForAgent(node.query, hits) };
     },
   };

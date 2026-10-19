@@ -7,8 +7,9 @@ import WorkspacePicker from '../workspaces/WorkspacePicker';
 import AgentPicker from './AgentPicker';
 import GraphView from './GraphView';
 import WorkspaceSummaryView from '../history/WorkspaceSummaryView';
-import { kbStore } from '@extension/storage';
-import type { GraphNode } from '@extension/storage';
+import { db, kbStore } from '@extension/storage';
+import type { AgentProfile, GraphNode } from '@extension/storage';
+import { ScopeActions, ScopeBadge } from './MemoryScope';
 import type { KbAnswer, KbCitation, KnowledgeItem, KnowledgeSourceType } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import MorphOrb from '../components/ui/morph-orb';
@@ -92,6 +93,8 @@ export default function KnowledgeView({
   isDarkMode,
 }: KnowledgeViewProps) {
   const allItems = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
+  const agents = useLive(() => db.agents.toArray(), [], [] as AgentProfile[]);
+  const agentName = (id?: string | null) => agents.find(agent => agent.id === id)?.name;
   // One workspace's knowledge, with what belongs to none; all of it when none is picked
   const [workspace, setWorkspace] = useState<string | null>(null);
   // Same idea for the agent whose work it is; the picker itself hides when there are no agents yet
@@ -265,6 +268,8 @@ export default function KnowledgeView({
                         {item.unembedded > 0 && ` · ${t('kb_keywordOnly')}`}
                       </span>
                     </button>
+                    <ScopeBadge item={item} agentName={agentName(item.agentId)} />
+                    <ScopeActions item={item} withDelete={false} />
                     <Button
                       variant="ghost"
                       size="icon-sm"

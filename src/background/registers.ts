@@ -18,3 +18,4 @@ import './identity/register';
 import './meetings/register';
 import './capabilities/register';
 import './skills/register';
+import './kb/register';

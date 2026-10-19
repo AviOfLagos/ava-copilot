@@ -21,6 +21,7 @@ import { closeOffscreenIfIdle, ensureOffscreen, toOffscreen } from '../offscreen
 import type { ThreadManager } from '../threads/manager';
 import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
+import { memoryScopeForThread } from '../kb/scope';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { quoteTitle } from '../calendar/watcher';
 import { allowedByClick } from './confirm';
@@ -368,7 +369,9 @@ A picture of the screen was sent to you just now: describe what you see in it, a
       }
       case 'ask_knowledge': {
         if (!this.kb) return 'The knowledge base is not available.';
-        const { answer, citations } = await this.kb.ask(String(args.question ?? ''));
+        // Ava's scope in the conversation's own workspace (`kb/scope.ts`)
+        const scope = await memoryScopeForThread(this.threadId);
+        const { answer, citations } = await this.kb.ask(String(args.question ?? ''), scope);
         const sources = citations.map(c => `[${c.n}] ${c.title}, ${c.label}`).join('; ');
         return sources ? `${answer}\nSources: ${sources}` : answer;
       }

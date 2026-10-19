@@ -1834,6 +1834,41 @@ starts a conversation. `voice-engines` (6, now "Packed with this build"), `wake`
 real hosts with the real sums. Under heavy machine load the KittenTTS playback level in `voice-engines` and the wake
 detection can time out (the same on `feat/restyle`).
 
+### Private and team memory for agents (2026-10-19)
+
+Decision with Avi: each agent has **private** memory (that agent, Ava and Avi read it) and there is one **team**
+memory every agent reads and adds to. No agent reads another agent's private memory.
+
+- **Scope on items:** `KnowledgeItem.scope?: 'private' | 'team'` (optional, no Dexie version bump, no index).
+  `itemScope()` in `src/background/kb/scope.ts`: `team` if marked; `private` if marked or the item has an `agentId`
+  (so items from before this change that an agent made are private); else `unowned` (Avi's own, every agent reads it).
+- **One enforcement point:** `canSee(scope, item)` with `memoryScopeFor(thread)` / `memoryScopeForThread(id)`, decided
+  from the chat alone, never from model arguments. Ava (user, voice, brief, panel) → everything in the workspace (the
+  panel's agent picker narrows to one agent); an agent's run → its own private + team + unowned; a routine
+  (`origin: 'workflow'`, even one running as an agent) → team + unowned; an unreadable chat id → the routine's.
+  Workspaces never mix (unchanged rule). Used by `KnowledgeBase.search/ask/items/item(id)` (their scope argument is
+  required now), `search_knowledge`, `workspace_context`'s passages, `kb_ask`, the routine `memory_search` step, voice
+  `ask_knowledge` (which now also stays in the conversation's workspace), and `look_up_graph`.
+- **Graph:** a node shows only when one of its `sourceItemIds` is visible, a link only when its `sourceItemId` is,
+  so an entity only a private note names never appears for another agent.
+- **Workspace summaries** (`history/rollup.ts` `itemsOf`) leave private items out, because every agent reads them
+  through `workspace_context`.
+- **Writes:** `saveFieldsFor(scope, team)`: an agent's saves are private unless `save_to_knowledge {team: true}`;
+  an agent's indexed run chat is private; a re-index keeps the scope the user chose. `share_with_team {title}` moves
+  one of the asking agent's own private items to the team (it can only find its own). The user's moves:
+  `memory_set_scope` / `memory_delete` (`src/background/kb/register.ts`, also as one-off messages from any extension
+  page). `setScope` refuses to make the user's own item private.
+- **Panel:** `src/side-panel/kb/MemoryScope.tsx` (`ScopeBadge`, `ScopeActions`, `AgentMemory`, `memoryRequest`),
+  self-contained for the coming full-page Settings. The agent's page shows its private memory and the team memory with
+  move-to-team / make-private / delete; the Knowledge base list shows Private/Team badges and the move buttons.
+
+Tests: unit `kb/__tests__/scope.test.ts` (36: matrix agent A / agent B / Ava / routine × A-private / B-private /
+team / unowned / B-legacy / other workspace × search_knowledge / ask / by id; graph entity, links and source nodes;
+save private vs team; share_with_team only own; user moves; run chat private and kept on re-index; summaries), full
+suite 1557 green. E2E Brave `e2e/kb.e2e.mjs` (8, +1): agent A's run saves a private note; agent B's run cannot find
+it; Ava's chat can; the user clicks "Move to the team memory" in the Knowledge base; B's next run finds it.
+`agents.e2e` (3) and `graph.e2e` (2) still green.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

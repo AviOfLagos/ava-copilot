@@ -16,6 +16,7 @@ import { WakeWord } from './voice/wake';
 import { VoiceManager } from './voice/manager';
 import { prepareAttachments } from './threads/attachments';
 import { KnowledgeBase } from './kb/manager';
+import { memoryScope } from './kb/scope';
 import { setKnowledgeBase } from './kb/shared';
 import { parseKbExport } from './kb/transfer';
 import { CalendarWatcher } from './calendar/watcher';
@@ -413,7 +414,8 @@ chrome.runtime.onConnect.addListener(port => {
         case 'kb_ask': {
           const scope = typeof message.workspaceId === 'string' ? message.workspaceId : null;
           const agent = typeof message.agentId === 'string' ? message.agentId : null;
-          const result = await kb.ask(String(message.question ?? ''), scope, agent);
+          // The panel is the user: everything in the workspace, or one agent's items when they picked one
+          const result = await kb.ask(String(message.question ?? ''), memoryScope.ava(scope, agent));
           return port.postMessage({ type: 'kb_answer', clientId: message.clientId, ...result });
         }
 

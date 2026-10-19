@@ -23,6 +23,8 @@ import { chunkMeeting, chunkNote, chunkPage, chunkThread, hashText } from './chu
 import type { DraftChunk } from './chunker';
 import { createEmbedder } from './embedder';
 import type { Embedder } from './embedder';
+import { canSee } from './scope';
+import type { MemoryScope } from './scope';
 import { KbIndex } from './search';
 import type { SearchHit } from './search';
 
@@ -129,6 +131,7 @@ export class KnowledgeBase {
       | 'workspaceId'
       | 'agentId'
       | 'origin'
+      | 'scope'
     >,
     drafts: DraftChunk[],
   ): Promise<KnowledgeItem | null> {
@@ -156,6 +159,15 @@ export class KnowledgeBase {
         embedModel: kept?.embedModel ?? null,
       };
     });
+    // An explicit scope wins; else the item keeps the one it had under the same owner; else an agent's own
+    // work is private to it, and the user's has none (every agent reads it)
+    const scope =
+      fields.scope ??
+      (previous && (previous.agentId ?? null) === (fields.agentId ?? null)
+        ? previous.scope
+        : fields.agentId
+          ? 'private'
+          : undefined);
     const item: KnowledgeItem = {
       ...fields,
       id,
@@ -164,6 +176,8 @@ export class KnowledgeBase {
       chunkCount: chunks.length,
       unembedded: 0,
     };
+    if (scope) item.scope = scope;
+    else delete item.scope;
     await this.deps.store.put(item, chunks);
     this.changed({ type: 'put', itemId: item.id });
     return item;
@@ -224,11 +238,12 @@ export class KnowledgeBase {
     });
   }
 
-  /** Saves the page a tab shows. */
+  /** Saves the page a tab shows. An agent's save is private to it unless `scope` says 'team'. */
   async savePage(
     tabId: number,
     workspaceId: string | null = null,
     agentId: string | null = null,
+    scope?: KnowledgeItem['scope'],
   ): Promise<KnowledgeItem> {
     const page = await this.deps.readTab(tabId);
     if (!page.text.trim()) {
@@ -246,6 +261,7 @@ export class KnowledgeBase {
           sourceUpdatedAt: now,
           workspaceId,
           agentId,
+          scope,
         },
         chunkPage(page.url, page.text),
       );
@@ -265,6 +281,7 @@ export class KnowledgeBase {
     text: string;
     workspaceId: string | null;
     agentId?: string | null;
+    scope?: KnowledgeItem['scope'];
   }): Promise<KnowledgeItem> {
     const text = doc.text.trim().slice(0, MAX_PAGE_CHARS);
     if (!text) throw new Error(t('kb_pageEmpty'));
@@ -280,6 +297,7 @@ export class KnowledgeBase {
           sourceUpdatedAt: now,
           workspaceId: doc.workspaceId,
           agentId: doc.agentId ?? null,
+          scope: doc.scope,
         },
         chunkPage(doc.url, text),
       );
@@ -288,8 +306,16 @@ export class KnowledgeBase {
     return item!;
   }
 
-  /** Keeps something the user asked to remember: a fact, a decision, text from a page. */
-  async saveNote(text: string, title?: string, workspaceId: string | null = null): Promise<KnowledgeItem> {
+  /**
+   * Keeps something the user asked to remember: a fact, a decision, text from a page. `owner` files it under
+   * an agent (private to it unless its scope is 'team'); without one it is the user's own.
+   */
+  async saveNote(
+    text: string,
+    title?: string,
+    workspaceId: string | null = null,
+    owner: { agentId?: string | null; scope?: KnowledgeItem['scope'] } = {},
+  ): Promise<KnowledgeItem> {
     const body = text.trim();
     if (!body) throw new Error(t('kb_noteEmpty'));
     const sourceId = crypto.randomUUID();
@@ -304,6 +330,8 @@ export class KnowledgeBase {
           sourceDate: now,
           sourceUpdatedAt: now,
           workspaceId,
+          agentId: owner.agentId ?? null,
+          scope: owner.scope,
         },
         chunkNote(kbItemId('note', sourceId), body),
       );
@@ -380,6 +408,33 @@ export class KnowledgeBase {
       }
       return moved;
     });
+  }
+
+  /**
+   * Moves an item between an agent's private memory and the team's, by the user's click or an agent sharing
+   * its own. Only an agent's item can be private: the user's own items are every agent's already. Returns
+   * whether it changed.
+   */
+  setScope(itemId: string, scope: 'private' | 'team'): Promise<boolean> {
+    return this.serial(async () => {
+      const item = await this.deps.store.item(itemId);
+      if (!item || (scope === 'private' && !item.agentId)) return false;
+      if ((item.scope ?? (item.agentId ? 'private' : undefined)) === scope) return false;
+      await this.deps.store.db.kbItems.update(itemId, { scope, updatedAt: Date.now() });
+      this.changed({ type: 'put', itemId });
+      return true;
+    });
+  }
+
+  /** Every item the caller may see, newest first. */
+  async items(scope: MemoryScope): Promise<KnowledgeItem[]> {
+    return (await this.deps.store.items()).filter(item => canSee(scope, item));
+  }
+
+  /** One item by id, only when the caller may see it: a crafted id never reveals another agent's memory. */
+  async item(itemId: string, scope: MemoryScope): Promise<KnowledgeItem | undefined> {
+    const item = await this.deps.store.item(itemId);
+    return item && canSee(scope, item) ? item : undefined;
   }
 
   /** Lets go of vault notes the user deleted or moved. */
@@ -526,13 +581,11 @@ export class KnowledgeBase {
     return this.index;
   }
 
-  /** The passages that best match a query, by meaning when embeddings are available and by keyword. */
-  async search(
-    query: string,
-    limit = 8,
-    workspaceId: string | null = null,
-    agentId: string | null = null,
-  ): Promise<SearchHit[]> {
+  /**
+   * The passages that best match a query, by meaning when embeddings are available and by keyword, among the
+   * items the caller's scope may see (`memoryScopeFor` in ./scope).
+   */
+  async search(query: string, limit: number, scope: MemoryScope): Promise<SearchHit[]> {
     const index = await this.loadIndex();
     if (index.size === 0) return [];
     const settings = await kbSettingsStore.getSettings();
@@ -546,15 +599,19 @@ export class KnowledgeBase {
         logger.error('Could not embed the query', error);
       }
     }
-    return index.search(query, vector, { limit, embedModel: embedder?.model ?? null, workspaceId, agentId });
+    return index.search(query, vector, {
+      limit,
+      embedModel: embedder?.model ?? null,
+      visible: item => canSee(scope, item),
+    });
   }
 
   /** Answers a question from the knowledge base, citing the sources it used. */
-  async ask(question: string, workspaceId: string | null = null, agentId: string | null = null): Promise<KbAnswer> {
+  async ask(question: string, scope: MemoryScope): Promise<KbAnswer> {
     if (await this.deps.overCap()) {
       throw new Error(t('usage_capReached_short'));
     }
-    const hits = await this.search(question, 8, workspaceId, agentId);
+    const hits = await this.search(question, 8, scope);
     if (hits.length === 0) {
       return { answer: t('kb_answer_nothing'), citations: [] };
     }

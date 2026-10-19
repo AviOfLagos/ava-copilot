@@ -2,14 +2,18 @@ import { GENERAL_SUMMARY_ID } from '@extension/storage';
 import type { KnowledgeItem, SummarySource, Workspace, WorkspaceSummary } from '@extension/storage';
 import { dayLabel } from '../kb/answer';
 import { hashText } from '../kb/chunker';
+import { itemScope } from '../kb/scope';
 
 // The pure half of the workspace summaries, which the panel uses too: scoping, actions, the roll-up
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Which items a workspace's summary may read: its own only (null: the ones in no workspace). */
+/**
+ * Which items a workspace's summary may read: its own only (null: the ones in no workspace), and never an
+ * agent's private memory, since every agent reads the summary (workspace_context).
+ */
 export function itemsOf(items: KnowledgeItem[], workspaceId: string | null): KnowledgeItem[] {
-  return items.filter(item => (item.workspaceId ?? null) === workspaceId);
+  return items.filter(item => (item.workspaceId ?? null) === workspaceId && itemScope(item) !== 'private');
 }
 
 /** A fingerprint of what a summary read, to know when it is out of date. */

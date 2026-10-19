@@ -4,7 +4,10 @@ import { AviCopilotDb, createKbStore, createMeetingStore, createThreadStore, new
 import type { KbSettingsConfig, KbStore, MeetingNote, MeetingStore, ThreadStore } from '@extension/storage';
 import type * as StorageModule from '@extension/storage';
 import type { Embedder } from '../embedder';
+import { memoryScope } from '../scope';
 import { normalize } from '../search';
+
+const AVA = memoryScope.ava(null);
 
 const settings: KbSettingsConfig = {
   indexChats: true,
@@ -182,7 +185,7 @@ describe('KnowledgeBase', () => {
     await kb.sweep();
 
     answers.push('Stage 2 is due Friday 10 October [1], and it closes on Friday [2].');
-    const result = await kb.ask('What did we decide about Stage 2 deadlines last week?');
+    const result = await kb.ask('What did we decide about Stage 2 deadlines last week?', AVA);
     expect(prompts[0]).toContain('[1] Meeting "Stage 2 sync"');
     expect(result.citations.map(citation => citation.anchor)).toEqual(
       expect.arrayContaining([
@@ -193,7 +196,7 @@ describe('KnowledgeBase', () => {
   });
 
   it('says so instead of asking a model when nothing matches', async () => {
-    const result = await kb.ask('anything?');
+    const result = await kb.ask('anything?', AVA);
     expect(result).toEqual({ answer: 'kb_answer_nothing', citations: [] });
     expect(prompts).toEqual([]);
   });
@@ -208,16 +211,16 @@ describe('KnowledgeBase', () => {
     });
     const thread = await chat('Deadlines', [['When is Stage 2 due?', 'Friday.']]);
     await kb.indexThread(thread.id);
-    expect((await kb.search('stage due')).map(hit => hit.item.id)).toEqual([`thread:${thread.id}`]);
+    expect((await kb.search('stage due', 8, AVA)).map(hit => hit.item.id)).toEqual([`thread:${thread.id}`]);
 
     overCap = true;
-    await expect(kb.ask('stage?')).rejects.toThrow('usage_capReached_short');
+    await expect(kb.ask('stage?', AVA)).rejects.toThrow('usage_capReached_short');
   });
 
   it('saves a page and finds it', async () => {
     const item = await kb.savePage(1);
     expect(item).toMatchObject({ sourceType: 'page', url: 'https://example.com/handbook', title: 'Handbook' });
-    const hits = await kb.search('who reviews submissions');
+    const hits = await kb.search('who reviews submissions', 8, AVA);
     expect(hits[0].chunk.anchor).toEqual({ kind: 'page', url: 'https://example.com/handbook' });
   });
 
@@ -239,7 +242,7 @@ describe('KnowledgeBase', () => {
       workspaceId: 'nexprove',
     });
     expect((await store.items()).filter(item => item.sourceId === 'drive:abc123def456')).toHaveLength(1);
-    const hits = await kb.search('revenue fifteen', 3, 'nexprove');
+    const hits = await kb.search('revenue fifteen', 3, memoryScope.ava('nexprove'));
     expect(hits[0].chunk.text).toContain('fifteen');
     await expect(
       kb.saveDocument({ sourceId: 'drive:x', title: 'x', url: link, text: '  ', workspaceId: null }),
@@ -285,11 +288,11 @@ describe('KnowledgeBase', () => {
 
     await kb.wipe();
     expect(await store.items()).toEqual([]);
-    expect(await kb.search('Stage 2')).toEqual([]);
+    expect(await kb.search('Stage 2', 8, AVA)).toEqual([]);
 
     expect(await kb.importAll(JSON.parse(JSON.stringify(data)))).toBe(1);
     expect((await store.chunks()).every(chunk => chunk.vector?.length === 32)).toBe(true);
-    expect((await kb.search('mentors email')).length).toBeGreaterThan(0);
+    expect((await kb.search('mentors email', 8, AVA)).length).toBeGreaterThan(0);
   });
 
   it('keeps chunks for the next sweep when embedding fails', async () => {

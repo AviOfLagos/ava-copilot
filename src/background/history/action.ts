@@ -8,6 +8,7 @@ import { wrapUntrustedContent } from '../agent/messages/utils';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { dayLabel, describeSource } from '../kb/answer';
+import { memoryScopeForThread } from '../kb/scope';
 import { getKnowledgeBase } from '../kb/shared';
 import { fingerprintOf, itemsOf, rollupMarkdown, workspaceSummaries } from './summaries';
 
@@ -60,7 +61,7 @@ export async function workspaceContext(
   if (input.query.trim()) {
     const kb = getKnowledgeBase();
     // This workspace's own passages only: not another's, and not what belongs to none
-    const hits = (await kb?.search(input.query, 12, workspace.id))?.filter(
+    const hits = (await kb?.search(input.query, 12, await memoryScopeForThread(context.taskId)))?.filter(
       hit => hit.item.workspaceId === workspace.id,
     );
     parts.push(
