@@ -35,6 +35,16 @@ export const fieldsPatchSchema = z
     inboxResults: z.boolean(),
     owns: z.array(z.string().max(40)).max(6),
     charter: z.string().max(200).nullable(),
+    personalityId: z.string().max(100).nullable(),
+    voices: z
+      .object({
+        live: z.string().max(200),
+        kitten: z.string().max(200),
+        kokoro: z.string().max(200),
+        system: z.string().max(200),
+      })
+      .partial()
+      .strict(),
   })
   .partial()
   .strict();

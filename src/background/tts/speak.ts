@@ -1,11 +1,12 @@
 import {
   personalityRateOf,
-  personalityStore,
   personalityVoiceFor,
   threadStore,
   ttsSettingsStore,
   ttsSpeakingStore,
 } from '@extension/storage';
+import { agentSpeaker, personalityForThread, spokenLine } from '../personalities/voices';
+import type { Speaker } from '../personalities/voices';
 import { services } from '../registry/services';
 import * as chromeEngine from './chromeEngine';
 import * as geminiEngine from './geminiEngine';
@@ -37,23 +38,26 @@ export async function speaking(): Promise<boolean> {
  */
 export async function speak(
   text: string,
-  context: { threadId: string; messageId: string },
+  // `speaker`: someone other than the chat's own voice says it (an agent's line), its name first
+  context: { threadId: string; messageId: string; speaker?: Speaker | null },
   options: SpeakOptions = {},
 ): Promise<void> {
   if (services().voice.running) return;
   const settings = await ttsSettingsStore.getSettings();
-  const spoken = toSpeakableText(text);
+  const said = toSpeakableText(text);
   await stopSpeaking();
-  if (!spoken) return;
+  if (!said) return;
 
-  // The chat's personality may ask for its own voice and pace
+  // The chat's personality (an agent's chat: the agent's) may ask for its own voice and pace
   const thread = await threadStore.get(context.threadId).catch(() => undefined);
-  const personality = await personalityStore.resolve(thread?.workspaceId).catch(() => null);
+  const personality = await personalityForThread(thread).catch(() => null);
+  const speaker = context.speaker ?? (await agentSpeaker(thread?.agentId).catch(() => null));
+  const spoken = context.speaker ? spokenLine(context.speaker, said) : said;
   await ttsSpeakingStore.set({ threadId: context.threadId, messageId: context.messageId });
   try {
     await engineFor(settings.engine).speak(spoken, {
-      voice: personalityVoiceFor(settings.engine, personality) ?? (settings.voice || undefined),
-      rate: personalityRateOf(personality) ?? settings.rate,
+      voice: personalityVoiceFor(settings.engine, speaker ?? personality) ?? (settings.voice || undefined),
+      rate: speaker?.rate ?? personalityRateOf(personality) ?? settings.rate,
       ...options,
     });
   } finally {

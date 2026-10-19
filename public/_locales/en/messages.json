@@ -8005,5 +8005,95 @@
   },
   "voice_models_error_other": {
     "message": "The voice files could not be downloaded. Try again."
+  },
+  "persona_voice_preview_sentence": {
+    "message": "Hi, I'm $NAME$. This is how I sound.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_preview_busy": {
+    "message": "End the voice conversation first, then preview a voice."
+  },
+  "persona_voice_preview_notInstalled": {
+    "message": "This voice isn't downloaded yet. Download it in Settings › Voice engines, then try again."
+  },
+  "persona_voices_title": {
+    "message": "Voices"
+  },
+  "persona_voices_hint": {
+    "message": "One voice per engine. Which one you hear depends on how Ava speaks: Gemini Live, a voice on this computer, or the system voices."
+  },
+  "persona_voice_engine_live": {
+    "message": "Gemini (Live and read-aloud)"
+  },
+  "persona_voice_engine_kitten": {
+    "message": "Kitten (on this computer)"
+  },
+  "persona_voice_engine_kokoro": {
+    "message": "Kokoro (on this computer)"
+  },
+  "persona_voice_engine_system": {
+    "message": "System voices"
+  },
+  "persona_voice_preview": {
+    "message": "Preview"
+  },
+  "persona_voice_preview_label": {
+    "message": "Preview the $ENGINE$ voice",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Kitten"
+      }
+    }
+  },
+  "persona_voice_previewing": {
+    "message": "Playing…"
+  },
+  "persona_voice_several": {
+    "message": "Its own picks: the first this computer has"
+  },
+  "persona_voice_inherit": {
+    "message": "From its personality"
+  },
+  "persona_voice_edit": {
+    "message": "Voices of $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_builtInHint": {
+    "message": "Built-in personalities are read-only, but their voices and pace are yours to change."
+  },
+  "persona_voice_reset": {
+    "message": "Back to its own voices"
+  },
+  "agents_edit_personality": {
+    "message": "Personality"
+  },
+  "agents_edit_personalityHint": {
+    "message": "How it thinks and talks in its runs."
+  },
+  "agents_edit_personalityNone": {
+    "message": "Its workspace's"
+  },
+  "agents_edit_voices": {
+    "message": "Its voice"
+  },
+  "agents_edit_voicesHint": {
+    "message": "Its answers are said in this voice, with its name first, so you know who is talking."
+  },
+  "agents_field_personality": {
+    "message": "Personality"
+  },
+  "agents_field_voices": {
+    "message": "Voice"
   }
 }

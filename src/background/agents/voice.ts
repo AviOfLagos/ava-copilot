@@ -51,7 +51,9 @@ export function registerAgentVoiceTools(service: AgentService): void {
           attended: true,
           tainted: false,
         });
-        return `Started "${agent.name}". ${await agentRunResult(run.id, VOICE_WAIT_MS)}`;
+        // Its answer is also said by the agent itself, in its own voice, once the run is done (VoiceManager.watch)
+        return `Started "${agent.name}". ${await agentRunResult(run.id, VOICE_WAIT_MS)}
+"${agent.name}" tells the user its answer itself, in its own voice: do not read the answer out; add one short line at most.`;
       } catch (error) {
         return toAppError(error).message;
       }

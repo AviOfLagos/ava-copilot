@@ -9,6 +9,8 @@ import { recordHeard } from './listen';
 import { acquireStt, releaseStt } from './pool';
 import { isRequest, UtteranceCollector } from './utterances';
 import { level } from '../vad';
+import { SpokenLines } from '../lines';
+import type { LineTts } from '../lines';
 
 /**
  * The economy voice conversation: the same Talk button, tools and thread as the Gemini Live one, but no audio
@@ -81,12 +83,38 @@ export class EconomySession {
   private bargedIn = false;
   // Dictation in the chat box has the microphone: nothing heard here counts meanwhile
   private micHeld = false;
+  // An agent's lines, said in its own voice with the same engine (see SpokenLines)
+  private readonly lines: SpokenLines;
+  // The voice the line playing now uses, so talking over it stops the right engine
+  private lineTts: LineTts | null = null;
 
   constructor(
     private readonly options: EconomyOptions,
     private readonly events: VoiceEvents,
     private readonly deps: EconomyDeps = browserDeps(),
-  ) {}
+  ) {
+    this.lines = new SpokenLines({
+      speak: (text, tts) => this.deps.speak(text, tts),
+      stop: tts => this.deps.stopSpeaking(tts),
+    });
+  }
+
+  /** A line someone else says (an agent's answer, its name first), in its voice, once the copilot is free. */
+  speakAs(text: string, tts: LineTts): void {
+    if (!text.trim()) return;
+    this.lines.push({ text: text.slice(0, 4000), tts });
+    this.pump();
+  }
+
+  /** The conversation's personality changed: its instructions now, its voice from the next answer. */
+  reconfigure(changes: { instructions?: string; tts?: LineTts }, notice = ''): void {
+    if (changes.instructions) this.options.instructions = changes.instructions;
+    if (changes.tts) {
+      this.options.economy = { ...this.options.economy, tts: changes.tts };
+      void this.deps.warmVoice(changes.tts).catch(() => {});
+    }
+    if (notice) this.say(notice);
+  }
 
   async start(): Promise<void> {
     this.status('connecting');
@@ -112,7 +140,8 @@ export class EconomySession {
     this.ready = false;
     this.closeMic?.();
     this.closeMic = null;
-    if (this.speaking) this.deps.stopSpeaking(this.options.economy.tts);
+    if (this.speaking) this.deps.stopSpeaking(this.lineTts ?? this.options.economy.tts);
+    this.lines.stop();
     if (this.stt) this.deps.releaseStt();
     this.stt = null;
     this.events.onStatus('off');
@@ -189,7 +218,7 @@ export class EconomySession {
     this.interruptions++;
     this.speaking = false;
     this.spokeUntil = performance.now();
-    this.deps.stopSpeaking(this.options.economy.tts);
+    this.deps.stopSpeaking(this.lineTts ?? this.options.economy.tts);
     this.status('listening');
   }
 
@@ -230,9 +259,32 @@ export class EconomySession {
       void this.turn({ heard });
       return;
     }
-    if (this.notices.length && !this.transcribing && !this.collector.speaking && !this.utterances.length) {
+    const quiet = !this.transcribing && !this.collector.speaking && !this.utterances.length;
+    if (this.lines.waiting && quiet) {
+      void this.sayLine();
+      return;
+    }
+    if (this.notices.length && quiet) {
       void this.turn({ notice: this.notices.splice(0).join('\n') });
     }
+  }
+
+  /** Says the next agent line in its own voice; talking over it stops it, as with an answer. */
+  private async sayLine(): Promise<void> {
+    this.speaking = true;
+    this.status('speaking');
+    const line = await this.lines.next(true, started => {
+      this.lineTts = started.tts;
+    });
+    this.lineTts = null;
+    if (line)
+      this.history.push({ heard: 'An agent spoke to the user in its own voice.', said: line.text, notice: true });
+    if (this.speaking) this.spokeUntil = performance.now();
+    this.speaking = false;
+    this.bargeSamples = 0;
+    if (this.stopped) return;
+    this.status('listening');
+    this.pump();
   }
 
   private async turn(input: {

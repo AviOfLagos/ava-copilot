@@ -2,13 +2,16 @@ import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Plus, X } from 'lucide-react';
 import { t } from '@extension/i18n';
-import type { AgentProfile, AgentTrigger } from '@extension/storage';
+import { allPersonalities, findPersonality } from '@extension/storage';
+import type { AgentProfile, AgentTrigger, PersonalityVoices } from '@extension/storage';
 import { AGENT_ROLES, userTimezone } from '@src/background/agents/profile';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import type { PanelApi } from '../registry';
 import { useWorkspaces } from '../workspaces/WorkspacePicker';
 import { ROLE_LABEL, TRIGGER_TYPE_LABEL, triggerText } from './meta';
+import { personalityName, usePersonalities } from '../personalities/usePersonalities';
+import VoicePicker from '../personalities/VoicePicker';
 
 const INPUT =
   'border-input w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1.5 text-[12.5px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ring)]';
@@ -85,6 +88,10 @@ export default function AgentEditor({
   const [owns, setOwns] = useState((agent.owns ?? []).join(', '));
   const [charter, setCharter] = useState(agent.charter ?? '');
   const [triggers, setTriggers] = useState<AgentTrigger[]>(agent.triggers);
+  const personalities = usePersonalities();
+  const [personalityId, setPersonalityId] = useState(agent.personalityId ?? '');
+  const [voices, setVoices] = useState<PersonalityVoices>(agent.voices ?? {});
+  const personality = findPersonality(personalities, personalityId);
   const [newType, setNewType] = useState<AgentTrigger['type']>('schedule');
   const [newValue, setNewValue] = useState('');
   const [busy, setBusy] = useState(false);
@@ -122,6 +129,9 @@ export default function AgentEditor({
           inboxResults,
           owns: list(owns),
           charter: charter.trim() || null,
+          personalityId: personalityId || null,
+          // Only the engines it has a voice of its own for; the rest come from its personality
+          voices: Object.fromEntries(Object.entries(voices).filter(([, voice]) => voice)),
           budget: {
             dailyUsd: daily !== null && Number.isFinite(daily) && daily > 0 ? daily : null,
             maxStepsPerRun: Math.round(Number(maxSteps)) || 1,
@@ -176,6 +186,34 @@ export default function AgentEditor({
           className={`${INPUT} resize-y`}
         />
       </Field>
+      <Field label={t('agents_edit_personality')} hint={t('agents_edit_personalityHint')} id={id('personality')}>
+        <select
+          id={id('personality')}
+          value={personalityId}
+          onChange={e => setPersonalityId(e.target.value)}
+          className={INPUT}>
+          <option value="">{t('agents_edit_personalityNone')}</option>
+          {allPersonalities(personalities).map(item => (
+            <option key={item.id} value={item.id}>
+              {item.icon} {personalityName(item)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <fieldset className="flex flex-col gap-1">
+        <legend className="mb-1 text-[11.5px] font-medium">{t('agents_edit_voices')}</legend>
+        <p className="text-muted-foreground text-[11px]">{t('agents_edit_voicesHint')}</p>
+        <VoicePicker
+          api={api}
+          idPrefix={id('v')}
+          voices={voices}
+          onChange={setVoices}
+          inheritLabel={t('persona_voice_inherit')}
+          inherited={personality?.voices}
+          rate={personality?.rate}
+          speaker={name.trim() || agent.name}
+        />
+      </fieldset>
       <Field label={t('agents_edit_owns')} hint={t('agents_edit_ownsHint')} id={id('owns')}>
         <input id={id('owns')} value={owns} onChange={e => setOwns(e.target.value)} className={INPUT} />
       </Field>

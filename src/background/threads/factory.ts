@@ -5,9 +5,9 @@ import {
   firewallStore,
   generalSettingsStore,
   llmProviderStore,
-  personalityStore,
   threadStore,
 } from '@extension/storage';
+import { personalityForThread } from '../personalities/voices';
 import type { ModelConfig } from '@extension/storage';
 import BrowserContext from '../browser/context';
 import { isHostName, siteHost } from '../agents/patterns';
@@ -116,9 +116,10 @@ export async function createExecutor(options: {
   media?: TaskImages | null;
 }): Promise<Executor> {
   const settings = await generalSettingsStore.getSettings();
-  // The personality of the thread's workspace (or the active one); a failure to read it keeps the default
+  // An agent's run follows the agent's own personality; any other chat its workspace's (or the active one). A
+  // failure to read it keeps the default
   const thread = await threadStore.get(options.threadId).catch(() => undefined);
-  const personality = await personalityStore.resolve(thread?.workspaceId).catch(() => null);
+  const personality = await personalityForThread(thread).catch(() => null);
   return new Executor(options.task, options.threadId, options.browserContext, options.models.navigator, {
     plannerLLM: options.models.planner,
     agentOptions: {

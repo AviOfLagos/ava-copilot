@@ -131,14 +131,20 @@ export function acceptsLanguageCode(model: string): boolean {
   return /^(models\/)?gemini-(2\.0-flash-live|live-2\.5-flash)/.test(name);
 }
 
-/** The Live setup's `speechConfig`: always the voice, and the language where the model takes it. */
+/**
+ * The Live setup's `speechConfig`: always the voice, and the language where the model takes it. The voice is the
+ * personality's Live voice when it has one (so the user hears who is talking), else Ava's from Settings; either
+ * way it is fixed for the whole session, and the language is always the Settings one.
+ */
 export function liveSpeechConfig(
   model: string,
   settings: Partial<VoiceIdentitySettings>,
+  personalityVoice?: string | null,
 ): { voiceConfig: { prebuiltVoiceConfig: { voiceName: string } }; languageCode?: string } {
   const language = voiceLanguageOf(settings.language);
+  const own = LIVE_VOICES.find(voice => voice.name.toLowerCase() === (personalityVoice ?? '').trim().toLowerCase());
   return {
-    voiceConfig: { prebuiltVoiceConfig: { voiceName: liveVoiceOf(settings.liveVoice) } },
+    voiceConfig: { prebuiltVoiceConfig: { voiceName: own?.name ?? liveVoiceOf(settings.liveVoice) } },
     ...(acceptsLanguageCode(model) ? { languageCode: language } : {}),
   };
 }

@@ -52,6 +52,8 @@ const FIELD_LABEL: Record<ProfileField, MessageKey> = {
   executor: 'agents_field_executor',
   owns: 'agents_field_owns',
   charter: 'agents_field_charter',
+  personalityId: 'agents_field_personality',
+  voices: 'agents_field_voices',
 };
 
 export function Avatar({ agent, size = 'md' }: { agent: Pick<AgentProfile, 'avatar' | 'name'>; size?: 'md' | 'lg' }) {

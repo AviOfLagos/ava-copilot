@@ -8005,5 +8005,95 @@
   },
   "voice_models_error_other": {
     "message": "Não foi possível baixar os arquivos de voz. Tente de novo."
+  },
+  "persona_voice_preview_sentence": {
+    "message": "Oi, eu sou $NAME$. Esta é a minha voz.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_preview_busy": {
+    "message": "Encerre a conversa por voz primeiro e depois ouça a voz."
+  },
+  "persona_voice_preview_notInstalled": {
+    "message": "Esta voz ainda não foi baixada. Baixe-a em Configurações › Mecanismos de voz e tente de novo."
+  },
+  "persona_voices_title": {
+    "message": "Vozes"
+  },
+  "persona_voices_hint": {
+    "message": "Uma voz por mecanismo. A que você ouve depende de como a Ava fala: Gemini Live, uma voz neste computador ou as vozes do sistema."
+  },
+  "persona_voice_engine_live": {
+    "message": "Gemini (Live e leitura em voz alta)"
+  },
+  "persona_voice_engine_kitten": {
+    "message": "Kitten (neste computador)"
+  },
+  "persona_voice_engine_kokoro": {
+    "message": "Kokoro (neste computador)"
+  },
+  "persona_voice_engine_system": {
+    "message": "Vozes do sistema"
+  },
+  "persona_voice_preview": {
+    "message": "Ouvir"
+  },
+  "persona_voice_preview_label": {
+    "message": "Ouvir a voz de $ENGINE$",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Kitten"
+      }
+    }
+  },
+  "persona_voice_previewing": {
+    "message": "Tocando…"
+  },
+  "persona_voice_several": {
+    "message": "Escolhas próprias: a primeira que este computador tiver"
+  },
+  "persona_voice_inherit": {
+    "message": "Da personalidade"
+  },
+  "persona_voice_edit": {
+    "message": "Vozes de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research"
+      }
+    }
+  },
+  "persona_voice_builtInHint": {
+    "message": "As personalidades prontas não podem ser editadas, mas as vozes e o ritmo delas você pode mudar."
+  },
+  "persona_voice_reset": {
+    "message": "Voltar às vozes originais"
+  },
+  "agents_edit_personality": {
+    "message": "Personalidade"
+  },
+  "agents_edit_personalityHint": {
+    "message": "Como ele pensa e fala nas execuções."
+  },
+  "agents_edit_personalityNone": {
+    "message": "A do espaço de trabalho"
+  },
+  "agents_edit_voices": {
+    "message": "A voz dele"
+  },
+  "agents_edit_voicesHint": {
+    "message": "As respostas dele são ditas nesta voz, com o nome dele antes, para você saber quem está falando."
+  },
+  "agents_field_personality": {
+    "message": "Personalidade"
+  },
+  "agents_field_voices": {
+    "message": "Voz"
   }
 }

@@ -260,3 +260,38 @@ describe('EconomySession', () => {
     expect(t.deps.ask.mock.calls[1][0].heard).toBe('and now spoken');
   });
 });
+describe('EconomySession and other voices', () => {
+  it("says an agent's line in its own voice, without asking the model, then goes on with the session's voice", async () => {
+    const t = setup(() => ({ said: 'Here is the answer.' }));
+    await t.session.start();
+    t.session.speakAs('Research: Two sources.', { engine: 'kitten', voice: 'Jasper', rate: 1.1 });
+    await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalledTimes(1));
+    expect(t.deps.speak).toHaveBeenCalledWith('Research: Two sources.', {
+      engine: 'kitten',
+      voice: 'Jasper',
+      rate: 1.1,
+    });
+    expect(t.deps.ask).not.toHaveBeenCalled();
+    t.finish();
+    await vi.waitFor(() => expect(t.statuses().at(-1)).toBe('listening'));
+    await new Promise(resolve => setTimeout(resolve, 350));
+    t.say('what next');
+    await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalledTimes(2));
+    // The line is in the history the model sees, marked as not the user's words
+    expect(t.deps.ask.mock.calls[0][0].history).toEqual([
+      { heard: 'An agent spoke to the user in its own voice.', said: 'Research: Two sources.', notice: true },
+    ]);
+    expect((t.deps.speak.mock.calls[1] as unknown[])[1]).toEqual(OPTIONS.economy.tts);
+  });
+
+  it('speaks the next answer in the new voice after a personality switch', async () => {
+    const t = setup(() => ({ said: 'Done.' }), { ...OPTIONS, economy: { ...OPTIONS.economy } });
+    await t.session.start();
+    t.session.reconfigure({ instructions: 'Now the engineer.', tts: { engine: 'kitten', voice: 'Leo', rate: 1.1 } });
+    t.say('switch please');
+    await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalled());
+    expect(t.deps.ask.mock.calls[0][0].instructions).toBe('Now the engineer.');
+    expect((t.deps.speak.mock.calls[0] as unknown[])[1]).toEqual({ engine: 'kitten', voice: 'Leo', rate: 1.1 });
+    expect(t.deps.warmVoice).toHaveBeenCalledWith({ engine: 'kitten', voice: 'Leo', rate: 1.1 });
+  });
+});

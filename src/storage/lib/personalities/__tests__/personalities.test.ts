@@ -20,7 +20,7 @@ const custom = (changes: Partial<Personality> = {}): Personality => ({
   description: 'Pushes for the close.',
   icon: '📈',
   instructions: 'Ask what the next step with the customer is.',
-  voice: '',
+  voices: {},
   rate: 0,
   ...changes,
 });

@@ -32,4 +32,6 @@ export interface VoiceEngineRuntimeStatus {
   stt: { loaded: string | null; lastLoad: { engine: string; device: string; ms: number } | null };
   // The last words a local recogniser heard in a conversation, and how long it took
   lastHeard: { text: string; ms: number } | null;
+  // The last line said in another voice in a conversation (an agent's answer), and the voice it used
+  lastLine?: { text: string; engine: string; voice: string; at: number } | null;
 }

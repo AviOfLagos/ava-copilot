@@ -11,7 +11,8 @@ import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { registerAgentAction, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
-import { switchedVoiceNote } from './prompt';
+import { switchedGreeting, switchedRestartNote, switchedVoiceNote } from './prompt';
+import './preview';
 
 // Runs nobody is watching (an agent, a routine, the brief) never switch: a page could have asked for it
 const UNATTENDED = new Set(['agent', 'workflow', 'brief']);
@@ -52,8 +53,13 @@ registerVoiceTool({
   // Free (voice/guard.ts): it never acts, so no click is asked for
   guardLabel: 'change its personality',
   handler: async args => {
-    const result = await switchPersonality(String(args.name ?? ''), services().voice.workspaceId);
-    return 'error' in result ? result.error! : switchedVoiceNote(result.personality!);
+    const voice = services().voice;
+    const result = await switchPersonality(String(args.name ?? ''), voice.workspaceId);
+    if ('error' in result) return result.error!;
+    const personality = result.personality!;
+    // Its voice too: an economy conversation's next answer, or a Live session started again in the new voice
+    const restarts = await voice.applyPersonality(personality, switchedGreeting(personality)).catch(() => false);
+    return restarts ? switchedRestartNote(personality) : switchedVoiceNote(personality);
   },
 });
 

@@ -117,6 +117,9 @@ export function fromAuthoredAgent(
     inboxResults: current?.inboxResults ?? true,
     owns: (authored.owns ?? []).map(area => area.trim()).filter(Boolean),
     charter: authored.charter?.trim() || null,
+    // How it talks and sounds is the user's choice in the editor: a drafted change keeps it
+    personalityId: current?.personalityId ?? null,
+    voices: { ...(current?.voices ?? {}) },
     budget: {
       dailyUsd,
       maxStepsPerRun: NUMBER(authored.maxStepsPerRun, 1, 200, DEFAULT_AGENT_BUDGET.maxStepsPerRun),

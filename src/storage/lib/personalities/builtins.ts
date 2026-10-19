@@ -16,7 +16,8 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
     description: 'The assistant as it always is: clear, helpful, to the point.',
     icon: '✨',
     instructions: '',
-    voice: '',
+    // Ava herself: the voices in Settings
+    voices: {},
     rate: 0,
     builtIn: true,
   },
@@ -34,8 +35,14 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
 - Call out hand-waving ("it should just work", "somehow", "etc."): ask what exactly happens, with what input.
 - Point out risks in one line each: data loss, security, breaking changes. Do not pad with minor nitpicks.
 - If you do not know, say "I don't know" and how you would find out.`,
-    voice: '',
-    rate: 0,
+    // Male, quick and bright
+    voices: {
+      live: 'Puck',
+      kitten: 'Leo',
+      kokoro: 'am_michael',
+      system: 'Alex|Fred|Microsoft David - English (United States)|Google UK English Male',
+    },
+    rate: 1.1,
     builtIn: true,
   },
   {
@@ -52,7 +59,13 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
 - Flag risky spend plainly: large or recurring commitments, unusual payees, duplicate charges, missing approvals, spend with no receipt.
 - Separate business from personal money, and point it out when they are mixed.
 - Show workings for any calculation in one or two lines so it can be checked.`,
-    voice: '',
+    // Male, measured and informative, British where the engine has it
+    voices: {
+      live: 'Charon',
+      kitten: 'Hugo',
+      kokoro: 'bm_george',
+      system: 'Daniel|Microsoft George - English (United Kingdom)|Google UK English Male',
+    },
     rate: 0,
     builtIn: true,
   },
@@ -69,7 +82,13 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
 - Say "Not legal advice; check with a lawyer for anything binding." once in every answer about a contract, a dispute or a legal question.
 - Never present yourself as the user's lawyer, never say a document is safe to sign, and never draft as if you represent them. You may suggest plain wording for them to take to a lawyer, labelled as a draft for review.
 - Where the answer depends on the country or state, say so instead of guessing.`,
-    voice: '',
+    // Female, mature and even, British where the engine has it
+    voices: {
+      live: 'Gacrux',
+      kitten: 'Luna',
+      kokoro: 'bf_emma',
+      system: 'Serena|Kate|Microsoft Hazel - English (United Kingdom)|Google UK English Female',
+    },
     rate: 0,
     builtIn: true,
   },
@@ -87,8 +106,14 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
 - Break a big task into the first ten-minute step and push them to start it now.
 - Never insult, shame, mock, threaten or swear at the user, and never comment on their body, family or worth. Firm about the work, kind about the person.
 - If they are stressed or unwell, ease off: help them pick the one thing that matters most today.`,
-    voice: '',
-    rate: 0,
+    // Female, firm, a touch slower
+    voices: {
+      live: 'Kore',
+      kitten: 'Rosie',
+      kokoro: 'af_nicole',
+      system: 'Moira|Tessa|Karen|Microsoft Zira - English (United States)|Google US English',
+    },
+    rate: 0.95,
     builtIn: true,
   },
   {
@@ -105,7 +130,13 @@ export const BUILTIN_PERSONALITIES: readonly Personality[] = [
 - Disagree and commit: when the user has heard the objections and decided, stop arguing and help them execute well.
 - High standards: point out what is not good enough yet, and what "great" would look like, specifically.
 - Think long term: name the effect of a choice in one year and in five.`,
-    voice: '',
+    // Male, firm and deeper
+    voices: {
+      live: 'Orus',
+      kitten: 'Bruno',
+      kokoro: 'am_fenrir',
+      system: 'Rishi|Aaron|Tom|Microsoft Mark - English (United States)|Google UK English Male',
+    },
     rate: 0,
     builtIn: true,
   },

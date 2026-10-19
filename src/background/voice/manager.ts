@@ -12,8 +12,9 @@ import {
   usageStore,
   voiceIdentityStore,
   liveSpeechConfig,
+  personalityVoiceFor,
 } from '@extension/storage';
-import type { MessageAttachment, ThreadRecord } from '@extension/storage';
+import type { MessageAttachment, Personality, ThreadRecord } from '@extension/storage';
 import { createLogger } from '../log';
 import { isOverDailyBudget } from '../usage/budget';
 import { LIVE_AUDIO_USD_PER_MINUTE, LIVE_AUDIO_OUT_USD_PER_MINUTE } from '../usage/pricing';
@@ -46,6 +47,10 @@ import { mediaOf } from '../threads/attachments';
 import { compactCapabilities } from '../capabilities/catalog';
 import { currentCapabilities } from '../capabilities/sources';
 import { currentTabLine, currentTarget, tabTracker } from '../capabilities/instance';
+import { agentSpeaker, speakerTts, spokenLine } from '../personalities/voices';
+import type { Speaker } from '../personalities/voices';
+import type { EconomyEngines } from './engines/wire';
+import { switchedGreeting } from '../personalities/prompt';
 
 const logger = createLogger('Voice');
 
@@ -53,6 +58,8 @@ const WATCH_MS = 2000;
 // A conversation "Hey Ava" started ends after this long with nothing said and no task running
 const WAKE_IDLE_MS = 2 * 60 * 1000;
 const KEEP_ALIVE_MS = 20_000;
+// The most of an agent's answer said aloud in its voice; the rest is in its chat
+const AGENT_LINE_MAX = 600;
 
 export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
 
@@ -86,10 +93,22 @@ export class VoiceManager {
   private lastActivity = 0;
   // Exchanges in this conversation, to tell a long one
   private turns = 0;
+  // When this conversation started
+  private startedAt = 0;
   // What the user calls the assistant, read when the conversation starts
   private assistantName = 'Ava';
   // The workspace of the conversation's chat, where "switch to the accountant" applies
   private personalityWorkspaceId: string | null = null;
+  // How this conversation runs, kept to change its personality's voice mid-way (applyPersonality)
+  private session: {
+    mode: 'live' | 'economy';
+    liveModel: string;
+    liveVoice: string;
+    hasGemini: boolean;
+    stylePrompt: string | undefined;
+    identity: string;
+    economyTts: EconomyEngines['tts'] | null;
+  } | null = null;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
   status: VoiceStatus = 'off';
@@ -104,10 +123,92 @@ export class VoiceManager {
   // The morning brief, set once it exists
   brief: { today(): Promise<string> } | null = null;
 
-  /** Says something to the user when a conversation is on, e.g. a meeting about to start. */
-  async announce(text: string): Promise<void> {
+  /**
+   * Says something to the user when a conversation is on, e.g. a meeting about to start. With a speaker (an
+   * agent), it is said in that speaker's voice, its name first.
+   */
+  async announce(text: string, speaker?: Speaker | null): Promise<void> {
     if (!this.running) return;
+    if (speaker && (await this.speakAs(speaker, text))) return;
     await toOffscreen({ type: 'voice_say', text: `System notice: ${text}` }).catch(() => {});
+  }
+
+  /**
+   * A line in someone else's voice (an agent's answer), its name first, so the user hears who is talking. An
+   * economy conversation says it with its own engine; a Live one plays it on the device, holding the microphone.
+   *
+   * @returns false when it could not be said that way (no conversation), so the caller can fall back
+   */
+  async speakAs(speaker: Speaker, text: string): Promise<boolean> {
+    if (!this.running || !this.session) return false;
+    const line = spokenLine(speaker, text.slice(0, AGENT_LINE_MAX));
+    if (!line) return false;
+    const tts = await speakerTts(speaker, this.session.mode === 'economy' ? this.session.economyTts : null);
+    const reply = await toOffscreen<{ ok?: boolean }>({ type: 'voice_speak_as', text: line, tts }).catch(() => null);
+    return reply?.ok === true;
+  }
+
+  /**
+   * The conversation's personality changed (set_personality): from now on it talks and sounds like that one. An
+   * economy conversation speaks its next answer in the new voice; a Live one starts its session again in the new
+   * voice once the floor is free (a short pause; the conversation so far goes into the new session's instructions,
+   * and `notice` is said first, in the new voice). Language and voice stay fixed for as long as it is in force.
+   *
+   * @returns true when the Live session restarts for the new voice
+   */
+  applyPersonality(personality: Personality, notice: string): Promise<boolean> {
+    // The voice tool and the settings change both arrive for one switch: the second gets the first one's answer
+    const key = personalityKey(personality);
+    if (this.applying?.key === key) return this.applying.result;
+    const result = this.reapply(personality, notice);
+    this.applying = { key, result };
+    return result;
+  }
+
+  // The personality last applied to this conversation, and whether that restarted the Live session
+  private applying: { key: string; result: Promise<boolean> } | null = null;
+  private stopWatchingPersonality: (() => void) | null = null;
+
+  /** Settings or the header switched the personality while the conversation is on: its voice follows. */
+  private async personalityChanged(): Promise<void> {
+    if (!this.running) return;
+    const personality = await personalityStore.resolve(this.personalityWorkspaceId).catch(() => null);
+    if (personality) await this.applyPersonality(personality, switchedGreeting(personality));
+  }
+
+  private async reapply(personality: Personality, notice: string): Promise<boolean> {
+    const session = this.session;
+    if (!this.running || !this.threadId || !session) return false;
+    const history = voiceHistory(await threadStore.messages(this.threadId));
+    const instructions = voiceSessionInstructions(
+      this.assistantName,
+      session.stylePrompt,
+      personality,
+      history,
+      session.identity,
+      capabilitySection(),
+    );
+    if (session.mode === 'economy') {
+      const economy = await economyVoiceOptions(personality, session.hasGemini).catch(() => null);
+      if (economy) session.economyTts = economy.economy.tts;
+      await toOffscreen({ type: 'voice_reconfigure', instructions, economyTts: economy?.economy.tts }).catch(() => {});
+      return false;
+    }
+    const speechConfig = liveSpeechConfig(
+      session.liveModel,
+      await voiceIdentityStore.getSettings(),
+      personalityVoiceFor('live', personality),
+    );
+    const voice = speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName;
+    const restart = voice !== session.liveVoice;
+    session.liveVoice = voice;
+    const reply = await toOffscreen<{ ok?: boolean }>({
+      type: 'voice_reconfigure',
+      instructions,
+      speechConfig,
+      notice: restart ? notice : '',
+    }).catch(() => null);
+    return restart && reply?.ok === true;
   }
 
   get running(): boolean {
@@ -166,6 +267,8 @@ export class VoiceManager {
     const identity = voiceCoreSection(await loadIdentityContext(previous?.workspaceId), voiceIdentity.language);
     const thread = previous ?? (await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] }));
     const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';
+    // The personality's Live voice, or Ava's from Settings: fixed for the session
+    const speechConfig = liveSpeechConfig(settings.liveModel, voiceIdentity, personalityVoiceFor('live', personality));
 
     await ensureOffscreen();
     const response = await toOffscreen<{ ok?: boolean; error?: string; micDenied?: boolean }>({
@@ -178,7 +281,7 @@ export class VoiceManager {
             ? { apiKey: '', tokenAuth: true }
             : { apiKey: gemini?.[1].apiKey ?? '' }),
           model: settings.liveModel,
-          speechConfig: liveSpeechConfig(settings.liveModel, voiceIdentity),
+          speechConfig,
         }),
         instructions: voiceSessionInstructions(
           this.assistantName,
@@ -207,6 +310,18 @@ export class VoiceManager {
     }
 
     this.threadId = thread.id;
+    this.session = {
+      mode: economy ? 'economy' : 'live',
+      liveModel: settings.liveModel,
+      liveVoice: speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName,
+      hasGemini: Boolean(gemini),
+      stylePrompt,
+      identity,
+      economyTts: economy?.economy.tts ?? null,
+    };
+    this.applying = personality ? { key: personalityKey(personality), result: Promise.resolve(false) } : null;
+    this.stopWatchingPersonality?.();
+    this.stopWatchingPersonality = personalityStore.subscribe(() => void this.personalityChanged());
     this.windowId = windowId;
     this.wakeSession = wake;
     this.guarded = wake && guarded;
@@ -215,6 +330,7 @@ export class VoiceManager {
     // Only this conversation's words count as the user's own (remember, open_tab)
     this.recentHeard = [];
     this.lastActivity = Date.now();
+    this.startedAt = Date.now();
     // Threads already waiting or finished are not news
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
     this.watchTimer = setInterval(() => void this.watch(), WATCH_MS);
@@ -259,6 +375,10 @@ export class VoiceManager {
     this.watchTimer = null;
     this.keepAlive = null;
     this.threadId = null;
+    this.session = null;
+    this.applying = null;
+    this.stopWatchingPersonality?.();
+    this.stopWatchingPersonality = null;
     this.status = 'off';
     await toOffscreen({ type: 'voice_stop' }).catch(() => {});
     await closeOffscreenIfIdle();
@@ -571,12 +691,20 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         const before = this.announced.get(thread.id);
         if (key === before) continue;
         this.announced.set(thread.id, key);
-        if (before === undefined && thread.status === 'idle') continue;
+        // Already done when first seen is not news, unless it is an agent's run that started and ended in this
+        // conversation between two looks (a quick run_agent): its answer is still to be heard
+        const fresh = Boolean(thread.agentId) && thread.createdAt >= this.startedAt;
+        if (before === undefined && thread.status === 'idle' && !fresh) continue;
         // A routine's or the brief's chat speaks up only when it waits for the user's click (an agent's is announced:
         // that is how a hand-off's answer is heard)
         const background = thread.origin === 'workflow' || thread.origin === 'brief';
         if (background && thread.status !== 'waiting_confirm') continue;
         const last = thread.status === 'idle' ? (await threadStore.messages(thread.id)).pop()?.content : undefined;
+        // An agent's answer is said by the agent, in its own voice, so the user knows who is talking
+        if (thread.agentId && thread.status === 'idle' && last?.trim()) {
+          const speaker = await agentSpeaker(thread.agentId).catch(() => null);
+          if (speaker && (await this.speakAs(speaker, last))) continue;
+        }
         const notice = noticeFor(thread, last);
         if (notice) await toOffscreen({ type: 'voice_say', text: notice });
       }
@@ -603,6 +731,11 @@ function capabilitySection(): string {
   const tab = currentTabLine();
   return `What you can do (your tools by group; what_can_you_do gives the full list):
 ${compactCapabilities(currentCapabilities())}${tab ? `\n${tab}` : ''}`;
+}
+
+/** What decides how a personality sounds and talks, to tell a real switch from the same one again. */
+function personalityKey(personality: Personality): string {
+  return `${personality.id}|${JSON.stringify(personality.voices ?? {})}|${personality.rate}|${personality.instructions.length}`;
 }
 
 function stateKey(thread: Pick<ThreadRecord, 'status' | 'pendingRequest'>): string {
