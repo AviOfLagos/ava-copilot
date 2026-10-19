@@ -88,17 +88,6 @@ async function openInbox(session) {
   await session.panel.waitForFunction(() => document.body.innerText.includes('Inbox'), { polling: 300 });
 }
 
-/** Opens Settings (now behind the profile menu) and reveals the Inbox settings section. */
-async function openInboxSettings(session) {
-  await session.click('Menu');
-  await session.openAccountMenu();
-  await session.click('Settings');
-  await session.panel.waitForFunction(() => document.body.innerText.includes('Speak up when something needs me'), {
-    polling: 300,
-    timeout: 10000,
-  });
-}
-
 function badgeText(session) {
   return session.panel.evaluate(() => chrome.action.getBadgeText({}));
 }
@@ -272,15 +261,21 @@ test('a WhatsApp-Web-like tab posts its unread conversations through the tab wat
   await whatsapp.goto('https://web.whatsapp.com/');
 
   const session = await openSession(extension, mock);
-  await openInboxSettings(session);
-  await session.click('WhatsApp Web');
-  await session.panel.waitForFunction(() => document.body.innerText.includes('Check now'), { polling: 300 });
-  await session.click('Check now');
-  await session.panel.waitForFunction(() => /Found \d+ new item/.test(document.body.innerText), {
+  // Settings › Meetings & brief › Inbox, on the full-page Settings
+  const settings = await extension.openSettings('#meetings/inbox');
+  await settings.waitForFunction(() => document.body.innerText.includes('Speak up when something needs me'), {
+    polling: 300,
+    timeout: 10000,
+  });
+  await extension.clickOn(settings, 'WhatsApp Web');
+  await settings.waitForFunction(() => document.body.innerText.includes('Check now'), { polling: 300 });
+  await extension.clickOn(settings, 'Check now');
+  await settings.waitForFunction(() => /Found \d+ new item/.test(document.body.innerText), {
     polling: 300,
     timeout: 15000,
   });
-  assert.match(await session.panelText(), /Found 2 new item/);
+  assert.match(await settings.evaluate(() => document.body.innerText), /Found 2 new item/);
+  await settings.close();
 
   const items = await readStore(session.panel, 'inbox');
   const fromWhatsapp = items.filter(item => item.source === 'whatsapp-web');

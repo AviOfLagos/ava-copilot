@@ -251,51 +251,43 @@ test('remember keeps what the user said, and Settings › About you shows it', a
   assert.equal(about.facts.find(fact => fact.text === 'Head of product at Ellum')?.status, 'active');
   assert.equal(about.facts.find(fact => fact.text === 'Owns a yacht in Monaco')?.status, 'proposed');
 
-  const session = await openSession(extension, mock);
-  await session.panel.setViewport({ width: 400, height: 760 });
-  await session.panel.bringToFront();
-  await session.panel.evaluate(() => {
-    const el = document.querySelector('[data-testid="personality-picker"]');
-    el.focus();
-    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-  });
-  await session.panel.waitForSelector('[role="menuitem"]', { timeout: 5000 });
-  await session.panel.evaluate(() =>
-    [...document.querySelectorAll('[role="menuitem"]')]
-      .find(el => el.innerText.includes('Manage personalities'))
-      .click(),
+  // Settings › Memory › About you, on the full-page Settings
+  const page = await extension.openSettings('#memory/about-you', { width: 760, height: 900 });
+  const errors = [];
+  page.on('pageerror', error => errors.push(String(error)));
+  await page.waitForSelector('[aria-label="About you"]', { timeout: 10000 });
+  await page.waitForFunction(
+    () => /Owns a yacht in Monaco/.test(document.querySelector('[aria-label="About you"]').innerText),
+    {
+      polling: 300,
+      timeout: 10000,
+    },
   );
-  await session.panel.waitForSelector('[aria-label="About you"]', { timeout: 10000 });
-  const text = await session.panel.evaluate(() => document.querySelector('[aria-label="About you"]').innerText);
+  const text = await page.evaluate(() => document.querySelector('[aria-label="About you"]').innerText);
   assert.match(text, /Head of product at Ellum/);
   assert.match(text, /Owns a yacht in Monaco/);
   assert.match(text, /Waiting for your OK/);
 
   // Confirming the proposed one makes it active
-  await session.click('Confirm “Owns a yacht in Monaco”');
+  await extension.clickOn(page, 'Confirm “Owns a yacht in Monaco”');
   await waitFor(
     async () =>
       (await extension.getStorage('about-you')).facts.find(fact => fact.text === 'Owns a yacht in Monaco')?.status ===
       'active',
     'the confirmation',
   );
-  await session.panel.evaluate(() =>
-    document.querySelector('[aria-label="About you"]').scrollIntoView({ block: 'start' }),
-  );
   await sleep(400);
-  await shot(session.panel, 'about-you');
-  await session.panel.evaluate(() =>
-    document.querySelector('[aria-label="Personalities"]').scrollIntoView({ block: 'start' }),
-  );
+  await shot(page, 'about-you');
+  await page.goto(`${extension.origin}/options.html#personalities`);
+  await page.waitForSelector('[aria-label="Personalities"]', { timeout: 10000 });
   await sleep(300);
-  await shot(session.panel, 'ava-core');
-  await session.panel.evaluate(() =>
-    document.querySelector('[aria-label="Voice and language"]').scrollIntoView({ block: 'start' }),
-  );
+  await shot(page, 'ava-core');
+  await page.goto(`${extension.origin}/options.html#voice/identity`);
+  await page.waitForSelector('[aria-label="Voice and language"]', { timeout: 10000 });
   await sleep(300);
-  await shot(session.panel, 'voice-language');
-  assert.deepEqual(session.panelErrors, []);
-  await session.close();
+  await shot(page, 'voice-language');
+  assert.deepEqual(errors, []);
+  await page.close();
 });
 
 test('the chat agent knows who it is and what it knows about the user', async () => {

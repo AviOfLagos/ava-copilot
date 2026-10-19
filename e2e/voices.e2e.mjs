@@ -244,18 +244,20 @@ test('a built-in personality takes voices of its own from the editor', async () 
       .find(el => el.innerText.includes('Manage personalities'))
       .click(),
   );
-  await session.panel.waitForSelector('[aria-label="Voices of Cracked engineer"]', { timeout: 10000 });
-  await session.click('Voices of Cracked engineer');
-  await session.panel.waitForSelector('[data-voice-picker="persona"] [data-voice-slot="live"]', { timeout: 5000 });
-  const shown = await session.panel.evaluate(() => document.querySelector('[data-voice-slot="live"]').value);
+  // Manage opens the full-page Settings at Personalities
+  const settings = await extension.settingsTab('#personalities');
+  await settings.waitForSelector('[aria-label="Voices of Cracked engineer"]', { timeout: 10000 });
+  await extension.clickOn(settings, 'Voices of Cracked engineer');
+  await settings.waitForSelector('[data-voice-picker="persona"] [data-voice-slot="live"]', { timeout: 5000 });
+  const shown = await settings.evaluate(() => document.querySelector('[data-voice-slot="live"]').value);
   assert.equal(shown, 'Puck', 'its own Live voice is shown');
-  await session.panel.select('[data-voice-slot="live"]', 'Fenrir');
-  await session.panel.evaluate(() =>
+  await settings.select('[data-voice-slot="live"]', 'Fenrir');
+  await settings.evaluate(() =>
     document.querySelector('[data-voice-picker="persona"]').closest('form').scrollIntoView({ block: 'start' }),
   );
   await sleep(300);
-  await shot(session.panel, 'personality-voices');
-  await session.click('Save');
+  await shot(settings, 'personality-voices');
+  await extension.clickOn(settings, 'Save');
   await waitFor(async () => (await extension.getStorage('personalities'))?.voiceOverrides?.engineer, 'saved');
   const stored = await extension.getStorage('personalities');
   assert.equal(stored.voiceOverrides.engineer.voices.live, 'Fenrir');

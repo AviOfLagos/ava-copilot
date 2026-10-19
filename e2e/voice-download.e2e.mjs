@@ -453,18 +453,18 @@ test('a reload keeps the files: Talk starts at once, and Settings shows them dow
   assert.equal(fileRequests.length, served, 'nothing downloaded again');
   await endConversation();
 
-  await session.click('Menu');
-  await session.openAccountMenu();
-  await session.click('Settings');
-  await panel.waitForSelector('[data-testid="voice-model-kitten-state"]', { timeout: 15_000 });
+  // Settings › Voice › Voice engines, on the full-page Settings
+  const settings = await extension.openSettings('#voice/engines');
+  await settings.waitForSelector('[data-testid="voice-model-kitten-state"]', { timeout: 15_000 });
   const state = id =>
-    panel.evaluate(id => document.querySelector(`[data-testid="voice-model-${id}-state"]`)?.textContent, id);
+    settings.evaluate(id => document.querySelector(`[data-testid="voice-model-${id}-state"]`)?.textContent, id);
   // The rows fill in once the background has answered
   await waitFor(async () => /^Downloaded/.test((await state('kitten')) ?? ''), 'the status to arrive', 15_000);
   assert.match(await state('kitten'), /^Downloaded · \d+ MB$/);
   assert.match(await state('moonshine-tiny'), /^Downloaded · \d+ MB$/);
   assert.match(await state('kokoro'), /^Not downloaded · about 97 MB$/);
-  assert.doesNotMatch(await panel.evaluate(() => document.body.innerText), /node scripts\//, 'no developer command');
+  assert.doesNotMatch(await settings.evaluate(() => document.body.innerText), /node scripts\//, 'no developer command');
+  await settings.close();
 });
 
 test(
@@ -479,12 +479,15 @@ test(
     const wakeSwitch = await panel.waitForSelector('button[role="switch"][aria-label^="Listen for"]', {
       timeout: 15_000,
     });
+    // The panel's quick wake word switch: it turns on only once its model is here (install before use)
     await wakeSwitch.click();
-    await panel.waitForSelector('[data-testid="voice-models-card"]', { timeout: 15_000 });
-    assert.match(await cardText(panel), /Download the wake word \(≈\d+ MB, once\)/);
+    const card = '[data-testid="requirement-card"]';
+    await panel.waitForSelector(card, { timeout: 15_000 });
+    assert.match(await panel.$eval(card, el => el.innerText), /Needs Vosk[^,]*, \d+ MB/);
+    assert.notEqual((await extension.getStorage('meeting-settings'))?.wakeWord, true, 'not on before the download');
     const before = textModel.requests.length;
-    await session.click('Download');
-    await waitFor(async () => !(await cardText(panel)), 'the wake model to download', 180_000);
+    await panel.$eval(`${card} button:last-of-type`, button => button.click());
+    await waitFor(async () => !(await panel.$(card)), 'the wake model to download', 180_000);
     const vosk = await opfsListing(panel, 'vosk');
     assert.deepEqual(vosk, ['.ready.json', 'model.tar.gz', 'words.txt']);
     assert.equal((await extension.getStorage('meeting-settings'))?.wakeWord, true);

@@ -101,7 +101,8 @@ before(async () => {
   models = await startModelServer();
   extension = await launchExtension(mock);
   options = await extension.browser.newPage();
-  await options.goto(`${extension.origin}/options.html`);
+  // Settings › Models
+  await options.goto(`${extension.origin}/options.html#models`);
 });
 
 after(async () => {

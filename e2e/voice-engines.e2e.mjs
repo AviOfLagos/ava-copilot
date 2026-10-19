@@ -226,11 +226,19 @@ after(async () => {
   await mock?.close();
 });
 
+// Settings › Voice › Voice engines, on the full-page Settings
+let settings;
+const clickIn = (page, label) =>
+  page.evaluate(label => {
+    const button = [...document.querySelectorAll('button')].find(b => b.innerText.trim() === label);
+    if (!button) throw new Error(`No button "${label}"`);
+    button.click();
+  }, label);
+
 test('Settings › Voice engines: KittenTTS says something, and the speech is heard', { skip: SKIP }, async () => {
-  const { panel } = session;
-  await session.click('Menu');
-  await session.openAccountMenu();
-  await session.click('Settings');
+  const { panel: commands } = session;
+  settings = await extension.openSettings('#voice/engines');
+  const panel = settings;
   await panel.waitForSelector('#voice-engine-tts', { timeout: 15_000 });
   // The packed models show as packed; the others offer their download (no developer command)
   await panel.waitForFunction(() => /KittenTTS nano\s*Packed with this build/.test(document.body.innerText), {
@@ -242,18 +250,23 @@ test('Settings › Voice engines: KittenTTS says something, and the speech is he
   assert.match(text, /Voice engines/i);
   assert.match(text, /Moonshine tiny\s*Packed with this build/);
   assert.match(text, /Kokoro[^\n]*\s*Not downloaded · about 97 MB/);
+  // Not installed: the choice says it installs first
+  assert.match(
+    await panel.$eval('#voice-engine-tts option[value="kokoro"]', el => el.textContent),
+    /Install \(97 MB\)/,
+  );
   assert.doesNotMatch(text, /node scripts\//);
 
   await panel.select('#voice-engine-tts', 'kitten');
   await waitFor(async () => (await extension.getStorage('tts-settings'))?.engine === 'kitten', 'KittenTTS chosen');
   await panel.bringToFront();
-  await session.click('Say something');
+  await clickIn(panel, 'Say something');
   await panel.waitForFunction(
     () => /Spoke in/.test(document.querySelector('[data-testid="voice-engine-result"]')?.textContent ?? ''),
     { polling: 300, timeout: 120_000 },
   );
 
-  const { runtime } = await command(panel, { type: 'voice_engine_status' });
+  const { runtime } = await command(commands, { type: 'voice_engine_status' });
   assert.equal(runtime.tts.engine, 'kitten');
   assert.ok(runtime.tts.loadMs > 0, 'the model was loaded');
   assert.ok(runtime.tts.playedSeconds > 0.5, `speech was made (${runtime.tts.playedSeconds} s)`);
@@ -261,11 +274,11 @@ test('Settings › Voice engines: KittenTTS says something, and the speech is he
 });
 
 test('Moonshine writes down the recording played as the microphone', { skip: SKIP }, async () => {
-  const { panel } = session;
+  const panel = settings;
   await panel.select('#voice-engine-stt', 'moonshine');
   await waitFor(async () => (await extension.getStorage('voice-engine-settings'))?.stt === 'moonshine', 'Moonshine');
   await panel.bringToFront();
-  await session.click('Test speech-to-text');
+  await clickIn(panel, 'Test speech-to-text');
   await panel.waitForFunction(
     () => /Heard “/.test(document.querySelector('[data-testid="voice-engine-result"]')?.textContent ?? ''),
     { polling: 300, timeout: 120_000 },
@@ -279,7 +292,7 @@ test(
   { skip: SKIP },
   async () => {
     const { panel } = session;
-    await panel.select('#voice-engine-mode', 'economy');
+    await settings.select('#voice-engine-mode', 'economy');
     await waitFor(
       async () => (await extension.getStorage('voice-engine-settings'))?.mode === 'economy',
       'economy mode',

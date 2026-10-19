@@ -577,7 +577,13 @@ export async function startMockLlm(scenarios) {
  * A stand-in for Ollama on its own port (11434), for the first-run setup: it lists a chat model and an embedding
  * model, says what each can do, and passes chats on to the mock model. Start it only where nothing else listens.
  */
-export async function startMockOllama(mock, { port = 11434, models = ['qwen3:4b', 'nomic-embed-text'] } = {}) {
+export async function startMockOllama(
+  mock,
+  { port = 11434, models: listed = ['qwen3:4b', 'nomic-embed-text'], pullStepMs = 250 } = {},
+) {
+  // Grows when a model is pulled
+  const models = [...listed];
+  const pulls = [];
   const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', '*');
@@ -589,6 +595,23 @@ export async function startMockOllama(mock, { port = 11434, models = ['qwen3:4b'
       res.end(JSON.stringify(value));
     };
     if (req.url.startsWith('/api/tags')) return json({ models: models.map(name => ({ name, model: name, size: 1 })) });
+    if (req.url.startsWith('/api/pull')) {
+      // As Ollama answers: a line per step, layers with total/completed, then success; the model is listed after
+      const name = String(JSON.parse(body || '{}').model ?? '');
+      pulls.push(name);
+      res.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+      const send = value => res.write(`${JSON.stringify(value)}\n`);
+      send({ status: 'pulling manifest' });
+      const total = 4_000_000;
+      for (let completed = 0; completed <= total; completed += 1_000_000) {
+        await new Promise(resolve => setTimeout(resolve, pullStepMs));
+        send({ status: `pulling ${name}`, digest: `sha256:${name}`, total, completed });
+      }
+      send({ status: 'verifying sha256 digest' });
+      if (!models.includes(name)) models.push(name);
+      send({ status: 'success' });
+      return res.end();
+    }
     if (req.url.startsWith('/api/ps')) return json({ models: [] });
     if (req.url.startsWith('/api/show')) {
       const name = String(JSON.parse(body || '{}').model ?? '');
@@ -612,6 +635,8 @@ export async function startMockOllama(mock, { port = 11434, models = ['qwen3:4b'
     server.listen(port, resolve);
   });
   return {
+    models,
+    pulls,
     close: () =>
       new Promise(resolve => {
         server.close(resolve);

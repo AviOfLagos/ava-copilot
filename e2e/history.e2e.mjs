@@ -143,11 +143,14 @@ async function screenshot(session, name) {
   await session.panel.screenshot({ path: path.join(SCREENS, `${name}.png`) });
 }
 
+/** Settings › Memory › AI history lives on the full-page Settings: the session's page goes there. */
 async function openSettings(session) {
-  await session.click('Menu');
-  await session.openAccountMenu();
-  await session.click('Settings');
+  await session.panel.goto(`${extension.origin}/options.html#memory/history`);
   await waitForText(session.panel, /Bring in your AI history/);
+  // The folder picker answers with the folder the test wrote (the stub did not survive the page change)
+  await session.panel.evaluate(() => {
+    window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('history');
+  });
 }
 
 test('a picked folder of AI history joins the knowledge base, routed, redacted, and read again only when changed', async () => {

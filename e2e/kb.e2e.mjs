@@ -321,18 +321,7 @@ test('the knowledge base exports, wipes and imports back', async () => {
   assert.equal((await readStore(session.panel, 'kbChunks')).length, chunks.length);
 
   // The settings page shows the section
-  const options = await extension.browser.newPage();
-  await options.goto(`${extension.origin}/options.html`);
-  await options.waitForFunction(
-    () => [...document.querySelectorAll('button')].some(b => b.innerText.trim() === 'General'),
-    {
-      polling: 300,
-      timeout: 10000,
-    },
-  );
-  await options.evaluate(() =>
-    [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'General').click(),
-  );
+  const options = await extension.openSettings('#memory/data');
   await options.waitForFunction(() => document.body.innerText.includes('Wipe the knowledge base'), {
     polling: 300,
     timeout: 10000,
@@ -403,16 +392,15 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
     });
   });
 
-  await session.click('Menu');
-  // WS1 Wave 2: Settings moved from the drawer's top list into the profile menu
-  await clickAccountMenu(session);
-  await session.click('Settings');
-  await session.panel.waitForFunction(() => document.body.innerText.includes('Sync now'), { polling: 300 });
-  await session.click('Sync now');
-  await session.panel.waitForFunction(() => /Wrote \d+ notes, read 1 of yours/.test(document.body.innerText), {
+  // Settings › Connections › Obsidian, on the full-page Settings
+  const settings = await extension.openSettings('#connections/obsidian');
+  await settings.waitForFunction(() => document.body.innerText.includes('Sync now'), { polling: 300 });
+  await extension.clickOn(settings, 'Sync now');
+  await settings.waitForFunction(() => /Wrote \d+ notes, read 1 of yours/.test(document.body.innerText), {
     polling: 300,
     timeout: 20000,
   });
+  await settings.close();
 
   const imported = await waitForItem(session.panel, entry => entry.sourceId === 'vault:Nexprove/Pitch notes.md');
   assert.equal(imported.workspaceId, 'nexprove');
@@ -446,12 +434,11 @@ test('an Obsidian vault gets the memory as linked notes, and its own notes join 
 
 test('the morning brief comes as a chat with the priorities first, made from the data as untrusted', async () => {
   const session = await openSession(extension, mock);
-  await session.click('Menu');
-  // WS1 Wave 2: Settings moved from the drawer's top list into the profile menu
-  await clickAccountMenu(session);
-  await session.click('Settings');
-  await session.panel.waitForFunction(() => document.body.innerText.includes('Make one now'), { polling: 300 });
-  await session.click('Make one now');
+  // Settings › Meetings & brief › Morning brief, on the full-page Settings; the brief opens in the panel
+  const settings = await extension.openSettings('#meetings/brief');
+  await settings.waitForFunction(() => document.body.innerText.includes('Make one now'), { polling: 300 });
+  await extension.clickOn(settings, 'Make one now');
+  await session.panel.bringToFront();
   await session.panel.waitForFunction(() => document.body.innerText.includes("Today's calendar"), {
     polling: 300,
     timeout: 20000,

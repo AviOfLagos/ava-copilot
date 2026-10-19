@@ -110,31 +110,31 @@ test('a personality written in Settings is used for the next task', async () => 
   await session.panel.setViewport({ width: 400, height: 760 });
   await openPicker(session.panel);
   await pick(session.panel, 'Manage personalities');
-  await session.panel.waitForSelector('[aria-label="All personalities"]', { timeout: 10000 });
+  // Manage opens the full-page Settings at Personalities
+  const settings = await extension.settingsTab('#personalities');
+  await settings.waitForSelector('[aria-label="All personalities"]', { timeout: 10000 });
 
-  await session.click('New personality');
-  await session.panel.waitForSelector('#persona-name');
-  await fill(session.panel, 'persona-icon', '🏴‍☠️');
-  await fill(session.panel, 'persona-name', 'Pirate captain');
-  await fill(session.panel, 'persona-description', 'Talks like a pirate.');
-  await fill(session.panel, 'persona-instructions', 'Say "arr" at the start of every answer. Call the user captain.');
+  await extension.clickOn(settings, 'New personality');
+  await settings.waitForSelector('#persona-name');
+  await fill(settings, 'persona-icon', '🏴‍☠️');
+  await fill(settings, 'persona-name', 'Pirate captain');
+  await fill(settings, 'persona-description', 'Talks like a pirate.');
+  await fill(settings, 'persona-instructions', 'Say "arr" at the start of every answer. Call the user captain.');
   await sleep(200);
-  await session.click('Save');
-  await session.panel.waitForSelector('[aria-label="Use Pirate captain"]', { timeout: 5000 });
+  await extension.clickOn(settings, 'Save');
+  await settings.waitForSelector('[aria-label="Use Pirate captain"]', { timeout: 5000 });
   const stored = await extension.getStorage('personalities');
   assert.equal(stored.custom.length, 1);
   assert.equal(stored.custom[0].name, 'Pirate captain');
 
-  await session.click('Use Pirate captain');
-  await session.panel.waitForFunction(
+  await extension.clickOn(settings, 'Use Pirate captain');
+  await settings.waitForFunction(
     () => document.querySelector('[aria-label="Use Pirate captain"]')?.getAttribute('aria-pressed') === 'true',
     { polling: 300, timeout: 5000 },
   );
-  await session.panel.evaluate(() =>
-    document.querySelector('[aria-label="Personalities"]')?.scrollIntoView({ block: 'start' }),
-  );
   await sleep(300);
-  await shot(session.panel, 'personality-settings');
+  await shot(settings, 'personality-settings');
+  await session.panel.bringToFront();
 
   mock.start('persona-b');
   await session.click('New thread');

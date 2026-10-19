@@ -96,19 +96,15 @@ function type(page, label, value) {
   );
 }
 
-const sectionText = () =>
-  session.panel.evaluate(selector => document.querySelector(selector)?.innerText ?? '', SECTION);
+// Settings › Connections › Nex Brain, on the full-page Settings
+let settings;
+const sectionText = () => settings.evaluate(selector => document.querySelector(selector)?.innerText ?? '', SECTION);
 
 test('pairs with Nex Brain from Settings and shows it connected', async () => {
   assert.equal(extension.origin, EXTENSION_ORIGIN, 'the extension ID is pinned, so the companion knows its origin');
-  const { panel } = session;
-  await panel.bringToFront();
-  await session.click('Menu');
-  await session.openAccountMenu();
-  await session.click('Settings');
-  await panel.waitForSelector(SECTION, { timeout: 10000 }).catch(async error => {
-    throw new Error(`${error.message}. Panel shows: ${(await session.panelText()).slice(0, 600)}`);
-  });
+  settings = await extension.openSettings('#connections/brain');
+  const panel = settings;
+  await panel.waitForSelector(SECTION, { timeout: 10000 });
   assert.match(await sectionText(), /Not paired/);
 
   await type(panel, 'Port', String(companion.port));
@@ -219,14 +215,16 @@ test("a routine's step.sandbox waits for the click, then runs on the Mac and ret
 });
 
 test('an artifact opens in an Avi Studio tab and cannot load a remote image', async () => {
-  const { panel } = session;
+  // Settings › Connections › Nex Brain lists what agents made (read again now that a run made one)
+  const panel = settings;
   const label = 'Open Remote image test in Avi Studio';
+  await panel.reload();
   await panel.bringToFront();
   await panel.waitForSelector(`button[aria-label="${label}"]`, { timeout: 15000 });
   const opened = extension.browser.waitForTarget(target => target.url().includes(`/studio/${companion.artifactId}`), {
     timeout: 15000,
   });
-  await session.click(label);
+  await extension.clickOn(panel, label);
   const studio = await (await opened).asPage();
   await studio.bringToFront();
 
