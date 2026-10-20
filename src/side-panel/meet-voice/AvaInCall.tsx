@@ -6,6 +6,7 @@ import { brainSettingsStore } from '@src/background/companion/state';
 import { meetVoiceStore } from '@src/background/meet-voice/state';
 import type { MeetVoiceState } from '@src/background/meet-voice/state';
 import { meetCodeOf } from '@src/shared/lib/protocol/companion';
+import { openSettingsPage } from '@src/shared/lib/settings-page';
 import type { MeetStatus } from '@src/shared/lib/protocol/companion';
 import { Button } from '../components/ui/button';
 import { useAssistantName } from '../hooks/useAssistant';
@@ -14,7 +15,8 @@ import { sendMeetVoice } from './send';
 /**
  * In a Google Meet call's notes: bring Ava into the call as her own participant (run by Nex Brain on the Mac), see
  * where she is (joining, waiting for the host, in the call, why it failed), stop her mid-sentence, and have her leave.
- * Shown only while Nex Brain is paired. The background does the talking; this reads its stored state.
+ * Without Nex Brain paired it says what she needs and links to its setup. The background does the talking; this reads
+ * its stored state.
  */
 
 const ACTIVE = new Set<MeetStatus['state']>(['joining', 'waiting_admission', 'in_call']);
@@ -71,7 +73,8 @@ export default function AvaInCall({ meeting }: { meeting: MeetingRecord }) {
   const code = meetCodeOf(meeting.url);
   const status = state?.status ?? null;
   const active = status !== null && ACTIVE.has(status.state);
-  const shown = paired && code !== null && meeting.status === 'recording';
+  const inCall = code !== null && meeting.status === 'recording';
+  const shown = paired && inCall;
 
   const run = useCallback(async (type: string, extra: Record<string, unknown> = {}) => {
     setBusy(type);
@@ -96,7 +99,20 @@ export default function AvaInCall({ meeting }: { meeting: MeetingRecord }) {
     return () => clearInterval(timer);
   }, [shown, active, status?.state]);
 
-  if (!shown) return null;
+  if (!inCall) return null;
+  if (!paired) {
+    return (
+      <section aria-labelledby="ava-in-call" className="glass mt-2.5 rounded-2xl p-3 text-[13px]">
+        <h3 id="ava-in-call" className="mb-1 text-sm font-semibold">
+          {t('meetvoice_title', [name])}
+        </h3>
+        <p className="text-muted-foreground">{t('meetvoice_needsBrain', [name])}</p>
+        <Button size="sm" className="mt-2" onClick={() => void openSettingsPage('#connections/brain')}>
+          {t('meetvoice_setUpBrain')}
+        </Button>
+      </section>
+    );
+  }
   const here = active && status?.meetingCode === code;
   const elsewhere = active && !here;
 

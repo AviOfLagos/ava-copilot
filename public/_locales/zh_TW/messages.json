@@ -8787,5 +8787,17 @@
   },
   "meetvoice_confirm_words": {
     "message": "要說的內容（逐字）"
+  },
+  "meetvoice_needsBrain": {
+    "message": "$NAME$ 透過 Mac 上的輔助程式 Nex Brain 加入你的通話。設定一次後再回到這裡。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_setUpBrain": {
+    "message": "設定 Nex Brain"
   }
 }

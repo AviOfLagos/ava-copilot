@@ -8787,5 +8787,17 @@
   },
   "meetvoice_confirm_words": {
     "message": "Palavras, exatamente como ditas"
+  },
+  "meetvoice_needsBrain": {
+    "message": "$NAME$ entra na sua chamada pelo Nex Brain, o app auxiliar no seu Mac. Configure-o uma vez e volte aqui.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_setUpBrain": {
+    "message": "Configurar o Nex Brain"
   }
 }
