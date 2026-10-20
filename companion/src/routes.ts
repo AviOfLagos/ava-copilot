@@ -30,6 +30,7 @@ import {
   WHATSAPP_ROUTES,
   whatsappAckRequestSchema,
   whatsappOwnerRequestSchema,
+  whatsappQuietRequestSchema,
   whatsappSendRequestSchema,
 } from '@protocol';
 import type { HealthReply } from '@protocol';
@@ -558,6 +559,17 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body }) {
         const request = parse(whatsappOwnerRequestSchema, body);
         return json({ ok: true, status: deps.whatsapp.setOwner(request.number) });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.quiet,
+      name: 'whatsapp.quiet',
+      auth: 'api',
+      rate: 'read',
+      async handler({ body }) {
+        const request = parse(whatsappQuietRequestSchema, body);
+        return json({ ok: true, status: deps.whatsapp.setQuietHours(request.quietStart, request.quietEnd) });
       },
     },
     {

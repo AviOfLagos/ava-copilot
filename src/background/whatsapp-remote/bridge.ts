@@ -2,7 +2,7 @@ import { t } from '@extension/i18n';
 import type { ConfirmRequest, MeetingRecord, ThreadMessage, ThreadRecord } from '@extension/storage';
 import type { WhatsAppMessage, WhatsAppNoticeKind, WhatsAppStatus } from '@src/shared/lib/protocol/companion';
 import type { Notice } from '../notices';
-import { describeRequest, toWhatsAppText } from './format';
+import { clip, describeRequest, plainOutside, requestKind, toWhatsAppText } from './format';
 import { mayNotify } from './notices';
 import type { WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
 
@@ -30,6 +30,9 @@ export interface BridgeDeps {
   now: () => number;
   warn: (message: string, error?: unknown) => void;
 }
+
+// The most of a notice's own text
+const NOTICE_BODY_MAX = 800;
 
 const dayOf = (at: number) => {
   const date = new Date(at);
@@ -96,7 +99,7 @@ export class WhatsAppBridge {
       this.deps.warn('A WhatsApp message could not start a turn', error);
       await this.deps.ack(ids);
       await this.say(
-        t('wava_reply_failed', [error instanceof Error ? error.message : String(error)]),
+        t('wava_reply_failed', [plainOutside(error instanceof Error ? error.message : String(error), 200)]),
         'reply',
         last.id,
       );
@@ -138,9 +141,10 @@ export class WhatsAppBridge {
     if (thread.status === 'waiting_confirm' && thread.pendingRequest) {
       await this.notice({
         kind: 'approval',
+        // Fixed words: the chat's name (cleaned) and the kind of action, nothing the page wrote
         title: t('wava_notice_approval', [
-          thread.title || t('wava_notice_untitled'),
-          describeRequest(thread.pendingRequest),
+          plainOutside(thread.title, 60) || t('wava_notice_untitled'),
+          requestKind(thread.pendingRequest),
         ]),
         key: `approval:${thread.pendingRequest.id}`,
       });
@@ -156,7 +160,7 @@ export class WhatsAppBridge {
       return;
     }
     if (thread.status === 'error') {
-      await this.say(t('wava_reply_stopped', [thread.error?.message ?? '']), 'reply', replyTo);
+      await this.say(t('wava_reply_stopped', [plainOutside(thread.error?.message ?? '', 200)]), 'reply', replyTo);
       return;
     }
     if (thread.status !== 'idle') return;
@@ -191,8 +195,15 @@ export class WhatsAppBridge {
     if (state.status?.state !== 'linked') return;
     if (!mayNotify(notice.kind, await this.deps.settings(), new Date(this.deps.now()))) return;
     this.sentKeys.add(notice.key);
-    const body = notice.body?.trim() ? `\n\n${notice.body.trim()}` : '';
-    await this.say(toWhatsAppText(`**${notice.title}**${body}`, undefined, t('wava_reply_more')), notice.kind);
+    // A notice carries words from outside (a routine's data, a call): one plain line each, no links, short
+    const lines = (notice.body ?? '')
+      .split('\n')
+      .map(line => plainOutside(line, 200))
+      .filter(Boolean)
+      .slice(0, 12);
+    const title = plainOutside(notice.title, 120);
+    const body = lines.length ? `\n\n${clip(lines.join('\n'), NOTICE_BODY_MAX, t('wava_reply_more'))}` : '';
+    await this.say(`*${title}*${body}`, notice.kind);
   }
 
   private async say(text: string, kind: WhatsAppNoticeKind, replyTo?: string): Promise<void> {

@@ -793,6 +793,7 @@ export const WHATSAPP_ROUTES = {
   inbox: '/v1/whatsapp/inbox',
   ack: '/v1/whatsapp/ack',
   send: '/v1/whatsapp/send',
+  quiet: '/v1/whatsapp/quiet',
 } as const;
 
 export const WHATSAPP_STATES = [
@@ -838,6 +839,14 @@ export const whatsappOwnerRequestSchema = z.object({
   number: z.string().regex(WHATSAPP_NUMBER).nullable(),
 });
 export type WhatsAppOwnerRequest = z.infer<typeof whatsappOwnerRequestSchema>;
+
+// Quiet hours, kept by Nex Brain too: only answers and approvals go out in them
+export const WHATSAPP_TIME = /^([01]?\d|2[0-3]):[0-5]\d$/;
+export const whatsappQuietRequestSchema = z.object({
+  quietStart: z.string().regex(WHATSAPP_TIME),
+  quietEnd: z.string().regex(WHATSAPP_TIME),
+});
+export type WhatsAppQuietRequest = z.infer<typeof whatsappQuietRequestSchema>;
 
 export const whatsappMessageSchema = z.object({
   id: z.string().min(1).max(200),

@@ -28,12 +28,23 @@ const PULL_MAX = 20;
 const QUEUE_TTL_MS = 7 * 24 * 60 * 60_000;
 const SEEN_MAX = 500;
 const CHATS_MAX = 200;
-// Her own sends show up again in the self chat; one that does within this long is not taken as the owner's
-const ECHO_MS = 10 * 60_000;
+// Her own sends show up again in the self chat (also after a restart, or when WhatsApp syncs history): each
+// is remembered by id and words this long, and carries an invisible mark besides
+const ECHO_MS = 30 * 24 * 60 * 60_000;
+const ECHOES_MAX = 1000;
 const HOUR_MS = 60 * 60_000;
+// A message dated this long before the session became ready is history being synced, not something new
+const HISTORY_GRACE_MS = 60_000;
+
+/** Invisible (two invisible separators around a zero-width space): ends every message Ava sends. */
+export const OWN_MARK = '\u2063\u200b\u2063';
 
 export const AWAY_TEXT = "Your browser is closed, I'll answer when it opens.";
 export const TEXT_ONLY_TEXT = 'I can only read text for now.';
+export const FORWARDED_TEXT =
+  'I only act on messages you type yourself. If you want me to look at a forwarded one, tell me in your own words.';
+// Kinds that may go in quiet hours: an answer he asked for, and something waiting for his click
+const ALWAYS_SENT: ReadonlySet<WhatsAppNoticeKind> = new Set(['reply', 'approval']);
 
 interface Queued extends WhatsAppMessage {
   chatId: string;
@@ -54,6 +65,11 @@ interface Saved {
   sentAt: number[];
   // Where a reply to an owner message goes, after it left the queue
   chats: { id: string; chatId: string }[];
+  // Her own sends, by id ("id:…") and by words ("text:<hash>"), to never take one back as the owner's
+  echoes: { key: string; at: number }[];
+  // No messages first in this window, kept here too so the Mac holds to it whatever the extension does
+  quietStart: string;
+  quietEnd: string;
 }
 
 const EMPTY: Saved = {
@@ -67,6 +83,9 @@ const EMPTY: Saved = {
   seen: [],
   sentAt: [],
   chats: [],
+  echoes: [],
+  quietStart: '22:00',
+  quietEnd: '07:00',
 };
 
 export interface WhatsAppServiceDeps {
@@ -79,7 +98,27 @@ export interface WhatsAppServiceDeps {
   awayAfterMs?: number;
 }
 
-const hashOf = (text: string) => createHash('sha256').update(text.trim()).digest('hex').slice(0, 32);
+const hashOf = (text: string) =>
+  createHash('sha256').update(text.replaceAll(OWN_MARK, '').trim()).digest('hex').slice(0, 32);
+
+/** "HH:MM" to minutes since midnight, or null. */
+function minutesOf(time: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+/** Whether a moment is in quiet hours, which may wrap past midnight. */
+export function inQuietHours(at: Date, start: string, end: string): boolean {
+  const from = minutesOf(start);
+  const to = minutesOf(end);
+  if (from === null || to === null || from === to) return false;
+  const now = at.getHours() * 60 + at.getMinutes();
+  return from < to ? now >= from && now < to : now >= from || now < to;
+}
+
+// Seconds or milliseconds since the epoch, as milliseconds
+const millisOf = (at: number) => (at > 0 && at < 1e12 ? at * 1000 : at);
 const cUs = (number: string) => `${number}@c.us`;
 
 export class WhatsAppService {
@@ -98,7 +137,8 @@ export class WhatsAppService {
   private generation = 0;
   private lastPullAt: number;
   private awayNoticeSent = false;
-  private readonly echoes = new Map<string, number>();
+  // When the session last became ready: anything dated well before is synced history
+  private readyAt: number | null = null;
 
   constructor(private readonly deps: WhatsAppServiceDeps) {
     this.now = deps.now ?? Date.now;
@@ -194,7 +234,7 @@ export class WhatsAppService {
     this.saved = { ...EMPTY };
     this.save();
     this.qr = null;
-    this.echoes.clear();
+    this.readyAt = null;
     this.setState('not_linked', null);
     return this.status();
   }
@@ -205,8 +245,20 @@ export class WhatsAppService {
     if (next !== this.saved.ownerNumber) {
       this.saved.ownerNumber = next;
       this.saved.ownerAliases = [];
+      // What came from a chat that is no longer the owner's goes: it must not be answered or acted on
+      this.saved.queue = this.saved.queue.filter(item => this.isOwnerChat(item.chatId));
+      this.saved.chats = this.saved.chats.filter(item => this.isOwnerChat(item.chatId));
       this.save();
     }
+    return this.status();
+  }
+
+  /** Quiet hours: only answers and approvals go out in them. */
+  setQuietHours(start: string, end: string): WhatsAppStatus {
+    if (minutesOf(start) === null || minutesOf(end) === null) fail('invalid', 'Quiet hours are times like 22:00.');
+    this.saved.quietStart = start;
+    this.saved.quietEnd = end;
+    this.save();
     return this.status();
   }
 
@@ -233,6 +285,12 @@ export class WhatsAppService {
 
   /** Sends to the owner: to the chat `replyTo` came from, else the owner's own number, else the self chat. */
   async send(request: { text: string; kind: WhatsAppNoticeKind; replyTo?: string }): Promise<WhatsAppStatus> {
+    if (
+      !ALWAYS_SENT.has(request.kind) &&
+      inQuietHours(new Date(this.now()), this.saved.quietStart, this.saved.quietEnd)
+    ) {
+      fail('forbidden', 'It is quiet hours: only answers and approvals go out now.');
+    }
     const chatId = (request.replyTo && this.chatOf(request.replyTo)) || this.defaultChat();
     if (!chatId) fail('unavailable', 'WhatsApp is not linked on your Mac.');
     await this.sendTo(chatId, request.text);
@@ -252,13 +310,19 @@ export class WhatsAppService {
       const retryAfterMs = recent[0] + HOUR_MS - this.now();
       fail('rate_limit', `Ava has sent ${this.limit} WhatsApp messages in the last hour.`, { retryAfterMs });
     }
-    const body = text.trim().slice(0, WHATSAPP_TEXT_MAX);
+    const body = text
+      .replaceAll(OWN_MARK, '')
+      .trim()
+      .slice(0, WHATSAPP_TEXT_MAX - OWN_MARK.length);
     if (!body) fail('invalid', 'There is nothing to send.');
     this.saved.sentAt = [...recent, this.now()];
-    this.echoes.set(`text:${hashOf(body)}`, this.now());
+    this.remember(`text:${hashOf(body)}`);
     this.save();
-    const id = await driver.sendText(chatId, body);
-    if (id) this.echoes.set(`id:${id}`, this.now());
+    const id = await driver.sendText(chatId, `${body}${OWN_MARK}`);
+    if (id) {
+      this.remember(`id:${id}`);
+      this.save();
+    }
   }
 
   async stop(): Promise<void> {
@@ -281,6 +345,7 @@ export class WhatsAppService {
     this.saved.selfIds = [...new Set([...(number ? [cUs(number)] : []), ...account.selfIds])];
     if (this.saved.ownerNumber === number) this.saved.ownerNumber = null;
     this.save();
+    this.readyAt = this.now();
     this.qr = null;
     this.setState('linked', null);
   }
@@ -290,11 +355,20 @@ export class WhatsAppService {
     const chatId = this.ownerChatFor(message);
     if (!chatId) return;
     if (this.isEcho(message)) return;
+    // History synced at link or after a restart is not something he just said
+    const at = millisOf(message.at);
+    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return;
     if (this.saved.seen.includes(message.id)) return;
     this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
     if (message.type !== 'chat') {
       this.save();
       await this.sendTo(chatId, TEXT_ONLY_TEXT).catch(() => {});
+      return;
+    }
+    // Someone else's words he passed on are never taken as his instructions
+    if (message.forwarded) {
+      this.save();
+      await this.sendTo(chatId, FORWARDED_TEXT).catch(() => {});
       return;
     }
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
@@ -338,13 +412,21 @@ export class WhatsAppService {
     return Boolean(owner) && (chatId === cUs(owner!) || this.saved.ownerAliases.includes(chatId));
   }
 
-  /** One of Ava's own sends coming back in the self chat. */
+  /** One of Ava's own sends coming back in the self chat: her mark, her id, or her words. */
   private isEcho(message: WaIncoming): boolean {
     if (!message.fromMe) return false;
-    const now = this.now();
-    for (const [key, at] of this.echoes) if (now - at > ECHO_MS) this.echoes.delete(key);
-    if (this.echoes.delete(`id:${message.id}`)) return true;
-    return this.echoes.delete(`text:${hashOf(message.body)}`);
+    if (message.body.includes(OWN_MARK)) return true;
+    const since = this.now() - ECHO_MS;
+    const keys = new Set(this.saved.echoes.filter(item => item.at > since).map(item => item.key));
+    return keys.has(`id:${message.id}`) || keys.has(`text:${hashOf(message.body)}`);
+  }
+
+  private remember(key: string): void {
+    const since = this.now() - ECHO_MS;
+    this.saved.echoes = [
+      ...this.saved.echoes.filter(item => item.at > since && item.key !== key),
+      { key, at: this.now() },
+    ].slice(-ECHOES_MAX);
   }
 
   // ── Bookkeeping ──

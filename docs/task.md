@@ -2226,6 +2226,23 @@ Ava inside his own WhatsApp Web tab) is unchanged.
   `side-panel/whatsapp-remote/qr.ts`, checked module for module against Arase's encoder), the state, the other
   number, a test message and Unlink. Not paired → it points to Nex Brain's setup.
 
+- **Security review fixes:** open-wa fetches live patches (obfuscated scripts it injects into WhatsApp Web) from
+  `cdn.openwa.dev` / GitHub with Node's fetch on every launch. `companion/src/whatsapp/harden.ts` guards the
+  process fetch: those addresses get the vendored, sha256-pinned set (empty: the bundled `wapi.js` has sendText,
+  getMe and the listeners, and open-wa goes on without remote patches), every other open-wa host is refused, a
+  mismatched pin fails closed; `cachedPatch`/`ghPatch` off, `blockCrashLogs` on. Its Puppeteer driver is wrapped:
+  debugging pipe instead of a random local port, `--ignore-certificate-errors*` dropped, open-wa and WhatsApp
+  telemetry hosts unresolvable. Forwarded messages are never queued ("I only act on messages you type
+  yourself…"). Her sends carry an invisible mark and are remembered by id and words for 30 days on disk; messages
+  dated before the session became ready (history sync) are ignored. Quiet hours are held by Nex Brain too
+  (`/v1/whatsapp/quiet`; only replies and approvals go). Changing the owner purges queued and remembered chats that
+  are no longer his. Notices carry no page text: the brief sends counts only, approvals the chat name and the kind
+  of action, routine and meeting text is one line each, links stripped, capped. WhatsApp chats never read aloud,
+  never use an incognito window, and may run but not create or change agents and routines (`gate/origins.ts`:
+  `alwaysAsks`, `userAtComputer`, `configRefusal`, `runRefusal`).
+  If a future WhatsApp Web build needs open-wa's remote patches, linking or sending will fail rather than run
+  unreviewed code: vendor a reviewed patch file and update the pin.
+
 Tests: companion `whatsapp.test.ts` (owner-only receive, nothing kept of other chats, send refusal, dedupe and echo,
 queue/ack and reply routing, @lid rule, media, browser closed, hourly limit, unlink, routes); extension
 `whatsapp-remote/__tests__/{bridge,format}.test.ts` (turns, busy and waiting chats, answers once, commit held,

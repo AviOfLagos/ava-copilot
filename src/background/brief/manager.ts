@@ -158,9 +158,10 @@ export class MorningBrief {
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });
 
     if (notify) {
-      emitNotice({ kind: 'brief', title: t('brief_ready'), body: text, key: `brief:${thread.id}` });
       // Counts only: invite titles are written by whoever sent them
       const meetings = todaysEvents(data.events, now).length;
+      const counts = t('brief_counts', [String(meetings), String(data.waiting.length + data.stopped.length)]);
+      emitNotice({ kind: 'brief', title: t('brief_ready'), body: counts, key: `brief:${thread.id}` });
       await chrome.notifications
         .create(NOTIFICATION_ID, {
           type: 'basic',

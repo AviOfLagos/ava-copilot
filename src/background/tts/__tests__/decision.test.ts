@@ -44,6 +44,10 @@ describe('shouldAutoSpeak', () => {
     expect(shouldAutoSpeak({ ...BASE, lastSpokenMessageId: 'm1' })).toBe(true);
   });
 
+  it('never reads a WhatsApp chat aloud: he is away from the computer', () => {
+    expect(shouldAutoSpeak({ ...BASE, readAloud: 'always', threadOrigin: 'whatsapp' })).toBe(false);
+  });
+
   it('has nothing to speak without a candidate message id', () => {
     expect(shouldAutoSpeak({ ...BASE, candidateMessageId: undefined })).toBe(false);
   });

@@ -30,14 +30,15 @@ const IDLE_RECHECK_MS = 60_000;
 // Where a WhatsApp chat's own background tab starts
 const START_URL = 'https://www.google.com/';
 
-/** A background tab for the chat when its own is gone: never the tab the user is on. */
+/** A background tab for the chat when its own is gone: never the tab the user is on, never an incognito window. */
 async function ensureTab(thread: ThreadRecord): Promise<void> {
   for (const id of thread.boundTabIds ?? []) {
-    if (await chrome.tabs.get(id).catch(() => null)) return;
+    const tab = await chrome.tabs.get(id).catch(() => null);
+    if (tab && !tab.incognito) return;
   }
   const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
   let tabId: number | undefined;
-  if (window?.id !== undefined) {
+  if (window?.id !== undefined && !window.incognito) {
     tabId = (await chrome.tabs.create({ url: START_URL, active: false, windowId: window.id })).id;
   } else {
     const created = await chrome.windows.create({ url: START_URL, focused: false });
@@ -92,6 +93,7 @@ registerJobHandler(POLL_JOB, async () => {
 
 registerRecovery('whatsapp-remote', async () => {
   await jobs.schedule({ kind: POLL_JOB, key: POLL_KEY, cron: POLL_CRON, catchUpMs: 60_000 });
+  if ((await brainSettingsStore.getSettings()).paired) void pushQuietHours().catch(() => {});
   void tick(true);
 });
 
@@ -143,8 +145,17 @@ async function withStatus(call: Promise<{ status: WhatsAppStatus }>) {
   return { status, settings: await whatsappRemoteSettingsStore.getSettings() };
 }
 
+/** Tells Nex Brain the quiet hours, so it holds to them whatever the extension does. */
+async function pushQuietHours(): Promise<void> {
+  const { quietStart, quietEnd } = await whatsappRemoteSettingsStore.getSettings();
+  await companionClient.whatsappSetQuiet({ quietStart, quietEnd });
+}
+
 command('wava_status', z.object({}), () => withStatus(companionClient.whatsappStatus()));
-command('wava_link', z.object({}), () => withStatus(companionClient.whatsappLink()));
+command('wava_link', z.object({}), async () => {
+  await pushQuietHours().catch(() => {});
+  return withStatus(companionClient.whatsappLink());
+});
 command('wava_unlink', z.object({}), async () => {
   const result = await withStatus(companionClient.whatsappUnlink());
   await whatsappRemoteStateStore.update({ replyTo: null, waitingTold: null });
@@ -170,6 +181,7 @@ command(
       ...(quietStart ? { quietStart } : {}),
       ...(quietEnd ? { quietEnd } : {}),
     });
+    if (quietStart || quietEnd) await pushQuietHours();
     return { settings };
   },
 );

@@ -18,6 +18,8 @@ export interface WaIncoming {
   at: number;
   // The sender's phone number in digits, when the client knows it (a chat id in @lid form does not show it)
   senderNumber: string | null;
+  // Passed on from another chat: someone else's words
+  forwarded: boolean;
 }
 
 /** The linked account: its number, and every id its own chat goes by (number@c.us, an @lid id). */

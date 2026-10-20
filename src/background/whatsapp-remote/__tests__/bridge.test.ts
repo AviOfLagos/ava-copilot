@@ -9,7 +9,7 @@ vi.mock('@extension/i18n', () => ({
 
 const { WhatsAppBridge, answerOf } = await import('../bridge');
 const { DEFAULT_WHATSAPP_REMOTE_SETTINGS, DEFAULT_WHATSAPP_REMOTE_STATE } = await import('../state');
-const { alwaysAsks } = await import('../../gate/origins');
+const { alwaysAsks, configRefusal, runRefusal, userAtComputer } = await import('../../gate/origins');
 const { isAttendedThread } = await import('../../agents/handoff');
 
 const LINKED: WhatsAppStatus = {
@@ -222,7 +222,8 @@ describe('Ava messages him first', () => {
         pendingRequest: request({ kind: 'purchase', target: 'Pay now' }),
       },
     );
-    expect(h.sent).toEqual([{ text: '*wava_notice_approval|Pay invoice|purchase: Pay now*', kind: 'approval' }]);
+    // The kind of action only: nothing the page wrote
+    expect(h.sent).toEqual([{ text: '*wava_notice_approval|Pay invoice|purchase*', kind: 'approval' }]);
   });
 
   it('keeps quiet in quiet hours and for kinds switched off, and sends a notice once', async () => {
@@ -236,7 +237,7 @@ describe('Ava messages him first', () => {
     expect(day.sent).toEqual([]);
     await day.bridge.notice({ kind: 'brief', title: 'Your brief', body: '- 3 meetings', key: 'brief:1' });
     await day.bridge.notice({ kind: 'brief', title: 'Your brief', body: '- 3 meetings', key: 'brief:1' });
-    expect(day.sent).toEqual([{ text: '*Your brief*\n\n• 3 meetings', kind: 'brief' }]);
+    expect(day.sent).toEqual([{ text: '*Your brief*\n\n- 3 meetings', kind: 'brief' }]);
   });
 
   it('says nothing first while WhatsApp is not linked', async () => {
@@ -265,12 +266,43 @@ describe('Ava messages him first', () => {
   });
 });
 
+describe('notices carry no links or page words', () => {
+  it('cleans a routine’s result and a chat title before sending', async () => {
+    const h = harness({ hour: 9 });
+    await h.bridge.notice({
+      kind: 'routine',
+      title: 'Price *alert* https://evil.example/login',
+      body: 'Log in at https://bank-verify.example.com/x now\u200b\nor www.phish.io/a\n' + 'x'.repeat(2000),
+      key: 'r:2',
+    });
+    const [sent] = h.sent;
+    expect(sent.text).not.toMatch(/https?:|www\.|phish\.io|evil|\u200b/);
+    expect(sent.text.startsWith('*Price alert*')).toBe(true);
+    expect(sent.text.length).toBeLessThan(1000);
+
+    await h.bridge.onThreadUpdate(
+      thread({ id: 'o', origin: 'user', title: 'Reply https://x.example/a', status: 'running' }),
+      { status: 'waiting_confirm', pendingRequest: request({ target: 'Pay https://evil.example now', intent: 'x' }) },
+    );
+    expect(h.sent[1].text).toBe('*wava_notice_approval|Reply|send*');
+  });
+});
+
 describe('a chat from WhatsApp', () => {
   it('always asks before it commits, whatever the confirm settings say', () => {
     expect(alwaysAsks({ origin: 'whatsapp' })).toBe(true);
     expect(alwaysAsks({ origin: 'workflow' })).toBe(true);
     expect(alwaysAsks({ origin: 'user' })).toBe(false);
     expect(alwaysAsks(undefined)).toBe(true);
+  });
+
+  it('changes no configuration, but may run what exists', () => {
+    expect(configRefusal({ origin: 'whatsapp' }, 'Workflows')).toMatch(/not from WhatsApp/);
+    expect(runRefusal({ origin: 'whatsapp' }, 'Workflows')).toBeNull();
+    expect(configRefusal({ origin: 'agent' }, 'Workflows')).toMatch(/not by a routine or an agent/);
+    expect(configRefusal({ origin: 'user' }, 'Workflows')).toBeNull();
+    expect(userAtComputer({ origin: 'whatsapp' })).toBe(false);
+    expect(userAtComputer({ origin: 'voice' })).toBe(true);
   });
 
   it('is not one the user is at: no hand-offs and nothing said in a call for him', () => {

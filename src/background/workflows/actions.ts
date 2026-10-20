@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { configRefusal, runRefusal } from '../gate/origins';
 import { db, threadStore } from '@extension/storage';
 import type { ThreadRecord, WorkflowRecord } from '@extension/storage';
 import { toAppError } from '@extension/shared';
@@ -71,17 +72,17 @@ export const WORKFLOW_ACTIONS_PROMPT = `- create_workflow drafts a routine when 
 - update_workflow changes a workflow when the user gives feedback on one ("also add GitHub trending"); pass the change in their words. It makes a draft for them to apply.
 - run_workflow runs a workflow now; list_workflows lists them with their ids. Use these for the user's routines instead of browsing.`;
 
-/** The chat a task runs in, or a refusal when it was not started by the user (a routine or an agent). */
+/**
+ * The chat a task runs in, or a refusal: routines and agents never change or run these, and a chat from WhatsApp
+ * only runs and lists them (configuration is changed from the browser). See ../gate/origins.
+ */
 async function attendedThread(
   context: AgentContext,
+  purpose: 'configure' | 'run' = 'run',
 ): Promise<{ thread: ThreadRecord | undefined } | { refused: string }> {
   const thread = await threadStore.get(context.taskId).catch(() => undefined);
-  if (thread?.origin === 'workflow' || thread?.origin === 'agent') {
-    return {
-      refused: 'Workflows can only be created, changed or run from a chat with the user, not by a routine or an agent.',
-    };
-  }
-  return { thread };
+  const refused = purpose === 'configure' ? configRefusal(thread, 'Workflows') : runRefusal(thread, 'Workflows');
+  return refused ? { refused } : { thread };
 }
 
 /** The workflows a chat may see: its workspace's and those in none (a chat in no workspace sees all). */
@@ -183,7 +184,7 @@ export function registerWorkflowActions(service: WorkflowService): void {
     create: context =>
       new Action(async (input: z.infer<typeof createWorkflowSchema.schema>) => {
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Drafting a workflow');
-        const allowed = await attendedThread(context);
+        const allowed = await attendedThread(context, 'configure');
         if ('refused' in allowed) return fail(context, allowed.refused);
         try {
           // The meeting-links routine is a template: no model call needed for it
@@ -211,7 +212,7 @@ export function registerWorkflowActions(service: WorkflowService): void {
     create: context =>
       new Action(async (input: z.infer<typeof updateWorkflowSchema.schema>) => {
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Changing a workflow');
-        const allowed = await attendedThread(context);
+        const allowed = await attendedThread(context, 'configure');
         if ('refused' in allowed) return fail(context, allowed.refused);
         const workflow = findWorkflow(await visibleWorkflows(allowed.thread), input.id);
         if (!workflow) return fail(context, `There is no workflow "${input.id}". Use list_workflows to see them.`);

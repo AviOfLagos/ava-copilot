@@ -40,6 +40,7 @@ import type {
   WorkflowPutRequest,
   MeetJoinRequest,
   MeetSayRequest,
+  WhatsAppQuietRequest,
   WhatsAppSendRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
@@ -621,6 +622,18 @@ export class CompanionClient {
       method: 'POST',
       path: WHATSAPP_ROUTES.owner,
       body: { number },
+      schema: whatsappStatusReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** Quiet hours, so Nex Brain holds to them too. */
+  whatsappSetQuiet(request: WhatsAppQuietRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.quiet,
+      body: request,
       schema: whatsappStatusReplySchema,
       idempotent: true,
       timeoutMs: 8000,

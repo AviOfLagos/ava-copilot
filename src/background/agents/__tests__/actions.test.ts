@@ -103,6 +103,18 @@ describe('agent actions in a chat', () => {
     expect(runs).toEqual([]);
   });
 
+  it('from WhatsApp, refuses to create or change agents but may run one (its commits wait for the click)', async () => {
+    const chat = await threadStore.create({ origin: 'whatsapp' });
+    const created = await action(chat.id, 'create_agent').call({ intent: '', request: 'make another agent' });
+    expect(created.error).toMatch(/from the browser, not from WhatsApp/);
+    const changed = await action(chat.id, 'update_agent').call({ intent: '', id: 'x', change: 'y' });
+    expect(changed.error).toMatch(/not from WhatsApp/);
+    const ran = await action(chat.id, 'run_agent').call({ intent: '', id: 'x', task: '' });
+    expect(ran.error).toMatch(/There is no agent "x"/);
+    expect(generated.calls).toEqual([]);
+    expect(drafts).toEqual([]);
+  });
+
   it('lists the agents a chat may see', async () => {
     const chat = await threadStore.create({ origin: 'user', workspaceId: 'ws-1' });
     const result = await action(chat.id, 'list_agents').call({ intent: '' });

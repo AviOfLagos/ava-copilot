@@ -80,6 +80,35 @@ export function toWhatsAppText(markdown: string, max = WHATSAPP_REPLY_MAX, more 
   return clip(text, max, more);
 }
 
+/**
+ * Text that came from outside (a page, a call, a routine's data, a chat title), made safe to pass on in a message
+ * Ava sends first: no links or addresses (they could be a lure in his own WhatsApp, in her name), no invisible or
+ * control characters, one line, and short.
+ */
+export function plainOutside(text: string, max: number): string {
+  const plain = text
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, '')
+    .replace(
+      /\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|dev|app|co|me|ly|xyz|info|biz|link|site|online)\b\S*/gi,
+      '',
+    )
+    // Control and invisible characters are exactly what this removes
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, ' ')
+    .replace(/[*~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
+}
+
+/** The kind of action a request waits for, in a word or two, with nothing taken from the page. */
+export function requestKind(request: ConfirmRequest | null | undefined): string {
+  if (!request) return '';
+  if (request.kind === 'questions') return t('wava_req_questions', [String(request.questions?.length ?? 0)]);
+  if (request.mode === 'needs_user') return describeRequest(request);
+  return request.kind;
+}
+
 /** What a waiting request is about, in a few words: "send: Reply to Tomi", "the sign-in". */
 export function describeRequest(request: ConfirmRequest | null | undefined): string {
   if (!request) return '';
@@ -93,6 +122,7 @@ export function describeRequest(request: ConfirmRequest | null | undefined): str
           ? t('wava_req_code')
           : t('wava_req_cap');
   }
-  const target = (request.target || request.intent || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  // The control's label comes from the page: kept short, with no links
+  const target = plainOutside(request.target || request.intent || '', 80);
   return target ? `${request.kind}: ${target}` : request.kind;
 }

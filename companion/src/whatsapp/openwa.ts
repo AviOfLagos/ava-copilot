@@ -1,7 +1,9 @@
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import type { Logger } from '../log';
 import { numberOfJid } from './driver';
 import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming } from './driver';
+import { hardenLaunch, installFetchGuard } from './harden';
 
 /**
  * The WhatsApp Web client: open-wa (@open-wa/wa-automate), which runs WhatsApp Web in a headless Chrome,
@@ -27,6 +29,8 @@ interface OpenWaClient {
 
 interface OpenWaModule {
   create: (config: Record<string, unknown>) => Promise<OpenWaClient>;
+  // The browser driver open-wa runs, made safe (./harden.ts); a new one per session
+  driver: () => unknown;
   ev?: {
     on: (event: string, listener: (...args: unknown[]) => void) => void;
     off?: (event: string, listener: (...args: unknown[]) => void) => void;
@@ -64,6 +68,8 @@ export function incomingOf(message: Record<string, unknown>): WaIncoming {
     id: str(message.id),
     chatId,
     fromMe: message.fromMe === true,
+    forwarded:
+      message.isForwarded === true || (typeof message.forwardingScore === 'number' && message.forwardingScore > 0),
     isGroup: message.isGroupMsg === true || chatId.endsWith('@g.us'),
     type: typeof message.type === 'string' ? message.type : 'unknown',
     body: typeof message.body === 'string' ? message.body : '',
@@ -92,6 +98,8 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
 
     const driver: WaDriver = {
       async start(events: WaEvents) {
+        // Before open-wa loads: its live patches never come from the network (./harden.ts)
+        installFetchGuard();
         module = await load();
         let lastQr = '';
         const onQr = (...args: unknown[]) => {
@@ -108,6 +116,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
           listeners.push([name, onQr]);
         }
         const config = {
+          driver: module.driver(),
           sessionId: SESSION_ID,
           sessionDataPath: options.sessionDir,
           userDataDir: join(options.sessionDir, 'browser'),
@@ -128,6 +137,10 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
           killProcessOnTimeout: false,
           killProcessOnBan: false,
           throwErrorOnTosBlock: true,
+          // No cached or GitHub patches; WhatsApp's crash logs and telemetry stay in the browser
+          cachedPatch: false,
+          ghPatch: false,
+          blockCrashLogs: true,
         };
         // Linking waits for the scan; start returns at once and the rest arrives as events
         void module
@@ -138,6 +151,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
               return;
             }
             client = created;
+            installFetchGuard();
             created.onAnyMessage(message => {
               if (!stopped) events.message(incomingOf(message));
             });
@@ -181,9 +195,42 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
   };
 }
 
+interface PuppeteerLike {
+  launch(options: Record<string, unknown>): Promise<unknown>;
+}
+
+type DriverClass = new () => { init(ctx?: unknown): Promise<void> };
+
+/**
+ * open-wa's own Puppeteer driver, with every launch hardened (a debugging pipe instead of a port, no
+ * certificate bypass, telemetry hosts unresolvable). Fails rather than fall back to the unhardened driver.
+ */
+export function hardenedDriverClass(Base: DriverClass): DriverClass {
+  return class HardenedPuppeteerDriver extends Base {
+    override async init(ctx?: unknown): Promise<void> {
+      await super.init(ctx);
+      const self = this as unknown as { puppeteer?: PuppeteerLike };
+      const puppeteer = self.puppeteer;
+      if (!puppeteer || typeof puppeteer.launch !== 'function')
+        throw new Error('The WhatsApp browser cannot be secured.');
+      const launch = puppeteer.launch.bind(puppeteer);
+      self.puppeteer = Object.assign(Object.create(puppeteer) as PuppeteerLike, {
+        launch: (options: Record<string, unknown>) => launch(hardenLaunch(options)),
+      });
+    }
+  };
+}
+
 async function loadOpenWa(): Promise<OpenWaModule> {
-  const loaded = (await import('@open-wa/wa-automate')) as unknown as OpenWaModule & { default?: OpenWaModule };
+  const loaded = (await import('@open-wa/wa-automate')) as unknown as Omit<OpenWaModule, 'driver'> & {
+    default?: Omit<OpenWaModule, 'driver'>;
+  };
   const module = typeof loaded.create === 'function' ? loaded : loaded.default;
   if (!module || typeof module.create !== 'function') throw new Error('The WhatsApp client is not installed.');
-  return module;
+  // The driver open-wa itself depends on, resolved from where open-wa is installed
+  const fromOpenWa = createRequire(createRequire(import.meta.url).resolve('@open-wa/wa-automate'));
+  const { PuppeteerDriver } = fromOpenWa('@open-wa/driver-puppeteer') as { PuppeteerDriver?: DriverClass };
+  if (typeof PuppeteerDriver !== 'function') throw new Error('The WhatsApp browser driver is not installed.');
+  const Hardened = hardenedDriverClass(PuppeteerDriver);
+  return { create: module.create, ev: module.ev, driver: () => new Hardened() };
 }
