@@ -34,6 +34,7 @@ export const CATALOG_HOW: Record<ConnectorCatalogId, MessageKey> = {
   google_calendar: 'conn_catalog_google',
   // Drive works through the signed-in browser (DriveSection); its MCP server is the advanced way
   google_drive: 'drive_catalog_advanced',
+  si_sdk: 'conn_catalog_siSdk',
 };
 
 const ERROR_TEXT: Record<string, MessageKey> = {

@@ -169,6 +169,8 @@ describe('setting up Obsidian and model keys with Ava', () => {
     expect(setupTargetFrom('linear')).toBe('linear');
     expect(setupTargetFrom('an API key for the model')).toBe('models');
     expect(setupTargetFrom('https://x.example/mcp')).toBe('custom');
+    expect(setupTargetFrom('my social accounts')).toBe('si_sdk');
+    expect(setupTargetFrom('SI-SDK')).toBe('si_sdk');
     expect(setupTargetFrom('the weather')).toBeNull();
   });
 });

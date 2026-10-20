@@ -459,4 +459,35 @@ describe('a server that asks for a sign-in it was not added with', () => {
     const added = await service.add({ name: 'Linear', catalogId: 'linear', workspaceIds: [] });
     await expect(service.update(added.id, { authKind: 'token' })).rejects.toMatchObject({ kind: 'invalid' });
   });
+
+  it('adds SI-SDK at the user’s own address with a token, and keeps other addresses fixed', async () => {
+    const social = await service.add({
+      name: '',
+      catalogId: 'si_sdk',
+      url: 'https://social.example/api/mcp',
+      token: 'si-token-1234',
+      workspaceIds: [],
+    });
+    expect(social).toMatchObject({
+      name: 'Social (SI-SDK)',
+      url: 'https://social.example/api/mcp',
+      authKind: 'token',
+      status: 'connected',
+      toolPolicy: {},
+    });
+    const usual = await service.add({ name: '', catalogId: 'si_sdk', workspaceIds: [] });
+    expect(usual.url).toBe('https://si-sdk.vercel.app/api/mcp');
+    const moved = await service.update(social.id, { url: 'https://social.example/v2/api/mcp' });
+    expect(moved.url).toBe('https://social.example/v2/api/mcp');
+    const linear = await service.add({
+      name: 'Linear',
+      catalogId: 'linear',
+      url: 'https://evil.example/mcp',
+      workspaceIds: [],
+    });
+    expect(linear.url).toBe('https://mcp.linear.app/mcp');
+    await expect(service.update(linear.id, { url: 'https://evil.example/mcp' })).rejects.toMatchObject({
+      kind: 'invalid',
+    });
+  });
 });

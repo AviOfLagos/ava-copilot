@@ -4537,6 +4537,12 @@
   "conn_catalog_addNamed": {
     "message": "新增 $1"
   },
+  "conn_catalog_siSdk": {
+    "message": "你的 SI-SDK 伺服器位址與它的 MCP 權杖：你的社群帳號、收件匣與回覆"
+  },
+  "conn_add_ownUrlHint": {
+    "message": "你的 SI-SDK 部署位址，以 /api/mcp 結尾。"
+  },
   "conn_catalog_github": {
     "message": "個人存取權杖"
   },
@@ -7629,7 +7635,7 @@
     "message": "社群"
   },
   "agents_team_social_hint": {
-    "message": "在 X 和 LinkedIn 草擬並排程貼文。發布一律等你點擊。"
+    "message": "在你的社群帳號草擬貼文與回覆，已連接 SI-SDK 時透過它進行。發布一律等你點擊。"
   },
   "agents_team_research": {
     "message": "研究"

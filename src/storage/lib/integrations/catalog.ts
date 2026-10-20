@@ -1,6 +1,6 @@
 /**
  * Well-known services with an official remote MCP server, each checked against the service's own public docs
- * (2026-10-12). Anything else is added as a custom server by its address.
+ * (2026-10-12), and the user's own SI-SDK social server. Anything else is added as a custom server by its address.
  */
 
 export const CONNECTOR_CATALOG_IDS = [
@@ -11,6 +11,7 @@ export const CONNECTOR_CATALOG_IDS = [
   'gmail',
   'google_calendar',
   'google_drive',
+  'si_sdk',
 ] as const;
 export type ConnectorCatalogId = (typeof CONNECTOR_CATALOG_IDS)[number];
 
@@ -27,6 +28,8 @@ export interface ConnectorCatalogEntry {
   // Extra parameters the service's sign-in page needs
   authParams?: Record<string, string>;
   docsUrl: string;
+  // The user runs the server themselves: `url` is only the usual address, and they may give their own
+  ownServer?: boolean;
 }
 
 // Google gives a refresh token only to a client that asks for offline access, and again only on a fresh consent
@@ -101,10 +104,27 @@ export const CONNECTOR_CATALOG: readonly ConnectorCatalogEntry[] = [
     authParams: GOOGLE_AUTH_PARAMS,
     docsUrl: 'https://developers.google.com/workspace/drive/api/guides/configure-mcp-server',
   },
+  {
+    // The user's own SI-SDK deployment (nexlabz/si-sdk): its remote MCP takes a bearer token. Bluesky, Mastodon,
+    // YouTube, and Instagram/LinkedIn/TikTok/Threads/X through social-sdk. Every tool asks first until the user
+    // marks one as only reading, so a post or a reply always waits for their click
+    id: 'si_sdk',
+    name: 'Social (SI-SDK)',
+    url: 'https://si-sdk.vercel.app/api/mcp',
+    auth: 'token',
+    needsClient: false,
+    docsUrl: 'https://si-sdk.vercel.app',
+    ownServer: true,
+  },
 ];
 
 export function connectorCatalogEntry(id: string | null | undefined): ConnectorCatalogEntry | undefined {
   return CONNECTOR_CATALOG.find(entry => entry.id === id);
+}
+
+/** The address a connector from the catalog uses: the fixed one, or for a server the user runs, theirs if given. */
+export function catalogConnectorUrl(entry: ConnectorCatalogEntry, given: string | null | undefined): string {
+  return entry.ownServer && given?.trim() ? given.trim() : entry.url;
 }
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
