@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import dns from 'node:dns';
+import http from 'node:http';
+import https from 'node:https';
 
 /**
  * Keeps open-wa from running code or reaching hosts nobody reviewed.
@@ -11,6 +14,9 @@ import { createHash } from 'node:crypto';
  *   is never served. The set is empty: the client's own bundled WAPI (wapi.js) carries sendText, getMe and the
  *   message listeners, and open-wa goes on without remote patches when the fetch gives none. If a WhatsApp Web
  *   update ever needs one, it is reviewed, committed here and pinned, never fetched.
+ * - **Every other client.** open-wa also ships axios and undici, which do not go through the global fetch. So the
+ *   process's http/https request functions refuse the same addresses, and name lookups for open-wa's and WhatsApp's
+ *   telemetry hosts fail for every client in the process (undici included).
  * - **The browser.** open-wa starts Chrome with a random local debugging port that any process on the Mac could
  *   attach to, and with certificate errors ignored. The launch is changed to a debugging pipe (no port), those
  *   flags are dropped, and open-wa's and WhatsApp's telemetry hosts resolve to nothing.
@@ -115,4 +121,80 @@ export interface LaunchOptions {
 export function hardenLaunch<T extends LaunchOptions>(options: T): T & { pipe: true; args: string[] } {
   const args = (options.args ?? []).filter(arg => !DROPPED_ARGS.some(pattern => pattern.test(arg)));
   return { ...options, pipe: true, args: [...args, BLOCKED_HOSTS_RULE] };
+}
+
+/** The address a node:http(s) request goes to, from its arguments (a URL, a string, or options). */
+export function requestUrlOf(args: unknown[], protocol: 'http:' | 'https:'): URL | null {
+  const [first] = args;
+  if (typeof first === 'string' || first instanceof URL) return urlOf(first);
+  if (!first || typeof first !== 'object') return null;
+  const options = first as {
+    protocol?: string;
+    hostname?: string;
+    host?: string;
+    port?: number | string;
+    path?: string;
+  };
+  const host = options.hostname ?? options.host?.replace(/:\d+$/, '');
+  if (!host) return null;
+  return urlOf(`${options.protocol ?? protocol}//${host}${options.path ?? '/'}`);
+}
+
+/** Whether a name lookup may resolve: never for open-wa's own hosts or WhatsApp's telemetry. */
+export function lookupAllowed(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, '');
+  return ![...OPENWA_DOMAINS, ...WHATSAPP_TELEMETRY].some(domain => within(host, domain));
+}
+
+const blockedError = () =>
+  Object.assign(new Error('Blocked by Nex Brain: open-wa may not reach this address.'), { code: 'ENOTFOUND' });
+
+type RequestFn = (...args: unknown[]) => http.ClientRequest;
+
+function guardRequest(target: { request: unknown; get: unknown }, protocol: 'http:' | 'https:'): void {
+  for (const name of ['request', 'get'] as const) {
+    const original = target[name] as RequestFn & Record<symbol, unknown>;
+    if (original[GUARDED]) continue;
+    const guarded = ((...args: unknown[]) => {
+      const url = requestUrlOf(args, protocol);
+      if (url && verdictFor(url) !== 'allowed') throw blockedError();
+      return original(...args);
+    }) as RequestFn;
+    Object.defineProperty(guarded, GUARDED, { value: true });
+    target[name] = guarded;
+  }
+}
+
+type Lookup = (hostname: string, ...rest: unknown[]) => unknown;
+
+function guardLookup(): void {
+  const original = dns.lookup as unknown as Lookup & Record<symbol, unknown>;
+  if (!original[GUARDED]) {
+    const guarded = ((hostname: string, ...rest: unknown[]) => {
+      if (lookupAllowed(hostname)) return original.call(dns, hostname, ...rest);
+      const callback = rest[rest.length - 1];
+      if (typeof callback === 'function') process.nextTick(() => (callback as (error: Error) => void)(blockedError()));
+      return undefined;
+    }) as Lookup;
+    Object.defineProperty(guarded, GUARDED, { value: true });
+    (dns as unknown as { lookup: Lookup }).lookup = guarded;
+  }
+  const promises = dns.promises as unknown as { lookup: Lookup & Record<symbol, unknown> };
+  if (!promises.lookup[GUARDED]) {
+    const originalPromise = promises.lookup;
+    const guarded = (async (hostname: string, ...rest: unknown[]) => {
+      if (!lookupAllowed(hostname)) throw blockedError();
+      return originalPromise.call(dns.promises, hostname, ...rest);
+    }) as Lookup;
+    Object.defineProperty(guarded, GUARDED, { value: true });
+    promises.lookup = guarded as Lookup & Record<symbol, unknown>;
+  }
+}
+
+/** The whole process: fetch, node:http(s) (axios and the like) and name lookups (undici and the rest). */
+export function installNetworkGuard(): void {
+  installFetchGuard();
+  guardRequest(http as unknown as { request: unknown; get: unknown }, 'http:');
+  guardRequest(https as unknown as { request: unknown; get: unknown }, 'https:');
+  guardLookup();
 }

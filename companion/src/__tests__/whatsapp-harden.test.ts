@@ -1,10 +1,15 @@
 import { createHash } from 'node:crypto';
+import dns from 'node:dns';
+import https from 'node:https';
 import { describe, expect, it } from 'vitest';
 import {
   BLOCKED_HOSTS_RULE,
   guardedFetch,
   hardenLaunch,
   installFetchGuard,
+  installNetworkGuard,
+  lookupAllowed,
+  requestUrlOf,
   VENDORED_PATCHES,
   VENDORED_PATCHES_SHA256,
   verdictFor,
@@ -123,5 +128,39 @@ describe('the session browser', () => {
       async init() {}
     }
     await expect(new (hardenedDriverClass(Unsecurable))().init()).rejects.toThrow(/cannot be secured/);
+  });
+});
+
+describe('clients that skip the global fetch (axios, undici)', () => {
+  it('reads the address of a node:http(s) request from a URL, a string or options', () => {
+    expect(requestUrlOf(['https://cdn.openwa.dev/patches.json'], 'https:')?.hostname).toBe('cdn.openwa.dev');
+    expect(
+      requestUrlOf([new URL('https://raw.githubusercontent.com/open-wa/x/patches.json')], 'https:')?.pathname,
+    ).toBe('/open-wa/x/patches.json');
+    expect(requestUrlOf([{ host: 'funcs.openwa.dev:443', path: '/license' }], 'https:')?.href).toBe(
+      'https://funcs.openwa.dev/license',
+    );
+  });
+
+  it('never resolves open-wa or WhatsApp telemetry hosts, and leaves the rest alone', () => {
+    expect(lookupAllowed('cdn.openwa.dev')).toBe(false);
+    expect(lookupAllowed('FUNCS.OPENWA.DEV.')).toBe(false);
+    expect(lookupAllowed('crashlogs.whatsapp.net')).toBe(false);
+    expect(lookupAllowed('web.whatsapp.com')).toBe(true);
+    expect(lookupAllowed('notopenwa.dev')).toBe(true);
+  });
+
+  it('refuses those addresses through https and name lookups once installed, without touching the network', async () => {
+    installNetworkGuard();
+    installNetworkGuard();
+    expect(() => https.get('https://cdn.openwa.dev/patches.json')).toThrow(/Blocked/);
+    expect(() =>
+      https.request({ hostname: 'raw.githubusercontent.com', path: '/open-wa/wa-automate/patches.json' }),
+    ).toThrow(/Blocked/);
+    await expect(dns.promises.lookup('cdn.openwa.dev')).rejects.toThrow(/Blocked/);
+    const error = await new Promise<NodeJS.ErrnoException | null>(resolve =>
+      dns.lookup('dit.whatsapp.net', failure => resolve(failure)),
+    );
+    expect(error?.code).toBe('ENOTFOUND');
   });
 });

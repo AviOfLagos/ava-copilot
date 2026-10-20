@@ -87,14 +87,20 @@ export function toWhatsAppText(markdown: string, max = WHATSAPP_REPLY_MAX, more 
  */
 export function plainOutside(text: string, max: number): string {
   const plain = text
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, '')
+    // Invisible characters first, so none can hide a link from the rules below
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, ' ')
+    // Any scheme (https://, ftp://, hxxp://…) and www.
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '')
+    .replace(/\bwww\.\S+/gi, '')
+    // Anything shaped like a host, whatever its ending (IDN and punycode included), and IP addresses
     .replace(
-      /\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|dev|app|co|me|ly|xyz|info|biz|link|site|online)\b\S*/gi,
+      /[\p{L}\p{N}_-]+(?:[.\u3002\uff0e\uff61][\p{L}\p{N}_-]+)*[.\u3002\uff0e\uff61](?:xn--[a-z0-9-]+|\p{L}{2,})(?![\p{L}\p{N}])\S*/giu,
       '',
     )
-    // Control and invisible characters are exactly what this removes
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, ' ')
+    .replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b\S*/g, '')
+    // A dot left between letters can still make a link: WhatsApp never links "a. b"
+    .replace(/(\p{L})[.\u3002\uff0e\uff61](?=\p{L})/gu, '$1. ')
     .replace(/[*~`]/g, '')
     .replace(/\s+/g, ' ')
     .trim();

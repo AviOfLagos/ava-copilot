@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Logger } from '../log';
 import { numberOfJid } from './driver';
 import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming } from './driver';
-import { hardenLaunch, installFetchGuard } from './harden';
+import { hardenLaunch, installNetworkGuard } from './harden';
 
 /**
  * The WhatsApp Web client: open-wa (@open-wa/wa-automate), which runs WhatsApp Web in a headless Chrome,
@@ -99,7 +99,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
     const driver: WaDriver = {
       async start(events: WaEvents) {
         // Before open-wa loads: its live patches never come from the network (./harden.ts)
-        installFetchGuard();
+        installNetworkGuard();
         module = await load();
         let lastQr = '';
         const onQr = (...args: unknown[]) => {
@@ -151,7 +151,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
               return;
             }
             client = created;
-            installFetchGuard();
+            installNetworkGuard();
             created.onAnyMessage(message => {
               if (!stopped) events.message(incomingOf(message));
             });
