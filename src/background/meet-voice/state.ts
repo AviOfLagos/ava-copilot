@@ -11,7 +11,7 @@ export interface MeetVoiceState {
   status: MeetStatus | null;
   // The user's meeting (its notes) she was brought into: she leaves when those notes end
   meetingId: string | null;
-  // Calls where she already said who she is
+  // Join sessions (call code and when she got in) where she already said who she is; cleared on join and leave
   introduced: string[];
   // The last thing that went wrong, as a plain sentence
   error: string | null;

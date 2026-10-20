@@ -2178,6 +2178,14 @@ except as her own, named participant, for words the user approved with a click.
   line, "Sign Ava's browser in". Esc stops her anywhere in the panel. The consent reminder mentions her.
 - `ask_meeting`'s answer to the voice model is now wrapped as untrusted (it is made from what the call said).
 - Not built: recording or captions by her, auto-approved short answers, locales other than English for Meet's buttons.
+- Security review fixes (same day): the user's own words this turn must ask her to speak to the call (`askedToSpeak`;
+  by voice, what was heard); words copied from the call are refused however short, and the call text now includes
+  what the user's Meet page shows (chat, pop-ups), read in the isolated world. The introduction is keyed by join
+  session (`code@since`) and cleared on join and leave, so a rejoin or next week's meeting on the same link gets it
+  again. `READ_STATE` trusts the exact "Leave call" control first and reads end screens only with chat, captions,
+  participant lists and other writable regions cut out. A sign-in check never closes a browser a join started (join
+  waits for it), and a call browser that exits always ends in left. Calls use the on-device voices first; Gemini is
+  the last resort, sent a fixed read-aloud-exactly instruction with the words quoted.
 
 Tests: companion `meet.test.ts` (addresses, launch flags, join/admission/denied/ended/removed/closed, say only in the
 approved call, stop, sign-in, routes with auth and size caps), opt-in `live-mic.test.ts`

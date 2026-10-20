@@ -98,27 +98,57 @@ export interface MeetReading {
   micOff: boolean;
 }
 
-/** Reads where the page is. Text checks first: the end screens keep some buttons of the call around. */
+// What other people can write on the page: chat, captions, participant names and tiles, notices that come and go.
+// Their words never decide where Ava is ("you've been removed" typed in the chat is just chat).
+export const UNTRUSTED_REGIONS = [
+  '[role="log"]',
+  '[aria-live]',
+  '[role="list"]',
+  '[role="listitem"]',
+  '[data-participant-id]',
+  '[data-requested-participant-id]',
+  '[data-message-id]',
+  '[data-sender-id]',
+  '[contenteditable]',
+  'textarea',
+  '[aria-label*="caption" i]',
+  '[aria-label*="chat" i]',
+  '[aria-label*="message" i]',
+  '[aria-label*="participant" i]',
+  '[aria-label*="people" i]',
+].join(',');
+
+/**
+ * Reads where the page is. Structure first: the call's own Leave call button (by its accessible name, exactly) means
+ * she is in the call, whatever any text says. Only without it are the end and waiting screens read, from the page's
+ * text with every region others can write to cut out.
+ */
 export const READ_STATE = `(() => {
   const host = location.hostname;
   if (host === 'accounts.google.com') return { phase: 'signin', asksName: false, cameraOn: false, micOff: false };
   if (host !== 'meet.google.com') return { phase: 'elsewhere', asksName: false, cameraOn: false, micOff: false };
-  const text = ((document.body && document.body.innerText) || '').slice(0, 20000);
   const visible = element => element.getClientRects().length > 0;
-  const labels = [...document.querySelectorAll('button,[role="button"]')]
-    .filter(visible)
-    .map(b => ((b.getAttribute('aria-label') || '') + ' | ' + (b.innerText || b.textContent || '')).replace(/\\s+/g, ' ').trim());
-  const has = re => labels.some(label => re.test(label));
+  const buttons = [...document.querySelectorAll('button,[role="button"]')].filter(visible);
+  const aria = buttons.map(b => (b.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim());
+  const words = buttons.map(b => (b.innerText || b.textContent || '').replace(/\\s+/g, ' ').trim());
+  const hasAria = re => aria.some(label => re.test(label));
+  const hasWords = re => words.some(label => re.test(label));
   const asksName = [...document.querySelectorAll('input')].some(input => visible(input) && /your name/i.test(input.getAttribute('aria-label') || input.placeholder || ''));
-  const base = { asksName, cameraOn: has(/turn off camera/i), micOff: has(/turn on microphone/i) };
+  const base = { asksName, cameraOn: hasAria(/^turn off camera/i), micOff: hasAria(/^turn on microphone/i) };
+  if (hasAria(/^leave call$/i)) return { ...base, phase: 'in_call' };
+  let text = ((document.body && document.body.innerText) || '');
+  for (const region of document.querySelectorAll(${JSON.stringify('__UNTRUSTED__')})) {
+    const said = region.innerText || region.textContent || '';
+    if (said.trim()) text = text.split(said).join(' ');
+  }
+  text = text.slice(0, 20000);
   if (/removed you from the (meeting|call)|you('ve| have) been removed|you were removed/i.test(text)) return { ...base, phase: 'removed' };
   if (/denied your request|no one responded to your request|can(no|')t join this call|you can't join/i.test(text)) return { ...base, phase: 'denied' };
-  if (/you left the (meeting|call)|the (call|meeting) has ended|call ended for everyone|you've left the call/i.test(text) || has(/^\\| ?rejoin$/i)) return { ...base, phase: 'ended' };
-  if (has(/leave call/i)) return { ...base, phase: 'in_call' };
+  if (/you left the (meeting|call)|the (call|meeting) has ended|call ended for everyone|you've left the call/i.test(text) || hasWords(/^rejoin$/i)) return { ...base, phase: 'ended' };
   if (/asking to be let in|lets you in|wait until a meeting host|waiting for the host|someone to let you in/i.test(text)) return { ...base, phase: 'waiting' };
-  if (has(/(^|\\| ?)(join now|ask to join)$/i)) return { ...base, phase: 'lobby' };
+  if (hasWords(/^(join now|ask to join)$/i)) return { ...base, phase: 'lobby' };
   return { ...base, phase: 'loading' };
-})()`;
+})()`.replace('"__UNTRUSTED__"', JSON.stringify(UNTRUSTED_REGIONS));
 
 /** Presses the first visible control whose accessible name or words match; true when one was pressed. */
 export function clickExpression(pattern: RegExp): string {

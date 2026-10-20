@@ -70,6 +70,8 @@ export class MeetBot {
   private cdp: CdpConnection | null = null;
   private sessionId: string | null = null;
   private monitor: AbortController | null = null;
+  // A sign-in check that is running
+  private checking: Promise<boolean | null> | null = null;
   private speakingUntil = 0;
   private readonly now: () => number;
   private readonly launch: LaunchBrowser;
@@ -115,6 +117,7 @@ export class MeetBot {
   async signin(): Promise<MeetStatus> {
     if (ACTIVE.has(this.state)) fail('invalid', 'Ava is in a call. Have her leave it first.');
     if (this.mode === 'signin' && this.browser?.running()) return this.status();
+    await this.settleCheck();
     await this.closeBrowser();
     const browser = await this.launch({
       executable: this.executable(),
@@ -141,8 +144,21 @@ export class MeetBot {
    * Whether the profile is signed in: signed out, meet.google.com sends you to Google's product page or the
    * sign-in page; signed in, it stays on Meet. Runs the browser for a few seconds when nothing else uses it.
    */
-  async checkSignedIn(): Promise<boolean | null> {
-    if (this.browser) return this.signedIn;
+  checkSignedIn(): Promise<boolean | null> {
+    if (this.browser) return Promise.resolve(this.signedIn);
+    if (!this.checking) {
+      const check = this.runCheck();
+      this.checking = check;
+      void check
+        .finally(() => {
+          if (this.checking === check) this.checking = null;
+        })
+        .catch(() => {});
+    }
+    return this.checking;
+  }
+
+  private async runCheck(): Promise<boolean | null> {
     const browser = await this.launch({
       executable: this.executable(),
       profileDir: this.profileDir,
@@ -163,8 +179,14 @@ export class MeetBot {
       this.signedIn = reading ? reading.phase !== 'signin' && reading.phase !== 'elsewhere' : null;
       return this.signedIn;
     } finally {
-      await this.closeBrowser();
+      // Only its own browser: never one a join started meanwhile
+      if (this.browser === browser) await this.closeBrowser();
     }
+  }
+
+  /** Waits for a sign-in check that is running, so nothing it does can touch what comes next. */
+  private async settleCheck(): Promise<void> {
+    await this.checking?.catch(() => {});
   }
 
   // ── A call ──
@@ -182,13 +204,21 @@ export class MeetBot {
       fail('invalid', "Finish signing in, then close Ava's browser window and try again.");
     }
     const executable = this.executable();
-    await this.closeBrowser();
+    // Taken at once, so a second join while this one starts sees she is joining
     this.code = code;
     this.set('joining');
     try {
+      await this.settleCheck();
+      await this.closeBrowser();
       const browser = await this.launch({ executable, profileDir: this.profileDir, debug: true, url: 'about:blank' });
       this.browser = browser;
       this.mode = 'call';
+      // However her browser goes away, the state says so
+      void browser.exited.then(() => {
+        if ((this.browser === browser || this.browser === null) && ACTIVE.has(this.state)) {
+          void this.finish('left', "Ava's browser was closed.");
+        }
+      });
       const { cdp, sessionId } = await this.attach(browser, true);
       await cdp.send('Page.navigate', { url }, { sessionId });
       const monitor = new AbortController();

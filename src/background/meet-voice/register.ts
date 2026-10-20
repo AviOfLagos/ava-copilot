@@ -28,7 +28,7 @@ import { createLogger } from '../log';
 import { answerOneOff, registerAgentAction, registerCommand, registerRecovery, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
 import { defaultRenderDeps, renderForCall } from './render';
-import { REFUSALS, sayInMeeting, wordsFromCall } from './say';
+import { askedToSpeak, REFUSALS, sayInMeeting, wordsFromCall } from './say';
 import type { SayDeps, UserMeeting } from './say';
 import { isInOrJoining, meetVoiceStore } from './state';
 
@@ -67,6 +67,24 @@ async function userMeetingRecord(): Promise<MeetingRecord | null> {
   return active[0] ?? null;
 }
 
+/**
+ * What the user's call page shows (Meet chat, chat pop-ups, captions, names), read in the extension's isolated world:
+ * a read only, compared against the words she is asked to say, never followed and never sent to a model.
+ */
+async function callPageText(tabId: number | null): Promise<string> {
+  if (tabId == null) return '';
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'ISOLATED',
+      func: () => ((document.body && document.body.innerText) || '').slice(-20000),
+    });
+    return typeof result?.result === 'string' ? result.result : '';
+  } catch {
+    return '';
+  }
+}
+
 async function userMeeting(): Promise<UserMeeting | null> {
   const meeting = await userMeetingRecord();
   if (!meeting) return null;
@@ -74,6 +92,7 @@ async function userMeeting(): Promise<UserMeeting | null> {
   const callText = [
     ...(meeting.liveCaptions ?? []).map(caption => caption.text),
     ...segments.slice(-60).map(segment => segment.text),
+    await callPageText(meeting.tabId),
   ].join('\n');
   return { id: meeting.id, url: meeting.url, title: meeting.title, callText };
 }
@@ -95,9 +114,10 @@ async function userName(): Promise<string> {
 async function leave(reason: string): Promise<void> {
   try {
     const { status } = await companionClient.meetLeave();
-    await meetVoiceStore.update({ status, meetingId: null, error: null });
+    // The next time she joins, she says who she is again
+    await meetVoiceStore.update({ status, meetingId: null, error: null, introduced: [] });
   } catch (error) {
-    await meetVoiceStore.update({ meetingId: null, error: toAppError(error).message });
+    await meetVoiceStore.update({ meetingId: null, error: toAppError(error).message, introduced: [] });
   }
   await jobs.cancel(WATCH_KEY).catch(() => {});
   logger.info('Ava left the call', reason);
@@ -151,7 +171,7 @@ command('meetvoice_join', z.object({ meetingId: z.string().min(1).max(100) }), a
   const url = meeting ? normalizeMeetUrl(meeting.url) : null;
   if (!meeting || meeting.status !== 'recording' || !url) throw new Error(t('meetvoice_errors_notMeet'));
   const { status } = await companionClient.meetJoin({ requestId: crypto.randomUUID(), url });
-  await meetVoiceStore.update({ status, meetingId, error: null });
+  await meetVoiceStore.update({ status, meetingId, error: null, introduced: [] });
   await jobs.schedule({ kind: WATCH_JOB, key: WATCH_KEY, cron: WATCH_CRON, catchUpMs: 60_000 });
   return state();
 });
@@ -188,7 +208,7 @@ registerJobHandler(WATCH_JOB, async () => {
   const status = await refresh();
   if (status && !isInOrJoining(status)) {
     await jobs.cancel(WATCH_KEY);
-    await meetVoiceStore.update({ meetingId: null });
+    await meetVoiceStore.update({ meetingId: null, introduced: [] });
     return;
   }
   await leaveIfNotesEnded();
@@ -218,9 +238,9 @@ function sayDeps(context: AgentContext): SayDeps {
     },
     userMeeting,
     introduced: async () => (await meetVoiceStore.getState()).introduced,
-    markIntroduced: async code => {
+    markIntroduced: async session => {
       const current = await meetVoiceStore.getState();
-      await meetVoiceStore.update({ introduced: [...current.introduced.filter(c => c !== code), code] });
+      await meetVoiceStore.update({ introduced: [...current.introduced.filter(c => c !== session), session] });
     },
     assistantName,
     userName,
@@ -301,7 +321,8 @@ registerAgentAction({
  */
 export async function voiceSay(words: string, heard: string): Promise<string> {
   const text = words.replace(/\s+/g, ' ').trim();
-  if (!heard.trim()) return REFUSALS.noRequest;
+  // What the user just said must itself ask her to speak to the call
+  if (!heard.trim() || !askedToSpeak(heard)) return REFUSALS.noRequest;
   if (!text) return REFUSALS.noWords;
   const status = await refresh();
   if (status?.state !== 'in_call') return REFUSALS.notInCall;

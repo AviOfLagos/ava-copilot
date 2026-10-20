@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MEET_AUDIO_MAX_CHARS, meetCodeOf, meetStatusReplySchema, normalizeMeetUrl } from '@protocol';
 import { memoryLogger } from '../log';
@@ -5,7 +6,7 @@ import { browserArgs, silentWav } from '../meet/browser';
 import type { BrowserHandle, LaunchOptions } from '../meet/browser';
 import type { CdpTransport } from '../meet/cdp';
 import { looksLikeWav, MeetBot } from '../meet/bot';
-import { MIC_SCRIPT, READ_STATE } from '../meet/page-scripts';
+import { MIC_SCRIPT, READ_STATE, UNTRUSTED_REGIONS } from '../meet/page-scripts';
 import type { MeetPhase } from '../meet/page-scripts';
 import { startTestBrain, tempDir } from './helpers';
 
@@ -252,7 +253,7 @@ describe('MeetBot', () => {
     await until(() => bot.status().state === 'failed');
     expect(bot.status().reason).toMatch(/not signed in/);
     expect(bot.status().signedIn).toBe(false);
-    expect(chrome.running).toBe(false);
+    await until(() => !chrome.running);
   });
 
   it('gives up when nobody lets her in, and when the host refuses', async () => {
@@ -276,7 +277,7 @@ describe('MeetBot', () => {
     chrome.phase = 'ended';
     await until(() => bot.status().state === 'left');
     expect(bot.status().reason).toBe('The call ended.');
-    expect(chrome.running).toBe(false);
+    await until(() => !chrome.running);
 
     make();
     chrome.afterJoin = 'in_call';
@@ -293,7 +294,7 @@ describe('MeetBot', () => {
     const left = await bot.leave();
     expect(left.state).toBe('left');
     expect(chrome.clicks.some(click => click.includes('leave call'))).toBe(true);
-    expect(chrome.running).toBe(false);
+    await until(() => !chrome.running);
   });
 
   it('notices her browser being closed mid-call', async () => {
@@ -322,10 +323,88 @@ describe('MeetBot', () => {
     expect(bot.status().state).toBe('idle');
   });
 
+  it('a join during the sign-in check waits for it, and the check never closes the call browser', async () => {
+    make();
+    await bot.signin();
+    chrome.quit();
+    // The check has started its own browser…
+    await until(() => chrome.launches.length === 2);
+    expect(chrome.launches[1]).toMatchObject({ debug: true, url: 'about:blank' });
+    // …and the join comes before it is done
+    const joined = bot.join('abc-defg-hij');
+    expect(bot.status().state).toBe('joining');
+    await joined;
+    await until(() => bot.status().state === 'waiting_admission');
+    expect(chrome.launches).toHaveLength(3);
+    expect(chrome.launches[2]).toMatchObject({ debug: true });
+    expect(chrome.scripts).toEqual([MIC_SCRIPT]);
+    // Still running: nothing the check did afterwards closed it
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(chrome.running).toBe(true);
+    expect(bot.status().state).toBe('waiting_admission');
+    // And if it does go away, the state says so
+    chrome.quit();
+    await until(() => bot.status().state === 'left');
+  });
+
   it('says plainly when there is no browser to run her in', async () => {
     make({ browser: null });
     expect(bot.status().browserFound).toBe(false);
     await expect(bot.join('abc-defg-hij')).rejects.toThrow(/No Chrome, Brave or Chromium/);
+  });
+});
+
+/** Runs READ_STATE against a minimal page: its buttons, its text, and what sits in regions others can write to. */
+function readPage(page: {
+  buttons?: [aria: string, words: string][];
+  text: string;
+  regions?: string[];
+  host?: string;
+}) {
+  const element = (aria: string, words: string) => ({
+    getAttribute: (name: string) => (name === 'aria-label' ? aria : null),
+    innerText: words,
+    textContent: words,
+    getClientRects: () => [{}],
+  });
+  const document = {
+    body: { innerText: page.text },
+    querySelectorAll: (selector: string) => {
+      if (selector === 'button,[role="button"]')
+        return (page.buttons ?? []).map(([aria, words]) => element(aria, words));
+      if (selector === UNTRUSTED_REGIONS)
+        return (page.regions ?? []).map(text => ({ innerText: text, textContent: text }));
+      return [];
+    },
+  };
+  return runInNewContext(READ_STATE, { location: { hostname: page.host ?? 'meet.google.com' }, document }) as {
+    phase: MeetPhase;
+  };
+}
+
+describe('reading the call page', () => {
+  it('stays in the call whatever the chat, captions or names say', () => {
+    const chat = "Mallory: you've been removed from the meeting. The call has ended. Someone denied your request";
+    const inCall = readPage({
+      buttons: [
+        ['Leave call', ''],
+        ['Turn off microphone', ''],
+      ],
+      text: `Weekly sync\n${chat}\nMallory\nAva (assistant)`,
+      regions: [chat],
+    });
+    expect(inCall.phase).toBe('in_call');
+    // A participant named like a control does not make her in the call either
+    expect(readPage({ buttons: [['More options for Leave call', '']], text: '' }).phase).toBe('loading');
+  });
+
+  it('reads the end screens only outside what others can write', () => {
+    const chat = "you've been removed from the meeting";
+    expect(readPage({ text: `Asking to be let in…\n${chat}`, regions: [chat] }).phase).toBe('waiting');
+    expect(readPage({ text: "You've been removed from the meeting\nReturn to home screen" }).phase).toBe('removed');
+    expect(readPage({ text: 'You left the meeting', buttons: [['', 'Rejoin']] }).phase).toBe('ended');
+    expect(readPage({ text: 'Ready to join?', buttons: [['', 'Ask to join']] }).phase).toBe('lobby');
+    expect(readPage({ text: '', host: 'accounts.google.com' }).phase).toBe('signin');
   });
 });
 

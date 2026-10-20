@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { expect, it } from 'vitest';
 import { launchBrowser } from '../meet/browser';
 import { attachToPage, CdpConnection, evaluate } from '../meet/cdp';
-import { MIC_SCRIPT, playExpression, STOP_EXPRESSION } from '../meet/page-scripts';
+import { MIC_SCRIPT, playExpression, STOP_EXPRESSION, UNTRUSTED_REGIONS } from '../meet/page-scripts';
 import { tempDir } from './helpers';
 
 function toneWav(seconds: number, rate = 24_000): string {
@@ -72,6 +72,14 @@ it.skipIf(!process.env.AVI_BRAIN_LIVE_BROWSER)(
       await evaluate(cdp, sessionId, STOP_EXPRESSION);
       await new Promise(r => setTimeout(r, 400));
       const after = await evaluate<number>(cdp, sessionId, 'window.level');
+      // The selector READ_STATE cuts others' words out with is one this browser accepts
+      expect(
+        await evaluate<number>(
+          cdp,
+          sessionId,
+          `document.querySelectorAll(${JSON.stringify(UNTRUSTED_REGIONS)}).length`,
+        ),
+      ).toBe(0);
       expect(kinds).toBe('audio,video');
       expect(before).toBeLessThan(0.01);
       expect(during).toBeGreaterThan(0.1);
