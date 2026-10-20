@@ -316,8 +316,9 @@ registerAgentAction({
 // ── Voice ─────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * By voice: the request is checked here against what the user just said, then handed to a chat, where the exact
- * words wait for the click on the confirm card. A spoken "yes" never sends them.
+ * By voice: the request is checked here against what the user just said, then the user's own words (never the voice
+ * model's version of them) start a chat, which writes the words, checks them against that request and waits for the
+ * click on the confirm card. A spoken "yes" never sends them.
  */
 export async function voiceSay(words: string, heard: string): Promise<string> {
   const text = words.replace(/\s+/g, ' ').trim();
@@ -331,8 +332,9 @@ export async function voiceSay(words: string, heard: string): Promise<string> {
   if (wordsFromCall(text, meeting.callText, heard)) return REFUSALS.fromCall;
   const record = await meetingStore.get(meeting.id);
   const tab = record?.tabId != null ? await chrome.tabs.get(record.tabId).catch(() => undefined) : undefined;
+  // Posted as the user's message, so it must be only what the user said: model text there would pass as theirs
   await services().threads.send({
-    text: `Say this in the meeting with say_in_meeting, word for word: "${text.replace(/"/g, "'")}"`,
+    text: heard.replace(/\s+/g, ' ').trim(),
     windowId: tab?.windowId,
     origin: 'voice',
   });
