@@ -40,6 +40,14 @@ interface Pending {
   workMs: number;
   audioSeconds: number;
   done: boolean;
+  // Rendering to a buffer (speech for a call), not playing: the sentences land here
+  collect?: { chunks: Float32Array[]; sampleRate: number; cancelled: boolean };
+}
+
+/** Speech made but not played: mono float samples. */
+export interface RenderedSpeech {
+  samples: Float32Array;
+  sampleRate: number;
 }
 
 export class LocalTts {
@@ -139,6 +147,50 @@ export class LocalTts {
     return finished;
   }
 
+  /**
+   * Makes the speech without playing it (Ava's words for a call go to the companion, not this speaker). Shares
+   * the one worker with speak(): a render cuts off what was playing, and a stop or a new request cancels it.
+   */
+  async render(request: SpeakRequest): Promise<RenderedSpeech> {
+    this.stop();
+    const generation = this.generation;
+    await this.warm(request.engine);
+    if (generation !== this.generation) throw new Error('Stopped');
+    const id = this.nextId++;
+    const collect = { chunks: [] as Float32Array[], sampleRate: 24_000, cancelled: false };
+    const finished = new Promise<void>((resolve, reject) => {
+      this.pending = {
+        id,
+        resolve,
+        reject,
+        started: performance.now(),
+        firstAudio: null,
+        workMs: 0,
+        audioSeconds: 0,
+        done: false,
+        collect,
+      };
+    });
+    this.post({
+      type: 'speak',
+      id,
+      engine: request.engine,
+      text: request.text,
+      voice: request.voice,
+      speed: request.rate ?? 1,
+    });
+    await finished;
+    if (collect.cancelled) throw new Error('Stopped');
+    const length = collect.chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const samples = new Float32Array(length);
+    let offset = 0;
+    for (const chunk of collect.chunks) {
+      samples.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return { samples, sampleRate: collect.sampleRate };
+  }
+
   /** Stops speaking at once; whatever was still being made is dropped. */
   stop(): void {
     this.cancelCurrent();
@@ -162,8 +214,9 @@ export class LocalTts {
     const current = this.pending;
     this.pending = null;
     if (current && !current.done) this.worker?.postMessage({ type: 'cancel', id: current.id } satisfies ToTtsWorker);
+    if (current?.collect) current.collect.cancelled = true;
     // What was heard before it was cut off still counts
-    if (current) this.recordPlayback();
+    else if (current) this.recordPlayback();
     this.player.stop();
     current?.resolve();
   }
@@ -194,7 +247,12 @@ export class LocalTts {
         pending.firstAudio ??= performance.now();
         pending.workMs += message.ms;
         pending.audioSeconds += message.samples.length / message.sampleRate;
-        this.player.enqueue(message.samples);
+        if (pending.collect) {
+          pending.collect.chunks.push(message.samples);
+          pending.collect.sampleRate = message.sampleRate;
+        } else {
+          this.player.enqueue(message.samples);
+        }
         return;
       }
       case 'done': {
@@ -204,6 +262,12 @@ export class LocalTts {
         this.stats.firstAudioMs = pending.firstAudio === null ? null : Math.round(pending.firstAudio - pending.started);
         this.stats.speedFactor =
           pending.workMs > 0 ? +(pending.audioSeconds / (pending.workMs / 1000)).toFixed(2) : null;
+        if (pending.collect) {
+          this.pending = null;
+          pending.resolve();
+          this.touch();
+          return;
+        }
         void this.player.whenDrained().then(() => {
           if (this.pending !== pending) return;
           this.recordPlayback();

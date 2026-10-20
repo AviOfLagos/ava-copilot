@@ -1,6 +1,6 @@
-# Ava speaking in a meeting — design note (not built)
+# Ava speaking in a meeting — design note
 
-Status: proposal, 2026-10-19. Nothing here is implemented. Today Ava speaks only to the user, never into a call
+Status: option A built 2026-10-20 (see "Ava speaks in Google Meet" in `docs/task.md`); option B is not built. Before that, Ava spoke only to the user, never into a call
 (rule from the Voice section of `docs/task.md`).
 
 ## What is being asked

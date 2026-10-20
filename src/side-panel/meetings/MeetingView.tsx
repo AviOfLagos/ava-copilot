@@ -7,6 +7,7 @@ import type { MeetingRecord, MeetingWarning } from '@extension/storage';
 import { useLive } from '../hooks/useLive';
 import { buttonClasses } from '../components/ui/button';
 import { useAssistantName } from '../hooks/useAssistant';
+import AvaInCall from '../meet-voice/AvaInCall';
 import { recordingStatus } from './status';
 
 type MeetingTab = 'summary' | 'live' | 'transcript' | 'ask';
@@ -204,6 +205,7 @@ export default function MeetingView({
             </ul>
           )}
         </div>
+        <AvaInCall meeting={meeting} />
 
         <div role="tablist" aria-label={t('meeting_tabs')} className="glass mt-2.5 flex gap-0.5 rounded-xl p-0.5">
           {tabs.map(item => (

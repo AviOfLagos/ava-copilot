@@ -2149,6 +2149,51 @@ Cancel settles and the next message runs; Stop on a question, twice), `dictation
 the device while the close is asked for every 100 ms — fails with the busy check removed; Gemini send-when-transcribed
 asserts one message, no error; Try again after a failed transcription), `voice` 6/6, `threads` 8/8.
 
+### Ava speaks in Google Meet, as her own participant (2026-10-20)
+
+Option A of `docs/meet-voice-plan.md`: a dedicated account (e.g. `ava@nexprove.com`) that the user signs in to by
+hand joins the call as a separate participant. The Voice rule "never into a call" now reads: never into a call
+except as her own, named participant, for words the user approved with a click.
+
+- **Nex Brain** (`companion/src/meet`): starts the installed Chrome, Brave or Chromium with its own profile
+  (`<data dir>/meet-profile`), no extensions, `--mute-audio` (no echo from the Mac's speakers), a silent fake capture
+  file, and the debugging **pipe** (no port any other program could drive). Before any page script,
+  `MIC_SCRIPT` replaces `getUserMedia` in that browser only: audio is a Web Audio destination the companion plays
+  WAV clips into, video a black frame. `MeetBot`: idle → joining → waiting_admission → in_call → left / failed(reason);
+  presses Join/Ask to join by name (camera off, mic on), gives up after 10 min unadmitted, leaves on call end, removal,
+  a closed window or `leave`. Sign-in opens accounts.google.com **without** the debugging pipe (nothing drives that
+  window) and checks the sign-in once it closes. Only `https://meet.google.com/<code>` is ever opened
+  (`normalizeMeetUrl` in the shared protocol). Routes `/v1/meet/{status,signin,join,say,stop,leave}` with pairing auth;
+  `say` is capped at 7 MB base64 and refused for any call but the one the words were approved for.
+- **Extension** (`src/background/meet-voice`): commands `meetvoice_*`; the `say_in_meeting` action and voice tool,
+  `stop_speaking_in_call` (unguarded: it can only quiet her) and `remove_ava_from_call`. `say.ts` holds the rules:
+  attended chats only, a user request in this turn, she is in the user's call, the words are not lifted from the
+  captions/transcript, the confirm card with the exact words every time (whatever the gate settings say), a one-line
+  introduction the first time in each call ("Hi, I'm Ava, an AI assistant speaking for …"). By voice the request is
+  checked against what was heard, then handed to a chat where the card waits. `render.ts` makes the WAV in the
+  personality's voice: Kitten/Kokoro through the new offscreen `local_tts_render` (`LocalTts.render`), Gemini with its
+  key; the system voice cannot render, and with no engine she refuses plainly. She leaves when the call page reports
+  the user left (`meeting_call_left`) and, as a backstop, a one-minute job when the notes end.
+- **Panel**: `AvaInCall` in the Meet notes view (paired only): Bring Ava into this call / Ava leaves / Stop, a state
+  line, "Sign Ava's browser in". Esc stops her anywhere in the panel. The consent reminder mentions her.
+- `ask_meeting`'s answer to the voice model is now wrapped as untrusted (it is made from what the call said).
+- Not built: recording or captions by her, auto-approved short answers, locales other than English for Meet's buttons.
+- Security review fixes (same day): the user's own words this turn must ask her to speak to the call (`askedToSpeak`;
+  by voice, what was heard); words copied from the call are refused however short, and the call text now includes
+  what the user's Meet page shows (chat, pop-ups), read in the isolated world. The introduction is keyed by join
+  session (`code@since`) and cleared on join and leave, so a rejoin or next week's meeting on the same link gets it
+  again. `READ_STATE` trusts the exact "Leave call" control first and reads end screens only with chat, captions,
+  participant lists and other writable regions cut out. A sign-in check never closes a browser a join started (join
+  waits for it), and a call browser that exits always ends in left. Calls use the on-device voices first; Gemini is
+  the last resort, sent a fixed read-aloud-exactly instruction with the words quoted.
+
+Tests: companion `meet.test.ts` (addresses, launch flags, join/admission/denied/ended/removed/closed, say only in the
+approved call, stop, sign-in, routes with auth and size caps), opt-in `live-mic.test.ts`
+(`AVI_BRAIN_LIVE_BROWSER=<browser>`: a played clip reaches a local page's `getUserMedia` stream, stop silences it —
+passed on Brave and Chrome); extension `meet-voice/__tests__/say.test.ts` (origins, request, other call, words from
+the call, gate every time, intro once per call, stop bypasses the breaker, render fallbacks), `local-tts.test.ts`
+(render without playing, stop cancels).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

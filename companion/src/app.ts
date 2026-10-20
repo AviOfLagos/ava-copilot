@@ -10,6 +10,8 @@ import type { Logger } from './log';
 import { createLogger } from './log';
 import { McpManager } from './mcp/manager';
 import type { McpConnect } from './mcp/manager';
+import { MeetBot } from './meet/bot';
+import type { MeetBotDeps } from './meet/bot';
 import { brainRoutes } from './routes';
 import { SandboxManager } from './sandbox/manager';
 import { runProcess } from './sandbox/process';
@@ -33,6 +35,8 @@ export interface BrainDeps {
   lookup?: MacWorkflowsDeps['lookup'];
   // null: no agent sessions; undefined: eve
   engine?: SessionEngine | null;
+  // Ava's meeting browser: how it is found and started, and how fast the call page is read
+  meet?: Partial<Pick<MeetBotDeps, 'launch' | 'findBrowser' | 'pollMs' | 'lobbyTimeoutMs' | 'admissionTimeoutMs'>>;
 }
 
 export type Brain = Awaited<ReturnType<typeof createBrain>>;
@@ -67,6 +71,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     lookup: deps.lookup,
   });
   const registry = new ProfileRegistry(config.dataDir, keys);
+  const meet = new MeetBot({ dataDir: config.dataDir, log: log.child({ part: 'meet' }), now, ...deps.meet });
   const engine =
     deps.engine === undefined
       ? new EveEngine({
@@ -88,6 +93,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
       artifacts,
       studio,
       workflows,
+      meet,
       registry,
       engine,
       startedAt,
@@ -104,6 +110,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     artifacts,
     studio,
     workflows,
+    meet,
     registry,
     engine,
     internalSecret,
@@ -120,6 +127,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     },
     async stop(): Promise<void> {
       workflows.stop();
+      await meet.shutdown().catch(error => log.warn('Ava did not leave cleanly', { error: (error as Error).message }));
       await engine?.stop();
       await mcp.stop();
       await server.close();

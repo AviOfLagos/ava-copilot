@@ -1384,7 +1384,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records.如果你讓助理加入通話，她會以自己的身分加入，並在發言前先說明她是 AI 助理。"
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -8596,5 +8596,196 @@
   },
   "meeting_auto_waitingCaptionsBody": {
     "message": "字幕已開啟。筆記會從第一句話開始。也可以在通話分頁上按下 Nex Copilot 圖示改為錄下音訊。"
+  },
+  "meetvoice_title": {
+    "message": "$NAME$ 在這場通話中",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_bring": {
+    "message": "讓 $NAME$ 加入這場通話",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_leave": {
+    "message": "$NAME$ 離開",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_stop": {
+    "message": "停止"
+  },
+  "meetvoice_signin": {
+    "message": "登入 $NAME$ 的瀏覽器",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_signinHint": {
+    "message": "登入會在你的 Mac 上開啟 $NAME$ 自己的瀏覽器並前往 Google 登入頁。請在那裡登入她自己的帳號（例如 ava@yourcompany.com），切勿使用你的帳號，然後關閉該視窗。Nex Copilot 永遠看不到密碼。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_about": {
+    "message": "$NAME$ 以自己的身分加入通話，第一句話會先說明她是 AI 助理，而且只說你點擊核准的內容。她不會錄製通話。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_stopHint": {
+    "message": "按 Esc 或「停止」會立刻打斷 $NAME$。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_idle": {
+    "message": "$NAME$ 不在這場通話中。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_signingIn": {
+    "message": "$NAME$ 的登入視窗已在你的 Mac 上開啟，完成後請關閉。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_joining": {
+    "message": "$NAME$ 正在加入…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_waiting": {
+    "message": "$NAME$ 正在等待主持人讓她進入。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_inCall": {
+    "message": "$NAME$ 已在通話中。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_speaking": {
+    "message": "$NAME$ 正在通話中發言…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_left": {
+    "message": "$NAME$ 已離開：$REASON$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "reason": {
+        "content": "$2",
+        "example": "The call ended."
+      }
+    }
+  },
+  "meetvoice_state_failed": {
+    "message": "$NAME$ 無法加入：$REASON$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "reason": {
+        "content": "$2",
+        "example": "The call ended."
+      }
+    }
+  },
+  "meetvoice_state_otherCall": {
+    "message": "$NAME$ 正在另一場通話中。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_signedOut": {
+    "message": "$NAME$ 的瀏覽器尚未登入，請先登入。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_noBrowser": {
+    "message": "Nex Brain 在你的 Mac 上找不到可執行她的 Chrome、Brave 或 Chromium。"
+  },
+  "meetvoice_errors_notMeet": {
+    "message": "她只能加入目前正在做筆記的 Google Meet 通話。"
+  },
+  "meetvoice_confirm_intent": {
+    "message": "$NAME$ 在通話中說出這段話",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_confirm_target": {
+    "message": "通話中的 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_confirm_words": {
+    "message": "要說的內容（逐字）"
   }
 }

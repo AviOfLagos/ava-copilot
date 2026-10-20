@@ -485,7 +485,8 @@ A picture of the screen was sent to you just now: describe what you see in it, a
       case 'ask_meeting': {
         const meeting = (await meetingStore.list()).find(m => m.status !== 'failed');
         if (!meeting) return 'No meeting has been recorded yet.';
-        return this.meetings.ask(meeting.id, String(args.question ?? ''));
+        // Made from what the call said: data, so a line in the call cannot order a tool (say_in_meeting, …)
+        return wrapUntrustedContent(await this.meetings.ask(meeting.id, String(args.question ?? '')));
       }
       case 'ask_knowledge': {
         if (!this.kb) return 'The knowledge base is not available.';

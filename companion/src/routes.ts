@@ -8,6 +8,10 @@ import {
   cursorRequestSchema,
   ghRequestSchema,
   healthRequestSchema,
+  MEET_ROUTES,
+  MEET_SAY_MAX_BODY_BYTES,
+  meetJoinRequestSchema,
+  meetSayRequestSchema,
   pairRequestSchema,
   sandboxRunRequestSchema,
   sessionAnswerRequestSchema,
@@ -33,6 +37,7 @@ import { fail } from './errors';
 import type { BrainServer, Route, RouteResult } from './http/server';
 import { json } from './http/server';
 import type { McpManager } from './mcp/manager';
+import type { MeetBot } from './meet/bot';
 import type { SandboxManager } from './sandbox/manager';
 import type { SessionEngine } from './sessions/eve';
 import type { ProfileRegistry } from './sessions/registry';
@@ -49,6 +54,7 @@ export interface RouteDeps {
   artifacts: ArtifactStore;
   studio: StudioKeys;
   workflows: MacWorkflows;
+  meet: MeetBot;
   registry: ProfileRegistry;
   engine: SessionEngine | null;
   startedAt: number;
@@ -434,6 +440,75 @@ export function brainRoutes(deps: RouteDeps): Route[] {
           headers: { ...ARTIFACT_HEADERS, 'Content-Type': file.contentType },
           body: file.body,
         };
+      },
+    },
+
+    // ── Ava in a Google Meet call ──
+    {
+      method: 'POST',
+      path: MEET_ROUTES.status,
+      name: 'meet.status',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        return json({ ok: true, status: deps.meet.status() });
+      },
+    },
+    {
+      method: 'POST',
+      path: MEET_ROUTES.signin,
+      name: 'meet.signin',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, status: await deps.meet.signin() });
+      },
+    },
+    {
+      method: 'POST',
+      path: MEET_ROUTES.join,
+      name: 'meet.join',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      async handler({ body }) {
+        const request = parse(meetJoinRequestSchema, body);
+        return json({ ok: true, status: await deps.meet.join(request.url) });
+      },
+    },
+    {
+      method: 'POST',
+      path: MEET_ROUTES.say,
+      name: 'meet.say',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: MEET_SAY_MAX_BODY_BYTES,
+      async handler({ body }) {
+        const request = parse(meetSayRequestSchema, body);
+        const durationMs = await deps.meet.say(request.audio, request.meetingCode);
+        return json({ ok: true, durationMs, status: deps.meet.status() });
+      },
+    },
+    {
+      // Stopping is never held back by a busy limit: it has a bucket of its own
+      method: 'POST',
+      path: MEET_ROUTES.stop,
+      name: 'meet.stop',
+      auth: 'api',
+      rate: 'meetStop',
+      async handler() {
+        return json({ ok: true, status: await deps.meet.stop() });
+      },
+    },
+    {
+      method: 'POST',
+      path: MEET_ROUTES.leave,
+      name: 'meet.leave',
+      auth: 'api',
+      rate: 'meetStop',
+      async handler() {
+        return json({ ok: true, status: await deps.meet.leave() });
       },
     },
 
