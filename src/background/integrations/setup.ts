@@ -119,6 +119,7 @@ export function setupTargetFrom(words: string): SetupTarget | null {
   if (/drive/.test(text)) return 'google_drive';
   if (/gmail|e-?mail/.test(text)) return 'gmail';
   if (/model|api key|llm/.test(text)) return 'models';
+  if (/si[- _]?sdk|social|bluesky|mastodon/.test(text)) return 'si_sdk';
   for (const id of CONNECTOR_CATALOG_IDS) if (text.includes(id)) return id;
   if (/https?:\/\/|custom|mcp/.test(text)) return 'custom';
   return null;
@@ -188,7 +189,7 @@ export class ConnectionSetup {
       try {
         ({ connector } = await this.deps.connectors.addAndConnect({
           name: entry?.name ?? request.name?.trim() ?? '',
-          url: entry ? undefined : request.url?.trim(),
+          url: entry && !entry.ownServer ? undefined : request.url?.trim(),
           // A custom server is tried with no sign-in first; one that asks for it is switched to signing in
           authKind: entry ? undefined : 'none',
           catalogId: entry?.id ?? null,

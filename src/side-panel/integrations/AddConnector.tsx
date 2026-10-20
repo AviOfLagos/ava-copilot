@@ -87,9 +87,12 @@ export default function AddConnector({
         )
       : null;
   const needsClient = authKind === 'oauth' && (entry?.needsClient ?? false);
+  // A server the user runs (SI-SDK) takes their own address; another well-known one has a fixed address
+  const ownServer = entry?.ownServer ?? false;
+  const urlOk = Boolean(urlCheck && !('error' in urlCheck));
   const canSubmit =
     !busy &&
-    (entry || (name.trim() && urlCheck && !('error' in urlCheck))) &&
+    (entry ? !ownServer || urlOk : name.trim() && urlOk) &&
     (authKind !== 'token' || token.trim()) &&
     (!needsClient || clientId.trim());
 
@@ -104,7 +107,7 @@ export default function AddConnector({
         {
           type: 'conn_add',
           name: name.trim() || entry?.name || '',
-          url: entry ? undefined : url.trim(),
+          url: entry && !ownServer ? undefined : url.trim(),
           authKind: entry ? undefined : authKind,
           catalogId: entry?.id ?? null,
           token: authKind === 'token' ? token.trim() : undefined,
@@ -143,7 +146,7 @@ export default function AddConnector({
       {entry && (
         <div className="glass rounded-2xl p-3 text-[12.5px]">
           <p>{t(CATALOG_HOW[entry.id])}</p>
-          <p className="text-muted-foreground mt-1 break-all font-mono text-[11px]">{entry.url}</p>
+          {!ownServer && <p className="text-muted-foreground mt-1 break-all font-mono text-[11px]">{entry.url}</p>}
           <a
             href={entry.docsUrl}
             target="_blank"
@@ -152,6 +155,19 @@ export default function AddConnector({
             {t('conn_add_docs')} <ExternalLink className="size-3" aria-hidden />
           </a>
         </div>
+      )}
+
+      {ownServer && (
+        <Field id="conn-url" label={t('conn_add_url')} hint={urlError ?? t('conn_add_ownUrlHint')}>
+          <input
+            id="conn-url"
+            type="url"
+            value={url}
+            onChange={event => setUrl(event.target.value)}
+            aria-invalid={Boolean(urlError)}
+            className={`${inputClass} font-mono`}
+          />
+        </Field>
       )}
 
       {!entry && (

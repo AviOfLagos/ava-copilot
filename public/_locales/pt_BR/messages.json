@@ -4537,6 +4537,12 @@
   "conn_catalog_addNamed": {
     "message": "Adicionar $1"
   },
+  "conn_catalog_siSdk": {
+    "message": "O endereço do seu servidor SI-SDK e o token MCP dele: suas redes sociais, caixa de entrada e respostas"
+  },
+  "conn_add_ownUrlHint": {
+    "message": "O endereço da sua implantação do SI-SDK, terminando em /api/mcp."
+  },
   "conn_catalog_github": {
     "message": "Token de acesso pessoal"
   },
@@ -7629,7 +7635,7 @@
     "message": "Redes sociais"
   },
   "agents_team_social_hint": {
-    "message": "Rascunha e agenda posts no X e no LinkedIn. Publicar sempre espera o seu clique."
+    "message": "Rascunha posts e respostas nas suas redes sociais, pelo SI-SDK quando ele está conectado. Publicar sempre espera o seu clique."
   },
   "agents_team_research": {
     "message": "Pesquisa"

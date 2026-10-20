@@ -3,6 +3,7 @@ import type { CircuitBreaker, RetryPolicy } from '@extension/shared';
 import {
   checkConnectorUrl,
   connectorBoundTo,
+  catalogConnectorUrl,
   connectorCatalogEntry,
   connectorToolState,
   effectiveToolPolicy,
@@ -152,7 +153,7 @@ export class ConnectorService {
   /** Adds a connector. Its secrets go to the vault; the record keeps their last characters only. */
   async add(input: NewConnector): Promise<ConnectorRecord> {
     const entry = connectorCatalogEntry(input.catalogId ?? null);
-    const rawUrl = entry?.url ?? input.url ?? '';
+    const rawUrl = entry ? catalogConnectorUrl(entry, input.url) : (input.url ?? '');
     const checked = checkConnectorUrl(rawUrl);
     if ('error' in checked) throw new AppError('invalid', urlProblem(checked.error));
     const authKind = entry?.auth ?? input.authKind ?? 'none';
@@ -259,7 +260,9 @@ export class ConnectorService {
     const checkedUrl = changes.url !== undefined ? checkConnectorUrl(changes.url) : null;
     if (checkedUrl && 'error' in checkedUrl) throw new AppError('invalid', urlProblem(checkedUrl.error));
     if (checkedUrl && 'url' in checkedUrl && checkedUrl.url.href !== connector.url) {
-      if (connector.catalogId) throw new AppError('invalid', `${connector.name}'s address is fixed.`);
+      if (connector.catalogId && !connectorCatalogEntry(connector.catalogId)?.ownServer) {
+        throw new AppError('invalid', `${connector.name}'s address is fixed.`);
+      }
       // A saved secret never follows the connector to another server: the user enters it again with the address
       if (checkedUrl.url.origin !== originOf(connector.url)) {
         if (connector.authKind === 'token' && !changes.token?.trim() && (await this.signedIn(connector))) {
