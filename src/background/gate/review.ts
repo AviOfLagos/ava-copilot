@@ -7,6 +7,7 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import type Page from '../browser/page';
 import type { DOMElementNode } from '../browser/dom/views';
 import { createLogger } from '../log';
+import { alwaysAsks } from './origins';
 import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TARGET } from './classify';
 import type { GateTarget } from './classify';
 import { readCommitContent, readCommitEffect, readFocus, readLiveLabel } from './probes';
@@ -151,12 +152,9 @@ async function buildRequest(
   };
 }
 
-/** Whether a task runs without the user watching: started by one of their agents or a routine. */
+/** Whether a task runs without the user watching (an agent, a routine, or the user away on WhatsApp): see ./origins. */
 async function isUnattended(context: AgentContext): Promise<boolean> {
-  const thread = await threadStore.get(context.taskId).catch(() => undefined);
-  // When the chat cannot be read, assume no one is watching
-  if (!thread) return true;
-  return thread.origin === 'agent' || thread.origin === 'workflow';
+  return alwaysAsks(await threadStore.get(context.taskId).catch(() => undefined));
 }
 
 /**

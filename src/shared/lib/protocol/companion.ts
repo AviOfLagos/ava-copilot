@@ -777,6 +777,94 @@ export const meetSayReplySchema = z.object({
   status: meetStatusSchema,
 });
 
+// ── Ava on WhatsApp ───────────────────────────────────────────────────────────────────────────────
+//
+// Nex Brain keeps a WhatsApp Web session of its own (an unofficial client the user chose, linked by
+// scanning a code under Linked devices). It talks to one person only, the owner: the linked account's own
+// "Message yourself" chat, and optionally one other number of the user's. Every other chat is dropped
+// before anything is kept, and a send to any other chat is refused. The owner's text messages wait in a
+// queue the extension pulls; the extension answers through `send`, which always goes to the owner.
+
+export const WHATSAPP_ROUTES = {
+  status: '/v1/whatsapp/status',
+  link: '/v1/whatsapp/link',
+  unlink: '/v1/whatsapp/unlink',
+  owner: '/v1/whatsapp/owner',
+  inbox: '/v1/whatsapp/inbox',
+  ack: '/v1/whatsapp/ack',
+  send: '/v1/whatsapp/send',
+} as const;
+
+export const WHATSAPP_STATES = [
+  // No session: nothing runs
+  'not_linked',
+  // Its browser is starting, or restoring a saved session
+  'starting',
+  // A code waits to be scanned (qr holds it)
+  'scan',
+  'linked',
+  // Was linked, and the connection dropped (the phone offline, the session ended elsewhere)
+  'disconnected',
+  // Could not start or link (message says why)
+  'failed',
+] as const;
+export type WhatsAppState = (typeof WHATSAPP_STATES)[number];
+
+// Digits only, with the country code: 2348012345678
+export const WHATSAPP_NUMBER = /^[1-9][0-9]{7,14}$/;
+export const WHATSAPP_TEXT_MAX = 4000;
+export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine'] as const;
+export type WhatsAppNoticeKind = (typeof WHATSAPP_NOTICE_KINDS)[number];
+
+export const whatsappStatusSchema = z.object({
+  state: z.enum(WHATSAPP_STATES),
+  // The code to show while state is 'scan' (the pairing string, or a picture of it as a data URL); never
+  // stored or logged
+  qr: z.string().max(200_000).nullable(),
+  // The linked account's number, digits only
+  number: z.string().nullable(),
+  // The user's other number, when Ava has a number of her own
+  ownerNumber: z.string().nullable(),
+  message: z.string().nullable(),
+  queued: z.number().int().nonnegative(),
+  sentLastHour: z.number().int().nonnegative(),
+  sendLimitPerHour: z.number().int().positive(),
+});
+export type WhatsAppStatus = z.infer<typeof whatsappStatusSchema>;
+
+export const whatsappStatusReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
+
+export const whatsappOwnerRequestSchema = z.object({
+  number: z.string().regex(WHATSAPP_NUMBER).nullable(),
+});
+export type WhatsAppOwnerRequest = z.infer<typeof whatsappOwnerRequestSchema>;
+
+export const whatsappMessageSchema = z.object({
+  id: z.string().min(1).max(200),
+  text: z.string().max(WHATSAPP_TEXT_MAX),
+  at: z.number(),
+});
+export type WhatsAppMessage = z.infer<typeof whatsappMessageSchema>;
+
+export const whatsappInboxReplySchema = z.object({
+  ok: z.literal(true),
+  messages: z.array(whatsappMessageSchema).max(50),
+  status: whatsappStatusSchema,
+});
+
+export const whatsappAckRequestSchema = z.object({ ids: z.array(z.string().min(1).max(200)).max(100) });
+
+export const whatsappSendRequestSchema = z.object({
+  requestId: requestIdSchema,
+  text: z.string().min(1).max(WHATSAPP_TEXT_MAX),
+  kind: z.enum(WHATSAPP_NOTICE_KINDS),
+  // The owner's message this answers: the reply goes to the chat it came from
+  replyTo: z.string().min(1).max(200).optional(),
+});
+export type WhatsAppSendRequest = z.infer<typeof whatsappSendRequestSchema>;
+
+export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
+
 // ── Replies, in general ───────────────────────────────────────────────────────────────────────────
 
 /** Whether a parsed body is the companion's error reply. */

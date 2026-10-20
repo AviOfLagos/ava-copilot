@@ -19,6 +19,10 @@ import type { ProcessRunner } from './sandbox/process';
 import { EveEngine } from './sessions/eve';
 import type { SessionEngine } from './sessions/eve';
 import { ProfileRegistry } from './sessions/registry';
+import { findBrowser } from './meet/browser';
+import { openWaDriver } from './whatsapp/openwa';
+import type { WaDriverFactory } from './whatsapp/driver';
+import { WhatsAppService } from './whatsapp/service';
 import { createKeyStore } from './workflows/keys';
 import type { KeyStore } from './workflows/keys';
 import { MacWorkflows } from './workflows/service';
@@ -37,6 +41,8 @@ export interface BrainDeps {
   engine?: SessionEngine | null;
   // Ava's meeting browser: how it is found and started, and how fast the call page is read
   meet?: Partial<Pick<MeetBotDeps, 'launch' | 'findBrowser' | 'pollMs' | 'lobbyTimeoutMs' | 'admissionTimeoutMs'>>;
+  // Ava on WhatsApp: the WhatsApp Web client (open-wa unless a stand-in is given)
+  whatsappDriver?: WaDriverFactory;
 }
 
 export type Brain = Awaited<ReturnType<typeof createBrain>>;
@@ -72,6 +78,13 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   });
   const registry = new ProfileRegistry(config.dataDir, keys);
   const meet = new MeetBot({ dataDir: config.dataDir, log: log.child({ part: 'meet' }), now, ...deps.meet });
+  const whatsapp = new WhatsAppService({
+    dataDir: config.dataDir,
+    log: log.child({ part: 'whatsapp' }),
+    driver: deps.whatsappDriver ?? openWaDriver(log.child({ part: 'whatsapp' })),
+    findBrowser: () => findBrowser(),
+    now,
+  });
   const engine =
     deps.engine === undefined
       ? new EveEngine({
@@ -94,6 +107,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
       studio,
       workflows,
       meet,
+      whatsapp,
       registry,
       engine,
       startedAt,
@@ -111,12 +125,14 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     studio,
     workflows,
     meet,
+    whatsapp,
     registry,
     engine,
     internalSecret,
     async start(): Promise<number> {
       const port = await server.listen();
       await workflows.start();
+      await whatsapp.init();
       // Slow starters do not hold up the API: health says what is still starting
       void mcp.start().catch(error => log.warn('MCP servers did not start', { error: (error as Error).message }));
       void engine
@@ -127,6 +143,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     },
     async stop(): Promise<void> {
       workflows.stop();
+      await whatsapp.stop();
       await meet.shutdown().catch(error => log.warn('Ava did not leave cleanly', { error: (error as Error).message }));
       await engine?.stop();
       await mcp.stop();

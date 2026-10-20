@@ -16,6 +16,7 @@ import { memoryScope } from '../kb/scope';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
+import { emitNotice } from '../notices';
 import { services } from '../registry/services';
 import { sanitizeSectionMarkdown } from './brief';
 import type { WorkflowBriefSection } from './brief';
@@ -515,6 +516,7 @@ export function inboxExecutor(): StepExecutor {
         agentId: workflow.agentId,
         runId: run.id,
       });
+      emitNotice({ kind: 'routine', title: item.title, body: node.body, key: item.id });
       return { kind: 'done', output: { inboxItemId: item.id } };
     },
   };
@@ -533,6 +535,12 @@ export function notifyExecutor(): StepExecutor {
         title: plain(node.title, 80) || workflow.name,
         message: plain(node.message, 300) || workflow.name,
         priority: 1,
+      });
+      emitNotice({
+        kind: 'routine',
+        title: plain(node.title, 80) || workflow.name,
+        body: plain(node.message, 300),
+        key: `workflow:${run.id}:${node.id}`,
       });
       return { kind: 'done', output: { notified: true } };
     },

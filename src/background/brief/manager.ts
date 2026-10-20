@@ -5,6 +5,7 @@ import type { CalendarWatcher } from '../calendar/watcher';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import { createLogger } from '../log';
+import { emitNotice } from '../notices';
 import { resolveModels } from '../threads/factory';
 import { isOverDailyBudget } from '../usage/budget';
 import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
@@ -157,6 +158,7 @@ export class MorningBrief {
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });
 
     if (notify) {
+      emitNotice({ kind: 'brief', title: t('brief_ready'), body: text, key: `brief:${thread.id}` });
       // Counts only: invite titles are written by whoever sent them
       const meetings = todaysEvents(data.events, now).length;
       await chrome.notifications

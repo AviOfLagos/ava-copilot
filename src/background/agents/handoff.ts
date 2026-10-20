@@ -46,8 +46,9 @@ const WATCH_POLL_MS = 1000;
 export const RECOVER_WITHIN_MS = 24 * 60 * 60_000;
 const MAX_TASK = 2000;
 
-// Chats nobody is watching: they never hand work over
-const UNATTENDED: ReadonlySet<string> = new Set(['agent', 'workflow', 'brief']);
+// Chats nobody is watching: they never hand work over. A chat from WhatsApp is the user's, but he is not at the
+// computer: no hand-offs, and nothing said in a call for him (say_in_meeting checks this too)
+const UNATTENDED: ReadonlySet<string> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
 
 /** Whether the user is in this chat (typed or spoken), so it may hand work to an agent. */
 export const isAttendedThread = (thread: Pick<ThreadRecord, 'origin'> | undefined): boolean =>

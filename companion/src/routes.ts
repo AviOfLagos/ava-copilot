@@ -27,6 +27,10 @@ import {
   workflowAnswerRequestSchema,
   workflowPutRequestSchema,
   workflowRunRequestSchema,
+  WHATSAPP_ROUTES,
+  whatsappAckRequestSchema,
+  whatsappOwnerRequestSchema,
+  whatsappSendRequestSchema,
 } from '@protocol';
 import type { HealthReply } from '@protocol';
 import type { ArtifactStore, StudioKeys } from './artifacts/store';
@@ -42,6 +46,7 @@ import type { SandboxManager } from './sandbox/manager';
 import type { SessionEngine } from './sessions/eve';
 import type { ProfileRegistry } from './sessions/registry';
 import { isToolName, runTool } from './sessions/tools';
+import type { WhatsAppService } from './whatsapp/service';
 import type { MacWorkflows } from './workflows/service';
 
 export interface RouteDeps {
@@ -55,6 +60,7 @@ export interface RouteDeps {
   studio: StudioKeys;
   workflows: MacWorkflows;
   meet: MeetBot;
+  whatsapp: WhatsAppService;
   registry: ProfileRegistry;
   engine: SessionEngine | null;
   startedAt: number;
@@ -509,6 +515,84 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       rate: 'meetStop',
       async handler() {
         return json({ ok: true, status: await deps.meet.leave() });
+      },
+    },
+
+    // ── Ava on WhatsApp (the owner only; see whatsapp/service.ts) ──
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.status,
+      name: 'whatsapp.status',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        return json({ ok: true, status: deps.whatsapp.status() });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.link,
+      name: 'whatsapp.link',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, status: await deps.whatsapp.link() });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.unlink,
+      name: 'whatsapp.unlink',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, status: await deps.whatsapp.unlink() });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.owner,
+      name: 'whatsapp.owner',
+      auth: 'api',
+      rate: 'run',
+      async handler({ body }) {
+        const request = parse(whatsappOwnerRequestSchema, body);
+        return json({ ok: true, status: deps.whatsapp.setOwner(request.number) });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.inbox,
+      name: 'whatsapp.inbox',
+      auth: 'api',
+      rate: 'read',
+      async handler() {
+        const messages = deps.whatsapp.pull();
+        return json({ ok: true, messages, status: deps.whatsapp.status() });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.ack,
+      name: 'whatsapp.ack',
+      auth: 'api',
+      rate: 'read',
+      async handler({ body }) {
+        deps.whatsapp.ack(parse(whatsappAckRequestSchema, body).ids);
+        return json({ ok: true });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.send,
+      name: 'whatsapp.send',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 40_000,
+      async handler({ body }) {
+        const request = parse(whatsappSendRequestSchema, body);
+        return json({ ok: true, status: await deps.whatsapp.send(request) });
       },
     },
 

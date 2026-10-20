@@ -2194,6 +2194,44 @@ passed on Brave and Chrome); extension `meet-voice/__tests__/say.test.ts` (origi
 the call, gate every time, intro once per call, stop bypasses the breaker, render fallbacks), `local-tts.test.ts`
 (render without playing, stop cancels).
 
+### Ava on WhatsApp, through Nex Brain (2026-10-20)
+
+Avi asked for Ava to message him and read his messages on WhatsApp now, with an unofficial WhatsApp Web client, and
+accepts the risk; this replaces the Cloud API plan (`docs/whatsapp-plan-b.md`). Plan A (`src/background/whatsapp`,
+Ava inside his own WhatsApp Web tab) is unchanged.
+
+- **Client:** `@open-wa/wa-automate` 5.6.6 in the companion (he named it; maintained; text send/receive and
+  QR login need no licence key). Baileys was the alternative and was ruled out: QR pairing has been broken in every
+  release since 2026-07-28 (WhiskeySockets/Baileys#2737, fix unmerged). open-wa drives real WhatsApp Web in its own
+  headless Chrome/Brave/Chromium, so WhatsApp's own pairing code runs. Loaded on first link only.
+- **Companion** (`companion/src/whatsapp`): `WhatsAppService` keeps the session under `<data>/whatsapp/session`
+  (0700) and `state.json` (0600). Owner only: the linked account's "Message yourself" chat, plus one other number of
+  his when Ava has her own number (a chat in `@lid` form counts only when the message shows that number). Every other
+  chat is dropped before anything is kept or logged; `sendTo` refuses any other chat; groups, broadcasts and
+  newsletters never count. Text is queued (dedupe by id, 50 max, 7 days), media gets "I can only read text for now",
+  her own sends coming back in the self chat are recognised (id or words). No pull for 2 minutes → the owner hears
+  once "Your browser is closed…" and the message stays queued. At most 20 sends an hour. Routes
+  `/v1/whatsapp/{status,link,unlink,owner,inbox,ack,send}` (pairing auth); `send` takes no recipient.
+- **Extension** (`src/background/whatsapp-remote`): polls `inbox` every 5 s while the worker runs and on a 1-minute
+  job; messages go into one chat a day (`WhatsApp · <day>`, origin `'whatsapp'`, its own background tab) as one
+  turn, acked after the turn starts. A running chat keeps them queued; a chat waiting for a click says so once. When
+  the turn ends the answer goes back as WhatsApp text (`format.ts`: no tables, `*bold*`, ≤3000 chars). Approvals in
+  that chat reply `That needs your click in the browser: <what>`; nothing is ever approved from WhatsApp.
+- **Origin `'whatsapp'`:** always asks before a commit (`gate/origins.ts`, used by `reviewAction` and Drive), not
+  attended for hand-offs or `say_in_meeting`, no connector set-up (sign-ins), voice speaks up only when it waits for
+  a click. Facts and memory scope stay the user's (his own words).
+- **Ava messages first** (`src/background/notices`: `emitNotice` from the brief, routine `out.inbox`/`out.notify`;
+  Dexie hooks for chats waiting for approval and meeting notes done). Per-kind toggles and quiet hours (22:00–07:00;
+  approvals still go) in Settings › Connections › WhatsApp, which also shows the code (inline QR encoder,
+  `side-panel/whatsapp-remote/qr.ts`, checked module for module against Arase's encoder), the state, the other
+  number, a test message and Unlink. Not paired → it points to Nex Brain's setup.
+
+Tests: companion `whatsapp.test.ts` (owner-only receive, nothing kept of other chats, send refusal, dedupe and echo,
+queue/ack and reply routing, @lid rule, media, browser closed, hourly limit, unlink, routes); extension
+`whatsapp-remote/__tests__/{bridge,format}.test.ts` (turns, busy and waiting chats, answers once, commit held,
+approvals in quiet hours, toggles, meeting notes, origins), `side-panel/whatsapp-remote/__tests__/qr.test.ts`,
+`say.test.ts` (WhatsApp refused).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

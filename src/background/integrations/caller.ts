@@ -3,8 +3,14 @@ import type { ThreadRecord } from '@extension/storage';
 import type { AgentContext } from '../agent/types';
 import type { CallScope } from './service';
 
-// Chats nobody is watching: a tool that asks first cannot ask there
-const UNATTENDED: ReadonlySet<NonNullable<ThreadRecord['origin']>> = new Set(['workflow', 'agent', 'brief']);
+// Chats nobody is watching: a tool that asks first cannot ask there. From WhatsApp the user is away from the
+// computer, so nothing that opens a sign-in for him is set up from there
+const UNATTENDED: ReadonlySet<NonNullable<ThreadRecord['origin']>> = new Set([
+  'workflow',
+  'agent',
+  'brief',
+  'whatsapp',
+]);
 
 /** Where a task runs: its chat's workspace, the agent it runs as, and whether the user started it. */
 export async function callerOf(
