@@ -23,6 +23,10 @@ import {
   toolListReplySchema,
   workflowRunReplySchema,
   workflowSyncReplySchema,
+  WHATSAPP_ROUTES,
+  whatsappInboxReplySchema,
+  whatsappSendReplySchema,
+  whatsappStatusReplySchema,
 } from '@src/shared/lib/protocol/companion';
 import type {
   ArtifactCreateRequest,
@@ -36,6 +40,8 @@ import type {
   WorkflowPutRequest,
   MeetJoinRequest,
   MeetSayRequest,
+  WhatsAppQuietRequest,
+  WhatsAppSendRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
 
@@ -571,6 +577,100 @@ export class CompanionClient {
       idempotent: true,
       bypassBreaker: true,
       timeoutMs: 15_000,
+    });
+  }
+
+  // ── Ava on WhatsApp (Nex Brain talks to the owner only) ──
+
+  whatsappStatus(signal?: AbortSignal) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.status,
+      body: {},
+      schema: whatsappStatusReplySchema,
+      idempotent: true,
+      retry: { attempts: 2 },
+      timeoutMs: 8000,
+      signal,
+    });
+  }
+
+  /** Starts linking (a code to scan) or restores the saved session. */
+  whatsappLink() {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.link,
+      body: {},
+      schema: whatsappStatusReplySchema,
+      timeoutMs: 30_000,
+    });
+  }
+
+  whatsappUnlink() {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.unlink,
+      body: {},
+      schema: whatsappStatusReplySchema,
+      idempotent: true,
+      timeoutMs: 30_000,
+    });
+  }
+
+  whatsappSetOwner(number: string | null) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.owner,
+      body: { number },
+      schema: whatsappStatusReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** Quiet hours, so Nex Brain holds to them too. */
+  whatsappSetQuiet(request: WhatsAppQuietRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.quiet,
+      body: request,
+      schema: whatsappStatusReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** The owner's messages waiting: pulling also tells Nex Brain the browser is open. Not retried: the next poll is. */
+  whatsappInbox(signal?: AbortSignal) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.inbox,
+      body: {},
+      schema: whatsappInboxReplySchema,
+      timeoutMs: 8000,
+      signal,
+    });
+  }
+
+  whatsappAck(ids: string[]) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.ack,
+      body: { ids },
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** A message to the owner: a side effect, sent once with its request id. */
+  whatsappSend(request: WhatsAppSendRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.send,
+      body: request,
+      schema: whatsappSendReplySchema,
+      timeoutMs: 30_000,
     });
   }
 }

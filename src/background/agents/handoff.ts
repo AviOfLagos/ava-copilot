@@ -1,4 +1,5 @@
 import { AppError } from '@extension/shared';
+import { userAtComputer } from '../gate/origins';
 import { createThreadStore } from '@extension/storage';
 import type {
   AgentHandoff,
@@ -46,12 +47,11 @@ const WATCH_POLL_MS = 1000;
 export const RECOVER_WITHIN_MS = 24 * 60 * 60_000;
 const MAX_TASK = 2000;
 
-// Chats nobody is watching: they never hand work over
-const UNATTENDED: ReadonlySet<string> = new Set(['agent', 'workflow', 'brief']);
-
-/** Whether the user is in this chat (typed or spoken), so it may hand work to an agent. */
-export const isAttendedThread = (thread: Pick<ThreadRecord, 'origin'> | undefined): boolean =>
-  Boolean(thread) && !(thread!.origin && UNATTENDED.has(thread!.origin));
+/**
+ * Whether the user is in this chat at the computer (typed or spoken), so it may hand work to an agent. Not a
+ * routine's, an agent's or the brief's, and not one from WhatsApp (nothing is said in a call for him either).
+ */
+export const isAttendedThread = (thread: Pick<ThreadRecord, 'origin'> | undefined): boolean => userAtComputer(thread);
 
 // ── Pure parts ────────────────────────────────────────────────────────────────────────────────────
 

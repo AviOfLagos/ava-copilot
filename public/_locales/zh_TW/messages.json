@@ -8805,5 +8805,222 @@
   },
   "meetvoice_setUpBrain": {
     "message": "設定 Nex Brain"
+  },
+  "wava_error_noTab": {
+    "message": "沒有可用的瀏覽器視窗。"
+  },
+  "wava_reply_stillWaiting": {
+    "message": "我仍在等你在瀏覽器中點擊：$WHAT$。之後我會讀你的新訊息。",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Reply to Tomi"
+      }
+    }
+  },
+  "wava_reply_failed": {
+    "message": "我無法開始處理：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Too many chats are running."
+      }
+    }
+  },
+  "wava_thread_title": {
+    "message": "WhatsApp · $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Tue 20 Oct"
+      }
+    }
+  },
+  "wava_notice_approval": {
+    "message": "「$TITLE$」正在等你在瀏覽器中點擊：$WHAT$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Reply to Tomi"
+      },
+      "what": {
+        "content": "$2",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_notice_untitled": {
+    "message": "一個對話"
+  },
+  "wava_reply_needsClick": {
+    "message": "這需要你在瀏覽器中點擊：$WHAT$",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_reply_stopped": {
+    "message": "這已停止：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The tab was closed."
+      }
+    }
+  },
+  "wava_reply_more": {
+    "message": "…（其餘內容在瀏覽器中）"
+  },
+  "wava_notice_meeting": {
+    "message": "「$TITLE$」的筆記已完成",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "wava_test_message": {
+    "message": "嗨，我是 Ava。在這裡傳訊息給我，我會從你的瀏覽器回覆。"
+  },
+  "wava_req_questions": {
+    "message": "關於表單的 $COUNT$ 個問題",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_req_login": {
+    "message": "登入"
+  },
+  "wava_req_captcha": {
+    "message": "CAPTCHA 驗證"
+  },
+  "wava_req_code": {
+    "message": "一次性驗證碼"
+  },
+  "wava_req_cap": {
+    "message": "提高每日費用上限"
+  },
+  "wava_settings_title": {
+    "message": "WhatsApp（Ava 傳訊息給你）"
+  },
+  "wava_settings_notify_approval": {
+    "message": "有對話在等我核准"
+  },
+  "wava_settings_notify_meeting": {
+    "message": "會議筆記完成"
+  },
+  "wava_settings_notify_brief": {
+    "message": "晨間簡報完成"
+  },
+  "wava_settings_notify_routine": {
+    "message": "提醒或例行工作有結果"
+  },
+  "wava_settings_qr_label": {
+    "message": "用 WhatsApp 掃描的條碼"
+  },
+  "wava_settings_needsBrain": {
+    "message": "Ava 透過你 Mac 上的 Nex Brain 傳訊息給你。請先配對 Nex Brain。"
+  },
+  "wava_settings_openBrain": {
+    "message": "設定 Nex Brain"
+  },
+  "wava_state_linked": {
+    "message": "已連結為 $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_state_scan": {
+    "message": "請掃描條碼"
+  },
+  "wava_state_starting": {
+    "message": "正在你的 Mac 上啟動 WhatsApp…"
+  },
+  "wava_state_disconnected": {
+    "message": "已中斷連線"
+  },
+  "wava_state_failed": {
+    "message": "無法連結"
+  },
+  "wava_state_notLinked": {
+    "message": "尚未連結"
+  },
+  "wava_state_unknown": {
+    "message": "檢查中…"
+  },
+  "wava_settings_unlink": {
+    "message": "取消連結"
+  },
+  "wava_settings_linking": {
+    "message": "啟動中…"
+  },
+  "wava_settings_relink": {
+    "message": "再試一次"
+  },
+  "wava_settings_link": {
+    "message": "連結 WhatsApp"
+  },
+  "wava_settings_scanHint": {
+    "message": "在手機上開啟 WhatsApp › 設定 › 已連結的裝置 › 連結裝置，然後掃描此條碼。條碼每隔幾秒會更新。"
+  },
+  "wava_settings_intro": {
+    "message": "在你自己的「傳訊息給自己」對話中傳訊息給 Ava，她會從你的瀏覽器回覆。她只和你對話，任何傳送、發布、購買或刪除的動作仍會等你在這裡點擊。"
+  },
+  "wava_settings_talksTo_owner": {
+    "message": "Ava 會回覆 $NUMBER$，以及此帳號的「傳訊息給自己」對話。",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_settings_talksTo_self": {
+    "message": "Ava 只會在此帳號的「傳訊息給自己」對話中回覆。"
+  },
+  "wava_settings_test": {
+    "message": "傳送測試訊息"
+  },
+  "wava_settings_testSent": {
+    "message": "已傳送，請查看 WhatsApp。"
+  },
+  "wava_settings_owner_label": {
+    "message": "你的另一個號碼（僅當 Ava 有自己的號碼時）"
+  },
+  "wava_settings_owner_hint": {
+    "message": "輸入含國碼的數字，不加 +。請在 Ava 的手機中存成聯絡人。留空則只使用「傳訊息給自己」對話。"
+  },
+  "wava_settings_owner_save": {
+    "message": "儲存號碼"
+  },
+  "wava_settings_notify_title": {
+    "message": "Ava 會主動傳訊息給你，當"
+  },
+  "wava_settings_quiet_from": {
+    "message": "安靜時段從"
+  },
+  "wava_settings_quiet_to": {
+    "message": "到"
+  },
+  "wava_settings_quiet_hint": {
+    "message": "在安靜時段，她只會通知你需要核准的事項。"
+  },
+  "wava_settings_risk": {
+    "message": "這會在你的 Mac 上使用非官方的 WhatsApp Web 用戶端，WhatsApp 可能會限制使用此類用戶端的號碼。Ava 每小時最多傳送 $LIMIT$ 則訊息。",
+    "placeholders": {
+      "limit": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
   }
 }

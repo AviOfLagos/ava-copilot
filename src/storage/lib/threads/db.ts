@@ -53,8 +53,9 @@ export interface ThreadRecord {
   workspaceId?: string | null;
   // The agent it runs as, when an agent or routine started it
   agentId?: string | null;
-  // Who started it: the user typing or talking, an agent, a routine, the morning brief
-  origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief';
+  // Who started it: the user typing or talking, an agent, a routine, the morning brief, or the user on WhatsApp
+  // (his own words, but he is not at the computer: every commit waits for the panel click)
+  origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief' | 'whatsapp';
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
 }

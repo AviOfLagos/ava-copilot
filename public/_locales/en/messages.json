@@ -8805,5 +8805,222 @@
   },
   "meetvoice_setUpBrain": {
     "message": "Set up Nex Brain"
+  },
+  "wava_error_noTab": {
+    "message": "There is no browser window to work in."
+  },
+  "wava_reply_stillWaiting": {
+    "message": "I'm still waiting for your click in the browser: $WHAT$. I'll read your new message after that.",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Reply to Tomi"
+      }
+    }
+  },
+  "wava_reply_failed": {
+    "message": "I couldn't start on that: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Too many chats are running."
+      }
+    }
+  },
+  "wava_thread_title": {
+    "message": "WhatsApp · $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Tue 20 Oct"
+      }
+    }
+  },
+  "wava_notice_approval": {
+    "message": "\"$TITLE$\" is waiting for your click in the browser: $WHAT$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Reply to Tomi"
+      },
+      "what": {
+        "content": "$2",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_notice_untitled": {
+    "message": "A chat"
+  },
+  "wava_reply_needsClick": {
+    "message": "That needs your click in the browser: $WHAT$",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_reply_stopped": {
+    "message": "That stopped: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The tab was closed."
+      }
+    }
+  },
+  "wava_reply_more": {
+    "message": "… (the rest is in the browser)"
+  },
+  "wava_notice_meeting": {
+    "message": "Notes for \"$TITLE$\" are ready",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "wava_test_message": {
+    "message": "Hi, it's Ava. Message me here and I'll answer from your browser."
+  },
+  "wava_req_questions": {
+    "message": "$COUNT$ questions about a form",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_req_login": {
+    "message": "a sign-in"
+  },
+  "wava_req_captcha": {
+    "message": "a CAPTCHA"
+  },
+  "wava_req_code": {
+    "message": "a one-time code"
+  },
+  "wava_req_cap": {
+    "message": "raising the daily cost cap"
+  },
+  "wava_settings_title": {
+    "message": "WhatsApp (Ava messages you)"
+  },
+  "wava_settings_notify_approval": {
+    "message": "A chat waits for my approval"
+  },
+  "wava_settings_notify_meeting": {
+    "message": "Meeting notes are ready"
+  },
+  "wava_settings_notify_brief": {
+    "message": "The morning brief is ready"
+  },
+  "wava_settings_notify_routine": {
+    "message": "A reminder or routine has a result"
+  },
+  "wava_settings_qr_label": {
+    "message": "Code to scan with WhatsApp"
+  },
+  "wava_settings_needsBrain": {
+    "message": "Ava messages you through Nex Brain on your Mac. Pair Nex Brain first."
+  },
+  "wava_settings_openBrain": {
+    "message": "Set up Nex Brain"
+  },
+  "wava_state_linked": {
+    "message": "Linked as $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_state_scan": {
+    "message": "Scan the code"
+  },
+  "wava_state_starting": {
+    "message": "Starting WhatsApp on your Mac…"
+  },
+  "wava_state_disconnected": {
+    "message": "Disconnected"
+  },
+  "wava_state_failed": {
+    "message": "Could not link"
+  },
+  "wava_state_notLinked": {
+    "message": "Not linked"
+  },
+  "wava_state_unknown": {
+    "message": "Checking…"
+  },
+  "wava_settings_unlink": {
+    "message": "Unlink"
+  },
+  "wava_settings_linking": {
+    "message": "Starting…"
+  },
+  "wava_settings_relink": {
+    "message": "Try again"
+  },
+  "wava_settings_link": {
+    "message": "Link WhatsApp"
+  },
+  "wava_settings_scanHint": {
+    "message": "On your phone open WhatsApp › Settings › Linked devices › Link a device, and scan this code. It changes every few seconds."
+  },
+  "wava_settings_intro": {
+    "message": "Message Ava in your own \"Message yourself\" chat and she answers from your browser. She only ever talks to you, and anything that sends, posts, buys or deletes still waits for your click here."
+  },
+  "wava_settings_talksTo_owner": {
+    "message": "Ava answers $NUMBER$, and this account's \"Message yourself\" chat.",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_settings_talksTo_self": {
+    "message": "Ava answers in this account's \"Message yourself\" chat only."
+  },
+  "wava_settings_test": {
+    "message": "Send a test message"
+  },
+  "wava_settings_testSent": {
+    "message": "Sent. Look in WhatsApp."
+  },
+  "wava_settings_owner_label": {
+    "message": "Your other number (only if Ava has a number of her own)"
+  },
+  "wava_settings_owner_hint": {
+    "message": "Digits with the country code, no +. Save it as a contact on Ava's phone. Leave empty to use only the \"Message yourself\" chat."
+  },
+  "wava_settings_owner_save": {
+    "message": "Save number"
+  },
+  "wava_settings_notify_title": {
+    "message": "Ava messages you first when"
+  },
+  "wava_settings_quiet_from": {
+    "message": "Quiet from"
+  },
+  "wava_settings_quiet_to": {
+    "message": "to"
+  },
+  "wava_settings_quiet_hint": {
+    "message": "In quiet hours she only messages you about approvals."
+  },
+  "wava_settings_risk": {
+    "message": "This uses an unofficial WhatsApp Web client on your Mac. WhatsApp may restrict a number that uses one. Ava sends at most $LIMIT$ messages an hour.",
+    "placeholders": {
+      "limit": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
   }
 }

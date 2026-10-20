@@ -701,7 +701,8 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         if (before === undefined && thread.status === 'idle' && !fresh) continue;
         // A routine's or the brief's chat speaks up only when it waits for the user's click (an agent's is announced:
         // that is how a hand-off's answer is heard)
-        const background = thread.origin === 'workflow' || thread.origin === 'brief';
+        // A WhatsApp chat answers on WhatsApp; aloud only when it waits for the click here
+        const background = thread.origin === 'workflow' || thread.origin === 'brief' || thread.origin === 'whatsapp';
         if (background && thread.status !== 'waiting_confirm') continue;
         const last = thread.status === 'idle' ? (await threadStore.messages(thread.id)).pop()?.content : undefined;
         // An agent's answer is said by the agent, in its own voice, so the user knows who is talking

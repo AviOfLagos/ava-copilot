@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { configRefusal, runRefusal } from '../gate/origins';
 import { db, localDay, threadStore } from '@extension/storage';
 import type { AgentProfile, ThreadRecord } from '@extension/storage';
 import { toAppError } from '@extension/shared';
@@ -72,17 +73,17 @@ export const AGENT_ACTIONS_PROMPT = `- create_agent drafts an agent when the use
 - update_agent changes an agent when the user gives feedback on one; pass the change in their words. It makes a draft for them to apply.
 - run_agent runs an agent now, in its own window; list_agents lists them with their ids. Use these for the user's agents instead of browsing.`;
 
-/** The chat a task runs in, or a refusal when it was not started by the user (a routine or an agent). */
+/**
+ * The chat a task runs in, or a refusal: routines and agents never change or run these, and a chat from WhatsApp
+ * only runs and lists them (configuration is changed from the browser). See ../gate/origins.
+ */
 async function attendedThread(
   context: AgentContext,
+  purpose: 'configure' | 'run' = 'run',
 ): Promise<{ thread: ThreadRecord | undefined } | { refused: string }> {
   const thread = await threadStore.get(context.taskId).catch(() => undefined);
-  if (thread?.origin === 'workflow' || thread?.origin === 'agent') {
-    return {
-      refused: 'Agents can only be created, changed or run from a chat with the user, not by a routine or an agent.',
-    };
-  }
-  return { thread };
+  const refused = purpose === 'configure' ? configRefusal(thread, 'Agents') : runRefusal(thread, 'Agents');
+  return refused ? { refused } : { thread };
 }
 
 /** The agents a chat may see: its workspace's and those in none (a chat in no workspace sees all). */
@@ -166,7 +167,7 @@ export function registerAgentActions(service: AgentService): void {
     create: context =>
       new Action(async (input: z.infer<typeof createAgentSchema.schema>) => {
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Drafting an agent');
-        const allowed = await attendedThread(context);
+        const allowed = await attendedThread(context, 'configure');
         if ('refused' in allowed) return fail(context, allowed.refused);
         try {
           const workspaceId = allowed.thread?.workspaceId ?? null;
@@ -187,7 +188,7 @@ export function registerAgentActions(service: AgentService): void {
     create: context =>
       new Action(async (input: z.infer<typeof updateAgentSchema.schema>) => {
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Changing an agent');
-        const allowed = await attendedThread(context);
+        const allowed = await attendedThread(context, 'configure');
         if ('refused' in allowed) return fail(context, allowed.refused);
         const agent = findAgent(await visibleAgents(allowed.thread?.workspaceId ?? null), input.id);
         if (!agent) return fail(context, `There is no agent "${input.id}". Use list_agents to see them.`);

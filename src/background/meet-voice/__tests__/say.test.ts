@@ -59,8 +59,8 @@ function harness(overrides: Partial<SayDeps> = {}) {
 }
 
 describe('sayInMeeting', () => {
-  it('refuses chats nobody is watching: agents, routines, the brief', async () => {
-    for (const origin of ['agent', 'workflow', 'brief'] as const) {
+  it('refuses chats nobody is watching: agents, routines, the brief, and WhatsApp (the user is away)', async () => {
+    for (const origin of ['agent', 'workflow', 'brief', 'whatsapp'] as const) {
       const { deps, confirmed, sent } = harness({ thread: async () => ({ origin }) });
       const outcome = await sayInMeeting(deps, 'The launch moves to Friday.');
       expect(outcome).toEqual({ ok: false, reason: REFUSALS.unattended });

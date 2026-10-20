@@ -8805,5 +8805,222 @@
   },
   "meetvoice_setUpBrain": {
     "message": "Configurar o Nex Brain"
+  },
+  "wava_error_noTab": {
+    "message": "Não há uma janela do navegador para trabalhar."
+  },
+  "wava_reply_stillWaiting": {
+    "message": "Ainda estou esperando seu clique no navegador: $WHAT$. Leio sua nova mensagem depois disso.",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Reply to Tomi"
+      }
+    }
+  },
+  "wava_reply_failed": {
+    "message": "Não consegui começar isso: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Too many chats are running."
+      }
+    }
+  },
+  "wava_thread_title": {
+    "message": "WhatsApp · $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Tue 20 Oct"
+      }
+    }
+  },
+  "wava_notice_approval": {
+    "message": "\"$TITLE$\" está esperando seu clique no navegador: $WHAT$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Reply to Tomi"
+      },
+      "what": {
+        "content": "$2",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_notice_untitled": {
+    "message": "Uma conversa"
+  },
+  "wava_reply_needsClick": {
+    "message": "Isso precisa do seu clique no navegador: $WHAT$",
+    "placeholders": {
+      "what": {
+        "content": "$1",
+        "example": "send: Send"
+      }
+    }
+  },
+  "wava_reply_stopped": {
+    "message": "Isso parou: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The tab was closed."
+      }
+    }
+  },
+  "wava_reply_more": {
+    "message": "… (o resto está no navegador)"
+  },
+  "wava_notice_meeting": {
+    "message": "As notas de \"$TITLE$\" estão prontas",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "wava_test_message": {
+    "message": "Oi, é a Ava. Me mande mensagem aqui e eu respondo do seu navegador."
+  },
+  "wava_req_questions": {
+    "message": "$COUNT$ perguntas sobre um formulário",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_req_login": {
+    "message": "um login"
+  },
+  "wava_req_captcha": {
+    "message": "um CAPTCHA"
+  },
+  "wava_req_code": {
+    "message": "um código de uso único"
+  },
+  "wava_req_cap": {
+    "message": "aumentar o limite diário de custo"
+  },
+  "wava_settings_title": {
+    "message": "WhatsApp (a Ava fala com você)"
+  },
+  "wava_settings_notify_approval": {
+    "message": "Uma conversa espera minha aprovação"
+  },
+  "wava_settings_notify_meeting": {
+    "message": "As notas da reunião estão prontas"
+  },
+  "wava_settings_notify_brief": {
+    "message": "O resumo da manhã está pronto"
+  },
+  "wava_settings_notify_routine": {
+    "message": "Um lembrete ou rotina tem um resultado"
+  },
+  "wava_settings_qr_label": {
+    "message": "Código para escanear com o WhatsApp"
+  },
+  "wava_settings_needsBrain": {
+    "message": "A Ava fala com você pelo Nex Brain no seu Mac. Pareie o Nex Brain primeiro."
+  },
+  "wava_settings_openBrain": {
+    "message": "Configurar o Nex Brain"
+  },
+  "wava_state_linked": {
+    "message": "Vinculado como $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_state_scan": {
+    "message": "Escaneie o código"
+  },
+  "wava_state_starting": {
+    "message": "Iniciando o WhatsApp no seu Mac…"
+  },
+  "wava_state_disconnected": {
+    "message": "Desconectado"
+  },
+  "wava_state_failed": {
+    "message": "Não foi possível vincular"
+  },
+  "wava_state_notLinked": {
+    "message": "Não vinculado"
+  },
+  "wava_state_unknown": {
+    "message": "Verificando…"
+  },
+  "wava_settings_unlink": {
+    "message": "Desvincular"
+  },
+  "wava_settings_linking": {
+    "message": "Iniciando…"
+  },
+  "wava_settings_relink": {
+    "message": "Tentar de novo"
+  },
+  "wava_settings_link": {
+    "message": "Vincular WhatsApp"
+  },
+  "wava_settings_scanHint": {
+    "message": "No celular, abra WhatsApp › Configurações › Aparelhos conectados › Conectar um aparelho e escaneie este código. Ele muda a cada poucos segundos."
+  },
+  "wava_settings_intro": {
+    "message": "Mande mensagem para a Ava na sua conversa \"Mensagem para você\" e ela responde do seu navegador. Ela só fala com você, e tudo o que envia, publica, compra ou apaga continua esperando seu clique aqui."
+  },
+  "wava_settings_talksTo_owner": {
+    "message": "A Ava responde a $NUMBER$ e à conversa \"Mensagem para você\" desta conta.",
+    "placeholders": {
+      "number": {
+        "content": "$1",
+        "example": "+2348012345678"
+      }
+    }
+  },
+  "wava_settings_talksTo_self": {
+    "message": "A Ava responde só na conversa \"Mensagem para você\" desta conta."
+  },
+  "wava_settings_test": {
+    "message": "Enviar mensagem de teste"
+  },
+  "wava_settings_testSent": {
+    "message": "Enviada. Veja no WhatsApp."
+  },
+  "wava_settings_owner_label": {
+    "message": "Seu outro número (só se a Ava tiver um número próprio)"
+  },
+  "wava_settings_owner_hint": {
+    "message": "Dígitos com o código do país, sem +. Salve-o como contato no celular da Ava. Deixe vazio para usar só a conversa \"Mensagem para você\"."
+  },
+  "wava_settings_owner_save": {
+    "message": "Salvar número"
+  },
+  "wava_settings_notify_title": {
+    "message": "A Ava manda mensagem primeiro quando"
+  },
+  "wava_settings_quiet_from": {
+    "message": "Silêncio das"
+  },
+  "wava_settings_quiet_to": {
+    "message": "às"
+  },
+  "wava_settings_quiet_hint": {
+    "message": "No horário de silêncio ela só avisa sobre aprovações."
+  },
+  "wava_settings_risk": {
+    "message": "Isto usa um cliente não oficial do WhatsApp Web no seu Mac. O WhatsApp pode restringir um número que use um. A Ava envia no máximo $LIMIT$ mensagens por hora.",
+    "placeholders": {
+      "limit": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
   }
 }

@@ -1,6 +1,9 @@
 # Plan B — Ava gets her own WhatsApp number
 
-Status: draft, 2026-10-14. Plan A (Ava inside your open WhatsApp Web tab) is being built now; this is the next step.
+Status: superseded, 2026-10-20. Avi chose an unofficial WhatsApp Web client (open-wa, in Nex Brain) to have Ava on
+WhatsApp now and accepts the risk of WhatsApp restricting the number; see "Ava on WhatsApp, through Nex Brain" in
+`docs/task.md`. This Cloud API plan stays as the fallback if that number is restricted. Plan A (Ava inside your open
+WhatsApp Web tab) is unchanged.
 
 ## What it gives you
 

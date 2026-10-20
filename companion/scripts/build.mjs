@@ -26,7 +26,7 @@ await build({
     '@extension/shared': resolve(here, 'src/engine/shared.ts'),
     '@extension/storage': resolve(here, 'src/engine/storage-types.ts'),
   },
-  external: ['zod', 'croner', 'ai', '@ai-sdk/*', '@modelcontextprotocol/*', 'eve', 'eve/*'],
+  external: ['zod', 'croner', 'ai', '@ai-sdk/*', '@modelcontextprotocol/*', 'eve', 'eve/*', '@open-wa/*'],
   banner: { js: '#!/usr/bin/env node' },
   legalComments: 'none',
   logLevel: 'warning',

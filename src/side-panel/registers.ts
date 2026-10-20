@@ -8,6 +8,7 @@ import './models/register';
 import './chat/register';
 import './voice-engines/register';
 import './companion/register';
+import './whatsapp-remote/register';
 import './history/register';
 import './personalities/register';
 import './audio-devices/register';

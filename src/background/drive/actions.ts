@@ -8,6 +8,7 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
+import { alwaysAsks } from '../gate/origins';
 import { reviewAction } from '../gate/review';
 import { getKnowledgeBase } from '../kb/shared';
 import { registerAgentAction } from '../registry';
@@ -232,7 +233,7 @@ export async function saveToKnowledge(
 
 async function unattended(threadId: string): Promise<boolean> {
   const thread = await threadStore.get(threadId).catch(() => undefined);
-  return !thread || thread.origin === 'agent' || thread.origin === 'workflow';
+  return alwaysAsks(thread);
 }
 
 export function registerDriveActions(drive: DriveService): void {

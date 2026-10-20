@@ -52,7 +52,7 @@ export type SayOutcome =
 
 export const REFUSALS = {
   unattended:
-    'Ava speaks in a call only when the user asks her in a chat with them, never from an agent, routine or brief.',
+    'Ava speaks in a call only when the user asks her in a chat with them at the computer, never from an agent, routine, brief or WhatsApp.',
   noRequest:
     "Ava speaks in a call only when the user's own message in this turn asks her to say something to the people in it (say, tell, announce, let them know, ask them…). Nothing was said.",
   noWords: 'There are no words to say.',

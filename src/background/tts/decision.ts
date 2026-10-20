@@ -1,4 +1,5 @@
 import type { MessageActor, ReadAloudMode, ThreadRecord } from '@extension/storage';
+import { isRemoteChat } from '../gate/origins';
 
 export interface AutoSpeakInput {
   readAloud: ReadAloudMode;
@@ -18,6 +19,8 @@ export interface AutoSpeakInput {
  */
 export function shouldAutoSpeak(input: AutoSpeakInput): boolean {
   if (input.readAloud === 'off') return false;
+  // A chat from WhatsApp answers on WhatsApp: nothing is read aloud to an empty room
+  if (isRemoteChat({ origin: input.threadOrigin })) return false;
   if (input.readAloud === 'voice' && input.threadOrigin !== 'voice') return false;
   if (input.voiceRunning) return false;
   if (input.lastMessageActor !== 'planner') return false;
