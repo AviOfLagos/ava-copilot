@@ -38,6 +38,8 @@ export const COMPANION_ROUTES = {
   workflowAck: '/v1/workflows/sync/ack',
   artifacts: '/v1/artifacts',
   artifactList: '/v1/artifacts/list',
+  // Ava in a Google Meet call, as her own participant: MEET_ROUTES below
+  meet: '/v1/meet',
   studio: '/studio',
   view: '/view',
 } as const;
@@ -665,6 +667,115 @@ export function studioCsp(scriptHash: string, styleHash: string): string {
     "frame-ancestors 'none'",
   ].join('; ');
 }
+
+// ── Ava in a Google Meet call ─────────────────────────────────────────────────────────────────────
+//
+// Nex Brain runs a browser of its own, signed in by the user (by hand) to a dedicated account, that joins a
+// call as a separate participant. Its microphone carries the companion's audio and nothing else: the
+// extension renders the approved words to speech and sends the clip; the companion plays it into that
+// browser's microphone. Nothing is ever injected into the user's own Meet tab.
+
+export const MEET_ROUTES = {
+  status: '/v1/meet/status',
+  signin: '/v1/meet/signin',
+  join: '/v1/meet/join',
+  say: '/v1/meet/say',
+  stop: '/v1/meet/stop',
+  leave: '/v1/meet/leave',
+} as const;
+
+export const MEET_STATES = [
+  // No call
+  'idle',
+  // The sign-in window is open for the user
+  'signing_in',
+  'joining',
+  // Asked to join; the host has not let her in yet
+  'waiting_admission',
+  'in_call',
+  'left',
+  'failed',
+] as const;
+export type MeetState = (typeof MEET_STATES)[number];
+
+const MEET_CODE = /^[a-z]{3,4}-[a-z]{4}-[a-z]{3,4}$/;
+// The only addresses the companion opens: a call, by its code (three letters, four, three; a few older codes
+// have four in the first or last group)
+export const MEET_URL_PATTERN = /^https:\/\/meet\.google\.com\/[a-z]{3,4}-[a-z]{4}-[a-z]{3,4}$/;
+
+/**
+ * A Google Meet call's address in the one form the companion will open, or null for anything else. A bare
+ * code ("abc-defg-hij"), "meet.google.com/abc-defg-hij", and a link with a query (?authuser=0) or fragment
+ * become https://meet.google.com/abc-defg-hij. Another host or scheme, a deeper path, a user name or a port
+ * is refused, never repaired.
+ */
+export function normalizeMeetUrl(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  let text = input.trim().toLowerCase();
+  if (!text || text.length > 300) return null;
+  if (MEET_CODE.test(text)) text = `https://meet.google.com/${text}`;
+  else if (text.startsWith('meet.google.com/')) text = `https://${text}`;
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'meet.google.com' || url.port || url.username || url.password) {
+    return null;
+  }
+  const candidate = `https://meet.google.com${url.pathname.replace(/\/$/, '')}`;
+  return MEET_URL_PATTERN.test(candidate) ? candidate : null;
+}
+
+/** The call code of a valid Meet address ("abc-defg-hij"), or null. */
+export function meetCodeOf(input: unknown): string | null {
+  const url = normalizeMeetUrl(input);
+  return url ? url.slice('https://meet.google.com/'.length) : null;
+}
+
+// A spoken clip: WAV as base64. 7 MB of base64 is over two minutes of 24 kHz speech
+export const MEET_AUDIO_MAX_CHARS = 7_000_000;
+export const MEET_SAY_MAX_BODY_BYTES = MEET_AUDIO_MAX_CHARS + 2000;
+
+export const meetStatusSchema = z.object({
+  state: z.enum(MEET_STATES),
+  // Why it failed or left, as a plain sentence
+  reason: z.string().max(400).nullable(),
+  // The call she is in or joining
+  meetingCode: z.string().max(20).nullable(),
+  speaking: z.boolean(),
+  // Whether her browser looked signed in when it was last checked (null: not checked yet)
+  signedIn: z.boolean().nullable(),
+  // Whether a Chrome, Brave or Chromium to run her in was found on the Mac
+  browserFound: z.boolean(),
+  since: z.number(),
+});
+export type MeetStatus = z.infer<typeof meetStatusSchema>;
+
+export const meetStatusReplySchema = z.object({ ok: z.literal(true), status: meetStatusSchema });
+
+export const meetJoinRequestSchema = z.object({ requestId: requestIdSchema, url: z.string().max(300) });
+export type MeetJoinRequest = z.infer<typeof meetJoinRequestSchema>;
+
+export const meetSayRequestSchema = z.object({
+  requestId: requestIdSchema,
+  // The call the words were approved for: refused when she is in another one
+  meetingCode: z.string().regex(MEET_CODE),
+  mimeType: z.literal('audio/wav'),
+  audio: z
+    .string()
+    .min(64)
+    .max(MEET_AUDIO_MAX_CHARS)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'Base64 only.'),
+});
+export type MeetSayRequest = z.infer<typeof meetSayRequestSchema>;
+
+export const meetSayReplySchema = z.object({
+  ok: z.literal(true),
+  durationMs: z.number().nonnegative(),
+  status: meetStatusSchema,
+});
 
 // ── Replies, in general ───────────────────────────────────────────────────────────────────────────
 

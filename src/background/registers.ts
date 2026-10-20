@@ -17,6 +17,7 @@ import './personalities/register';
 import './audio-devices/register';
 import './identity/register';
 import './meetings/register';
+import './meet-voice/register';
 import './capabilities/register';
 import './skills/register';
 import './kb/register';

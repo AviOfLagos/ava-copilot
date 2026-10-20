@@ -20,6 +20,8 @@ export const RATE_RULES = {
   studio: { capacity: 20, perMinute: 30 },
   view: { capacity: 300, perMinute: 1200 },
   internal: { capacity: 200, perMinute: 2000 },
+  // Ava stopping or leaving a call: a bucket of its own, so a busy minute never holds it back
+  meetStop: { capacity: 60, perMinute: 600 },
 } satisfies Record<string, RateRule>;
 
 export type RateGroup = keyof typeof RATE_RULES;

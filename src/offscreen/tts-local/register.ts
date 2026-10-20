@@ -6,6 +6,7 @@ import { transcribeRecording } from '../stt/transcribe';
 import type { LocalVoiceEngine } from './protocol';
 import { localTts } from './shared';
 import { lastSpokenLine } from '../lines';
+import { encodeWav, toBase64 } from '../pcm';
 
 /**
  * The local voice and speech commands of the offscreen document, on a target of their own so the shared router in
@@ -40,6 +41,28 @@ async function handle(message: Message): Promise<unknown> {
           rate: typeof message.rate === 'number' ? message.rate : 1,
         });
         return { ok: true, ms: Math.round(performance.now() - started), stats: localTts().stats };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+    // Speech made into a WAV file and handed back, not played (Ava's words for a call, sent to Nex Brain)
+    case 'local_tts_render': {
+      if (!isEngine(message.engine)) return { ok: false, error: 'Unknown voice engine' };
+      const started = performance.now();
+      try {
+        const speech = await localTts().render({
+          engine: message.engine,
+          text: String(message.text ?? '').slice(0, 4000),
+          voice: String(message.voice ?? ''),
+          rate: typeof message.rate === 'number' ? message.rate : 1,
+        });
+        if (!speech.samples.length) return { ok: false, error: 'The voice made no sound' };
+        return {
+          ok: true,
+          audio: toBase64(encodeWav(speech.samples, speech.sampleRate)),
+          durationMs: Math.round((speech.samples.length / speech.sampleRate) * 1000),
+          ms: Math.round(performance.now() - started),
+        };
       } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }

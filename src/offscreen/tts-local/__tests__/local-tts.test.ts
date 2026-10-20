@@ -149,4 +149,30 @@ describe('LocalTts', () => {
     expect(worker().terminated).toBe(true);
     expect(tts.loaded).toBe(false);
   });
+
+  it('renders speech to a buffer without playing it (words for a call)', async () => {
+    const { tts, player, worker } = setup();
+    const rendered = tts.render({ engine: 'kokoro', text: 'Hello. There.', voice: 'af_heart' });
+    worker().emit({ type: 'loaded', engine: 'kokoro', ms: 10 });
+    await flush();
+    const speak = worker().sent.find(message => message.type === 'speak');
+    if (speak?.type !== 'speak') throw new Error('no speak message');
+    worker().emit({ type: 'audio', id: speak.id, samples: new Float32Array([0.1, 0.2]), sampleRate: 24_000, ms: 5 });
+    worker().emit({ type: 'audio', id: speak.id, samples: new Float32Array([0.3]), sampleRate: 24_000, ms: 5 });
+    worker().emit({ type: 'done', id: speak.id });
+    const speech = await rendered;
+    expect([...speech.samples].map(value => +value.toFixed(1))).toEqual([0.1, 0.2, 0.3]);
+    expect(speech.sampleRate).toBe(24_000);
+    expect(player.clips).toHaveLength(0);
+    expect(tts.speaking).toBe(false);
+  });
+
+  it('a stop cancels a render', async () => {
+    const { tts, worker } = setup();
+    const rendered = tts.render({ engine: 'kitten', text: 'Hello.', voice: 'Leo' });
+    worker().emit({ type: 'loaded', engine: 'kitten', ms: 10 });
+    await flush();
+    tts.stop();
+    await expect(rendered).rejects.toThrow('Stopped');
+  });
 });

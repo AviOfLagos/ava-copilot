@@ -14,3 +14,4 @@ import './audio-devices/register';
 import './identity/register';
 import './capabilities/register';
 import './settings/register';
+import './meet-voice/register';

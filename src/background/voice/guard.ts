@@ -3,7 +3,14 @@
 // aloud can reach a call. Only these need none; a tool added later is guarded until listed here.
 // set_personality only changes how the assistant talks (the user's own settings), never what it may do
 // what_can_you_do only lists the assistant's own abilities, nothing of the user's
-export const UNGUARDED_TOOLS = new Set(['stop_tasks', 'end_conversation', 'set_personality', 'what_can_you_do']);
+// stop_speaking_in_call only quiets Ava in a call (meet-voice); it can never make her say anything
+export const UNGUARDED_TOOLS = new Set([
+  'stop_tasks',
+  'end_conversation',
+  'set_personality',
+  'what_can_you_do',
+  'stop_speaking_in_call',
+]);
 // How the click-to-allow notice names each tool; one not named here is "act for you"
 export const TOOL_ACTIONS: Record<string, string> = {
   run_browser_task: 'run a task in the browser',

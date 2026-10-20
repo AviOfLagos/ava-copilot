@@ -1384,7 +1384,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records."
+    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records. Se você trouxer sua assistente para a chamada, ela entra como participante própria e diz que é uma assistente de IA antes de falar."
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -8596,5 +8596,196 @@
   },
   "meeting_auto_waitingCaptionsBody": {
     "message": "As legendas estão ativadas. As notas começam com as primeiras palavras ditas. Clique no ícone do Nex Copilot na aba da chamada para gravar o áudio em vez disso."
+  },
+  "meetvoice_title": {
+    "message": "$NAME$ nesta chamada",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_bring": {
+    "message": "Trazer $NAME$ para esta chamada",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_leave": {
+    "message": "$NAME$ sai",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_stop": {
+    "message": "Parar"
+  },
+  "meetvoice_signin": {
+    "message": "Entrar no navegador de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_signinHint": {
+    "message": "Entrar abre o navegador próprio de $NAME$ no seu Mac, na página de login do Google. Entre ali com a conta dela (por exemplo ava@suaempresa.com), nunca com a sua, e feche essa janela. O Nex Copilot nunca vê a senha.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_about": {
+    "message": "$NAME$ entra como participante própria, diz primeiro que é uma assistente de IA e só fala palavras que você aprova com um clique. Ela não grava a chamada.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_stopHint": {
+    "message": "Esc ou Parar interrompe $NAME$ na hora.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_idle": {
+    "message": "$NAME$ não está nesta chamada.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_signingIn": {
+    "message": "A janela de login de $NAME$ está aberta no seu Mac. Feche-a quando terminar.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_joining": {
+    "message": "$NAME$ está entrando…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_waiting": {
+    "message": "$NAME$ está esperando o anfitrião deixá-la entrar.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_inCall": {
+    "message": "$NAME$ está na chamada.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_speaking": {
+    "message": "$NAME$ está falando na chamada…",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_state_left": {
+    "message": "$NAME$ saiu: $REASON$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "reason": {
+        "content": "$2",
+        "example": "The call ended."
+      }
+    }
+  },
+  "meetvoice_state_failed": {
+    "message": "$NAME$ não conseguiu entrar: $REASON$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "reason": {
+        "content": "$2",
+        "example": "The call ended."
+      }
+    }
+  },
+  "meetvoice_state_otherCall": {
+    "message": "$NAME$ está em outra chamada.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_signedOut": {
+    "message": "O navegador de $NAME$ ainda não está conectado: entre primeiro.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_noBrowser": {
+    "message": "O Nex Brain não encontrou Chrome, Brave nem Chromium no seu Mac para executá-la."
+  },
+  "meetvoice_errors_notMeet": {
+    "message": "Ela só pode entrar em uma chamada do Google Meet cujas notas estão sendo feitas agora."
+  },
+  "meetvoice_confirm_intent": {
+    "message": "$NAME$ diz isto na chamada",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_confirm_target": {
+    "message": "$NAME$ na chamada",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_confirm_words": {
+    "message": "Palavras, exatamente como ditas"
   }
 }

@@ -11,6 +11,9 @@ import {
   errorReplySchema,
   ghReplySchema,
   healthReplySchema,
+  MEET_ROUTES,
+  meetSayReplySchema,
+  meetStatusReplySchema,
   okReplySchema,
   pairReplySchema,
   sandboxRunReplySchema,
@@ -31,6 +34,8 @@ import type {
   SessionEvent,
   ToolCallRequest,
   WorkflowPutRequest,
+  MeetJoinRequest,
+  MeetSayRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
 
@@ -500,6 +505,73 @@ export class CompanionClient {
       throw new AppError('forbidden', 'Nex Brain gave an address that is not its own.');
     }
     return url.toString();
+  }
+
+  // ── Ava in a Google Meet call ──
+
+  meetStatus(signal?: AbortSignal) {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.status,
+      body: {},
+      schema: meetStatusReplySchema,
+      idempotent: true,
+      retry: { attempts: 2 },
+      timeoutMs: 8000,
+      signal,
+    });
+  }
+
+  /** Opens Ava's browser at Google's sign-in page, for the user to sign in to her account by hand. */
+  meetSignin() {
+    return this.call({ method: 'POST', path: MEET_ROUTES.signin, body: {}, schema: meetStatusReplySchema });
+  }
+
+  meetJoin(request: MeetJoinRequest) {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.join,
+      body: request,
+      schema: meetStatusReplySchema,
+      timeoutMs: 60_000,
+    });
+  }
+
+  /** Plays approved words into the call: a side effect, sent once. */
+  meetSay(request: MeetSayRequest, signal?: AbortSignal) {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.say,
+      body: request,
+      schema: meetSayReplySchema,
+      timeoutMs: 45_000,
+      signal,
+    });
+  }
+
+  /** Stops her at once; goes through even while the breaker is open. */
+  meetStop() {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.stop,
+      body: {},
+      schema: meetStatusReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 5000,
+    });
+  }
+
+  meetLeave() {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.leave,
+      body: {},
+      schema: meetStatusReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 15_000,
+    });
   }
 }
 
