@@ -9173,5 +9173,8 @@
   },
   "backup_onboard_back": {
     "message": "Configurar do zero"
+  },
+  "backup_file_warning": {
+    "message": "Importe apenas um arquivo que você mesmo exportou. Um arquivo mantém o firewall, as confirmações e as skills deste navegador, e qualquer modelo ou conector que aponte para outro lugar pede a chave de novo."
   }
 }

@@ -37,11 +37,14 @@ export function useRestore(request: ModelsRequest) {
 /** "Replace everything here?" with the click that does it, and a way out. */
 export function RestoreConfirm({
   question,
+  warning,
   busy,
   onConfirm,
   onCancel,
 }: {
   question: string;
+  // Said before the question, for a restore that comes from outside (a file)
+  warning?: string;
   busy: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -56,6 +59,11 @@ export function RestoreConfirm({
   }, [busy, onCancel]);
   return (
     <div role="alertdialog" aria-label={t('backup_restore')} className="glass space-y-2 rounded-xl p-2.5">
+      {warning && (
+        <p className="text-destructive text-[12px] font-medium leading-snug" data-testid="backup-file-warning">
+          {warning}
+        </p>
+      )}
       <p className="text-[12px] leading-snug">{question}</p>
       <div className="flex flex-wrap justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>

@@ -170,8 +170,11 @@ export class BackupService {
     return restoreSnapshot(snapshot, this.deps.target, secrets);
   }
 
-  /** A snapshot file from disk: the same checks, and never any keys (a file does not carry them). */
+  /**
+   * A snapshot file from disk: the same checks, never any keys, and treated as untrusted (anyone could have made
+   * it): security settings stay as they are here, and keys are unbound from endpoints that changed.
+   */
   async restoreFromFile(bytes: Uint8Array<ArrayBuffer>): Promise<RestoreSummary> {
-    return restoreSnapshot(await parseSnapshot(bytes), this.deps.target, null);
+    return restoreSnapshot(await parseSnapshot(bytes), this.deps.target, null, { untrusted: true });
   }
 }

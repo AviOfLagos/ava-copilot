@@ -2,9 +2,12 @@ import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
 import { AppError } from '@extension/shared';
 import { LLM_PROVIDERS_STORAGE_KEY } from '@extension/storage/lib/settings/llmProviders';
+import type { ConnectorRecord } from '@extension/storage';
 import { BRAIN_TOKEN_REF } from '../companion/state';
+import { allSecretRefs } from '../integrations/credentials';
 import { EXCLUDED_TABLES, isExcludedStorageKey, NEWER_SNAPSHOT_MESSAGE } from './snapshot';
 import type { Snapshot, StorageAreaLike } from './snapshot';
+import { FILE_KEEP_STORAGE_KEYS, FILE_KEEP_TABLES, unbindMovedConnectors, unbindMovedProviders } from './trust';
 
 /**
  * Puts a snapshot back: a full replace, not a merge. The database is replaced inside one Dexie transaction
@@ -13,6 +16,11 @@ import type { Snapshot, StorageAreaLike } from './snapshot';
  * schema, so Dexie runs the real upgrades on it; one from a newer version is refused.
  *
  * The caller reloads the extension afterwards, so every store and the search index read the restored data.
+ * Scheduled jobs are never restored: the table is cleared and each feature's recovery schedules its own again
+ * from what it stores (routines, agents, snoozes…) when the extension starts.
+ *
+ * `untrusted` (a file from disk): this browser's security settings stay, and keys are unbound from any provider or
+ * connector whose endpoint changed (./trust.ts).
  */
 
 // Vault entries a restore never touches: the pairing with Nex Brain belongs to this install
@@ -45,19 +53,11 @@ export interface RestoreSummary {
   secretsFailed: number;
   migratedFrom: number | null;
   modelsRestored: boolean;
+  // A file restore: the providers and connectors whose key was unbound, to be entered again
+  unbound: { providers: string[]; connectors: string[] };
 }
 
 type Rows = Record<string, Record<string, unknown>[]>;
-
-/** What a restored row must not carry over: a job's claim from the old install. */
-function sanitize(table: string, rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  if (table !== 'jobs') return rows;
-  return rows.map(job =>
-    job.status === 'running' || job.leaseUntil
-      ? { ...job, leaseUntil: null, status: job.status === 'running' ? 'scheduled' : job.status }
-      : job,
-  );
-}
 
 async function readAll(db: Dexie): Promise<Rows> {
   const rows: Rows = {};
@@ -96,7 +96,9 @@ export async function restoreSnapshot(
   snapshot: Snapshot,
   target: RestoreTarget,
   secrets: Record<string, string> | null = null,
+  options: { untrusted?: boolean } = {},
 ): Promise<RestoreSummary> {
+  const untrusted = Boolean(options.untrusted);
   const { db } = target;
   if (!db.isOpen()) await db.open();
   if (snapshot.db.version > db.verno) throw new AppError('invalid', NEWER_SNAPSHOT_MESSAGE, { retryable: false });
@@ -104,26 +106,44 @@ export async function restoreSnapshot(
   restoring = true;
   try {
     const older = snapshot.db.version < db.verno;
-    const rows = older ? await migrate(snapshot, target) : snapshot.db.tables;
+    const rows = { ...(older ? await migrate(snapshot, target) : snapshot.db.tables) };
+
+    let unboundConnectors: string[] = [];
+    if (untrusted && rows.connectors && db.tables.some(table => table.name === 'connectors')) {
+      const current = (await db.table('connectors').toArray()) as ConnectorRecord[];
+      const checked = unbindMovedConnectors(rows.connectors, current);
+      rows.connectors = checked.rows;
+      unboundConnectors = checked.unbound;
+    }
 
     // The database: every table but the excluded ones is cleared and filled from the snapshot, in one transaction
-    const replaced = db.tables.filter(table => EXCLUDED_TABLES[table.name]?.onRestore !== 'keep');
+    const replaced = db.tables.filter(
+      table => EXCLUDED_TABLES[table.name]?.onRestore !== 'keep' && !(untrusted && FILE_KEEP_TABLES.has(table.name)),
+    );
     const counts: Record<string, number> = {};
     await db.transaction('rw', replaced, async () => {
       for (const table of replaced as Table[]) {
         await table.clear();
         if (Object.hasOwn(EXCLUDED_TABLES, table.name)) continue;
-        const kept = sanitize(table.name, rows[table.name] ?? []);
+        const kept = rows[table.name] ?? [];
         if (kept.length) await table.bulkPut(kept);
         counts[table.name] = kept.length;
       }
     });
 
     // chrome.storage.local: the user's keys replaced, this install's own (pairing, caches) left as they are
+    // (and, from a file, this browser's security settings)
+    const keepHere = (key: string) => isExcludedStorageKey(key) || (untrusted && FILE_KEEP_STORAGE_KEYS.has(key));
     const current = await target.storage.get(null);
-    const stale = Object.keys(current).filter(key => !isExcludedStorageKey(key));
+    const stale = Object.keys(current).filter(key => !keepHere(key));
     if (stale.length) await target.storage.remove(stale);
-    const next = Object.fromEntries(Object.entries(snapshot.storage).filter(([key]) => !isExcludedStorageKey(key)));
+    const next = Object.fromEntries(Object.entries(snapshot.storage).filter(([key]) => !keepHere(key)));
+    let unboundProviders: string[] = [];
+    if (untrusted && next[LLM_PROVIDERS_STORAGE_KEY]) {
+      const checked = unbindMovedProviders(next[LLM_PROVIDERS_STORAGE_KEY], current[LLM_PROVIDERS_STORAGE_KEY]);
+      next[LLM_PROVIDERS_STORAGE_KEY] = checked.value;
+      unboundProviders = checked.unbound;
+    }
     const providers = (next[LLM_PROVIDERS_STORAGE_KEY] as { providers?: Record<string, unknown> } | undefined)
       ?.providers;
     const modelsRestored = Boolean(providers && Object.keys(providers).length);
@@ -134,10 +154,17 @@ export async function restoreSnapshot(
     }
     await target.storage.set(next);
 
-    // API keys: replaced only when the backup kept them
+    // A connector that now points elsewhere loses the sign-in this browser had for that id
+    if (target.secrets) {
+      for (const id of unboundConnectors) {
+        for (const ref of allSecretRefs(id)) await target.secrets.delete(ref).catch(() => {});
+      }
+    }
+
+    // API keys: replaced only when the backup kept them (never from a file)
     let restored = 0;
     let failed = 0;
-    if (secrets && target.secrets) {
+    if (secrets && target.secrets && !untrusted) {
       for (const ref of await target.secrets.refs()) {
         if (!PROTECTED_SECRET_REFS.has(ref) && !Object.hasOwn(secrets, ref)) await target.secrets.delete(ref);
       }
@@ -159,6 +186,7 @@ export async function restoreSnapshot(
       secretsFailed: failed,
       migratedFrom: older ? snapshot.db.version : null,
       modelsRestored,
+      unbound: { providers: unboundProviders, connectors: unboundConnectors },
     };
   } finally {
     restoring = false;
