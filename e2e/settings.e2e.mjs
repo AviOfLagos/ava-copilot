@@ -157,8 +157,9 @@ test('every page opens from the nav and draws its sections; one control per page
 
   // Connections: reminders ten minutes before meetings
   await page.goto(`${extension.origin}/options.html#connections`);
-  await page.waitForSelector(`${section('calendar')} select`);
-  await choose(page, `${section('calendar')} select`, '10');
+  const remind = `${section('calendar')} select[aria-label="Remind me before meetings"]`;
+  await page.waitForSelector(remind);
+  await choose(page, remind, '10');
   await waitFor(async () => (await extension.getStorage('calendar-settings'))?.remindMinutes === 10, 'reminders saved');
 
   // Meetings: keep the audio

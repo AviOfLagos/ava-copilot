@@ -1,7 +1,11 @@
 import { calendarSettingsStore, upcomingEventsStore } from '@extension/storage';
+import type { CalendarSettingsConfig, CalendarSourceName } from '@extension/storage';
+import { companionClient } from '../companion/client';
+import { brainSettingsStore } from '../companion/state';
 import { createLogger } from '../log';
-import { eventsBetween } from './ics';
 import type { CalendarEvent } from './ics';
+import { icsSource, macSource, planSources, readFromSources } from './sources';
+import type { CalendarSource } from './sources';
 
 const logger = createLogger('Calendar');
 
@@ -27,7 +31,8 @@ export interface Reminder {
 }
 
 /**
- * Watches the user's calendar: reads its iCal feed every few minutes, keeps the next day's events
+ * Watches the user's calendar: reads it every few minutes (the Mac's Calendar through Nex Brain, or the iCal
+ * address; see ./sources.ts), keeps the next day's events
  * for the panel and for voice, and reminds the user shortly before each meeting.
  */
 export class CalendarWatcher {
@@ -50,36 +55,49 @@ export class CalendarWatcher {
     chrome.notifications.onClicked.addListener(id => void this.onNotificationButton(id, 0));
   }
 
-  /** Reads the feed now, whatever its schedule; returns an error message or null. */
+  /** The sources to read, in order: the Mac's Calendar when Nex Brain is paired, then the iCal address. */
+  private async sources(settings: CalendarSettingsConfig): Promise<CalendarSource[]> {
+    const paired = (await brainSettingsStore.getSettings().catch(() => ({ paired: false }))).paired;
+    return planSources({ paired, settings }).map(name =>
+      name === 'mac' ? macSource(companionClient, settings.macCalendarIds) : icsSource(settings.icsUrl),
+    );
+  }
+
+  /** Where the events were read from last time, for the panel. */
+  source: CalendarSourceName | null = null;
+
+  /** Reads the calendar now, whatever its schedule; returns an error message or null. */
   async refresh(): Promise<string | null> {
-    const { icsUrl } = await calendarSettingsStore.getSettings();
-    if (!icsUrl.trim()) {
+    const settings = await calendarSettingsStore.getSettings();
+    const sources = await this.sources(settings);
+    const now = Date.now();
+    if (!sources.length) {
       this.events = [];
-      await upcomingEventsStore.set({ events: [], readAt: Date.now(), error: null });
+      this.source = null;
+      await upcomingEventsStore.set({ events: [], readAt: now, error: null, source: null });
       return null;
     }
-    try {
-      const url = icsUrl.trim().replace(/^webcal:/i, 'https:');
-      // Plain http only for a calendar on this machine
-      if (!/^https:\/\//i.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(url)) {
-        throw new Error('The calendar address must start with https:// or webcal://');
-      }
-      const response = await fetch(url, { credentials: 'omit', cache: 'no-store' });
-      if (!response.ok) throw new Error(`The calendar answered ${response.status}`);
-      const now = Date.now();
-      this.events = eventsBetween(await response.text(), now - HOUR, now + 36 * HOUR);
-      this.readAt = now;
+    const read = await readFromSources(sources, now - HOUR, now + 36 * HOUR);
+    if (read.error !== null) {
+      // Kept as they were: one failed read does not empty the day
       await upcomingEventsStore.set({
         events: this.events.map(({ id, title, start, end, joinUrl }) => ({ id, title, start, end, joinUrl })),
         readAt: now,
-        error: null,
+        error: read.error,
+        source: this.source,
       });
-      return null;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await upcomingEventsStore.set({ events: [], readAt: Date.now(), error: message });
-      return message;
+      return read.error;
     }
+    this.events = read.events;
+    this.source = read.source;
+    this.readAt = now;
+    await upcomingEventsStore.set({
+      events: this.events.map(({ id, title, start, end, joinUrl }) => ({ id, title, start, end, joinUrl })),
+      readAt: now,
+      error: null,
+      source: read.source,
+    });
+    return null;
   }
 
   /** Events from now on, soonest first. */
@@ -91,7 +109,7 @@ export class CalendarWatcher {
 
   private async tick(): Promise<void> {
     const settings = await calendarSettingsStore.getSettings();
-    if (!settings.icsUrl.trim()) return;
+    if (!(await this.sources(settings)).length) return;
     if (Date.now() - this.readAt > REFRESH_MS) await this.refresh();
     if (!settings.reminders) return;
 

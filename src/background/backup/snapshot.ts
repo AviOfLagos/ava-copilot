@@ -51,6 +51,7 @@ export const EXCLUDED_STORAGE_KEYS: Record<string, string> = {
   'calendar-upcoming': 'Calendar events read ahead; read again.',
   'model-health': 'Which model calls failed lately; measured again.',
   'capabilities-panel': "The panel's list of places, written when the panel starts.",
+  // The browser folder's summary only: the vault Nex Brain uses ('obsidian-vault') is a setting and is kept
   'vault-state': 'Whether an Obsidian folder is connected: the folder itself is a browser permission, picked again.',
 };
 

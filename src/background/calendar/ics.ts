@@ -5,6 +5,8 @@
  * occurrences (RECURRENCE-ID). Monthly and yearly repeats show only their first date.
  */
 
+import { meetingLinkIn } from '@src/shared/lib/protocol/companion';
+
 export interface CalendarEvent {
   // Unique per occurrence: the event's UID plus its start
   id: string;
@@ -30,27 +32,8 @@ interface RawEvent {
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-const LINKS = /https:\/\/[^\s"<>\\]+/gi;
-
-/**
- * The first meeting link in a text. Invites can come from anyone, so a link counts only when its
- * host is exactly a meeting service, never a look-alike such as evilzoom.us.
- */
-export function joinLinkIn(text: string): string | null {
-  for (const [candidate] of text.matchAll(LINKS)) {
-    try {
-      const url = new URL(candidate);
-      const host = url.hostname.toLowerCase();
-      const meet = host === 'meet.google.com' && /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(url.pathname);
-      const zoom = (host === 'zoom.us' || host.endsWith('.zoom.us')) && url.pathname.startsWith('/j/');
-      const teams = host === 'teams.microsoft.com' && url.pathname.startsWith('/l/meetup-join/');
-      if (meet || zoom || teams) return url.toString();
-    } catch {
-      // Not a link
-    }
-  }
-  return null;
-}
+// The meeting link of an event: shared with Nex Brain, which reads the Mac's Calendar
+export const joinLinkIn = meetingLinkIn;
 
 /** Lines of the feed with folded continuation lines joined back. */
 function unfold(text: string): string[] {

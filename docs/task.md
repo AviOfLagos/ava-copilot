@@ -2288,6 +2288,45 @@ full replace, migration through a real upgrade, newer refused, keys apart and to
 `size.test.ts` (realistic fixture: 75 MB JSON → 31 MB gzipped), companion `backup.test.ts` (auth, chunks,
 damaged/oversized/out of order/non-gzip, retention, Keychain on stdin, file modes), E2E `e2e/backup.e2e.mjs`.
 
+### Obsidian and the calendar through Nex Brain
+
+Neither had ever connected for Avi (Brave on macOS). The browser folder picker is off in Brave, its permission is asked
+again each session, and the handle is lost on reinstall; the iCal scrape opened `/u/0` only, read English labels, and
+waited four minutes when a Workspace admin had turned secret addresses off. With Nex Brain paired both now go through
+the Mac:
+
+- **Obsidian** (`companion/src/obsidian/`, `OBSIDIAN_ROUTES`): vaults from Obsidian's `obsidian.json` or a typed path
+  (must be a directory with `.obsidian/`, realpath'd, kept in `<dataDir>/obsidian.json`); notes listed (paged,
+  `since`), read in batches of 50, written (temp file + rename, `create` never replaces, `overwrite` only a note whose
+  front matter carries the marker), removed (marker only), searched (names then text, capped). Every path is a
+  relative `.md` path without `..`, hidden parts or control characters; no symlink may lead outside the vault and
+  writes never go through one. The extension's `src/background/obsidian/` syncs exactly as the browser folder does
+  (`sync.ts`: memory out to `Nex Copilot/`, the user's changed notes into the KB, deleted ones out), every 10 minutes
+  as a job, and chooses the vault again from its path when Nex Brain lost it. The choice is the `obsidian-vault`
+  setting, so a Nex Brain backup restores it; a backup file never sets it (`FILE_KEEP_STORAGE_KEYS`). The card
+  (`vault/BrainVault.tsx`) shows "Your vaults" + "Other folder…" when paired; the browser picker and Brave's steps
+  stay for unpaired.
+- **Calendar** (`companion/src/calendar/macos.ts`, `CALENDAR_ROUTES`): EventKit through `osascript -l JavaScript`
+  (shell-free runner), status (`granted`, `not_determined`, `denied`, `write_only`, `restricted`, `unavailable`),
+  the one-time prompt (`request`), events in a ≤32-day window (≤500, notes ≤2000 chars, join link extracted with the
+  shared `meetingLinkIn`). The watcher reads from `sources.ts`: the Mac first when paired and on, the iCal address as
+  fallback; one failed read keeps the day's events. The card (`side-panel/calendar/MacCalendarCard.tsx`) shows the
+  permission steps, "Allow access", the calendars by account with checkboxes, and the Internet Accounts note. The
+  iCal path gained an account choice (`/u/0`…`/u/4`), plain errors for 404/403/non-feeds, and says within ~6 s that
+  secret addresses are off (English pages only).
+
+Security review fixes: Nex Brain writes and removes only under `Nex Copilot/` (any case; schema and companion both
+check), the marker (`OBSIDIAN_MARKER`) is fixed and always required to replace or remove, vault roots refuse `/`,
+home and its ancestors, `~/Library/**`, system folders and hidden folders (home compared by realpath), and a sync
+re-chooses the saved path only when Nex Brain has none chosen and the path is still the same vault id
+(`expectVaultId`); otherwise it stops with "Choose your vault again", so two browsers never undo each other.
+
+Tests: companion `obsidian.test.ts` (discovery, confinement: `..`, symlink escape, absolute, encoded; limits; marker;
+routes), `calendar.test.ts` (osascript output, permission states, denied, off-macOS, routes; osascript is always
+mocked); extension `obsidian/__tests__/sync.test.ts`, `calendar/__tests__/{sources,connect}.test.ts`,
+`vault/__tests__/brain.test.ts`, `calendar/__tests__/macCalendar.test.ts`; E2E `e2e/brain-connect.e2e.mjs` with the
+mock companion.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

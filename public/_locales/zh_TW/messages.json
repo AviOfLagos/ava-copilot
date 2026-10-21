@@ -9176,5 +9176,137 @@
   },
   "backup_file_warning": {
     "message": "只匯入你自己匯出的檔案。匯入檔案時會保留這個瀏覽器的防火牆、確認與技能設定；任何指向新位址的模型或連接器都需要重新輸入金鑰。"
+  },
+  "vault_brain_title": {
+    "message": "這台 Mac 上的資料庫"
+  },
+  "vault_brain_hint": {
+    "message": "Nex Brain 在你的 Mac 上讀寫資料庫：不需要資料夾權限，重新啟動後不必再次允許，重新安裝後也會保留選擇。"
+  },
+  "vault_brain_found": {
+    "message": "你的資料庫"
+  },
+  "vault_brain_looking": {
+    "message": "正在向 Nex Brain 取得你的資料庫…"
+  },
+  "vault_brain_none": {
+    "message": "Nex Brain 在 Obsidian 的清單中找不到資料庫。請在下方輸入資料庫的資料夾。"
+  },
+  "vault_brain_missing": {
+    "message": "在這台 Mac 上已找不到"
+  },
+  "vault_brain_use": {
+    "message": "使用"
+  },
+  "vault_brain_useNamed": {
+    "message": "使用 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Vault"
+      }
+    }
+  },
+  "vault_brain_other": {
+    "message": "其他資料夾…"
+  },
+  "vault_brain_other_hint": {
+    "message": "含有 .obsidian 資料夾的資料夾完整路徑，例如 ~/Documents/My Vault。"
+  },
+  "vault_brain_on": {
+    "message": "透過你 Mac 上的 Nex Brain，每 10 分鐘一次，面板關閉時也會同步。"
+  },
+  "vault_brain_lastError": {
+    "message": "上次同步失敗：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Nex Brain is not running"
+      }
+    }
+  },
+  "conn_setup_obsidianBrain": {
+    "message": "Nex Brain 可以存取你 Mac 上的資料庫。在「設定 › 連線 › Obsidian」中，按下資料庫旁的「使用」。"
+  },
+  "settings_calendar_mac_title": {
+    "message": "從 Mac 的行事曆讀取"
+  },
+  "settings_calendar_mac_hint": {
+    "message": "透過 Nex Brain：macOS 行事曆中的所有帳號，包括 Google Workspace，無需複製任何內容。"
+  },
+  "settings_calendar_mac_unpaired": {
+    "message": "配對 Nex Brain（設定 › Nex Brain）即可讀取 Mac 的行事曆。在此之前，請使用下方的秘密 iCal 網址。"
+  },
+  "settings_calendar_mac_checking": {
+    "message": "正在讀取 Mac 的行事曆…"
+  },
+  "settings_calendar_mac_check": {
+    "message": "再次檢查"
+  },
+  "settings_calendar_mac_allow": {
+    "message": "允許存取"
+  },
+  "settings_calendar_mac_asking": {
+    "message": "請在 Mac 上回應提示…"
+  },
+  "settings_calendar_mac_step_allow": {
+    "message": "按下「允許存取」，然後在 macOS 提示中選擇「允許」（提示會顯示「node」，也就是 Nex Brain 執行的程式）。"
+  },
+  "settings_calendar_mac_step_settings": {
+    "message": "沒有提示或之前拒絕過？打開「系統設定 › 隱私權與安全性 › 行事曆」，為「node」開啟「完整取用權」。"
+  },
+  "settings_calendar_mac_step_check": {
+    "message": "按下「再次檢查」。"
+  },
+  "settings_calendar_mac_unavailable": {
+    "message": "這裡無法讀取 Mac 的行事曆。"
+  },
+  "settings_calendar_mac_noCalendars": {
+    "message": "macOS 行事曆還沒有任何行事曆。"
+  },
+  "settings_calendar_mac_accounts": {
+    "message": "看不到你的 Google 行事曆？在「系統設定 › Internet 帳號」中加入 Google 帳號並開啟「行事曆」。"
+  },
+  "settings_calendar_source_mac": {
+    "message": "正在從 Mac 的行事曆讀取。"
+  },
+  "settings_calendar_source_ics": {
+    "message": "正在從 iCal 網址讀取。"
+  },
+  "settings_calendar_lastError": {
+    "message": "無法讀取行事曆：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The calendar answered 404"
+      }
+    }
+  },
+  "settings_calendar_ics_title": {
+    "message": "或使用秘密 iCal 網址"
+  },
+  "settings_calendar_account": {
+    "message": "Google 帳號"
+  },
+  "settings_calendar_account_n": {
+    "message": "Google 帳號 $N$",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "settings_calendar_account_hint": {
+    "message": "若登入了多個 Google 帳號，請選擇你要的行事曆所屬的帳號（依登入順序）。"
+  },
+  "settings_calendar_secretDisabled": {
+    "message": "此 Google 帳號沒有秘密 iCal 網址：Workspace 管理員已將其關閉。請改用 Nex Brain 讀取 Mac 的行事曆（在「系統設定 › Internet 帳號」中加入帳號），或貼上其他行事曆的網址。"
+  },
+  "vault_brain_chooseAgain": {
+    "message": "請重新選擇你的資料庫：Nex Brain 現在選擇了另一個資料庫，或找不到這個。同步已停止。"
+  },
+  "vault_brain_chooseAgain_button": {
+    "message": "重新選擇"
   }
 }

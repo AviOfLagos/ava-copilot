@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { VAULT_STATE_KEY } from '@extension/storage';
+import { DEFAULT_OBSIDIAN_VAULT, obsidianVaultStore, VAULT_STATE_KEY } from '@extension/storage';
+import type { ObsidianVaultSetting } from '@extension/storage';
+import { brainSettingsStore } from '@src/background/companion/state';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import {
@@ -16,6 +18,8 @@ import {
   VaultUnsupported,
 } from './vault';
 import type { VaultStatus } from './vault';
+import { showBrowserFolder, vaultCardMode } from './brain';
+import { BrainVaultConnected, BrainVaultPicker } from './BrainVault';
 
 /** What went wrong, in words the user can act on. Closing the picker is not worth showing. */
 function problemText(error: unknown): string | null {
@@ -49,14 +53,54 @@ function BraveSteps() {
   );
 }
 
-/** Settings › Obsidian: pick the vault, allow access again after a restart, sync now, or let go of it. */
+/**
+ * Settings › Obsidian. With Nex Brain paired the vault is read and written on the Mac (the vaults it found, or a
+ * folder typed); otherwise this browser's folder picker, with Brave's flag steps when Brave keeps it off.
+ */
 export default function VaultSettings() {
+  const [paired, setPaired] = useState<boolean | null>(null);
+  const [setting, setSetting] = useState<ObsidianVaultSetting | null>(null);
+  const [browserName, setBrowserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const readPaired = () => void brainSettingsStore.getSettings().then(value => setPaired(value.paired));
+    const readSetting = () =>
+      void obsidianVaultStore.getSetting().then(setSetting, () => setSetting({ ...DEFAULT_OBSIDIAN_VAULT }));
+    // Whether this browser still holds a folder of its own (shown under Nex Brain's so it can be let go)
+    void vaultStatus().then(status => setBrowserName(status.source === 'browser' ? status.name : null));
+    readPaired();
+    readSetting();
+    const stopPaired = brainSettingsStore.subscribe(readPaired);
+    const stopSetting = obsidianVaultStore.subscribe(readSetting);
+    return () => {
+      stopPaired();
+      stopSetting();
+    };
+  }, []);
+
+  if (paired === null || !setting) return null;
+  const mode = vaultCardMode({ paired, setting });
+  if (mode === 'brain') return <BrainVaultConnected setting={setting} />;
+  return (
+    <>
+      {mode === 'brain_pick' && <BrainVaultPicker />}
+      {showBrowserFolder(mode, browserName, vaultSupport()) && <BrowserVault onName={setBrowserName} />}
+    </>
+  );
+}
+
+/** This browser's own folder: pick the vault, allow access again after a restart, sync now, or let go of it. */
+function BrowserVault({ onName }: { onName: (name: string | null) => void }) {
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ text: string; alert: boolean } | null>(null);
   const support = vaultSupport();
 
-  const refresh = () => void vaultStatus().then(setStatus);
+  const refresh = () =>
+    void vaultStatus().then(next => {
+      setStatus(next);
+      onName(next.source === 'browser' ? next.name : null);
+    });
   useEffect(() => {
     refresh();
     // Another view of the vault (the guided setup, Settings) connected or let go of it

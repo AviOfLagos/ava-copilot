@@ -8,12 +8,21 @@ export interface CalendarSettingsConfig {
   // How long before a meeting the reminder comes
   remindMinutes: number;
   reminders: boolean;
+  // Read the Mac's Calendar through Nex Brain when it is paired (the iCal address is then the fallback)
+  macEnabled: boolean;
+  // The Mac calendars that count; null for all of them
+  macCalendarIds: string[] | null;
+  // Which signed-in Google account "Find it for me" opens: 0 is the first (calendar.google.com/calendar/u/0)
+  googleAccount: number;
 }
 
 export const DEFAULT_CALENDAR_SETTINGS: CalendarSettingsConfig = {
   icsUrl: '',
   remindMinutes: 5,
   reminders: true,
+  macEnabled: true,
+  macCalendarIds: null,
+  googleAccount: 0,
 };
 
 export type CalendarSettingsStorage = BaseStorage<CalendarSettingsConfig> & {
@@ -44,9 +53,17 @@ export interface UpcomingEvent {
   joinUrl: string | null;
 }
 
+// Where the events came from: the Mac's Calendar (through Nex Brain) or the iCal address
+export type CalendarSourceName = 'mac' | 'ics';
+
 // What the background last read from the calendar, for the panel to show without fetching
-export const upcomingEventsStore = createStorage<{ events: UpcomingEvent[]; readAt: number; error: string | null }>(
+export const upcomingEventsStore = createStorage<{
+  events: UpcomingEvent[];
+  readAt: number;
+  error: string | null;
+  source?: CalendarSourceName | null;
+}>(
   'calendar-upcoming',
-  { events: [], readAt: 0, error: null },
+  { events: [], readAt: 0, error: null, source: null },
   { storageEnum: StorageEnum.Local, liveUpdate: true },
 );

@@ -9,6 +9,13 @@ import {
   BACKUP_CHUNK_BYTES,
   BACKUP_ROUTES,
   backupBeginRequestSchema,
+  CALENDAR_ROUTES,
+  calendarEventsRequestSchema,
+  isSafeNotePath,
+  OBSIDIAN_ROUTES,
+  obsidianChooseRequestSchema,
+  obsidianRemoveRequestSchema,
+  obsidianWriteRequestSchema,
   COMPANION_EXTENSION_ORIGIN,
   COMPANION_PROTOCOL_VERSION,
   normalizePairingCode,
@@ -42,7 +49,24 @@ function artifactHtml(remoteUrl) {
 </body></html>`;
 }
 
-export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {}) {
+// A vault and a Mac Calendar in memory: nothing on the machine running the tests is read
+export const MOCK_VAULT = { id: 'f00df00df00df00d', name: 'E2E Vault', path: '/Users/e2e/E2E Vault' };
+
+export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, calendarAccess = 'not_determined' } = {}) {
+  // path → { text, mtime }
+  const vaultNotes = new Map([
+    ['Projects/Blue folder.md', { text: '# Blue folder\nThe blue folder holds the tower drawings.', mtime: 1000 }],
+  ]);
+  let chosenVault = null;
+  const calendar = {
+    access: calendarAccess,
+    calendars: [
+      { id: 'cal-work', title: 'Work', account: 'avi@nexprove.com', color: null },
+      { id: 'cal-home', title: 'Home', account: 'iCloud', color: null },
+    ],
+    events: [],
+    eventRequests: [],
+  };
   const requests = [];
   const sandboxRuns = [];
   const remoteHits = [];
@@ -248,6 +272,89 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
       backupSecrets = null;
       return send(200, { ok: true });
     }
+    // Obsidian through Nex Brain, as the real one answers (a vault in memory)
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.vaults) {
+      const listed = { ...MOCK_VAULT, found: 'obsidian', usable: true };
+      return send(200, { ok: true, vaults: [listed], chosen: chosenVault ? listed : null });
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.choose) {
+      const parsed = obsidianChooseRequestSchema.safeParse(json());
+      const wrongVault = parsed.success && parsed.data.expectVaultId && parsed.data.expectVaultId !== MOCK_VAULT.id;
+      if (!parsed.success || parsed.data.path !== MOCK_VAULT.path || wrongVault) {
+        return fail(400, 'invalid', 'That folder is not an Obsidian vault (it has no .obsidian folder).');
+      }
+      chosenVault = MOCK_VAULT.id;
+      return send(200, { ok: true, vault: { ...MOCK_VAULT, found: 'obsidian', usable: true } });
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.forget) {
+      chosenVault = null;
+      return send(200, { ok: true });
+    }
+    if (url.pathname.startsWith('/v1/obsidian/') && json().vaultId !== chosenVault) {
+      return fail(404, 'not_found', 'No Obsidian vault is chosen in Nex Brain.');
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.notes) {
+      const { cursor = null, since = 0 } = json();
+      const notes = [...vaultNotes]
+        .filter(([path, note]) => (cursor === null || path > cursor) && note.mtime > since)
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([path, note]) => ({ path, mtime: note.mtime, size: Buffer.byteLength(note.text) }));
+      return send(200, { ok: true, notes, next: null, capped: false });
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.read) {
+      const paths = json().paths ?? [];
+      if (!paths.every(isSafeNotePath)) return fail(400, 'invalid', 'That is not a Markdown note inside the vault.');
+      const notes = paths
+        .filter(path => vaultNotes.has(path))
+        .map(path => ({ path, ...vaultNotes.get(path), size: Buffer.byteLength(vaultNotes.get(path).text) }));
+      return send(200, { ok: true, notes, skipped: [] });
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.write) {
+      const parsed = obsidianWriteRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The vault request is not valid.');
+      const existing = vaultNotes.get(parsed.data.path);
+      const marked = text => /^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(text);
+      if (existing && parsed.data.mode === 'create') return fail(400, 'invalid', 'A note already exists at that path.');
+      if (existing && !marked(existing.text)) {
+        return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+      }
+      vaultNotes.set(parsed.data.path, { text: parsed.data.text, mtime: Date.now() });
+      return send(200, { ok: true, path: parsed.data.path, mtime: Date.now(), created: !existing });
+    }
+    if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.remove) {
+      const parsed = obsidianRemoveRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'Nex Brain only removes notes in the Nex Copilot folder.');
+      const existing = vaultNotes.get(parsed.data.path);
+      if (existing && !/^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(existing.text)) {
+        return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+      }
+      return send(200, { ok: true, removed: vaultNotes.delete(parsed.data.path) });
+    }
+    // The Mac's Calendar: its permission flips to granted when "Allow access" asks
+    const calendarStatus = () => ({
+      ok: true,
+      access: calendar.access,
+      calendars: calendar.access === 'granted' ? calendar.calendars : [],
+      message: calendar.access === 'granted' ? null : 'Nex Brain needs your permission to read the Mac’s Calendar.',
+    });
+    if (req.method === 'POST' && url.pathname === CALENDAR_ROUTES.status) return send(200, calendarStatus());
+    if (req.method === 'POST' && url.pathname === CALENDAR_ROUTES.request) {
+      if (calendar.access === 'not_determined') calendar.access = 'granted';
+      return send(200, calendarStatus());
+    }
+    if (req.method === 'POST' && url.pathname === CALENDAR_ROUTES.events) {
+      const parsed = calendarEventsRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The calendar request is not valid.');
+      if (calendar.access !== 'granted')
+        return fail(403, 'forbidden', 'Nex Brain needs your permission to read the Mac’s Calendar.');
+      calendar.eventRequests.push(parsed.data);
+      const ids = parsed.data.calendarIds;
+      return send(200, {
+        ok: true,
+        truncated: false,
+        events: calendar.events.filter(event => ids === null || ids.includes(event.calendarId)),
+      });
+    }
     if (req.method === 'POST' && url.pathname === '/v1/unpair') {
       token = null;
       return send(200, { ok: true });
@@ -266,6 +373,9 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
     token: () => token,
     backups,
     backupSecrets: () => backupSecrets,
+    vaultNotes,
+    calendar,
+    chosenVault: () => chosenVault,
     async close() {
       server.closeAllConnections();
       remote.closeAllConnections();

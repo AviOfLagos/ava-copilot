@@ -229,7 +229,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await kb.sweep();
         return { ok: true };
       case 'kb_calendar_connect':
-        return connectGoogleCalendar();
+        // Which signed-in Google account: its number (/u/N) or its address
+        return connectGoogleCalendar(
+          typeof message.account === 'number' || typeof message.account === 'string' ? message.account : 0,
+        );
       case 'kb_calendar_refresh': {
         const error = await calendar.refresh();
         return error ? { ok: false, error } : { ok: true };

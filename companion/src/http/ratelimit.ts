@@ -24,6 +24,8 @@ export const RATE_RULES = {
   meetStop: { capacity: 60, perMinute: 600 },
   // Backup chunks: a 256 MB snapshot is 64 of them, sent or read back in a row
   backup: { capacity: 120, perMinute: 600 },
+  // Obsidian notes: a first sync lists and reads a few thousand notes in pages of 50
+  vault: { capacity: 300, perMinute: 1200 },
 } satisfies Record<string, RateRule>;
 
 export type RateGroup = keyof typeof RATE_RULES;

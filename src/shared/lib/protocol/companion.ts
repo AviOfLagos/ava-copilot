@@ -973,6 +973,293 @@ export const backupSecretsGetReplySchema = z.object({
   storedAt: z.number().int().nonnegative().nullable(),
 });
 
+// ── Obsidian vault on the Mac ─────────────────────────────────────────────────────────────────────
+// Nex Brain reads and writes the user's Obsidian vault on disk, so the browser needs no folder picker (Brave
+// ships without one). The vault is chosen once (choose); every other call names it by id and every path is
+// relative to it: Nex Brain resolves each one with realpath and refuses anything that leaves the vault.
+
+export const OBSIDIAN_ROUTES = {
+  // Vaults Obsidian knows (its obsidian.json) and the one chosen
+  vaults: '/v1/obsidian/vaults',
+  choose: '/v1/obsidian/choose',
+  forget: '/v1/obsidian/forget',
+  // Note paths, mtimes and sizes, a page at a time (since=mtime for what changed)
+  notes: '/v1/obsidian/notes',
+  // Up to OBSIDIAN_LIMITS.readBatch notes at once
+  read: '/v1/obsidian/read',
+  write: '/v1/obsidian/write',
+  remove: '/v1/obsidian/remove',
+  search: '/v1/obsidian/search',
+} as const;
+
+export const OBSIDIAN_LIMITS = {
+  // A note larger than this is never read or written
+  noteBytes: 1_000_000,
+  readBatch: 50,
+  readBatchBytes: 4_000_000,
+  listPage: 1000,
+  // Notes walked in one vault at most
+  maxNotes: 20_000,
+  searchResults: 50,
+  // Bytes a search reads before it stops and says it was cut short
+  searchScanBytes: 40_000_000,
+} as const;
+
+// The one folder of the vault Nex Brain writes in (any case), and the line every note it writes carries in its front
+// matter. Both are fixed here, never chosen by the caller: only a note under the folder with the marker is replaced
+// or removed.
+export const OBSIDIAN_WRITE_ROOT = 'Nex Copilot';
+export const OBSIDIAN_MARKER = 'source: avi-copilot';
+
+/** Whether a note path is in the copilot's own folder ("Nex Copilot/…", any case). */
+export function isInObsidianWriteRoot(value: string): boolean {
+  const [top, ...rest] = value.split('/');
+  return rest.length > 0 && top.toLowerCase() === OBSIDIAN_WRITE_ROOT.toLowerCase();
+}
+
+/**
+ * A note's path inside a vault: relative, "/"-separated, ending in .md, no "..", no hidden parts (".obsidian",
+ * ".trash", dotfiles), no backslashes or control characters. Percent signs stay as they are: nothing decodes them.
+ */
+export function isSafeNotePath(value: string): boolean {
+  if (typeof value !== 'string' || value.length > 500 || !isSafeRelativePath(value)) return false;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(value)) return false;
+  if (!/\.md$/i.test(value)) return false;
+  return value.split('/').every(part => !part.startsWith('.') && part.length <= 255 && part.trim() === part);
+}
+
+export const vaultIdSchema = z.string().regex(/^[a-f0-9]{16}$/);
+export const notePathSchema = z
+  .string()
+  .min(4)
+  .max(500)
+  .refine(isSafeNotePath, 'A Markdown note inside the vault, without ".." or hidden folders.');
+
+export const obsidianVaultSchema = z.object({
+  id: vaultIdSchema,
+  name: z.string().max(200),
+  path: z.string().max(1000),
+  // 'obsidian': in Obsidian's own list; 'chosen': a folder the user typed
+  found: z.enum(['obsidian', 'chosen']),
+  // Whether the folder is still there and still an Obsidian vault
+  usable: z.boolean(),
+});
+export type ObsidianVault = z.infer<typeof obsidianVaultSchema>;
+
+export const obsidianVaultsReplySchema = z.object({
+  ok: z.literal(true),
+  vaults: z.array(obsidianVaultSchema).max(100),
+  chosen: obsidianVaultSchema.nullable(),
+});
+export type ObsidianVaultsReply = z.infer<typeof obsidianVaultsReplySchema>;
+
+export const obsidianChooseRequestSchema = z.object({
+  requestId: requestIdSchema,
+  path: z.string().min(1).max(1000),
+  // Choose it only if it is still this vault: a sync choosing a saved path again never switches to another folder
+  expectVaultId: vaultIdSchema.optional(),
+});
+export const obsidianChooseReplySchema = z.object({ ok: z.literal(true), vault: obsidianVaultSchema });
+
+export const obsidianNotesRequestSchema = z.object({
+  vaultId: vaultIdSchema,
+  // Only notes changed after this time (ms); 0 lists them all
+  since: z.number().nonnegative().default(0),
+  // The last path of the page before: pages are in path order
+  cursor: z.string().max(500).nullable().default(null),
+  limit: z.number().int().min(1).max(OBSIDIAN_LIMITS.listPage).default(500),
+});
+export const noteMetaSchema = z.object({
+  path: z.string().max(500),
+  mtime: z.number().nonnegative(),
+  size: z.number().int().nonnegative(),
+});
+export type NoteMeta = z.infer<typeof noteMetaSchema>;
+export const obsidianNotesReplySchema = z.object({
+  ok: z.literal(true),
+  notes: z.array(noteMetaSchema).max(OBSIDIAN_LIMITS.listPage),
+  next: z.string().max(500).nullable(),
+  // The vault has more notes than Nex Brain walks
+  capped: z.boolean(),
+});
+
+export const obsidianReadRequestSchema = z.object({
+  vaultId: vaultIdSchema,
+  paths: z.array(notePathSchema).min(1).max(OBSIDIAN_LIMITS.readBatch),
+});
+export const obsidianReadReplySchema = z.object({
+  ok: z.literal(true),
+  notes: z
+    .array(
+      z.object({
+        path: z.string().max(500),
+        text: z.string().max(OBSIDIAN_LIMITS.noteBytes),
+        mtime: z.number().nonnegative(),
+        size: z.number().int().nonnegative(),
+      }),
+    )
+    .max(OBSIDIAN_LIMITS.readBatch),
+  skipped: z
+    .array(
+      z.object({
+        path: z.string().max(500),
+        reason: z.enum(['missing', 'too_large', 'not_allowed', 'batch_full']),
+      }),
+    )
+    .max(OBSIDIAN_LIMITS.readBatch),
+});
+
+export const obsidianWriteRequestSchema = z.object({
+  requestId: requestIdSchema,
+  vaultId: vaultIdSchema,
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only writes in the Nex Copilot folder.'),
+  text: z.string().max(OBSIDIAN_LIMITS.noteBytes),
+  // 'create' never replaces a file; 'overwrite' replaces only a note carrying OBSIDIAN_MARKER (or makes a new one)
+  mode: z.enum(['create', 'overwrite']),
+});
+export type ObsidianWriteRequest = z.infer<typeof obsidianWriteRequestSchema>;
+export const obsidianWriteReplySchema = z.object({
+  ok: z.literal(true),
+  path: z.string().max(500),
+  mtime: z.number().nonnegative(),
+  created: z.boolean(),
+});
+
+// Removes only a note in the copilot's folder that carries the marker: the copilot's own, never the user's
+export const obsidianRemoveRequestSchema = z.object({
+  requestId: requestIdSchema,
+  vaultId: vaultIdSchema,
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only removes notes in the Nex Copilot folder.'),
+});
+export const obsidianRemoveReplySchema = z.object({ ok: z.literal(true), removed: z.boolean() });
+
+export const obsidianSearchRequestSchema = z.object({
+  vaultId: vaultIdSchema,
+  query: z.string().trim().min(2).max(200),
+  limit: z.number().int().min(1).max(OBSIDIAN_LIMITS.searchResults).default(20),
+});
+export const obsidianSearchReplySchema = z.object({
+  ok: z.literal(true),
+  results: z
+    .array(
+      z.object({
+        path: z.string().max(500),
+        title: z.string().max(300),
+        snippet: z.string().max(400),
+        mtime: z.number().nonnegative(),
+      }),
+    )
+    .max(OBSIDIAN_LIMITS.searchResults),
+  truncated: z.boolean(),
+});
+
+// ── The Mac's Calendar ────────────────────────────────────────────────────────────────────────────
+// Nex Brain reads macOS Calendar (EventKit), which syncs every Google, Workspace, iCloud or Exchange account
+// added under System Settings › Internet Accounts. Read-only. Event text is written by whoever sent the invite:
+// it is data, never instructions.
+
+export const CALENDAR_ROUTES = {
+  status: '/v1/calendar/status',
+  // Asks macOS for access (the one-time Calendars prompt)
+  request: '/v1/calendar/request',
+  events: '/v1/calendar/events',
+} as const;
+
+export const CALENDAR_LIMITS = {
+  events: 500,
+  calendars: 300,
+  notesChars: 2000,
+  windowMs: 32 * 24 * 60 * 60 * 1000,
+} as const;
+
+// EventKit's authorization, in words: 'write_only' (macOS 14+) cannot read events
+export const CALENDAR_ACCESS = [
+  'granted',
+  'not_determined',
+  'denied',
+  'restricted',
+  'write_only',
+  'unavailable',
+] as const;
+export type CalendarAccess = (typeof CALENDAR_ACCESS)[number];
+
+export const macCalendarSchema = z.object({
+  id: z.string().min(1).max(200),
+  title: z.string().max(200),
+  // The account it syncs from (e.g. "Google", "iCloud", an email address)
+  account: z.string().max(200),
+  color: z.string().max(20).nullable(),
+});
+export type MacCalendar = z.infer<typeof macCalendarSchema>;
+
+export const calendarStatusReplySchema = z.object({
+  ok: z.literal(true),
+  access: z.enum(CALENDAR_ACCESS),
+  calendars: z.array(macCalendarSchema).max(CALENDAR_LIMITS.calendars),
+  // A plain sentence when access is missing: what to do on the Mac
+  message: z.string().max(1000).nullable(),
+});
+export type CalendarStatusReply = z.infer<typeof calendarStatusReplySchema>;
+
+export const calendarEventsRequestSchema = z
+  .object({
+    from: z.number().int().nonnegative(),
+    to: z.number().int().nonnegative(),
+    // Only these calendars; null for all
+    calendarIds: z.array(z.string().min(1).max(200)).max(CALENDAR_LIMITS.calendars).nullable().default(null),
+  })
+  .refine(range => range.to > range.from && range.to - range.from <= CALENDAR_LIMITS.windowMs, {
+    message: 'A window of up to 32 days.',
+  });
+export type CalendarEventsRequest = z.infer<typeof calendarEventsRequestSchema>;
+
+export const macEventSchema = z.object({
+  id: z.string().min(1).max(400),
+  calendarId: z.string().max(200),
+  calendar: z.string().max(200),
+  title: z.string().max(500),
+  start: z.number(),
+  end: z.number(),
+  allDay: z.boolean(),
+  location: z.string().max(1000),
+  notes: z.string().max(CALENDAR_LIMITS.notesChars),
+  url: z.string().max(2000).nullable(),
+  joinUrl: z.string().max(2000).nullable(),
+});
+export type MacEvent = z.infer<typeof macEventSchema>;
+
+export const calendarEventsReplySchema = z.object({
+  ok: z.literal(true),
+  events: z.array(macEventSchema).max(CALENDAR_LIMITS.events),
+  truncated: z.boolean(),
+});
+
+const MEETING_LINKS = /https:\/\/[^\s"<>\\]+/gi;
+
+/**
+ * The first meeting link in a text. Invites can come from anyone, so a link counts only when its host is exactly
+ * a meeting service (Meet, Zoom, Teams), never a look-alike such as evilzoom.us.
+ */
+export function meetingLinkIn(text: string): string | null {
+  for (const [candidate] of text.matchAll(MEETING_LINKS)) {
+    try {
+      // A link at the end of a sentence or in brackets keeps no trailing punctuation
+      const url = new URL(candidate.replace(/[),.;\]>]+$/, ''));
+      const host = url.hostname.toLowerCase();
+      const meet = host === 'meet.google.com' && /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(url.pathname);
+      const zoom = (host === 'zoom.us' || host.endsWith('.zoom.us')) && url.pathname.startsWith('/j/');
+      const teams =
+        (host === 'teams.microsoft.com' && url.pathname.startsWith('/l/meetup-join/')) ||
+        (host === 'teams.live.com' && url.pathname.startsWith('/meet/'));
+      if (meet || zoom || teams) return url.toString();
+    } catch {
+      // Not a link
+    }
+  }
+  return null;
+}
+
 // ── Replies, in general ───────────────────────────────────────────────────────────────────────────
 
 /** Whether a parsed body is the companion's error reply. */
