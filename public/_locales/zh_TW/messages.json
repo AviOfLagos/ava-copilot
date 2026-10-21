@@ -9308,5 +9308,11 @@
   },
   "vault_brain_chooseAgain_button": {
     "message": "重新選擇"
+  },
+  "brain_autoPair": {
+    "message": "與這台 Mac 上的 Nex Brain 配對"
+  },
+  "brain_autoPair_hint": {
+    "message": "Nex Brain 在這裡執行時不需要代碼。若它設定為需要代碼，請使用下方的代碼。"
   }
 }

@@ -103,15 +103,6 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
     };
   }, [api, online, status?.checkedAt]);
 
-  // Not paired, and not unpaired on purpose: pair with Nex Brain on this Mac with no code if it allows it; the code
-  // field below stays for a Mac that turned that off
-  const loaded = Boolean(settings);
-  const tryAuto = Boolean(settings && !settings.paired && !settings.unpairedByUser);
-  useEffect(() => {
-    if (tryAuto) void api.request({ type: 'brain_auto_pair' }, 20_000).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
-
   // Asks once when the page opens, so what it shows is fresh
   useEffect(() => {
     if (settings?.paired) void api.request({ type: 'brain_check' }, 20_000).catch(() => {});
@@ -150,41 +141,55 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
       </div>
 
       {!settings.paired ? (
-        <form
-          className={row}
-          onSubmit={event => {
-            event.preventDefault();
-            void run('pair', { type: 'brain_pair', code, port: Number(port) });
-          }}>
-          <p className="text-muted-foreground text-[11.5px]">{t('brain_pair_hint')}</p>
-          <div className="flex gap-2">
-            <label className="flex w-20 flex-col gap-1 text-[11.5px]">
-              {t('brain_port_label')}
-              <input
-                className={inputClass}
-                inputMode="numeric"
-                value={port}
-                onChange={event => setPort(event.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
-                aria-label={t('brain_port_label')}
-              />
-            </label>
-            <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11.5px]">
-              {t('brain_code_label')}
-              <input
-                className={cn(inputClass, 'font-mono uppercase tracking-wider')}
-                value={code}
-                placeholder="ABCD-2345"
-                autoComplete="off"
-                spellCheck={false}
-                onChange={event => setCode(event.target.value.slice(0, 12))}
-                aria-label={t('brain_code_label')}
-              />
-            </label>
+        <>
+          {/* One click, no code: only ever on the user's click, so nothing that merely listens on the port is
+              paired with on its own */}
+          <div className={row}>
+            <Button
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => void run('pair', { type: 'brain_auto_pair' })}
+              data-testid="brain-auto-pair">
+              {busy === 'pair' ? t('brain_pairing') : t('brain_autoPair')}
+            </Button>
+            <p className="text-muted-foreground text-[11.5px]">{t('brain_autoPair_hint')}</p>
           </div>
-          <Button type="submit" size="sm" disabled={busy !== null || code.trim().length < 8}>
-            {busy === 'pair' ? t('brain_pairing') : t('brain_pair')}
-          </Button>
-        </form>
+          <form
+            className={row}
+            onSubmit={event => {
+              event.preventDefault();
+              void run('pair', { type: 'brain_pair', code, port: Number(port) });
+            }}>
+            <p className="text-muted-foreground text-[11.5px]">{t('brain_pair_hint')}</p>
+            <div className="flex gap-2">
+              <label className="flex w-20 flex-col gap-1 text-[11.5px]">
+                {t('brain_port_label')}
+                <input
+                  className={inputClass}
+                  inputMode="numeric"
+                  value={port}
+                  onChange={event => setPort(event.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
+                  aria-label={t('brain_port_label')}
+                />
+              </label>
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11.5px]">
+                {t('brain_code_label')}
+                <input
+                  className={cn(inputClass, 'font-mono uppercase tracking-wider')}
+                  value={code}
+                  placeholder="ABCD-2345"
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={event => setCode(event.target.value.slice(0, 12))}
+                  aria-label={t('brain_code_label')}
+                />
+              </label>
+            </div>
+            <Button type="submit" size="sm" disabled={busy !== null || code.trim().length < 8}>
+              {busy === 'pair' ? t('brain_pairing') : t('brain_pair')}
+            </Button>
+          </form>
+        </>
       ) : (
         <>
           {status.docker ? (

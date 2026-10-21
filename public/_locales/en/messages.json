@@ -9308,5 +9308,11 @@
   },
   "vault_brain_chooseAgain_button": {
     "message": "Choose again"
+  },
+  "brain_autoPair": {
+    "message": "Pair with Nex Brain on this Mac"
+  },
+  "brain_autoPair_hint": {
+    "message": "No code needed while Nex Brain is running here. If it was set to ask for one, use the code below."
   }
 }

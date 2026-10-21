@@ -139,14 +139,10 @@ registerJobHandler(HEALTH_JOB, async () => {
 });
 
 // After a restart: keep checking while paired (scheduling the same key again replaces the job)
+// Never pairs on its own here: whatever listens on the port could be pretending to be Nex Brain, so pairing waits for
+// the user's click (the Nex Brain card, or Restore on a fresh install)
 registerRecovery('companion', async () => {
-  const { paired, unpairedByUser } = await brainSettingsStore.getSettings();
-  if (paired) {
-    await scheduleHealth();
-    return;
-  }
-  // Not paired and the user did not choose that: pair with Nex Brain if it is running on this Mac
-  if (!unpairedByUser) await autoPair().catch(() => {});
+  if ((await brainSettingsStore.getSettings()).paired) await scheduleHealth();
 });
 
 // Routines' step.sandbox runs in Nex Brain's sandbox
