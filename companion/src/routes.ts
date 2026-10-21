@@ -13,6 +13,7 @@ import {
   meetJoinRequestSchema,
   meetSayRequestSchema,
   pairRequestSchema,
+  autoPairRequestSchema,
   sandboxRunRequestSchema,
   sessionAnswerRequestSchema,
   sessionCreateRequestSchema,
@@ -112,6 +113,27 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body }) {
         const request = parse(pairRequestSchema, body);
         const { token, companionId } = await deps.pairing.redeem(request.code, request.client);
+        return json({
+          ok: true,
+          token,
+          companionId,
+          version: deps.config.version,
+          protocol: COMPANION_PROTOCOL_VERSION,
+        });
+      },
+    },
+    {
+      method: 'POST',
+      path: COMPANION_ROUTES.autoPair,
+      name: 'auto-pair',
+      auth: 'pair',
+      rate: 'pair',
+      async handler({ body }) {
+        if (deps.config.autoPair === false) {
+          fail('forbidden', 'Automatic pairing is off on this Mac. Run `pnpm pair` in Nex Brain for a code.');
+        }
+        const request = parse(autoPairRequestSchema, body);
+        const { token, companionId } = await deps.pairing.autoPair(request.client);
         return json({
           ok: true,
           token,

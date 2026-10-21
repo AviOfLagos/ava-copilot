@@ -179,3 +179,48 @@ describe('the server is closed by default', () => {
     expect(statuses.slice(5)).toEqual([429, 429]);
   });
 });
+
+describe('pairing with no code', () => {
+  let test: Awaited<ReturnType<typeof startTestBrain>>;
+  afterEach(async () => test?.stop());
+
+  const autoPair = (origin?: string | null) =>
+    test.api('/v1/pair/auto', { method: 'POST', token: null, origin, body: JSON.stringify({ client: 'Nex Copilot' }) });
+
+  it('gives Nex Copilot a token it then recognises, and replaces the browser paired before', async () => {
+    test = await startTestBrain();
+    const first = pairReplySchema.parse(await (await autoPair()).json());
+    expect((await test.api('/v1/health', { token: first.token })).status).toBe(200);
+    const second = pairReplySchema.parse(await (await autoPair()).json());
+    expect(second.companionId).toBe(first.companionId);
+    expect((await test.api('/v1/health', { token: first.token })).status).toBe(401);
+    expect((await test.api('/v1/health', { token: second.token })).status).toBe(200);
+  });
+
+  it('is refused from any other origin, and from none', async () => {
+    test = await startTestBrain();
+    expect((await autoPair('https://evil.example')).status).toBe(403);
+    expect((await autoPair('chrome-extension://abcdefghijklmnopabcdefghijklmnop')).status).toBe(403);
+    expect((await autoPair(null)).status).toBe(403);
+  });
+
+  it('is refused when the Mac turned it off, and a code still works then', async () => {
+    test = await startTestBrain({}, { autoPair: false });
+    const refused = await autoPair();
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error?: { message?: string } }).error?.message ?? '').toMatch(/off/i);
+    pairReplySchema.parse(await test.pair());
+  });
+
+  it('spends any code still waiting', async () => {
+    test = await startTestBrain();
+    const code = await test.brain.pairing.createCode();
+    pairReplySchema.parse(await (await autoPair()).json());
+    const late = await test.api('/v1/pair', {
+      method: 'POST',
+      token: null,
+      body: JSON.stringify({ code, client: 'x' }),
+    });
+    expect(late.status).toBe(403);
+  });
+});

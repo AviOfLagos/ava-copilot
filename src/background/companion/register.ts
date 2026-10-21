@@ -65,7 +65,12 @@ command(
       await brainSettingsStore.update({ port });
     }
     const reply = await companionClient.pair(normalized);
-    await brainSettingsStore.update({ paired: true, companionId: reply.companionId, pairedAt: Date.now() });
+    await brainSettingsStore.update({
+      paired: true,
+      companionId: reply.companionId,
+      pairedAt: Date.now(),
+      unpairedByUser: false,
+    });
     await scheduleHealth();
     await refreshStatus(companionClient, { fresh: true, manual: true });
     logger.info('Paired with Nex Brain');
@@ -73,9 +78,30 @@ command(
   },
 );
 
+/** Pairs with Nex Brain on this Mac without a code, when it is running and allows it. */
+async function autoPair(): Promise<boolean> {
+  if ((await brainSettingsStore.getSettings()).paired) return true;
+  const reply = await companionClient.autoPair();
+  await brainSettingsStore.update({
+    paired: true,
+    companionId: reply.companionId,
+    pairedAt: Date.now(),
+    unpairedByUser: false,
+  });
+  await scheduleHealth();
+  await refreshStatus(companionClient, { fresh: true, manual: true });
+  logger.info('Paired with Nex Brain automatically');
+  return true;
+}
+
+command('brain_auto_pair', z.object({}), async () => {
+  await autoPair();
+  return snapshot();
+});
+
 command('brain_unpair', z.object({}), async () => {
   await companionClient.unpair();
-  await brainSettingsStore.update({ paired: false, companionId: null, pairedAt: null });
+  await brainSettingsStore.update({ paired: false, companionId: null, pairedAt: null, unpairedByUser: true });
   await jobs.cancel(HEALTH_KEY);
   await brainStatusStore.update({
     state: 'unpaired',
@@ -114,7 +140,13 @@ registerJobHandler(HEALTH_JOB, async () => {
 
 // After a restart: keep checking while paired (scheduling the same key again replaces the job)
 registerRecovery('companion', async () => {
-  if ((await brainSettingsStore.getSettings()).paired) await scheduleHealth();
+  const { paired, unpairedByUser } = await brainSettingsStore.getSettings();
+  if (paired) {
+    await scheduleHealth();
+    return;
+  }
+  // Not paired and the user did not choose that: pair with Nex Brain if it is running on this Mac
+  if (!unpairedByUser) await autoPair().catch(() => {});
 });
 
 // Routines' step.sandbox runs in Nex Brain's sandbox

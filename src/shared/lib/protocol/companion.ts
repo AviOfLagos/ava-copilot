@@ -26,6 +26,7 @@ export const COMPANION_EXTENSION_ORIGIN = `chrome-extension://${COMPANION_EXTENS
 // All POST, except PUT/DELETE /v1/workflows/:id; sessions take /:id/messages, /answer, /cancel, /events
 export const COMPANION_ROUTES = {
   pair: '/v1/pair',
+  autoPair: '/v1/pair/auto',
   unpair: '/v1/unpair',
   health: '/v1/health',
   sandboxRun: '/v1/sandbox/run',
@@ -130,6 +131,10 @@ export const pairRequestSchema = z.object({
   client: z.string().trim().min(1).max(80),
 });
 export type PairRequest = z.infer<typeof pairRequestSchema>;
+
+// Pairing with no code: only Nex Copilot's own extension origin can ask (the server checks the Origin), which is the
+// same trust as a code a local program could print for itself by running `pnpm pair`
+export const autoPairRequestSchema = z.object({ client: z.string().trim().min(1).max(80) });
 
 export const pairReplySchema = z.object({
   ok: z.literal(true),

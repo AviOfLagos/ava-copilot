@@ -223,6 +223,21 @@ export class CompanionClient {
     return reply;
   }
 
+  /** Pairs with no code: Nex Brain accepts it from this extension's own origin unless the Mac turned it off. */
+  async autoPair(client = 'Nex Copilot'): Promise<z.infer<typeof pairReplySchema>> {
+    const reply = await this.call({
+      method: 'POST',
+      path: COMPANION_ROUTES.autoPair,
+      schema: pairReplySchema,
+      body: { client },
+      auth: false,
+      bypassBreaker: true,
+      timeoutMs: 10_000,
+    });
+    await putSecret(BRAIN_TOKEN_REF, reply.token);
+    return reply;
+  }
+
   /** Tells the Mac to forget this browser (best effort) and forgets the token here. */
   async unpair(): Promise<void> {
     try {

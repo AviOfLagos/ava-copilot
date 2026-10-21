@@ -103,6 +103,15 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
     };
   }, [api, online, status?.checkedAt]);
 
+  // Not paired, and not unpaired on purpose: pair with Nex Brain on this Mac with no code if it allows it; the code
+  // field below stays for a Mac that turned that off
+  const loaded = Boolean(settings);
+  const tryAuto = Boolean(settings && !settings.paired && !settings.unpairedByUser);
+  useEffect(() => {
+    if (tryAuto) void api.request({ type: 'brain_auto_pair' }, 20_000).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
   // Asks once when the page opens, so what it shows is fresh
   useEffect(() => {
     if (settings?.paired) void api.request({ type: 'brain_check' }, 20_000).catch(() => {});

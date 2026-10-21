@@ -15,6 +15,8 @@ export interface BrainConfig {
   version: string;
   // The Docker image every sandbox runs
   sandboxImage: string;
+  // Nex Copilot may pair without a code (on unless AVI_BRAIN_AUTO_PAIR=0)
+  autoPair?: boolean;
 }
 
 export const SANDBOX_IMAGE = 'avi-brain-sandbox:1';
@@ -42,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BrainConfig {
     packageDir,
     version,
     sandboxImage: env.AVI_BRAIN_SANDBOX_IMAGE ?? SANDBOX_IMAGE,
+    autoPair: env.AVI_BRAIN_AUTO_PAIR !== '0',
   };
 }
 

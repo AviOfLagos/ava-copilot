@@ -113,6 +113,21 @@ export class PairingStore {
       );
     }
     await rm(this.codePath, { force: true });
+    return this.issueToken(client);
+  }
+
+  /**
+   * A token with no code, for Nex Copilot's own extension origin (the route checks it). Like a code, it replaces the
+   * browser paired before; any code still waiting stops working.
+   */
+  autoPair(client: string): Promise<{ token: string; companionId: string }> {
+    return this.serial(async () => {
+      await rm(this.codePath, { force: true });
+      return this.issueToken(client);
+    });
+  }
+
+  private async issueToken(client: string): Promise<{ token: string; companionId: string }> {
     const token = randomBytes(32).toString('base64url');
     const existing = await readJson<AuthFile>(this.authPath);
     const companionId = existing?.companionId ?? randomBytes(8).toString('hex');

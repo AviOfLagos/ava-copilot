@@ -16,6 +16,8 @@ export interface BrainSettings {
   paired: boolean;
   companionId: string | null;
   pairedAt: number | null;
+  // The user unpaired on purpose: never pair again on its own
+  unpairedByUser: boolean;
 }
 
 export const DEFAULT_BRAIN_SETTINGS: BrainSettings = {
@@ -23,6 +25,7 @@ export const DEFAULT_BRAIN_SETTINGS: BrainSettings = {
   paired: false,
   companionId: null,
   pairedAt: null,
+  unpairedByUser: false,
 };
 
 export type BrainState = 'unpaired' | 'online' | 'offline' | 'error';

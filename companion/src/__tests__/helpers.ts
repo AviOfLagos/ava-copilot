@@ -96,17 +96,20 @@ export function testConfig(dataDir: string): BrainConfig {
 }
 
 /** A started Nex Brain on a free port, with stand-ins, and a fetch that speaks as the extension. */
-export async function startTestBrain(deps: BrainDeps = {}) {
+export async function startTestBrain(deps: BrainDeps = {}, config: Partial<BrainConfig> = {}) {
   const dir = tempDir();
   const log = memoryLogger();
-  const brain = await createBrain(testConfig(dir.path), {
-    log,
-    run: fakeRunner(dockerUp),
-    keys: memoryKeys(),
-    keychain: memoryKeychain(),
-    engine: null,
-    ...deps,
-  });
+  const brain = await createBrain(
+    { ...testConfig(dir.path), ...config },
+    {
+      log,
+      run: fakeRunner(dockerUp),
+      keys: memoryKeys(),
+      keychain: memoryKeychain(),
+      engine: null,
+      ...deps,
+    },
+  );
   const port = await brain.start();
   const base = `http://127.0.0.1:${port}`;
   let token = '';
