@@ -22,6 +22,8 @@ export const RATE_RULES = {
   internal: { capacity: 200, perMinute: 2000 },
   // Ava stopping or leaving a call: a bucket of its own, so a busy minute never holds it back
   meetStop: { capacity: 60, perMinute: 600 },
+  // Backup chunks: a 256 MB snapshot is 64 of them, sent or read back in a row
+  backup: { capacity: 120, perMinute: 600 },
 } satisfies Record<string, RateRule>;
 
 export type RateGroup = keyof typeof RATE_RULES;

@@ -8,6 +8,7 @@ import './models/register';
 import './settings/port';
 import './tts/register';
 import './companion/register';
+import './backup/register';
 import './voice/engines/register';
 import './history/register';
 import './whatsapp/register';

@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
-import { checkAssistantName, generalSettingsStore, meetingSettingsStore, onboardingStore } from '@extension/storage';
+import {
+  checkAssistantName,
+  db,
+  generalSettingsStore,
+  meetingSettingsStore,
+  onboardingStore,
+} from '@extension/storage';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { LiveOrb } from '../components/ui/live-orb';
@@ -11,6 +17,7 @@ import { NameInput, WakeNote, nameError } from './AssistantName';
 import { setWakeWord } from './wake';
 import VoiceModelsCard from '../voice-models/VoiceModelsCard';
 import ModelSetup from './ModelSetup';
+import RestoreFromBrain from '../backup/RestoreFromBrain';
 import type { ModelsRequest } from '../models/useProviders';
 
 const STEPS = 3;
@@ -47,6 +54,9 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
   const [showError, setShowError] = useState(false);
   const [wakeOn, setWakeOn] = useState(false);
   const [wakeError, setWakeError] = useState('');
+  // A reinstall: nothing here yet, so the first thing offered is bringing it back from Nex Brain
+  const [fresh, setFresh] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const dialog = useRef<HTMLDivElement>(null);
   // The dialog's keys (set below, on every render, so it sees the current step)
   const onKey = useRef<(event: KeyboardEvent) => void>(() => {});
@@ -66,6 +76,10 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
 
   useEffect(() => {
     void meetingSettingsStore.getSettings().then(settings => setWakeOn(settings.wakeWord));
+    void db.threads
+      .count()
+      .then(count => setFresh(count === 0))
+      .catch(() => setFresh(false));
   }, []);
 
   // Each step starts with focus on its first control, so the keyboard can go straight on
@@ -92,7 +106,8 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
   if (completedAt === undefined) return null;
   const done = completedAt > 0;
   // The full setup shows until it is finished or skipped; after that only the model step, when asked for
-  const showDialog = done ? reopened : !parked;
+  // A restore marks the setup done as it lands: the dialog stays until the extension starts again
+  const showDialog = restoring || (done ? reopened : !parked);
   const owed = hasModel === false;
   const modelBlocked = step === MODEL_STEP && hasModel !== true;
 
@@ -156,6 +171,14 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
 
   // Esc skips; Enter outside a button goes on; Tab stays inside the dialog
   onKey.current = (event: KeyboardEvent) => {
+    if (restoring) {
+      // The restore has its own form and buttons; Esc goes back to the setup
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setRestoring(false);
+      }
+      return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       finish();
@@ -224,9 +247,24 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
 
       <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-4 pt-8">
         <LiveOrb size={step === 0 ? 88 : 64} label={shownName} className="self-start" />
-        <h2 className="text-[22px] font-medium leading-tight tracking-[-0.03em]">{t(titles[step])}</h2>
+        <h2 className="text-[22px] font-medium leading-tight tracking-[-0.03em]">
+          {restoring ? t('backup_onboard_title') : t(titles[step])}
+        </h2>
 
-        {step === 0 && (
+        {restoring && <RestoreFromBrain request={request} onCancel={() => setRestoring(false)} />}
+
+        {step === 0 && !restoring && fresh && !done && (
+          <button
+            type="button"
+            data-testid="onboard-restore"
+            onClick={() => setRestoring(true)}
+            className="glass hover:bg-accent flex flex-col items-start gap-0.5 rounded-2xl px-3 py-2.5 text-left">
+            <span className="text-[13px] font-medium">{t('backup_onboard_offer')}</span>
+            <span className="text-muted-foreground text-[11.5px]">{t('backup_onboard_offer_hint')}</span>
+          </button>
+        )}
+
+        {step === 0 && !restoring && (
           <>
             <p id="onboard-body" className="text-muted-foreground text-[13px] leading-relaxed">
               {t('onboard_name_body')}
@@ -259,7 +297,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
           </>
         )}
 
-        {step === MODEL_STEP && (
+        {step === MODEL_STEP && !restoring && (
           <ModelSetup
             request={request}
             hasModel={hasModel}
@@ -272,7 +310,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
           />
         )}
 
-        {step === 2 && (
+        {step === 2 && !restoring && (
           <>
             <p id="onboard-body" className="text-muted-foreground text-[13px] leading-relaxed">
               {t('onboard_wake_body', [displayPhrase(wake, shownName)])}
@@ -296,7 +334,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
         )}
       </div>
 
-      <div className="relative flex items-center justify-between gap-2 px-4 pb-6 pt-2">
+      <div className={cn('relative flex items-center justify-between gap-2 px-4 pb-6 pt-2', restoring && 'hidden')}>
         {step > 0 && !reopened ? (
           <Button variant="ghost" onClick={() => setStep(step - 1)}>
             {t('onboard_back')}

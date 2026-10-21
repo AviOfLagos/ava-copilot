@@ -8,6 +8,7 @@ import type { BrainConfig } from '../config';
 import { memoryLogger } from '../log';
 import type { ProcessOptions, ProcessResult, ProcessRunner } from '../sandbox/process';
 import type { KeyStore } from '../workflows/keys';
+import type { KeychainAdapter } from '../backup/secrets';
 
 export function tempDir(): { path: string; remove: () => void } {
   const path = mkdtempSync(join(tmpdir(), 'avi-brain-test-'));
@@ -69,6 +70,20 @@ export function memoryKeys(): KeyStore & { values: Map<string, string> } {
   };
 }
 
+/** A Keychain in memory: tests never write to the real one. */
+export function memoryKeychain(): KeychainAdapter & { values: Map<string, string> } {
+  const values = new Map<string, string>();
+  return {
+    values,
+    async get(account) {
+      return values.get(account) ?? null;
+    },
+    async set(account, value) {
+      values.set(account, value);
+    },
+  };
+}
+
 export function testConfig(dataDir: string): BrainConfig {
   return {
     host: '127.0.0.1',
@@ -88,6 +103,7 @@ export async function startTestBrain(deps: BrainDeps = {}) {
     log,
     run: fakeRunner(dockerUp),
     keys: memoryKeys(),
+    keychain: memoryKeychain(),
     engine: null,
     ...deps,
   });

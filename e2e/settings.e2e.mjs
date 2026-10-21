@@ -100,7 +100,14 @@ test('every page opens from the nav and draws its sections; one control per page
   }
   assert.deepEqual(seen.voice, ['voice-identity', 'tts', 'voice-engines', 'audio-devices', 'wake']);
   assert.deepEqual(seen.general, ['names', 'theme', 'writing', 'confirm', 'cap', 'highlights', 'agent']);
-  assert.deepEqual(seen.memory, ['about-you', 'history', 'memory-index', 'memory-agents', 'memory-data']);
+  assert.deepEqual(seen.memory, [
+    'about-you',
+    'history',
+    'memory-index',
+    'memory-agents',
+    'memory-backups',
+    'memory-data',
+  ]);
   assert.deepEqual(seen.connections, ['connectors', 'obsidian', 'calendar', 'brain']);
   assert.deepEqual(seen.meetings, ['meetings', 'brief', 'inbox']);
   assert.deepEqual(seen.privacy, ['firewall', 'skills']);

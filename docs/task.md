@@ -2249,6 +2249,37 @@ queue/ack and reply routing, @lid rule, media, browser closed, hourly limit, unl
 approvals in quiet hours, toggles, meeting notes, origins), `side-panel/whatsapp-remote/__tests__/qr.test.ts`,
 `say.test.ts` (WhatsApp refused).
 
+### Memory and settings survive an uninstall (2026-10-21)
+
+Uninstalling wipes IndexedDB, `chrome.storage` and OPFS; Nex Brain's data dir does not, and the pinned manifest key
+keeps the extension ID. So Nex Brain keeps backups (`companion/src/backup/`, routes `BACKUP_ROUTES` in the protocol,
+auth `api` like the rest of /v1): gzipped snapshots sent in 4 MB parts and checked by size and SHA-256 at commit,
+files 0600 in `backups/` (0700), the last 14 kept plus the newest of each day for 30 days, 256 MB cap.
+
+- **What is in a snapshot** (`src/background/backup/snapshot.ts`): every table of the database, found by listing
+  `db.tables`, and every `chrome.storage.local` key, minus two short deny-lists there (tables: `logs`,
+  `audioChunks`, `modelCatalog`; keys: pairing and health of Nex Brain, the backup's own status, live call state,
+  caches). Not in it: `chrome.storage.session`, OPFS voice models, the Obsidian/AI-history folder handles, the
+  vault's database. Embeddings are kept (they cost model calls). Blobs and byte arrays travel tagged in the JSON.
+- **Keys** never go in a snapshot: with "Include API keys and sign-ins" on (default), the vault's entries (all but
+  the pairing token) go to `/v1/backups/secrets/put`, which encrypts them (AES-256-GCM) under a random key kept in
+  the macOS Keychain (service "Nex Brain backup"), passed to `security -i` on stdin. Off removes the copy on the Mac.
+- **When**: `backup_auto` job 2 min after the last change (Dexie hooks, `storage.onChanged`), at most 10 min after
+  the first, never within 10 min of the last backup; `backup_daily` at 13:00; one a minute after browser start.
+  Skipped while not paired or before the first-run setup is done (a fresh install never uploads an empty snapshot).
+- **Restore** (`restore.ts`): full replace in one Dexie transaction, then storage (this install's pairing kept), then
+  keys; an older snapshot is written into a scratch DB at its own version and opened as today's so Dexie runs the
+  real upgrades; a newer one is refused. Then `chrome.runtime.reload()`. From the first setup screen on a fresh
+  install ("Restore from Nex Brain on this Mac": find it, pair with the code, pick, confirm) or Settings › Memory ›
+  Backups. Export/Import in Settings › Memory now write and read the same snapshot as a `.json.gz` file (no keys;
+  the old knowledge-only export still imports); an imported file is size-limited, gunzip-capped and zod-checked,
+  and reaches the background through OPFS.
+
+Tests: `src/background/backup/__tests__/backup.test.ts` (coverage of every table and store key, round trip,
+full replace, migration through a real upgrade, newer refused, keys apart and toggle, debounce),
+`size.test.ts` (realistic fixture: 75 MB JSON → 31 MB gzipped), companion `backup.test.ts` (auth, chunks,
+damaged/oversized/out of order/non-gzip, retention, Keychain on stdin, file modes), E2E `e2e/backup.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { t } from '@extension/i18n';
-import { kbSettingsStore, kbStore } from '@extension/storage';
+import { kbSettingsStore } from '@extension/storage';
 import type { KbSettingsConfig } from '@extension/storage';
+import { describeCounts, megabytes, RestoreConfirm, useRestore, when } from '../../backup/BackupList';
+import { exportBackupFile, readPickedFile, stageRestoreFile } from '../../backup/file';
+import type { PickedFile } from '../../backup/file';
+import type { PanelApi } from '../../registry';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { useAgents } from '../../kb/AgentPicker';
@@ -116,9 +120,14 @@ export function MemoryIndexSection() {
   );
 }
 
-/** Export everything remembered, bring an export back, or wipe it all. */
-export function MemoryDataSection() {
+/**
+ * Export everything as a backup file (the same snapshot Nex Brain keeps, without API keys), bring one back (or an
+ * older knowledge-only export, merged as before), or wipe the knowledge base.
+ */
+export function MemoryDataSection({ api }: { api: PanelApi }) {
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [picked, setPicked] = useState<Extract<PickedFile, { kind: 'snapshot' }> | null>(null);
+  const restoreFile = useRestore(api.request);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const run = async (work: () => Promise<string>) => {
@@ -130,24 +139,25 @@ export function MemoryDataSection() {
     }
   };
 
-  const exportAll = () =>
-    run(async () => {
-      const data = await kbStore.exportAll();
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `avi-copilot-knowledge-${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      return t('options_kb_exported', [String(data.items.length)]);
-    });
+  const exportAll = () => run(async () => t('backup_exported', [megabytes(await exportBackupFile())]));
 
   const importFile = (file: File) =>
     run(async () => {
-      const data = JSON.parse(await file.text());
-      const { count = 0 } = await kbRequest({ type: 'kb_import', data });
+      setPicked(null);
+      const read = await readPickedFile(file);
+      if (read.kind === 'snapshot') {
+        setPicked(read);
+        return t('backup_file_ready');
+      }
+      const { count = 0 } = await kbRequest({ type: 'kb_import', data: read.data });
       return t('options_kb_imported', [String(count)]);
     });
+
+  const restorePicked = async () => {
+    if (!picked) return;
+    await stageRestoreFile(picked.bytes);
+    await restoreFile.restore({ type: 'backup_restore_file', confirmed: true });
+  };
 
   const wipe = () => {
     if (!window.confirm(t('options_kb_wipeConfirm'))) return;
@@ -162,17 +172,17 @@ export function MemoryDataSection() {
       <p className={HINT}>{t('options_kb_desc')}</p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="glass" onClick={() => void exportAll()}>
-          {t('options_kb_export')}
+          {t('backup_export')}
         </Button>
         <Button size="sm" variant="glass" onClick={() => fileRef.current?.click()}>
-          {t('options_kb_import')}
+          {t('backup_import')}
         </Button>
         <input
           ref={fileRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,application/gzip,.json,.gz"
           className="hidden"
-          aria-label={t('options_kb_import')}
+          aria-label={t('backup_import')}
           onChange={event => {
             const file = event.target.files?.[0];
             event.target.value = '';
@@ -183,7 +193,25 @@ export function MemoryDataSection() {
           {t('options_kb_wipe')}
         </Button>
       </div>
-      {status && (
+      {picked && !restoreFile.done && (
+        <RestoreConfirm
+          question={t('backup_file_confirm', [when(picked.snapshot.createdAt), describeCounts(picked.snapshot.counts)])}
+          busy={restoreFile.busy}
+          onCancel={() => setPicked(null)}
+          onConfirm={() => void restorePicked()}
+        />
+      )}
+      {restoreFile.done && (
+        <p role="status" className="text-[12.5px]">
+          {t('backup_restored')}
+        </p>
+      )}
+      {restoreFile.error && (
+        <p role="alert" className="text-destructive text-[11.5px]">
+          {restoreFile.error}
+        </p>
+      )}
+      {status && !picked && (
         <p
           role={status.error ? 'alert' : 'status'}
           className={status.error ? 'text-destructive text-[11.5px]' : 'text-muted-foreground text-[11.5px]'}>

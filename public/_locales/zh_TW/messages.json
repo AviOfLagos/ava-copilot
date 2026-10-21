@@ -9022,5 +9022,156 @@
         "example": "20"
       }
     }
+  },
+  "backup_section": {
+    "message": "在你的 Mac 上備份"
+  },
+  "backup_desc": {
+    "message": "Nex Brain 會在這台 Mac 上保存你的記憶與設定副本，重新安裝 Nex Copilot 後即可找回。變更後幾分鐘以及每天一次會自動備份。"
+  },
+  "backup_notPaired": {
+    "message": "先配對 Nex Brain（設定 › 連線 › Nex Brain），才能備份到這台 Mac。"
+  },
+  "backup_last": {
+    "message": "上次備份：$WHEN$ · $SIZE$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      },
+      "size": {
+        "content": "$2",
+        "example": "12.3 MB"
+      }
+    }
+  },
+  "backup_never": {
+    "message": "尚未備份。"
+  },
+  "backup_running": {
+    "message": "正在備份…"
+  },
+  "backup_error": {
+    "message": "上次備份失敗：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Nex Brain is not running on your Mac."
+      }
+    }
+  },
+  "backup_includeSecrets": {
+    "message": "包含 API 金鑰與登入資訊"
+  },
+  "backup_includeSecrets_hint": {
+    "message": "以這台 Mac 鑰匙圈中的金鑰加密保存，絕不放在備份檔裡。"
+  },
+  "backup_now": {
+    "message": "立即備份"
+  },
+  "backup_list": {
+    "message": "這台 Mac 上的備份"
+  },
+  "backup_list_empty": {
+    "message": "這台 Mac 上還沒有備份。"
+  },
+  "backup_counts": {
+    "message": "$CHATS$ 則對話 · $MEETINGS$ 場會議 · $MEMORY$ 項記憶",
+    "placeholders": {
+      "chats": {
+        "content": "$1",
+        "example": "312"
+      },
+      "meetings": {
+        "content": "$2",
+        "example": "14"
+      },
+      "memory": {
+        "content": "$3",
+        "example": "820"
+      }
+    }
+  },
+  "backup_restore": {
+    "message": "還原"
+  },
+  "backup_restore_confirm": {
+    "message": "要以 $WHEN$ 的備份取代這個瀏覽器上的所有資料嗎？目前的對話、記憶與設定都會被取代，Nex Copilot 會重新啟動。",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      }
+    }
+  },
+  "backup_restore_confirm_button": {
+    "message": "取代並還原"
+  },
+  "backup_cancel": {
+    "message": "取消"
+  },
+  "backup_restoring": {
+    "message": "正在還原…"
+  },
+  "backup_restored": {
+    "message": "已還原。Nex Copilot 正在重新啟動，請再次開啟面板。"
+  },
+  "backup_export": {
+    "message": "匯出備份檔"
+  },
+  "backup_import": {
+    "message": "匯入檔案"
+  },
+  "backup_exported": {
+    "message": "已儲存備份檔（$SIZE$），其中不含 API 金鑰。",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "12.3 MB"
+      }
+    }
+  },
+  "backup_file_ready": {
+    "message": "這個檔案是備份，確認後即可還原。"
+  },
+  "backup_file_confirm": {
+    "message": "要以 $WHEN$ 的這份備份（$COUNTS$）取代這個瀏覽器上的所有資料嗎？檔案中不含 API 金鑰，之後請重新輸入。",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      },
+      "counts": {
+        "content": "$2",
+        "example": "312 chats · 14 meetings · 820 memory items"
+      }
+    }
+  },
+  "backup_onboard_offer": {
+    "message": "從這台 Mac 上的 Nex Brain 還原"
+  },
+  "backup_onboard_offer_hint": {
+    "message": "重新安裝了嗎？找回你的對話、記憶與設定。"
+  },
+  "backup_onboard_title": {
+    "message": "從 Nex Brain 還原"
+  },
+  "backup_onboard_checking": {
+    "message": "正在這台 Mac 上尋找 Nex Brain…"
+  },
+  "backup_onboard_unreachable": {
+    "message": "Nex Brain 在這台 Mac 上沒有回應。請先啟動它（執行 \"avi-brain start\"，或在 companion 資料夾執行 \"pnpm start\"），然後再試一次。"
+  },
+  "backup_onboard_retry": {
+    "message": "再試一次"
+  },
+  "backup_onboard_choose": {
+    "message": "選擇要找回的備份，最新的在最前面。"
+  },
+  "backup_onboard_none": {
+    "message": "這台 Mac 上沒有備份。請返回並從頭設定。"
+  },
+  "backup_onboard_back": {
+    "message": "改為從頭設定"
   }
 }

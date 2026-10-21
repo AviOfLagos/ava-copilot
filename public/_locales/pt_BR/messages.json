@@ -9022,5 +9022,156 @@
         "example": "20"
       }
     }
+  },
+  "backup_section": {
+    "message": "Backups no seu Mac"
+  },
+  "backup_desc": {
+    "message": "O Nex Brain guarda uma cópia da sua memória e das suas configurações neste Mac, para que voltem se você reinstalar o Nex Copilot. Ele faz backup alguns minutos depois de cada mudança e uma vez por dia."
+  },
+  "backup_notPaired": {
+    "message": "Pareie o Nex Brain (Configurações › Conexões › Nex Brain) para fazer backup neste Mac."
+  },
+  "backup_last": {
+    "message": "Último backup: $WHEN$ · $SIZE$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      },
+      "size": {
+        "content": "$2",
+        "example": "12.3 MB"
+      }
+    }
+  },
+  "backup_never": {
+    "message": "Nenhum backup ainda."
+  },
+  "backup_running": {
+    "message": "Fazendo backup…"
+  },
+  "backup_error": {
+    "message": "O último backup falhou: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Nex Brain is not running on your Mac."
+      }
+    }
+  },
+  "backup_includeSecrets": {
+    "message": "Incluir chaves de API e logins"
+  },
+  "backup_includeSecrets_hint": {
+    "message": "Guardados criptografados com uma chave no Keychain deste Mac, nunca dentro de um backup."
+  },
+  "backup_now": {
+    "message": "Fazer backup agora"
+  },
+  "backup_list": {
+    "message": "Backups neste Mac"
+  },
+  "backup_list_empty": {
+    "message": "Ainda não há backups neste Mac."
+  },
+  "backup_counts": {
+    "message": "$CHATS$ conversas · $MEETINGS$ reuniões · $MEMORY$ itens de memória",
+    "placeholders": {
+      "chats": {
+        "content": "$1",
+        "example": "312"
+      },
+      "meetings": {
+        "content": "$2",
+        "example": "14"
+      },
+      "memory": {
+        "content": "$3",
+        "example": "820"
+      }
+    }
+  },
+  "backup_restore": {
+    "message": "Restaurar"
+  },
+  "backup_restore_confirm": {
+    "message": "Substituir tudo neste navegador pelo backup de $WHEN$? As conversas, a memória e as configurações daqui são substituídas, e o Nex Copilot reinicia.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      }
+    }
+  },
+  "backup_restore_confirm_button": {
+    "message": "Substituir e restaurar"
+  },
+  "backup_cancel": {
+    "message": "Cancelar"
+  },
+  "backup_restoring": {
+    "message": "Restaurando…"
+  },
+  "backup_restored": {
+    "message": "Restaurado. O Nex Copilot reinicia agora; abra o painel de novo."
+  },
+  "backup_export": {
+    "message": "Exportar um arquivo de backup"
+  },
+  "backup_import": {
+    "message": "Importar um arquivo"
+  },
+  "backup_exported": {
+    "message": "Arquivo de backup salvo ($SIZE$). Ele não contém chaves de API.",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "12.3 MB"
+      }
+    }
+  },
+  "backup_file_ready": {
+    "message": "Este arquivo é um backup. Confirme para restaurá-lo."
+  },
+  "backup_file_confirm": {
+    "message": "Substituir tudo neste navegador por este backup de $WHEN$ ($COUNTS$)? Chaves de API não ficam em arquivos: digite-as de novo depois.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Oct 21, 2026, 10:04"
+      },
+      "counts": {
+        "content": "$2",
+        "example": "312 chats · 14 meetings · 820 memory items"
+      }
+    }
+  },
+  "backup_onboard_offer": {
+    "message": "Restaurar do Nex Brain neste Mac"
+  },
+  "backup_onboard_offer_hint": {
+    "message": "Reinstalou? Traga de volta suas conversas, memória e configurações."
+  },
+  "backup_onboard_title": {
+    "message": "Restaurar do Nex Brain"
+  },
+  "backup_onboard_checking": {
+    "message": "Procurando o Nex Brain neste Mac…"
+  },
+  "backup_onboard_unreachable": {
+    "message": "O Nex Brain não está respondendo neste Mac. Inicie-o (execute \"avi-brain start\", ou \"pnpm start\" na pasta do companion) e tente de novo."
+  },
+  "backup_onboard_retry": {
+    "message": "Tentar de novo"
+  },
+  "backup_onboard_choose": {
+    "message": "Escolha o backup a restaurar. Os mais recentes primeiro."
+  },
+  "backup_onboard_none": {
+    "message": "Não há backups neste Mac. Volte e configure do zero."
+  },
+  "backup_onboard_back": {
+    "message": "Configurar do zero"
   }
 }
