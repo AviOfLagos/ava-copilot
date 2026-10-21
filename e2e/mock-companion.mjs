@@ -6,6 +6,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import http from 'node:http';
 import {
   ARTIFACT_HEADERS,
+  BACKUP_CHUNK_BYTES,
+  BACKUP_ROUTES,
+  backupBeginRequestSchema,
   COMPANION_EXTENSION_ORIGIN,
   COMPANION_PROTOCOL_VERSION,
   normalizePairingCode,
@@ -46,6 +49,9 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
   let token = null;
   const studioTokens = new Map();
   const viewKeys = new Set();
+  const backups = new Map();
+  const uploads = new Map();
+  let backupSecrets = null;
 
   // Another origin, standing in for the internet: an artifact must never reach it
   const remote = http.createServer((req, res) => {
@@ -186,6 +192,62 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
       studioTokens.set(studioToken, Date.now());
       return send(200, { ok: true, url: `${self}/studio/${ARTIFACT_ID}#${studioToken}` });
     }
+    // Backups, kept in memory for as long as the mock runs: a second browser (a reinstall) finds them
+    const json = () => JSON.parse(body || '{}');
+    if (req.method === 'POST' && url.pathname === BACKUP_ROUTES.list) {
+      return send(200, {
+        ok: true,
+        snapshots: [...backups.values()].map(entry => entry.meta).sort((a, b) => b.createdAt - a.createdAt),
+        secrets: { storedAt: backupSecrets ? 1 : null, count: Object.keys(backupSecrets ?? {}).length },
+      });
+    }
+    if (req.method === 'POST' && url.pathname === BACKUP_ROUTES.begin) {
+      const parsed = backupBeginRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The backup request is not valid.');
+      const uploadId = randomBytes(16).toString('hex');
+      const { requestId: _requestId, ...meta } = parsed.data;
+      uploads.set(uploadId, { meta, parts: [] });
+      return send(200, { ok: true, uploadId, chunkBytes: BACKUP_CHUNK_BYTES });
+    }
+    const chunk = /^\/v1\/backups\/uploads\/([a-f0-9]{32})\/chunks\/(\d+)$/.exec(url.pathname);
+    if (req.method === 'PUT' && chunk) {
+      const upload = uploads.get(chunk[1]);
+      if (!upload || Number(chunk[2]) !== upload.parts.length) return fail(400, 'invalid', 'Out of order.');
+      upload.parts.push(Buffer.from(json().data, 'base64'));
+      return send(200, { ok: true });
+    }
+    const commit = /^\/v1\/backups\/uploads\/([a-f0-9]{32})\/commit$/.exec(url.pathname);
+    if (req.method === 'POST' && commit) {
+      const upload = uploads.get(commit[1]);
+      uploads.delete(commit[1]);
+      const bytes = Buffer.concat(upload?.parts ?? []);
+      if (!upload || createHash('sha256').update(bytes).digest('hex') !== upload.meta.sha256) {
+        return fail(400, 'invalid', 'The backup arrived damaged.');
+      }
+      const meta = { ...upload.meta, id: `${upload.meta.createdAt}-${randomBytes(4).toString('hex')}` };
+      backups.set(meta.id, { meta, bytes });
+      return send(200, { ok: true, snapshot: meta });
+    }
+    const read = /^\/v1\/backups\/(\d{13}-[a-f0-9]{8})\/read$/.exec(url.pathname);
+    if (req.method === 'POST' && read) {
+      const entry = backups.get(read[1]);
+      if (!entry) return fail(404, 'not_found', 'That backup is not on this Mac any more.');
+      const index = json().index ?? 0;
+      const chunks = Math.max(1, Math.ceil(entry.bytes.length / BACKUP_CHUNK_BYTES));
+      const data = entry.bytes.subarray(index * BACKUP_CHUNK_BYTES, (index + 1) * BACKUP_CHUNK_BYTES);
+      return send(200, { ok: true, index, chunks, data: data.toString('base64') });
+    }
+    if (req.method === 'POST' && url.pathname === BACKUP_ROUTES.secretsPut) {
+      backupSecrets = json().secrets;
+      return send(200, { ok: true, storedAt: 1, count: Object.keys(backupSecrets).length });
+    }
+    if (req.method === 'POST' && url.pathname === BACKUP_ROUTES.secretsGet) {
+      return send(200, { ok: true, secrets: backupSecrets ?? {}, storedAt: backupSecrets ? 1 : null });
+    }
+    if (req.method === 'DELETE' && url.pathname === BACKUP_ROUTES.secretsClear) {
+      backupSecrets = null;
+      return send(200, { ok: true });
+    }
     if (req.method === 'POST' && url.pathname === '/v1/unpair') {
       token = null;
       return send(200, { ok: true });
@@ -202,6 +264,8 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {} } = {
     sandboxRuns,
     remoteHits,
     token: () => token,
+    backups,
+    backupSecrets: () => backupSecrets,
     async close() {
       server.closeAllConnections();
       remote.closeAllConnections();

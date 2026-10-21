@@ -2,6 +2,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { ArtifactStore, StudioKeys } from './artifacts/store';
 import { PairingStore } from './auth/pairing';
+import { backupRoutes } from './backup/routes';
+import { BackupSecrets, securityKeychain } from './backup/secrets';
+import type { KeychainAdapter } from './backup/secrets';
+import { BackupStore } from './backup/store';
 import { createGhRunner } from './cli/gh';
 import { privateDir } from './config';
 import type { BrainConfig } from './config';
@@ -43,6 +47,8 @@ export interface BrainDeps {
   meet?: Partial<Pick<MeetBotDeps, 'launch' | 'findBrowser' | 'pollMs' | 'lobbyTimeoutMs' | 'admissionTimeoutMs'>>;
   // Ava on WhatsApp: the WhatsApp Web client (open-wa unless a stand-in is given)
   whatsappDriver?: WaDriverFactory;
+  // Where the backup key is kept (the macOS Keychain unless a stand-in is given)
+  keychain?: KeychainAdapter;
 }
 
 export type Brain = Awaited<ReturnType<typeof createBrain>>;
@@ -94,7 +100,15 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
           internalSecret,
         })
       : deps.engine;
+  const backups = new BackupStore({ dataDir: config.dataDir, log: log.child({ part: 'backup' }), now });
+  const backupSecrets = new BackupSecrets({
+    dir: backups.dir,
+    keychain: deps.keychain ?? securityKeychain({ run }),
+    log: log.child({ part: 'backup' }),
+    now,
+  });
   const startedAt = now();
+  server.add(...backupRoutes({ backups, secrets: backupSecrets }));
   server.add(
     ...brainRoutes({
       config,
@@ -128,6 +142,8 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     whatsapp,
     registry,
     engine,
+    backups,
+    backupSecrets,
     internalSecret,
     async start(): Promise<number> {
       const port = await server.listen();

@@ -874,6 +874,105 @@ export type WhatsAppSendRequest = z.infer<typeof whatsappSendRequestSchema>;
 
 export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
 
+// ── Backups: memory and settings that outlive an uninstall ────────────────────────────────────────
+// The extension sends a gzipped snapshot of its database and settings in chunks (it can be hundreds of MB);
+// Nex Brain keeps the files under its data dir, which uninstalling the extension does not touch. API keys and
+// sign-ins travel separately and are kept encrypted under a key in the macOS Keychain, never in a snapshot.
+
+export const BACKUP_ROUTES = {
+  list: '/v1/backups/list',
+  begin: '/v1/backups/uploads',
+  // PUT
+  chunk: '/v1/backups/uploads/:uploadId/chunks/:index',
+  commit: '/v1/backups/uploads/:uploadId/commit',
+  // One chunk of a stored snapshot
+  read: '/v1/backups/:id/read',
+  // DELETE
+  remove: '/v1/backups/:id',
+  secretsPut: '/v1/backups/secrets/put',
+  secretsGet: '/v1/backups/secrets/get',
+  // DELETE
+  secretsClear: '/v1/backups/secrets',
+} as const;
+
+/** A route with its parameters filled in, e.g. backupPath(BACKUP_ROUTES.read, { id }). */
+export function backupPath(route: string, params: Record<string, string | number>): string {
+  return route.replace(/:([A-Za-z]+)/g, (_, key: string) => encodeURIComponent(String(params[key])));
+}
+
+// One chunk of a snapshot before base64; its request body is that base64 in JSON
+export const BACKUP_CHUNK_BYTES = 4 * 1024 * 1024;
+export const BACKUP_CHUNK_BODY_BYTES = Math.ceil((BACKUP_CHUNK_BYTES * 4) / 3) + 4096;
+// A gzipped snapshot at most (its JSON must also fit in one string to be read back)
+export const BACKUP_MAX_BYTES = 256 * 1024 * 1024;
+// Kept: the last 14 snapshots, and the newest of each day for 30 days
+export const BACKUP_KEEP_LAST = 14;
+export const BACKUP_KEEP_DAYS = 30;
+
+export const backupIdSchema = z.string().regex(/^\d{13}-[a-f0-9]{8}$/);
+export const backupUploadIdSchema = z.string().regex(/^[a-f0-9]{32}$/);
+const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+const base64Schema = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/);
+// What a snapshot holds, by table or area, for the list ("312 chats, 4 meetings")
+export const backupCountsSchema = z
+  .record(z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/), z.number().int().nonnegative())
+  .refine(counts => Object.keys(counts).length <= 100, 'Too many counts.');
+
+export const backupMetaSchema = z.object({
+  id: backupIdSchema,
+  createdAt: z.number().int().nonnegative(),
+  bytes: z.number().int().positive().max(BACKUP_MAX_BYTES),
+  sha256: sha256Schema,
+  // The extension's database version the snapshot was taken at
+  dbVersion: z.number().int().positive().max(100_000),
+  extensionVersion: z.string().max(40),
+  counts: backupCountsSchema,
+});
+export type BackupMeta = z.infer<typeof backupMetaSchema>;
+
+export const backupBeginRequestSchema = backupMetaSchema.omit({ id: true }).extend({ requestId: requestIdSchema });
+export type BackupBeginRequest = z.infer<typeof backupBeginRequestSchema>;
+export const backupBeginReplySchema = z.object({
+  ok: z.literal(true),
+  uploadId: backupUploadIdSchema,
+  chunkBytes: z.number().int().positive(),
+});
+
+export const backupChunkRequestSchema = z.object({ data: base64Schema.min(1).max(BACKUP_CHUNK_BODY_BYTES) });
+export const backupCommitReplySchema = z.object({ ok: z.literal(true), snapshot: backupMetaSchema });
+
+export const backupSecretsStateSchema = z.object({
+  storedAt: z.number().int().nonnegative().nullable(),
+  count: z.number().int().nonnegative(),
+});
+export const backupListReplySchema = z.object({
+  ok: z.literal(true),
+  snapshots: z.array(backupMetaSchema).max(200),
+  secrets: backupSecretsStateSchema,
+});
+export type BackupListReply = z.infer<typeof backupListReplySchema>;
+
+export const backupReadRequestSchema = z.object({ index: z.number().int().nonnegative().max(10_000) });
+export const backupReadReplySchema = z.object({
+  ok: z.literal(true),
+  index: z.number().int().nonnegative(),
+  chunks: z.number().int().positive(),
+  data: base64Schema.max(BACKUP_CHUNK_BODY_BYTES),
+});
+
+// A name in the extension's vault, e.g. "llm:openai"
+export const backupSecretRefSchema = z.string().regex(/^[A-Za-z0-9:._@/-]{1,200}$/);
+export const BACKUP_SECRETS_MAX = 500;
+export const backupSecretsSchema = z
+  .record(backupSecretRefSchema, z.string().min(1).max(20_000))
+  .refine(secrets => Object.keys(secrets).length <= BACKUP_SECRETS_MAX, 'Too many keys.');
+export const backupSecretsPutRequestSchema = z.object({ requestId: requestIdSchema, secrets: backupSecretsSchema });
+export const backupSecretsGetReplySchema = z.object({
+  ok: z.literal(true),
+  secrets: backupSecretsSchema,
+  storedAt: z.number().int().nonnegative().nullable(),
+});
+
 // ── Replies, in general ───────────────────────────────────────────────────────────────────────────
 
 /** Whether a parsed body is the companion's error reply. */

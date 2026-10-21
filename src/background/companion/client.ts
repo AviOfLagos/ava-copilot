@@ -6,6 +6,14 @@ import {
   artifactCreateReplySchema,
   artifactListReplySchema,
   artifactOpenReplySchema,
+  BACKUP_ROUTES,
+  backupBeginReplySchema,
+  backupCommitReplySchema,
+  backupListReplySchema,
+  backupPath,
+  backupReadReplySchema,
+  backupSecretsGetReplySchema,
+  backupSecretsStateSchema,
   COMPANION_HOST,
   COMPANION_ROUTES,
   errorReplySchema,
@@ -30,6 +38,7 @@ import {
 } from '@src/shared/lib/protocol/companion';
 import type {
   ArtifactCreateRequest,
+  BackupBeginRequest,
   GhRequest,
   HealthReply,
   SandboxRunRequest,
@@ -671,6 +680,124 @@ export class CompanionClient {
       body: request,
       schema: whatsappSendReplySchema,
       timeoutMs: 30_000,
+    });
+  }
+
+  // ── Backups (src/background/backup) ──
+
+  /** Whether Nex Brain answers on its port at all, paired or not: an answer without a token is a 401. */
+  async reachable(): Promise<boolean> {
+    try {
+      await this.call({
+        method: 'POST',
+        path: COMPANION_ROUTES.health,
+        body: { fresh: false },
+        schema: healthReplySchema,
+        auth: false,
+        bypassBreaker: true,
+        timeoutMs: 4000,
+      });
+      return true;
+    } catch (error) {
+      const kind = toAppError(error).kind;
+      return kind !== 'network' && kind !== 'timeout';
+    }
+  }
+
+  backupList() {
+    return this.call({
+      method: 'POST',
+      path: BACKUP_ROUTES.list,
+      body: {},
+      schema: backupListReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 15_000,
+    });
+  }
+
+  backupBegin(request: BackupBeginRequest) {
+    return this.call({
+      method: 'POST',
+      path: BACKUP_ROUTES.begin,
+      body: request,
+      schema: backupBeginReplySchema,
+      idempotent: true,
+      timeoutMs: 15_000,
+    });
+  }
+
+  /** Nex Brain accepts the last part again, so a part whose answer was lost may be sent twice. */
+  backupChunk(uploadId: string, index: number, data: string) {
+    return this.call({
+      method: 'PUT',
+      path: backupPath(BACKUP_ROUTES.chunk, { uploadId, index }),
+      body: { data },
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  backupCommit(uploadId: string) {
+    return this.call({
+      method: 'POST',
+      path: backupPath(BACKUP_ROUTES.commit, { uploadId }),
+      body: {},
+      schema: backupCommitReplySchema,
+      timeoutMs: 60_000,
+    });
+  }
+
+  backupRead(id: string, index: number) {
+    return this.call({
+      method: 'POST',
+      path: backupPath(BACKUP_ROUTES.read, { id }),
+      body: { index },
+      schema: backupReadReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  backupRemove(id: string) {
+    return this.call({
+      method: 'DELETE',
+      path: backupPath(BACKUP_ROUTES.remove, { id }),
+      schema: okReplySchema,
+      timeoutMs: 15_000,
+    });
+  }
+
+  backupSecretsPut(requestId: string, secrets: Record<string, string>) {
+    return this.call({
+      method: 'POST',
+      path: BACKUP_ROUTES.secretsPut,
+      body: { requestId, secrets },
+      schema: backupSecretsStateSchema.extend({ ok: okReplySchema.shape.ok }),
+      timeoutMs: 30_000,
+    });
+  }
+
+  backupSecretsGet() {
+    return this.call({
+      method: 'POST',
+      path: BACKUP_ROUTES.secretsGet,
+      body: {},
+      schema: backupSecretsGetReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 30_000,
+    });
+  }
+
+  backupSecretsClear() {
+    return this.call({
+      method: 'DELETE',
+      path: BACKUP_ROUTES.secretsClear,
+      schema: okReplySchema,
+      timeoutMs: 15_000,
     });
   }
 }

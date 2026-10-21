@@ -13,7 +13,7 @@ import type { CommandContext } from '../registry';
 export const SETTINGS_PORT_NAME = MODELS_PORT_NAME;
 
 // What settings sections send: models, voice engines and downloads, previews, devices, Nex Brain, identity and
-// memory, AI history, the Inbox's watch, and install-before-use checks
+// memory, AI history, backups, the Inbox's watch, and install-before-use checks
 export const SETTINGS_COMMAND_PREFIXES = [
   'models_',
   'voice_engine_',
@@ -24,6 +24,7 @@ export const SETTINGS_COMMAND_PREFIXES = [
   'identity_',
   'memory_',
   'history_',
+  'backup_',
   'inbox_watch_now',
 ] as const;
 
