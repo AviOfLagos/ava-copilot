@@ -108,7 +108,7 @@ test('every page opens from the nav and draws its sections; one control per page
     'memory-backups',
     'memory-data',
   ]);
-  assert.deepEqual(seen.connections, ['connectors', 'obsidian', 'calendar', 'brain']);
+  assert.deepEqual(seen.connections, ['connectors', 'obsidian', 'calendar', 'brain', 'whatsapp-remote']);
   assert.deepEqual(seen.meetings, ['meetings', 'brief', 'inbox']);
   assert.deepEqual(seen.privacy, ['firewall', 'skills']);
   assert.deepEqual(seen.help, ['help-install', 'help-tasks']);
