@@ -2274,6 +2274,14 @@ files 0600 in `backups/` (0700), the last 14 kept plus the newest of each day fo
   Backups. Export/Import in Settings › Memory now write and read the same snapshot as a `.json.gz` file (no keys;
   the old knowledge-only export still imports); an imported file is size-limited, gunzip-capped and zod-checked,
   and reaches the background through OPFS.
+- **Review fixes** (`trust.ts`): secret-named fields (apiKey, token, accessToken, refreshToken, secret, password,
+  clientSecret, authorization, cookie…, any case, nested) are emptied in every row and storage value of every
+  snapshot. A file restore is untrusted: firewall, gate, skills and workflow settings and the approved tool pins
+  (`toolFingerprints`) stay as they are; a provider whose type/baseUrl differs from the current one (or its known
+  default) loses `keyRef`/`hasKey`; a connector whose server changed asks for sign-in again (its vault entries are
+  deleted) and tool policies are always this browser's. The import confirm says "Only import a file you exported
+  yourself." Jobs are never restored (excluded and cleared); recovery schedules them again: workflows and agents
+  from their records, and now Inbox snoozes too (`rescheduleSnoozes`). Test: `backup/__tests__/trust.test.ts`.
 
 Tests: `src/background/backup/__tests__/backup.test.ts` (coverage of every table and store key, round trip,
 full replace, migration through a real upgrade, newer refused, keys apart and toggle, debounce),

@@ -196,6 +196,7 @@ export function MemoryDataSection({ api }: { api: PanelApi }) {
       {picked && !restoreFile.done && (
         <RestoreConfirm
           question={t('backup_file_confirm', [when(picked.snapshot.createdAt), describeCounts(picked.snapshot.counts)])}
+          warning={t('backup_file_warning')}
           busy={restoreFile.busy}
           onCancel={() => setPicked(null)}
           onConfirm={() => void restorePicked()}

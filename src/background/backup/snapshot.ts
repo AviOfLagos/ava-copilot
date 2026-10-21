@@ -3,6 +3,7 @@ import type { Dexie, IndexableType, Table } from 'dexie';
 import { AppError } from '@extension/shared';
 import { BACKUP_MAX_BYTES } from '@src/shared/lib/protocol/companion';
 import { decodeValue, encodeValue, gunzip, gzip, isGzip } from './codec';
+import { redactSecrets } from './trust';
 
 /**
  * A snapshot of everything Nex Copilot keeps on this browser that an uninstall would wipe: every table of the
@@ -35,6 +36,10 @@ export const EXCLUDED_TABLES: Record<string, { reason: string; onRestore: 'keep'
     onRestore: 'clear',
   },
   modelCatalog: { reason: "The providers' model lists, read again from each provider.", onRestore: 'keep' },
+  jobs: {
+    reason: "Scheduled work and its claims: each feature's recovery schedules its own again from what it stores.",
+    onRestore: 'clear',
+  },
 };
 
 /** Keys of chrome.storage.local left out: state of this install, not the user's memory or settings. */
@@ -166,8 +171,9 @@ export async function buildSnapshot(source: SnapshotSource): Promise<BuiltSnapsh
     let tagged = false;
     for await (const rows of pages(table)) {
       for (const row of rows) {
-        const value = await encodeValue(row);
-        if (value !== row) tagged = true;
+        const clean = redactSecrets(row);
+        const value = await encodeValue(clean);
+        if (value !== clean) tagged = true;
         push(`${count ? ',' : ''}${JSON.stringify(value)}`);
         count += 1;
       }
@@ -182,8 +188,9 @@ export async function buildSnapshot(source: SnapshotSource): Promise<BuiltSnapsh
   let storageEncoded = false;
   for (const [key, value] of Object.entries(area)) {
     if (isExcludedStorageKey(key)) continue;
-    const kept = await encodeValue(value);
-    if (kept !== value) storageEncoded = true;
+    const clean = redactSecrets(value);
+    const kept = await encodeValue(clean);
+    if (kept !== clean) storageEncoded = true;
     storage[key] = kept;
   }
   counts.storageKeys = Object.keys(storage).length;

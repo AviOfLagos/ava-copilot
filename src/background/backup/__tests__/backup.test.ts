@@ -126,17 +126,21 @@ describe('restore', () => {
     expect(summary.modelsRestored).toBe(true);
   });
 
-  it('is a full replace: rows that are not in the snapshot are gone, jobs lose their old claims', async () => {
+  it('is a full replace: rows that are not in the snapshot are gone, and no job is restored', async () => {
     const source = freshDb();
     await source.threads.put({ id: 'kept' } as never);
     await source.jobs.put({ id: 'j1', key: 'k', kind: 'x', status: 'running', leaseUntil: 9e12, runAt: 1 } as never);
     const { snapshot } = await snapshotOf(source);
+    expect(snapshot.db.tables).not.toHaveProperty('jobs');
+    // Even a snapshot (or a crafted file) that carries jobs does not bring them back
+    snapshot.db.tables.jobs = [{ id: 'j2', key: 'k2', kind: 'x', status: 'scheduled', runAt: 1 }];
     const target = freshDb();
     await target.threads.put({ id: 'local-only' } as never);
+    await target.jobs.put({ id: 'j-local', key: 'kl', kind: 'x', status: 'scheduled', runAt: 1 } as never);
     await target.logs.put({ id: 'log-1', at: 1, level: 'info' } as never);
     await restoreSnapshot(snapshot, { db: target, makeDb: name => new AviCopilotDb(name), storage: memoryArea() });
     expect((await target.threads.toArray()).map(thread => thread.id)).toEqual(['kept']);
-    expect(await target.jobs.get('j1')).toMatchObject({ status: 'scheduled', leaseUntil: null });
+    expect(await target.jobs.count()).toBe(0);
     // Excluded tables kept as they were on this browser
     expect(await target.logs.count()).toBe(1);
   });

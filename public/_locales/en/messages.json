@@ -9173,5 +9173,8 @@
   },
   "backup_onboard_back": {
     "message": "Set up from scratch instead"
+  },
+  "backup_file_warning": {
+    "message": "Only import a file you exported yourself. A file keeps this browser's firewall, confirmation and skill settings, and any model or connector that points somewhere new asks for its key again."
   }
 }

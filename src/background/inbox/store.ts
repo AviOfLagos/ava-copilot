@@ -142,6 +142,27 @@ export async function wakeSnoozed(id: string, database: AviCopilotDb = defaultDb
   if (item?.status === 'snoozed') await touch(id, { status: 'unread', snoozeUntil: null }, database);
 }
 
+/**
+ * After a restart: every snoozed item has its wake-up job, made again from the item itself (scheduling the same key
+ * replaces it). A restore from a backup clears the job table, so the items are the record of their snoozes.
+ */
+export async function rescheduleSnoozes(
+  schedule: (request: { kind: string; key: string; runAt: number; payload: { id: string } }) => Promise<unknown>,
+  keyOf: (id: string) => string,
+  database: AviCopilotDb = defaultDb,
+): Promise<number> {
+  const snoozed = await database.inbox.where('status').equals('snoozed').toArray();
+  for (const item of snoozed) {
+    await schedule({
+      kind: 'inbox_unsnooze',
+      key: keyOf(item.id),
+      runAt: item.snoozeUntil ?? Date.now(),
+      payload: { id: item.id },
+    });
+  }
+  return snoozed.length;
+}
+
 /** done items older than the retention window are removed; returns how many. */
 export async function pruneDone(database: AviCopilotDb = defaultDb, now: number = Date.now()): Promise<number> {
   return database.inbox

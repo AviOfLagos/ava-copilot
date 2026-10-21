@@ -15,7 +15,7 @@ import { answerApproval, registerApprovalHandler } from './approvals';
 import { refreshBadge } from './badge';
 import { RETENTION_CRON, RETENTION_JOB_KEY, WATCH_CRON, WATCH_JOB_KEY, snoozeJobKey } from './constants';
 import { notifyHighPriority } from './notify';
-import { markDone, markRead, markUnread, pruneDone, snoozeItem, wakeSnoozed } from './store';
+import { markDone, markRead, markUnread, pruneDone, rescheduleSnoozes, snoozeItem, wakeSnoozed } from './store';
 import { registerInboxVoiceTools } from './voice';
 import { runWatchers } from './watchers';
 
@@ -122,6 +122,7 @@ registerInboxVoiceTools();
 registerRecovery('inbox', async () => {
   await jobs.schedule({ kind: 'inbox_retention', key: RETENTION_JOB_KEY, cron: RETENTION_CRON });
   await jobs.schedule({ kind: 'inbox_watch', key: WATCH_JOB_KEY, cron: WATCH_CRON });
+  await rescheduleSnoozes(request => jobs.schedule(request), snoozeJobKey);
   await refreshBadge();
   // A meeting about to start is said aloud when nobody else already will: index.ts's own handler
   // speaks it over a running Live conversation, so this only fills in the local-TTS fallback.
