@@ -223,8 +223,10 @@ describe('a file from disk is untrusted', () => {
     expect(providers.openai).toMatchObject({ baseUrl: 'https://evil.example/v1', hasKey: false });
     expect(providers.openai).not.toHaveProperty('keyRef');
     expect(providers.custom1).not.toHaveProperty('keyRef');
-    expect(providers.anthropic).toMatchObject({ keyRef: 'llm:anthropic', hasKey: true });
-    expect(summary.unbound.providers.sort()).toEqual(['custom1', 'openai']);
+    // Not set up in this browser: a file never says which saved key it uses
+    expect(providers.anthropic).toMatchObject({ hasKey: false });
+    expect(providers.anthropic).not.toHaveProperty('keyRef');
+    expect(summary.unbound.providers.sort()).toEqual(['anthropic', 'custom1', 'openai']);
 
     expect(storage.map.get('firewall-settings')).toEqual({ enabled: true });
     expect(storage.map.get('gate-settings')).toEqual({ confirm: ['send', 'delete'] });
@@ -234,8 +236,10 @@ describe('a file from disk is untrusted', () => {
     const c1 = (await db.connectors.get('c1')) as ConnectorRecord;
     expect(c1).toMatchObject({
       url: 'https://evil.example/mcp',
-      status: 'needs_auth',
-      toolPolicy: { send: 'approve' },
+      // Moved: off, in no workspace, and every tool asks, until the user confirms the new server
+      status: 'disabled',
+      workspaceIds: [],
+      toolPolicy: {},
     });
     expect((await db.connectors.get('c2'))?.toolPolicy).toEqual({ send: 'approve' });
     expect(summary.unbound.connectors).toEqual(['c1']);
@@ -244,7 +248,8 @@ describe('a file from disk is untrusted', () => {
     expect(vault.values.get('conn:c2:token')).toBe('t2');
     expect(vault.values.get('llm:openai')).toBe('sk-mine');
     // Tool approvals are this browser's
-    expect((await db.toolFingerprints.get('c1:send'))?.hash).toBe('mine');
+    // c1 moved: the tools approved for its old server are not approved for the new one
+    expect(await db.toolFingerprints.get('c1:send')).toBeUndefined();
   });
 
   it('a Nex Brain snapshot (the user’s own) still restores in full', async () => {
@@ -316,5 +321,55 @@ describe('scheduled work after a restore', () => {
       kind: 'inbox_unsnooze',
       runAt: snoozedUntil,
     });
+  });
+});
+
+describe('a file never chooses keys or permissions', () => {
+  it("keeps this browser's key binding when the endpoint matches, whatever key the file names", async () => {
+    const { unbindMovedProviders } = await import('../trust');
+    const here = {
+      providers: { openai: { type: 'openai', baseUrl: '', apiKey: '', keyRef: 'llm:openai', hasKey: true } },
+    };
+    const file = {
+      providers: { openai: { type: 'openai', baseUrl: '', apiKey: '', keyRef: 'conn:github:token', hasKey: true } },
+    };
+    const { value } = unbindMovedProviders(file, here);
+    expect((value as typeof file).providers.openai).toMatchObject({ keyRef: 'llm:openai', hasKey: true });
+  });
+
+  it("keeps this browser's sign-in, scope and tool rules for a connector on the same server", async () => {
+    const { unbindMovedConnectors } = await import('../trust');
+    const existing = {
+      id: 'c1',
+      kind: 'remote',
+      url: 'https://mcp.example/mcp',
+      name: 'Mine',
+      authKind: 'token',
+      secretRef: 'conn:c1:token',
+      workspaceIds: ['work'],
+      toolPolicy: { send: 'approve' },
+      status: 'connected',
+    };
+    const file = { ...existing, name: 'Renamed', workspaceIds: ['work', 'personal'], toolPolicy: { send: 'allow' } };
+    const { rows, unbound } = unbindMovedConnectors([file], [existing as never]);
+    expect(unbound).toEqual([]);
+    expect(rows[0]).toMatchObject({ name: 'Renamed', workspaceIds: ['work'], toolPolicy: { send: 'approve' } });
+  });
+
+  it('starts a new or moved connector disabled, in no workspace, with every tool asking', async () => {
+    const { unbindMovedConnectors } = await import('../trust');
+    const file = {
+      id: 'new1',
+      kind: 'remote',
+      url: 'https://evil.example/mcp',
+      authKind: 'none',
+      secretRef: null,
+      workspaceIds: ['work'],
+      toolPolicy: { send: 'allow' },
+      status: 'connected',
+    };
+    const { rows, unbound } = unbindMovedConnectors([file], []);
+    expect(unbound).toEqual(['new1']);
+    expect(rows[0]).toMatchObject({ status: 'disabled', workspaceIds: [], toolPolicy: {} });
   });
 });

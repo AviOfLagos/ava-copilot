@@ -125,11 +125,21 @@ export async function restoreSnapshot(
       for (const table of replaced as Table[]) {
         await table.clear();
         if (Object.hasOwn(EXCLUDED_TABLES, table.name)) continue;
-        const kept = rows[table.name] ?? [];
+        let kept = rows[table.name] ?? [];
+        // Tool approvals a moved or new connector had are not carried to its new server
+        if (table.name === 'toolFingerprints' && unboundConnectors.length) {
+          kept = kept.filter(
+            pin => !unboundConnectors.includes(String((pin as { connectorId?: unknown }).connectorId)),
+          );
+        }
         if (kept.length) await table.bulkPut(kept);
         counts[table.name] = kept.length;
       }
     });
+
+    if (untrusted && unboundConnectors.length && db.tables.some(table => table.name === 'toolFingerprints')) {
+      await db.table('toolFingerprints').where('connectorId').anyOf(unboundConnectors).delete();
+    }
 
     // chrome.storage.local: the user's keys replaced, this install's own (pairing, caches) left as they are
     // (and, from a file, this browser's security settings)

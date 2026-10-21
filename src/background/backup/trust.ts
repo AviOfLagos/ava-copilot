@@ -1,6 +1,4 @@
 import type { ConnectorRecord, ProviderConfig } from '@extension/storage';
-import { getDefaultProviderConfig } from '@extension/storage/lib/settings/llmProviders';
-import { ProviderTypeEnum } from '@extension/storage/lib/settings/types';
 
 /**
  * What a backup may carry, and what a restore may believe.
@@ -10,8 +8,9 @@ import { ProviderTypeEnum } from '@extension/storage/lib/settings/types';
  *    emptied before a snapshot is written. Keys go only through the Keychain path (./service.ts).
  * 2. A file from disk is not the user's own Nex Brain: anyone could have made it. Restoring one keeps this
  *    browser's security settings (firewall, what asks first, installed skills, approved connector tools), and
- *    unbinds every key from a model provider or connector whose endpoint is not the one it has now (or, when there is
- *    none, the provider's known default), so a crafted file cannot point a saved key at another server.
+ *    never takes a key binding, sign-in, workspace scope or tool rule from the file: a provider or connector keeps
+ *    this browser's own only when its endpoint is the one it has here now, so a crafted file cannot point a saved
+ *    key at another server or name another saved key.
  */
 
 // Lower-cased, without "-" and "_": a field with one of these names, or ending in one, holds a secret
@@ -89,11 +88,10 @@ function providerEndpoint(config: Pick<ProviderConfig, 'type' | 'baseUrl'>): str
   return `${config.type ?? ''}|${endpoint(config.baseUrl)}`;
 }
 
-const BUILT_IN = new Set<string>(Object.values(ProviderTypeEnum));
-
 /**
- * The model providers of a file, each still bound to its key only when its endpoint is the one it has here now, or
- * the provider's known default when this browser has none. Returns the providers whose key was unbound.
+ * The model providers of a file. A file never says which saved key a provider uses: its keyRef, hasKey and keyLast4
+ * are dropped, and a provider keeps this browser's own binding only when its endpoint is the one it has here now.
+ * Otherwise it has no key until the user enters one. Returns the providers whose key was unbound.
  */
 export function unbindMovedProviders(incoming: unknown, current: unknown): { value: unknown; unbound: string[] } {
   const providers = (incoming as { providers?: Record<string, ProviderConfig> } | null)?.providers;
@@ -102,20 +100,20 @@ export function unbindMovedProviders(incoming: unknown, current: unknown): { val
   const unbound: string[] = [];
   const next: Record<string, ProviderConfig> = {};
   for (const [id, config] of Object.entries(providers)) {
-    const reference = here[id] ?? (BUILT_IN.has(id) ? getDefaultProviderConfig(id) : undefined);
-    const bound = Boolean(config?.keyRef || config?.hasKey);
-    if (bound && (!reference || providerEndpoint(reference) !== providerEndpoint(config))) {
-      next[id] = {
-        ...config,
-        apiKey: PLACEHOLDERS.has(config.apiKey ?? '') ? (config.apiKey ?? '') : '',
-        hasKey: false,
-      };
-      delete next[id].keyRef;
-      delete next[id].keyLast4;
-      unbound.push(id);
-    } else {
-      next[id] = config;
+    const rest: Partial<ProviderConfig> = { ...config };
+    delete rest.keyRef;
+    delete rest.keyLast4;
+    const local = here[id];
+    const apiKey = PLACEHOLDERS.has(config?.apiKey ?? '') ? (config?.apiKey ?? '') : '';
+    if (local && providerEndpoint(local) === providerEndpoint(config)) {
+      const binding: Partial<ProviderConfig> = { hasKey: local.hasKey };
+      if (local.keyRef) binding.keyRef = local.keyRef;
+      if (local.keyLast4) binding.keyLast4 = local.keyLast4;
+      next[id] = { ...rest, apiKey: local.apiKey ?? apiKey, ...binding } as ProviderConfig;
+      continue;
     }
+    if (config?.keyRef || config?.hasKey) unbound.push(id);
+    next[id] = { ...rest, apiKey, hasKey: false } as ProviderConfig;
   }
   return { value: { ...(incoming as object), providers: next }, unbound };
 }
@@ -124,9 +122,23 @@ function connectorEndpoint(connector: Partial<ConnectorRecord>): string {
   return [connector.kind, endpoint(connector.url), endpoint(connector.oauth?.authorizationServerUrl ?? null)].join('|');
 }
 
+// What decides where a connector's sign-in goes and what it may do: always this browser's, never a file's
+const CONNECTOR_SECURITY_FIELDS = [
+  'authKind',
+  'secretRef',
+  'tokenHeader',
+  'oauth',
+  'credential',
+  'workspaceIds',
+  'toolPolicy',
+  'status',
+] as const;
+
 /**
- * The connectors of a file: one whose server is not the one this browser has under that id loses its sign-in
- * (the caller deletes the vault entries) and asks for it again; tool permissions are this browser's, never the file's.
+ * The connectors of a file. One whose server is the one this browser has under that id keeps this browser's
+ * sign-in, scope and tool permissions (only its descriptive fields come from the file). Any other, a new one
+ * included, starts disabled with no sign-in and every tool asking first, so the user confirms the server; the caller
+ * deletes its vault entries and approved tool pins.
  */
 export function unbindMovedConnectors(
   incoming: Record<string, unknown>[],
@@ -137,13 +149,20 @@ export function unbindMovedConnectors(
   const rows = incoming.map(row => {
     const connector = row as unknown as ConnectorRecord;
     const existing = here.get(connector.id);
-    const toolPolicy = existing?.toolPolicy ?? {};
-    if (existing && connectorEndpoint(existing) === connectorEndpoint(connector)) return { ...row, toolPolicy };
+    if (existing && connectorEndpoint(existing) === connectorEndpoint(connector)) {
+      const kept: Record<string, unknown> = { ...row };
+      for (const field of CONNECTOR_SECURITY_FIELDS)
+        kept[field] = (existing as unknown as Record<string, unknown>)[field];
+      return kept;
+    }
     unbound.push(connector.id);
     return {
       ...row,
-      toolPolicy,
-      status: connector.authKind === 'none' ? connector.status : 'needs_auth',
+      authKind: connector.authKind,
+      secretRef: null,
+      workspaceIds: [],
+      toolPolicy: {},
+      status: 'disabled',
       credential: null,
       oauth: connector.oauth ? { ...connector.oauth, hasClientSecret: false } : connector.oauth,
     };
