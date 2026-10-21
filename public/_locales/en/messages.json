@@ -9176,5 +9176,131 @@
   },
   "backup_file_warning": {
     "message": "Only import a file you exported yourself. A file keeps this browser's firewall, confirmation and skill settings, and any model or connector that points somewhere new asks for its key again."
+  },
+  "vault_brain_title": {
+    "message": "Your vaults on this Mac"
+  },
+  "vault_brain_hint": {
+    "message": "Nex Brain reads and writes the vault on your Mac: no folder permission, nothing to allow again after a restart, and it stays chosen after a reinstall."
+  },
+  "vault_brain_found": {
+    "message": "Your vaults"
+  },
+  "vault_brain_looking": {
+    "message": "Asking Nex Brain for your vaults…"
+  },
+  "vault_brain_none": {
+    "message": "Nex Brain found no vaults in Obsidian’s list. Type the vault’s folder below."
+  },
+  "vault_brain_missing": {
+    "message": "Not found on this Mac any more"
+  },
+  "vault_brain_use": {
+    "message": "Use"
+  },
+  "vault_brain_useNamed": {
+    "message": "Use $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Vault"
+      }
+    }
+  },
+  "vault_brain_other": {
+    "message": "Other folder…"
+  },
+  "vault_brain_other_hint": {
+    "message": "The full path of a folder with an .obsidian folder in it, like ~/Documents/My Vault."
+  },
+  "vault_brain_on": {
+    "message": "Through Nex Brain on your Mac, every 10 minutes, with the panel closed too."
+  },
+  "vault_brain_lastError": {
+    "message": "The last sync failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Nex Brain is not running"
+      }
+    }
+  },
+  "conn_setup_obsidianBrain": {
+    "message": "Nex Brain can reach your vault on the Mac. In Settings › Connections › Obsidian, press Use next to your vault."
+  },
+  "settings_calendar_mac_title": {
+    "message": "Read from your Mac’s Calendar"
+  },
+  "settings_calendar_mac_hint": {
+    "message": "Through Nex Brain: every account in macOS Calendar, Google Workspace too, with nothing to copy."
+  },
+  "settings_calendar_mac_unpaired": {
+    "message": "Pair Nex Brain (Settings › Nex Brain) to read your Mac’s Calendar. Until then, use the secret iCal address below."
+  },
+  "settings_calendar_mac_checking": {
+    "message": "Asking your Mac’s Calendar…"
+  },
+  "settings_calendar_mac_check": {
+    "message": "Check again"
+  },
+  "settings_calendar_mac_allow": {
+    "message": "Allow access"
+  },
+  "settings_calendar_mac_asking": {
+    "message": "Answer the prompt on your Mac…"
+  },
+  "settings_calendar_mac_step_allow": {
+    "message": "Press Allow access, then choose Allow in the macOS prompt (it names “node”, which Nex Brain runs as)."
+  },
+  "settings_calendar_mac_step_settings": {
+    "message": "No prompt, or refused before? Open System Settings › Privacy & Security › Calendars and turn on “node” with Full Access."
+  },
+  "settings_calendar_mac_step_check": {
+    "message": "Press Check again."
+  },
+  "settings_calendar_mac_unavailable": {
+    "message": "The Mac’s Calendar cannot be read here."
+  },
+  "settings_calendar_mac_noCalendars": {
+    "message": "macOS Calendar has no calendars yet."
+  },
+  "settings_calendar_mac_accounts": {
+    "message": "Not seeing your Google calendar? Add your Google account in System Settings › Internet Accounts and turn on Calendars."
+  },
+  "settings_calendar_source_mac": {
+    "message": "Reading from your Mac’s Calendar."
+  },
+  "settings_calendar_source_ics": {
+    "message": "Reading from the iCal address."
+  },
+  "settings_calendar_lastError": {
+    "message": "The calendar could not be read: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The calendar answered 404"
+      }
+    }
+  },
+  "settings_calendar_ics_title": {
+    "message": "Or the secret iCal address"
+  },
+  "settings_calendar_account": {
+    "message": "Google account"
+  },
+  "settings_calendar_account_n": {
+    "message": "Google account $N$",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "settings_calendar_account_hint": {
+    "message": "With several Google accounts signed in, pick the one whose calendar you want (in sign-in order)."
+  },
+  "settings_calendar_secretDisabled": {
+    "message": "This Google account has no secret iCal address: its Workspace admin turned them off. Read your Mac’s Calendar through Nex Brain instead (add the account in System Settings › Internet Accounts), or paste an address from another calendar."
   }
 }

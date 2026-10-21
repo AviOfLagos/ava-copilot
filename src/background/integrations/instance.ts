@@ -9,6 +9,7 @@ import {
   workspaceStore,
 } from '@extension/storage';
 import type { VaultState } from '@extension/storage';
+import { brainSettingsStore } from '../companion/state';
 import { postReconnectAlert } from './alerts';
 import { OAuthManager } from './oauth';
 import type { SessionAreaLike } from './oauth';
@@ -62,6 +63,7 @@ export const connectionSetup = new ConnectionSetup({
     const kept = (await chrome.storage.local.get(VAULT_STATE_KEY))[VAULT_STATE_KEY] as VaultState | undefined;
     return kept ?? { support: null, name: null, access: null };
   },
+  brainPaired: async () => (await brainSettingsStore.getSettings()).paired,
   // Brave marks itself on navigator, in workers too
   isBrave: () => Boolean((navigator as Navigator & { brave?: unknown }).brave),
   providerHasKey: async provider => providerHasKey((await llmProviderStore.getAllProviders())[provider]),

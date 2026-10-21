@@ -9176,5 +9176,131 @@
   },
   "backup_file_warning": {
     "message": "Importe apenas um arquivo que você mesmo exportou. Um arquivo mantém o firewall, as confirmações e as skills deste navegador, e qualquer modelo ou conector que aponte para outro lugar pede a chave de novo."
+  },
+  "vault_brain_title": {
+    "message": "Seus cofres neste Mac"
+  },
+  "vault_brain_hint": {
+    "message": "O Nex Brain lê e grava o cofre no seu Mac: sem permissão de pasta, nada a permitir de novo após reiniciar, e ele continua escolhido após reinstalar."
+  },
+  "vault_brain_found": {
+    "message": "Seus cofres"
+  },
+  "vault_brain_looking": {
+    "message": "Pedindo seus cofres ao Nex Brain…"
+  },
+  "vault_brain_none": {
+    "message": "O Nex Brain não encontrou cofres na lista do Obsidian. Digite a pasta do cofre abaixo."
+  },
+  "vault_brain_missing": {
+    "message": "Não encontrado mais neste Mac"
+  },
+  "vault_brain_use": {
+    "message": "Usar"
+  },
+  "vault_brain_useNamed": {
+    "message": "Usar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Vault"
+      }
+    }
+  },
+  "vault_brain_other": {
+    "message": "Outra pasta…"
+  },
+  "vault_brain_other_hint": {
+    "message": "O caminho completo de uma pasta que contém uma pasta .obsidian, como ~/Documents/Meu Cofre."
+  },
+  "vault_brain_on": {
+    "message": "Pelo Nex Brain no seu Mac, a cada 10 minutos, mesmo com o painel fechado."
+  },
+  "vault_brain_lastError": {
+    "message": "A última sincronização falhou: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Nex Brain is not running"
+      }
+    }
+  },
+  "conn_setup_obsidianBrain": {
+    "message": "O Nex Brain alcança seu cofre no Mac. Em Configurações › Conexões › Obsidian, toque em Usar ao lado do seu cofre."
+  },
+  "settings_calendar_mac_title": {
+    "message": "Ler do Calendário do seu Mac"
+  },
+  "settings_calendar_mac_hint": {
+    "message": "Pelo Nex Brain: todas as contas do Calendário do macOS, inclusive Google Workspace, sem nada para copiar."
+  },
+  "settings_calendar_mac_unpaired": {
+    "message": "Pareie o Nex Brain (Configurações › Nex Brain) para ler o Calendário do seu Mac. Até lá, use o endereço iCal secreto abaixo."
+  },
+  "settings_calendar_mac_checking": {
+    "message": "Consultando o Calendário do seu Mac…"
+  },
+  "settings_calendar_mac_check": {
+    "message": "Verificar de novo"
+  },
+  "settings_calendar_mac_allow": {
+    "message": "Permitir acesso"
+  },
+  "settings_calendar_mac_asking": {
+    "message": "Responda ao aviso no seu Mac…"
+  },
+  "settings_calendar_mac_step_allow": {
+    "message": "Toque em Permitir acesso e escolha Permitir no aviso do macOS (ele mostra “node”, o programa do Nex Brain)."
+  },
+  "settings_calendar_mac_step_settings": {
+    "message": "Sem aviso, ou recusou antes? Abra Ajustes do Sistema › Privacidade e Segurança › Calendários e ative “node” com Acesso Total."
+  },
+  "settings_calendar_mac_step_check": {
+    "message": "Toque em Verificar de novo."
+  },
+  "settings_calendar_mac_unavailable": {
+    "message": "O Calendário do Mac não pode ser lido aqui."
+  },
+  "settings_calendar_mac_noCalendars": {
+    "message": "O Calendário do macOS ainda não tem calendários."
+  },
+  "settings_calendar_mac_accounts": {
+    "message": "Não vê sua agenda Google? Adicione sua conta Google em Ajustes do Sistema › Contas de Internet e ative Calendários."
+  },
+  "settings_calendar_source_mac": {
+    "message": "Lendo do Calendário do seu Mac."
+  },
+  "settings_calendar_source_ics": {
+    "message": "Lendo do endereço iCal."
+  },
+  "settings_calendar_lastError": {
+    "message": "Não foi possível ler a agenda: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The calendar answered 404"
+      }
+    }
+  },
+  "settings_calendar_ics_title": {
+    "message": "Ou o endereço iCal secreto"
+  },
+  "settings_calendar_account": {
+    "message": "Conta Google"
+  },
+  "settings_calendar_account_n": {
+    "message": "Conta Google $N$",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "settings_calendar_account_hint": {
+    "message": "Com várias contas Google conectadas, escolha aquela cuja agenda você quer (na ordem de login)."
+  },
+  "settings_calendar_secretDisabled": {
+    "message": "Esta conta Google não tem endereço iCal secreto: o administrador do Workspace desativou. Leia o Calendário do seu Mac pelo Nex Brain (adicione a conta em Ajustes do Sistema › Contas de Internet) ou cole o endereço de outra agenda."
   }
 }

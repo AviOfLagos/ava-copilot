@@ -77,8 +77,18 @@ export function redactSecrets<T>(value: T): T {
 
 // ── A file from disk ─────────────────────────────────────────────────────────────────────────────
 
-/** Storage keys a file restore leaves as they are on this browser. */
-export const FILE_KEEP_STORAGE_KEYS = new Set(['firewall-settings', 'gate-settings', 'skills', 'workflow-settings']);
+/**
+ * Storage keys a file restore leaves as they are on this browser. The Obsidian vault on the Mac is one: a file must
+ * not point Nex Brain at a folder (a Nex Brain backup, which this Mac made, restores it).
+ */
+export const FILE_KEEP_STORAGE_KEYS = new Set([
+  'firewall-settings',
+  'gate-settings',
+  'skills',
+  'workflow-settings',
+  'obsidian-vault',
+  'obsidian-vault-sync',
+]);
 /** Tables a file restore leaves as they are: which connector tools the user approved, as they were. */
 export const FILE_KEEP_TABLES = new Set(['toolFingerprints']);
 

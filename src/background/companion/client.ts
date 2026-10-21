@@ -7,6 +7,17 @@ import {
   artifactListReplySchema,
   artifactOpenReplySchema,
   BACKUP_ROUTES,
+  CALENDAR_ROUTES,
+  calendarEventsReplySchema,
+  calendarStatusReplySchema,
+  OBSIDIAN_ROUTES,
+  obsidianChooseReplySchema,
+  obsidianNotesReplySchema,
+  obsidianReadReplySchema,
+  obsidianRemoveReplySchema,
+  obsidianSearchReplySchema,
+  obsidianVaultsReplySchema,
+  obsidianWriteReplySchema,
   backupBeginReplySchema,
   backupCommitReplySchema,
   backupListReplySchema,
@@ -49,6 +60,7 @@ import type {
   WorkflowPutRequest,
   MeetJoinRequest,
   MeetSayRequest,
+  ObsidianWriteRequest,
   WhatsAppQuietRequest,
   WhatsAppSendRequest,
 } from '@src/shared/lib/protocol/companion';
@@ -798,6 +810,135 @@ export class CompanionClient {
       path: BACKUP_ROUTES.secretsClear,
       schema: okReplySchema,
       timeoutMs: 15_000,
+    });
+  }
+
+  // ── Obsidian vault on the Mac (src/background/obsidian) ──
+
+  obsidianVaults() {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.vaults,
+      body: {},
+      schema: obsidianVaultsReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 15_000,
+    });
+  }
+
+  obsidianChoose(requestId: string, path: string) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.choose,
+      body: { requestId, path },
+      schema: obsidianChooseReplySchema,
+      idempotent: true,
+      bypassBreaker: true,
+      timeoutMs: 15_000,
+    });
+  }
+
+  obsidianForget() {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.forget,
+      body: {},
+      schema: okReplySchema,
+      timeoutMs: 15_000,
+    });
+  }
+
+  obsidianNotes(vaultId: string, options: { since?: number; cursor?: string | null; limit?: number } = {}) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.notes,
+      body: { vaultId, since: options.since ?? 0, cursor: options.cursor ?? null, limit: options.limit ?? 1000 },
+      schema: obsidianNotesReplySchema,
+      idempotent: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  obsidianRead(vaultId: string, paths: string[]) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.read,
+      body: { vaultId, paths },
+      schema: obsidianReadReplySchema,
+      idempotent: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  /** A write carries a request id, so a repeat after a lost answer gets the first answer and never writes twice. */
+  obsidianWrite(request: ObsidianWriteRequest) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.write,
+      body: request,
+      schema: obsidianWriteReplySchema,
+      idempotent: true,
+      timeoutMs: 30_000,
+    });
+  }
+
+  obsidianRemove(request: { requestId: string; vaultId: string; path: string; onlyIfMarker: string }) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.remove,
+      body: request,
+      schema: obsidianRemoveReplySchema,
+      idempotent: true,
+      timeoutMs: 30_000,
+    });
+  }
+
+  obsidianSearch(vaultId: string, query: string, limit = 20) {
+    return this.call({
+      method: 'POST',
+      path: OBSIDIAN_ROUTES.search,
+      body: { vaultId, query, limit },
+      schema: obsidianSearchReplySchema,
+      idempotent: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  // ── The Mac's Calendar (src/background/calendar) ──
+
+  calendarStatus(options: { bypassBreaker?: boolean } = {}) {
+    return this.call({
+      method: 'POST',
+      path: CALENDAR_ROUTES.status,
+      body: {},
+      schema: calendarStatusReplySchema,
+      idempotent: true,
+      bypassBreaker: options.bypassBreaker,
+      timeoutMs: 40_000,
+    });
+  }
+
+  /** Shows macOS's Calendars prompt on the Mac; waits for the user's answer. */
+  calendarRequestAccess() {
+    return this.call({
+      method: 'POST',
+      path: CALENDAR_ROUTES.request,
+      body: {},
+      schema: calendarStatusReplySchema,
+      bypassBreaker: true,
+      timeoutMs: 130_000,
+    });
+  }
+
+  calendarEvents(from: number, to: number, calendarIds: string[] | null) {
+    return this.call({
+      method: 'POST',
+      path: CALENDAR_ROUTES.events,
+      body: { from: Math.floor(from), to: Math.floor(to), calendarIds },
+      schema: calendarEventsReplySchema,
+      idempotent: true,
+      timeoutMs: 40_000,
     });
   }
 }

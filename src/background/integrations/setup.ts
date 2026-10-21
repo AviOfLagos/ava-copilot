@@ -79,6 +79,8 @@ export interface SetupDeps {
   defaultWorkspaceId(): Promise<string | null>;
   redirectUrl(): string;
   vaultState(): Promise<VaultState>;
+  // Nex Brain is paired: it reaches the vault on the Mac, with no folder picker or Brave flag
+  brainPaired?(): Promise<boolean>;
   isBrave(): boolean;
   providerHasKey(provider: string): Promise<boolean>;
   // The extension's own Models page
@@ -271,6 +273,9 @@ export class ConnectionSetup {
       return this.step(request, 'done', t('conn_setup_obsidianDone', [vault.name]));
     }
     if (vault.name) return this.step(request, 'obsidian_allow', t('conn_setup_obsidianAllow', [vault.name]));
+    if (await this.deps.brainPaired?.().catch(() => false)) {
+      return this.step(request, 'obsidian_pick', t('conn_setup_obsidianBrain'));
+    }
     const braveOff = vault.support === 'brave_off' || (vault.support === null && this.deps.isBrave());
     if (braveOff) {
       const opened = await this.open(request, [BRAVE_FLAG_URL]);

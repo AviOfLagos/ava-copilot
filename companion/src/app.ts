@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { ArtifactStore, StudioKeys } from './artifacts/store';
 import { PairingStore } from './auth/pairing';
 import { backupRoutes } from './backup/routes';
+import { MacCalendarReader } from './calendar/macos';
+import { calendarRoutes } from './calendar/routes';
 import { BackupSecrets, securityKeychain } from './backup/secrets';
 import type { KeychainAdapter } from './backup/secrets';
 import { BackupStore } from './backup/store';
@@ -15,6 +17,8 @@ import { createLogger } from './log';
 import { McpManager } from './mcp/manager';
 import type { McpConnect } from './mcp/manager';
 import { MeetBot } from './meet/bot';
+import { obsidianRoutes } from './obsidian/routes';
+import { ObsidianVaults } from './obsidian/vault';
 import type { MeetBotDeps } from './meet/bot';
 import { brainRoutes } from './routes';
 import { SandboxManager } from './sandbox/manager';
@@ -49,6 +53,11 @@ export interface BrainDeps {
   whatsappDriver?: WaDriverFactory;
   // Where the backup key is kept (the macOS Keychain unless a stand-in is given)
   keychain?: KeychainAdapter;
+  // Obsidian: the home folder and Obsidian's vault list (tests give fixtures, never the user's own)
+  home?: string;
+  obsidianConfig?: string;
+  // The platform the Mac's Calendar is read on (tests pass 'darwin' with a fake runner)
+  platform?: NodeJS.Platform;
 }
 
 export type Brain = Awaited<ReturnType<typeof createBrain>>;
@@ -107,8 +116,18 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     log: log.child({ part: 'backup' }),
     now,
   });
+  const vaults = new ObsidianVaults({
+    dataDir: config.dataDir,
+    log: log.child({ part: 'obsidian' }),
+    home: deps.home,
+    obsidianConfig: deps.obsidianConfig,
+    now,
+  });
+  const calendar = new MacCalendarReader({ run, log: log.child({ part: 'calendar' }), platform: deps.platform });
   const startedAt = now();
   server.add(...backupRoutes({ backups, secrets: backupSecrets }));
+  server.add(...obsidianRoutes({ vaults }));
+  server.add(...calendarRoutes({ calendar }));
   server.add(
     ...brainRoutes({
       config,
@@ -144,6 +163,8 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     engine,
     backups,
     backupSecrets,
+    vaults,
+    calendar,
     internalSecret,
     async start(): Promise<number> {
       const port = await server.listen();

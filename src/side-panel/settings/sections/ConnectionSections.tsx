@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
-import { calendarSettingsStore, db, upcomingEventsStore } from '@extension/storage';
+import { calendarSettingsStore, db, DEFAULT_CALENDAR_SETTINGS, upcomingEventsStore } from '@extension/storage';
+import type { CalendarSourceName } from '@extension/storage';
+import { MacCalendarCard } from '../../calendar/MacCalendarCard';
 import { Button } from '../../components/ui/button';
 import { useLive } from '../../hooks/useLive';
 import type { PanelApi } from '../../registry';
@@ -26,16 +28,30 @@ export function ObsidianSection() {
   return <VaultSettings />;
 }
 
-/** The calendar: a secret iCal address (or Google Calendar found for you), and reminders before meetings. */
+/**
+ * The calendar: the Mac's Calendar through Nex Brain when it is paired, else a secret iCal address (pasted, or
+ * found in Google Calendar for the account chosen), and reminders before meetings.
+ */
 export function CalendarSection() {
-  const [calendar, setCalendar] = useState({ icsUrl: '', remindMinutes: 5, reminders: true });
+  const [calendar, setCalendar] = useState({ ...DEFAULT_CALENDAR_SETTINGS });
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const [connecting, setConnecting] = useState(false);
   // A calendar the connector found, waiting for the user to choose it
   const [found, setFound] = useState<{ calendar: string; url: string } | null>(null);
+  // Where the events were read from last, and why the last read failed
+  const [source, setSource] = useState<{ name: CalendarSourceName | null; error: string | null }>({
+    name: null,
+    error: null,
+  });
 
   useEffect(() => {
     void calendarSettingsStore.getSettings().then(setCalendar);
+    const read = () =>
+      void upcomingEventsStore
+        .get()
+        .then(value => setSource({ name: value?.source ?? null, error: value?.error ?? null }));
+    read();
+    return upcomingEventsStore.subscribe(read);
   }, []);
 
   const save = async (changes: Partial<typeof calendar>) => {
@@ -58,10 +74,16 @@ export function CalendarSection() {
     setConnecting(true);
     setStatus({ text: t('settings_calendar_connecting'), error: false });
     void chrome.runtime
-      .sendMessage({ type: 'kb_calendar_connect' })
-      .then((reply: { ok: boolean; error?: string; calendar?: string; url?: string } | undefined) => {
+      .sendMessage({ type: 'kb_calendar_connect', account: calendar.googleAccount })
+      .then((reply: { ok: boolean; error?: string; calendar?: string; url?: string; reason?: string } | undefined) => {
         if (!reply?.ok || !reply.url) {
-          setStatus({ text: reply?.error ?? t('errors_unknown'), error: true });
+          setStatus({
+            text:
+              reply?.reason === 'secret_disabled'
+                ? t('settings_calendar_secretDisabled')
+                : (reply?.error ?? t('errors_unknown')),
+            error: true,
+          });
           return;
         }
         setStatus(null);
@@ -72,7 +94,23 @@ export function CalendarSection() {
 
   return (
     <>
+      <MacCalendarCard
+        macEnabled={calendar.macEnabled}
+        macCalendarIds={calendar.macCalendarIds}
+        onChange={changes => setCalendar(current => ({ ...current, ...changes }))}
+      />
+      {source.name && !source.error && (
+        <p className="px-3 text-[11.5px] text-muted-foreground" data-calendar-source={source.name}>
+          {source.name === 'mac' ? t('settings_calendar_source_mac') : t('settings_calendar_source_ics')}
+        </p>
+      )}
+      {source.error && (
+        <p role="alert" className="px-3 text-[11.5px] text-destructive">
+          {t('settings_calendar_lastError', [source.error])}
+        </p>
+      )}
       <div className="space-y-2 p-3">
+        <p className="text-[11.5px] font-medium">{t('settings_calendar_ics_title')}</p>
         <label htmlFor="settings-ics" className="block text-[13px]">
           {t('settings_calendar_url')}
         </label>
@@ -87,9 +125,23 @@ export function CalendarSection() {
           className="w-full rounded-xl border bg-transparent px-2.5 py-1.5 font-mono text-[11.5px] text-foreground outline-none focus:border-primary/50"
         />
         <p className="text-[11.5px] text-muted-foreground">{t('settings_calendar_hint')}</p>
-        <Button variant="default" size="sm" disabled={connecting} onClick={connect}>
-          {connecting ? t('settings_calendar_connecting_short') : t('settings_calendar_connect')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label={t('settings_calendar_account')}
+            value={calendar.googleAccount}
+            onChange={event => void save({ googleAccount: Number(event.target.value) })}
+            className={SELECT}>
+            {[0, 1, 2, 3, 4].map(index => (
+              <option key={index} value={index}>
+                {t('settings_calendar_account_n', [String(index + 1)])}
+              </option>
+            ))}
+          </select>
+          <Button variant="default" size="sm" disabled={connecting} onClick={connect}>
+            {connecting ? t('settings_calendar_connecting_short') : t('settings_calendar_connect')}
+          </Button>
+        </div>
+        <p className="text-[11.5px] text-muted-foreground">{t('settings_calendar_account_hint')}</p>
         {found && (
           <div className="rounded-xl border border-primary/40 bg-primary/10 p-2.5 text-[12px]">
             <p>{t('settings_calendar_found', [found.calendar])}</p>

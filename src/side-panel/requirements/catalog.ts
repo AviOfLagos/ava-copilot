@@ -210,12 +210,12 @@ export function brainRequirement(): Requirement {
   };
 }
 
-/** Folder access for the Obsidian vault: Brave keeps it behind a flag. */
+/** Folder access for the Obsidian vault: Brave keeps it behind a flag, unless Nex Brain reaches the vault on the Mac. */
 export function obsidianRequirement(): Requirement {
   return {
     id: 'obsidian',
     label: t('settings_obsidian'),
-    isReady: async () => vaultSupport() === 'ok',
+    isReady: async () => vaultSupport() === 'ok' || (await brainSettingsStore.getSettings()).paired,
     steps: [t('vault_brave_step1'), t('vault_brave_step2'), t('vault_brave_step3')],
     link: { url: BRAVE_FLAG_URL, label: t('vault_brave_open') },
   };
