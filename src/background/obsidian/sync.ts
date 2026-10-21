@@ -1,6 +1,6 @@
 import { AppError, toAppError } from '@extension/shared';
 import type { ObsidianSyncState, ObsidianVaultSetting, Workspace } from '@extension/storage';
-import { EXPORT_ROOT, MARKER, readFrontmatter } from '@src/side-panel/vault/markdown';
+import { EXPORT_ROOT, readFrontmatter } from '@src/side-panel/vault/markdown';
 import type { CompanionClient } from '../companion/client';
 
 /**
@@ -29,7 +29,7 @@ export interface VaultNoteIn {
 export interface BrainVaultSyncDeps {
   client: Pick<
     CompanionClient,
-    'obsidianNotes' | 'obsidianRead' | 'obsidianWrite' | 'obsidianRemove' | 'obsidianChoose'
+    'obsidianNotes' | 'obsidianRead' | 'obsidianWrite' | 'obsidianRemove' | 'obsidianChoose' | 'obsidianVaults'
   >;
   setting: { get(): Promise<ObsidianVaultSetting>; update(changes: Partial<ObsidianVaultSetting>): Promise<unknown> };
   state: { get(): Promise<ObsidianSyncState>; update(changes: Partial<ObsidianSyncState>): Promise<unknown> };
@@ -66,7 +66,6 @@ async function writeOut(deps: BrainVaultSyncDeps, vaultId: string, written: Reco
         path,
         text,
         mode: 'overwrite',
-        onlyIfMarker: MARKER,
       });
       count++;
     } catch (error) {
@@ -81,7 +80,7 @@ async function writeOut(deps: BrainVaultSyncDeps, vaultId: string, written: Reco
   }
   for (const path of Object.keys(written)) {
     if (next[path] || !path.startsWith(`${EXPORT_ROOT}/`)) continue;
-    await deps.client.obsidianRemove({ requestId: requestId(), vaultId, path, onlyIfMarker: MARKER }).catch(error => {
+    await deps.client.obsidianRemove({ requestId: requestId(), vaultId, path }).catch(error => {
       const kind = toAppError(error).kind;
       if (kind !== 'forbidden' && kind !== 'invalid' && kind !== 'not_found') throw error;
     });
@@ -130,17 +129,46 @@ async function readIn(deps: BrainVaultSyncDeps, vaultId: string, seen: Record<st
   return { now, changed, gone: Object.keys(seen).filter(path => !(path in now)) };
 }
 
+export const CHOOSE_AGAIN_MESSAGE =
+  'Choose your vault again: Nex Brain has another vault chosen now, or cannot find this one.';
+
 /**
- * One full sync. When Nex Brain has no vault chosen any more (it was reinstalled or paired anew), the vault this
- * browser chose is chosen again from its path, once: the user picked it before.
+ * What to do when Nex Brain says the vault is not the chosen one. Its vault is chosen again from the saved path only
+ * when Nex Brain has none chosen (it was reinstalled or paired anew) and the path still resolves to this very vault.
+ * A different vault chosen there (by the user, or by another paired browser) is never undone: this browser stops
+ * syncing and asks the user to choose again. Returns whether syncing may go on.
+ */
+async function recoverChoice(deps: BrainVaultSyncDeps, setting: ObsidianVaultSetting): Promise<boolean> {
+  if (!setting.path || !setting.vaultId) return false;
+  const { chosen } = await deps.client.obsidianVaults();
+  if (chosen) return false;
+  try {
+    const { vault } = await deps.client.obsidianChoose(
+      (deps.requestId ?? (() => crypto.randomUUID()))(),
+      setting.path,
+      setting.vaultId,
+    );
+    return vault.id === setting.vaultId;
+  } catch (error) {
+    const kind = toAppError(error).kind;
+    if (kind === 'not_found' || kind === 'invalid' || kind === 'forbidden') return false;
+    throw error;
+  }
+}
+
+/**
+ * One full sync. Stops (and the card asks to choose again) when Nex Brain's vault is no longer this browser's:
+ * see recoverChoice.
  */
 export async function syncBrainVault(deps: BrainVaultSyncDeps): Promise<{ written: number; read: number }> {
   const now = deps.now ?? Date.now;
-  let setting = await deps.setting.get();
+  const setting = await deps.setting.get();
   if (setting.source !== 'brain' || !setting.vaultId) return { written: 0, read: 0 };
   const state = await deps.state.get();
+  if (state.needsChoice) return { written: 0, read: 0 };
+  const vaultId = setting.vaultId;
 
-  const run = async (vaultId: string) => {
+  const run = async () => {
     const out = await writeOut(deps, vaultId, state.written);
     await deps.state.update({ written: out.next });
     let read = 0;
@@ -157,23 +185,15 @@ export async function syncBrainVault(deps: BrainVaultSyncDeps): Promise<{ writte
   try {
     let counts: { written: number; read: number };
     try {
-      counts = await run(setting.vaultId);
+      counts = await run();
     } catch (error) {
       const appError = toAppError(error);
-      if (appError.kind !== 'not_found' || !setting.path) throw appError;
-      const { vault } = await deps.client.obsidianChoose(
-        (deps.requestId ?? (() => crypto.randomUUID()))(),
-        setting.path,
-      );
-      if (vault.id !== setting.vaultId) {
-        // Another folder answers at that path now: start over with it, as with a vault chosen anew
-        await deps.state.update({ written: {}, read: {} });
-        state.written = {};
-        state.read = {};
+      if (appError.kind !== 'not_found') throw appError;
+      if (!(await recoverChoice(deps, setting))) {
+        await deps.state.update({ needsChoice: true });
+        throw new AppError('not_found', CHOOSE_AGAIN_MESSAGE);
       }
-      setting = { ...setting, vaultId: vault.id, name: vault.name };
-      await deps.setting.update({ vaultId: vault.id, name: vault.name });
-      counts = await run(vault.id);
+      counts = await run();
     }
     await deps.state.update({ lastSyncAt: now(), lastError: null, lastCounts: counts });
     return counts;

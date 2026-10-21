@@ -9302,5 +9302,11 @@
   },
   "settings_calendar_secretDisabled": {
     "message": "Esta conta Google não tem endereço iCal secreto: o administrador do Workspace desativou. Leia o Calendário do seu Mac pelo Nex Brain (adicione a conta em Ajustes do Sistema › Contas de Internet) ou cole o endereço de outra agenda."
+  },
+  "vault_brain_chooseAgain": {
+    "message": "Escolha seu cofre de novo: o Nex Brain tem outro cofre escolhido agora ou não encontra este. A sincronização parou."
+  },
+  "vault_brain_chooseAgain_button": {
+    "message": "Escolher de novo"
   }
 }

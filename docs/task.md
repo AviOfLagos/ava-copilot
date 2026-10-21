@@ -2315,6 +2315,12 @@ the Mac:
   iCal path gained an account choice (`/u/0`…`/u/4`), plain errors for 404/403/non-feeds, and says within ~6 s that
   secret addresses are off (English pages only).
 
+Security review fixes: Nex Brain writes and removes only under `Nex Copilot/` (any case; schema and companion both
+check), the marker (`OBSIDIAN_MARKER`) is fixed and always required to replace or remove, vault roots refuse `/`,
+home and its ancestors, `~/Library/**`, system folders and hidden folders (home compared by realpath), and a sync
+re-chooses the saved path only when Nex Brain has none chosen and the path is still the same vault id
+(`expectVaultId`); otherwise it stops with "Choose your vault again", so two browsers never undo each other.
+
 Tests: companion `obsidian.test.ts` (discovery, confinement: `..`, symlink escape, absolute, encoded; limits; marker;
 routes), `calendar.test.ts` (osascript output, permission states, denied, off-macOS, routes; osascript is always
 mocked); extension `obsidian/__tests__/sync.test.ts`, `calendar/__tests__/{sources,connect}.test.ts`,

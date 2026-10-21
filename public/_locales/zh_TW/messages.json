@@ -9302,5 +9302,11 @@
   },
   "settings_calendar_secretDisabled": {
     "message": "此 Google 帳號沒有秘密 iCal 網址：Workspace 管理員已將其關閉。請改用 Nex Brain 讀取 Mac 的行事曆（在「系統設定 › Internet 帳號」中加入帳號），或貼上其他行事曆的網址。"
+  },
+  "vault_brain_chooseAgain": {
+    "message": "請重新選擇你的資料庫：Nex Brain 現在選擇了另一個資料庫，或找不到這個。同步已停止。"
+  },
+  "vault_brain_chooseAgain_button": {
+    "message": "重新選擇"
   }
 }

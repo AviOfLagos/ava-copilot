@@ -14,6 +14,7 @@ import {
   isSafeNotePath,
   OBSIDIAN_ROUTES,
   obsidianChooseRequestSchema,
+  obsidianRemoveRequestSchema,
   obsidianWriteRequestSchema,
   COMPANION_EXTENSION_ORIGIN,
   COMPANION_PROTOCOL_VERSION,
@@ -278,7 +279,8 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
     }
     if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.choose) {
       const parsed = obsidianChooseRequestSchema.safeParse(json());
-      if (!parsed.success || parsed.data.path !== MOCK_VAULT.path) {
+      const wrongVault = parsed.success && parsed.data.expectVaultId && parsed.data.expectVaultId !== MOCK_VAULT.id;
+      if (!parsed.success || parsed.data.path !== MOCK_VAULT.path || wrongVault) {
         return fail(400, 'invalid', 'That folder is not an Obsidian vault (it has no .obsidian folder).');
       }
       chosenVault = MOCK_VAULT.id;
@@ -313,14 +315,20 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       const existing = vaultNotes.get(parsed.data.path);
       const marked = text => /^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(text);
       if (existing && parsed.data.mode === 'create') return fail(400, 'invalid', 'A note already exists at that path.');
-      if (existing && parsed.data.onlyIfMarker && !marked(existing.text)) {
+      if (existing && !marked(existing.text)) {
         return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
       }
       vaultNotes.set(parsed.data.path, { text: parsed.data.text, mtime: Date.now() });
       return send(200, { ok: true, path: parsed.data.path, mtime: Date.now(), created: !existing });
     }
     if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.remove) {
-      return send(200, { ok: true, removed: vaultNotes.delete(json().path) });
+      const parsed = obsidianRemoveRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'Nex Brain only removes notes in the Nex Copilot folder.');
+      const existing = vaultNotes.get(parsed.data.path);
+      if (existing && !/^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(existing.text)) {
+        return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+      }
+      return send(200, { ok: true, removed: vaultNotes.delete(parsed.data.path) });
     }
     // The Mac's Calendar: its permission flips to granted when "Allow access" asks
     const calendarStatus = () => ({

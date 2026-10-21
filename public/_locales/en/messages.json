@@ -9302,5 +9302,11 @@
   },
   "settings_calendar_secretDisabled": {
     "message": "This Google account has no secret iCal address: its Workspace admin turned them off. Read your Mac’s Calendar through Nex Brain instead (add the account in System Settings › Internet Accounts), or paste an address from another calendar."
+  },
+  "vault_brain_chooseAgain": {
+    "message": "Choose your vault again: Nex Brain has another vault chosen now, or cannot find this one. Syncing stopped."
+  },
+  "vault_brain_chooseAgain_button": {
+    "message": "Choose again"
   }
 }

@@ -151,6 +151,22 @@ export function BrainVaultConnected({ setting }: { setting: ObsidianVaultSetting
     : sync?.lastCounts
       ? { text: t('vault_synced', [String(sync.lastCounts.written), String(sync.lastCounts.read)]), alert: false }
       : null;
+  // Nex Brain has another vault chosen now (by the user or another browser): this browser stopped syncing
+  if (sync?.needsChoice) {
+    return (
+      <div data-vault="brain-choose-again" className={row}>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px]">{setting.name}</div>
+          <div role="alert" className="mt-0.5 text-[11.5px] text-destructive">
+            {t('vault_brain_chooseAgain')}
+          </div>
+        </div>
+        <Button size="sm" disabled={busy} onClick={() => void run('obsidian_disconnect', { local: true })}>
+          {t('vault_brain_chooseAgain_button')}
+        </Button>
+      </div>
+    );
+  }
   return (
     <div data-vault="brain">
       <div className={row}>

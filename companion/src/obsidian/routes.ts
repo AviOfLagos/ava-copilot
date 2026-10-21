@@ -50,7 +50,7 @@ export function obsidianRoutes(deps: { vaults: ObsidianVaults }): Route[] {
       dedupe: true,
       async handler({ body }) {
         const request = parse(obsidianChooseRequestSchema, body);
-        return json({ ok: true, vault: await vaults.choose(request.path) });
+        return json({ ok: true, vault: await vaults.choose(request.path, request.expectVaultId) });
       },
     },
     {
@@ -109,7 +109,7 @@ export function obsidianRoutes(deps: { vaults: ObsidianVaults }): Route[] {
       dedupe: true,
       async handler({ body }) {
         const request = parse(obsidianRemoveRequestSchema, body);
-        return json({ ok: true, removed: await vaults.remove(request.vaultId, request.path, request.onlyIfMarker) });
+        return json({ ok: true, removed: await vaults.remove(request.vaultId, request.path) });
       },
     },
     {

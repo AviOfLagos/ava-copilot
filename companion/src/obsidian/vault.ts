@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { lstat, mkdir, open, readdir, readFile, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { OBSIDIAN_LIMITS } from '@protocol';
+import { isInObsidianWriteRoot, OBSIDIAN_LIMITS, OBSIDIAN_MARKER, OBSIDIAN_WRITE_ROOT } from '@protocol';
 import type { NoteMeta, ObsidianVault } from '@protocol';
 import { AppError, fail } from '../errors';
 import type { Logger } from '../log';
@@ -29,6 +29,8 @@ export interface ObsidianDeps {
   // Obsidian's own list of vaults (default ~/Library/Application Support/obsidian/obsidian.json)
   obsidianConfig?: string;
   now?: () => number;
+  // System folders refused as vaults (tests narrow it: their temporary folders are under /private)
+  systemRoots?: string[];
 }
 
 interface Chosen {
@@ -52,10 +54,18 @@ export function obsidianVaultPaths(text: string): string[] {
   }
 }
 
-/** Whether a note's front matter (at its very start) has the marker as a line of its own, as the copilot writes it. */
-export function carriesMarker(head: string, marker: string): boolean {
+/**
+ * Whether a note's front matter (at its very start) has the copilot's marker as a line of its own. The marker is
+ * fixed (OBSIDIAN_MARKER), never the caller's.
+ */
+export function carriesMarker(head: string): boolean {
   const match = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/.exec(head);
-  return !!match && match[1].split(/\r?\n/).includes(marker);
+  return !!match && match[1].split(/\r?\n/).includes(OBSIDIAN_MARKER);
+}
+
+/** Nex Brain writes and removes only in the copilot's folder, whatever the request says. */
+function requireWriteRoot(path: string): void {
+  if (!isInObsidianWriteRoot(path)) fail('forbidden', `Nex Brain only writes in the ${OBSIDIAN_WRITE_ROOT} folder.`);
 }
 
 const isMissing = (error: unknown) => (error as NodeJS.ErrnoException)?.code === 'ENOENT';
@@ -65,6 +75,7 @@ export class ObsidianVaults {
   private readonly configPath: string;
   private readonly chosenPath: string;
   private readonly now: () => number;
+  private readonly systemRoots: string[] | undefined;
   private walked: { root: string; at: number; notes: NoteMeta[]; capped: boolean } | null = null;
 
   constructor(private readonly deps: ObsidianDeps) {
@@ -73,6 +84,7 @@ export class ObsidianVaults {
       deps.obsidianConfig ?? join(this.home, 'Library', 'Application Support', 'obsidian', 'obsidian.json');
     this.chosenPath = join(deps.dataDir, 'obsidian.json');
     this.now = deps.now ?? Date.now;
+    this.systemRoots = deps.systemRoots;
   }
 
   private chosen(): Chosen | null {
@@ -85,7 +97,7 @@ export class ObsidianVaults {
   }
 
   private async describe(path: string, found: ObsidianVault['found']): Promise<ObsidianVault> {
-    const real = await isVault(path, this.home);
+    const real = await isVault(path, this.home, this.systemRoots);
     return { id: vaultIdOf(real ?? path), name: basename(real ?? path), path: real ?? path, found, usable: !!real };
   }
 
@@ -116,9 +128,15 @@ export class ObsidianVaults {
     return { vaults, chosen };
   }
 
-  /** Makes a folder the vault Nex Copilot reads and writes. It must be an Obsidian vault. */
-  async choose(path: string): Promise<ObsidianVault> {
-    const root = await resolveVaultRoot(path, this.home);
+  /**
+   * Makes a folder the vault Nex Copilot reads and writes. It must be an Obsidian vault and, when `expectVaultId` is
+   * given, still that vault: otherwise nothing changes.
+   */
+  async choose(path: string, expectVaultId?: string): Promise<ObsidianVault> {
+    const root = await resolveVaultRoot(path, this.home, this.systemRoots);
+    if (expectVaultId && vaultIdOf(root) !== expectVaultId) {
+      fail('not_found', 'That folder is a different vault now. Choose your vault again.');
+    }
     writeFileSync(this.chosenPath, JSON.stringify({ path: root, chosenAt: this.now() } satisfies Chosen), {
       mode: 0o600,
     });
@@ -138,7 +156,7 @@ export class ObsidianVaults {
     const kept = this.chosen();
     if (!kept)
       fail('not_found', 'No Obsidian vault is chosen in Nex Brain. Choose one in Settings › Connections › Obsidian.');
-    const root = await isVault(kept.path, this.home);
+    const root = await isVault(kept.path, this.home, this.systemRoots);
     if (!root) fail('not_found', 'The chosen Obsidian vault is gone or is no longer a vault. Choose it again.');
     if (vaultIdOf(root) !== vaultId)
       fail('not_found', 'A different Obsidian vault is chosen in Nex Brain now. Choose it again.');
@@ -247,21 +265,22 @@ export class ObsidianVaults {
   }
 
   /**
-   * Writes a note. 'create' never replaces anything; 'overwrite' replaces a note only when it carries the marker
-   * (when one is given), so the user's own notes are left alone. The new text goes to a hidden file in the same
-   * folder first and is renamed into place, so a note is never left half written.
+   * Writes a note in the copilot's folder only. 'create' never replaces anything; 'overwrite' replaces a note only
+   * when its front matter carries the marker, so the user's own notes are left alone. The new text goes to a hidden
+   * file in the same folder first and is renamed into place, so a note is never left half written.
    */
   async write(
     vaultId: string,
-    request: { path: string; text: string; mode: 'create' | 'overwrite'; onlyIfMarker?: string },
+    request: { path: string; text: string; mode: 'create' | 'overwrite' },
   ): Promise<{ path: string; mtime: number; created: boolean }> {
+    requireWriteRoot(request.path);
     if (Buffer.byteLength(request.text, 'utf8') > OBSIDIAN_LIMITS.noteBytes)
       fail('invalid', 'That note is too large to write.');
     const root = await this.root(vaultId);
     const target = await confinedNotePath(root, request.path, 'write');
     const existing = await lstat(target).catch(() => null);
     if (existing && request.mode === 'create') fail('invalid', 'A note already exists at that path.');
-    if (existing && request.onlyIfMarker && !carriesMarker(await this.head(target), request.onlyIfMarker)) {
+    if (existing && !carriesMarker(await this.head(target))) {
       fail('forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
     }
     await mkdir(dirname(target), { recursive: true });
@@ -290,12 +309,13 @@ export class ObsidianVaults {
   }
 
   /** Removes a note only when it carries the marker. */
-  async remove(vaultId: string, path: string, marker: string): Promise<boolean> {
+  async remove(vaultId: string, path: string): Promise<boolean> {
+    requireWriteRoot(path);
     const root = await this.root(vaultId);
     const target = await confinedNotePath(root, path, 'write');
     const info = await lstat(target).catch(() => null);
     if (!info) return false;
-    if (!carriesMarker(await this.head(target), marker)) {
+    if (!carriesMarker(await this.head(target))) {
       fail('forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
     }
     await unlink(target);

@@ -113,6 +113,7 @@ command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), 
   const { vault } = await companionClient.obsidianChoose(crypto.randomUUID(), path);
   const before = await obsidianVaultStore.getSetting();
   if (before.vaultId !== vault.id) await obsidianSyncStore.set({ ...DEFAULT_OBSIDIAN_SYNC });
+  else await obsidianSyncStore.update({ needsChoice: false, lastError: null });
   await obsidianVaultStore.update({
     source: 'brain',
     vaultId: vault.id,
@@ -127,8 +128,9 @@ command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), 
   return snapshot();
 });
 
-command('obsidian_disconnect', z.object({}), async () => {
-  await companionClient.obsidianForget().catch(() => {});
+// `local`: only this browser lets go (Nex Brain's choice may be another browser's, and stays)
+command('obsidian_disconnect', z.object({ local: z.boolean().optional() }), async ({ local }) => {
+  if (!local) await companionClient.obsidianForget().catch(() => {});
   await obsidianVaultStore.update({ source: null, vaultId: null, path: null, name: null, chosenAt: null });
   await obsidianSyncStore.set({ ...DEFAULT_OBSIDIAN_SYNC });
   await jobs.cancel(SYNC_KEY);

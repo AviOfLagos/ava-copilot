@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AppError } from '@extension/shared';
 import { DEFAULT_OBSIDIAN_SYNC, DEFAULT_OBSIDIAN_VAULT } from '@extension/storage';
 import type { ObsidianSyncState, ObsidianVaultSetting, Workspace } from '@extension/storage';
-import { MAX_NOTE_BYTES, syncBrainVault } from '../sync';
+import { CHOOSE_AGAIN_MESSAGE, MAX_NOTE_BYTES, syncBrainVault } from '../sync';
 import type { BrainVaultSyncDeps } from '../sync';
 
 const OURS = '---\nsource: avi-copilot\n---\n';
@@ -13,11 +13,15 @@ function harness(options: {
   notes?: Record<string, { text: string; mtime: number; size?: number }>;
   setting?: Partial<ObsidianVaultSetting>;
   state?: Partial<ObsidianSyncState>;
-  chosenId?: string;
+  // The vault Nex Brain has chosen (null: none, as after a reinstall of Nex Brain)
+  chosenId?: string | null;
+  // The vault the saved path resolves to now
+  pathVaultId?: string;
   workspaces?: Workspace[];
 }) {
   const vault = new Map(Object.entries(options.notes ?? {}));
-  let chosenId = options.chosenId ?? 'aaaaaaaaaaaaaaaa';
+  let chosenId = options.chosenId === undefined ? 'aaaaaaaaaaaaaaaa' : options.chosenId;
+  const chooseCalls: { path: string; expect?: string }[] = [];
   let setting: ObsidianVaultSetting = {
     ...DEFAULT_OBSIDIAN_VAULT,
     source: 'brain',
@@ -63,8 +67,7 @@ function harness(options: {
     async obsidianWrite(request) {
       check(request.vaultId);
       const existing = vault.get(request.path);
-      if (existing && request.onlyIfMarker && !existing.text.startsWith(OURS))
-        throw new AppError('forbidden', 'Not ours.');
+      if (existing && !existing.text.startsWith(OURS)) throw new AppError('forbidden', 'Not ours.');
       writes.push(request.path);
       vault.set(request.path, { text: request.text, mtime: 99 });
       return { ok: true as const, path: request.path, mtime: 99, created: !existing };
@@ -76,11 +79,20 @@ function harness(options: {
       removes.push(request.path);
       return { ok: true as const, removed: vault.delete(request.path) };
     },
-    async obsidianChoose(_requestId, path) {
-      chosenId = 'bbbbbbbbbbbbbbbb';
+    async obsidianVaults() {
+      const chosen = chosenId
+        ? { id: chosenId, name: 'Vault', path: '/x', found: 'chosen' as const, usable: true }
+        : null;
+      return { ok: true as const, vaults: [], chosen };
+    },
+    async obsidianChoose(_requestId, path, expect) {
+      chooseCalls.push({ path, expect });
+      const resolved = options.pathVaultId ?? 'aaaaaaaaaaaaaaaa';
+      if (expect && expect !== resolved) throw new AppError('not_found', 'That folder is a different vault now.');
+      chosenId = resolved;
       return {
         ok: true as const,
-        vault: { id: chosenId, name: 'Vault', path, found: 'chosen' as const, usable: true },
+        vault: { id: resolved, name: 'Vault', path, found: 'chosen' as const, usable: true },
       };
     },
   };
@@ -109,7 +121,18 @@ function harness(options: {
     now: () => 1000,
     requestId: () => 'request-0001',
   };
-  return { deps, vault, saved, removed, writes, removes, getState: () => state, getSetting: () => setting };
+  return {
+    deps,
+    vault,
+    saved,
+    removed,
+    writes,
+    removes,
+    chooseCalls,
+    getState: () => state,
+    getSetting: () => setting,
+    chosen: () => chosenId,
+  };
 }
 
 describe('syncBrainVault', () => {
@@ -177,21 +200,42 @@ describe('syncBrainVault', () => {
     expect(saved).toEqual([]);
   });
 
-  it('chooses the vault again from its path when Nex Brain no longer has it, starting over for a new one', async () => {
-    const { deps, getSetting, saved } = harness({
-      chosenId: 'cccccccccccccccc',
+  it('chooses the vault again from its path when Nex Brain has none chosen and the path is still this vault', async () => {
+    const { deps, chooseCalls, chosen, getState } = harness({
+      chosenId: null,
       notes: { 'A.md': { text: 'a', mtime: 1 } },
-      state: { read: { 'A.md': 1 } },
     });
-    await syncBrainVault(deps);
-    expect(getSetting().vaultId).toBe('bbbbbbbbbbbbbbbb');
-    // A different vault: its notes are read as new
-    expect(saved.map(note => note.path)).toEqual(['A.md']);
+    expect((await syncBrainVault(deps)).read).toBe(1);
+    expect(chooseCalls).toEqual([{ path: '/Users/avi/Vault', expect: 'aaaaaaaaaaaaaaaa' }]);
+    expect(chosen()).toBe('aaaaaaaaaaaaaaaa');
+    expect(getState().needsChoice).toBe(false);
+  });
+
+  it('stops and asks to choose again when the saved path is another vault now', async () => {
+    const { deps, chosen, getState, getSetting } = harness({ chosenId: null, pathVaultId: 'bbbbbbbbbbbbbbbb' });
+    await expect(syncBrainVault(deps)).rejects.toThrow(CHOOSE_AGAIN_MESSAGE);
+    expect(chosen()).toBeNull();
+    expect(getState()).toMatchObject({ needsChoice: true, lastError: CHOOSE_AGAIN_MESSAGE });
+    expect(getSetting().vaultId).toBe('aaaaaaaaaaaaaaaa');
+  });
+
+  it('never undoes a vault another browser chose: it stops instead, and stays stopped', async () => {
+    const { deps, chooseCalls, chosen, getState, writes } = harness({
+      chosenId: 'cccccccccccccccc',
+      files: new Map([['Nex Copilot/One.md', `${OURS}one`]]),
+    });
+    await expect(syncBrainVault(deps)).rejects.toThrow(CHOOSE_AGAIN_MESSAGE);
+    expect(chooseCalls).toEqual([]);
+    expect(chosen()).toBe('cccccccccccccccc');
+    expect(getState().needsChoice).toBe(true);
+    // The next sync (the job, the panel) does nothing until the user chooses again
+    expect(await syncBrainVault(deps)).toEqual({ written: 0, read: 0 });
+    expect(writes).toEqual([]);
   });
 
   it('keeps the error for the card and throws it', async () => {
-    const { deps, getState } = harness({ setting: { path: null }, chosenId: 'cccccccccccccccc' });
-    await expect(syncBrainVault(deps)).rejects.toThrow(/No Obsidian vault/);
-    expect(getState().lastError).toMatch(/No Obsidian vault/);
+    const { deps, getState } = harness({ setting: { path: null }, chosenId: null });
+    await expect(syncBrainVault(deps)).rejects.toThrow(CHOOSE_AGAIN_MESSAGE);
+    expect(getState().lastError).toBe(CHOOSE_AGAIN_MESSAGE);
   });
 });

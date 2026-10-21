@@ -1005,6 +1005,18 @@ export const OBSIDIAN_LIMITS = {
   searchScanBytes: 40_000_000,
 } as const;
 
+// The one folder of the vault Nex Brain writes in (any case), and the line every note it writes carries in its front
+// matter. Both are fixed here, never chosen by the caller: only a note under the folder with the marker is replaced
+// or removed.
+export const OBSIDIAN_WRITE_ROOT = 'Nex Copilot';
+export const OBSIDIAN_MARKER = 'source: avi-copilot';
+
+/** Whether a note path is in the copilot's own folder ("Nex Copilot/…", any case). */
+export function isInObsidianWriteRoot(value: string): boolean {
+  const [top, ...rest] = value.split('/');
+  return rest.length > 0 && top.toLowerCase() === OBSIDIAN_WRITE_ROOT.toLowerCase();
+}
+
 /**
  * A note's path inside a vault: relative, "/"-separated, ending in .md, no "..", no hidden parts (".obsidian",
  * ".trash", dotfiles), no backslashes or control characters. Percent signs stay as they are: nothing decodes them.
@@ -1045,6 +1057,8 @@ export type ObsidianVaultsReply = z.infer<typeof obsidianVaultsReplySchema>;
 export const obsidianChooseRequestSchema = z.object({
   requestId: requestIdSchema,
   path: z.string().min(1).max(1000),
+  // Choose it only if it is still this vault: a sync choosing a saved path again never switches to another folder
+  expectVaultId: vaultIdSchema.optional(),
 });
 export const obsidianChooseReplySchema = z.object({ ok: z.literal(true), vault: obsidianVaultSchema });
 
@@ -1099,11 +1113,10 @@ export const obsidianReadReplySchema = z.object({
 export const obsidianWriteRequestSchema = z.object({
   requestId: requestIdSchema,
   vaultId: vaultIdSchema,
-  path: notePathSchema,
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only writes in the Nex Copilot folder.'),
   text: z.string().max(OBSIDIAN_LIMITS.noteBytes),
-  // 'create' never replaces a file; 'overwrite' replaces one, but only one carrying the marker when given
+  // 'create' never replaces a file; 'overwrite' replaces only a note carrying OBSIDIAN_MARKER (or makes a new one)
   mode: z.enum(['create', 'overwrite']),
-  onlyIfMarker: z.string().min(4).max(100).optional(),
 });
 export type ObsidianWriteRequest = z.infer<typeof obsidianWriteRequestSchema>;
 export const obsidianWriteReplySchema = z.object({
@@ -1113,12 +1126,11 @@ export const obsidianWriteReplySchema = z.object({
   created: z.boolean(),
 });
 
-// Removes only a note that carries the marker: the copilot's own, never the user's
+// Removes only a note in the copilot's folder that carries the marker: the copilot's own, never the user's
 export const obsidianRemoveRequestSchema = z.object({
   requestId: requestIdSchema,
   vaultId: vaultIdSchema,
-  path: notePathSchema,
-  onlyIfMarker: z.string().min(4).max(100),
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only removes notes in the Nex Copilot folder.'),
 });
 export const obsidianRemoveReplySchema = z.object({ ok: z.literal(true), removed: z.boolean() });
 

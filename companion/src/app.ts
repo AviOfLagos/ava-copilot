@@ -56,6 +56,8 @@ export interface BrainDeps {
   // Obsidian: the home folder and Obsidian's vault list (tests give fixtures, never the user's own)
   home?: string;
   obsidianConfig?: string;
+  // System folders refused as vaults: tests narrow it, since their temporary folders are under /private
+  obsidianSystemRoots?: string[];
   // The platform the Mac's Calendar is read on (tests pass 'darwin' with a fake runner)
   platform?: NodeJS.Platform;
 }
@@ -121,6 +123,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     log: log.child({ part: 'obsidian' }),
     home: deps.home,
     obsidianConfig: deps.obsidianConfig,
+    systemRoots: deps.obsidianSystemRoots,
     now,
   });
   const calendar = new MacCalendarReader({ run, log: log.child({ part: 'calendar' }), platform: deps.platform });

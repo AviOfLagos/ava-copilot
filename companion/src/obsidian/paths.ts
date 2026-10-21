@@ -14,8 +14,33 @@ export function isInside(root: string, candidate: string): boolean {
   return candidate === root || candidate.startsWith(root.endsWith(sep) ? root : root + sep);
 }
 
-/** The vault folder a user typed or Obsidian lists, resolved and checked. Throws a plain sentence otherwise. */
-export async function resolveVaultRoot(input: string, home: string = homedir()): Promise<string> {
+// System folders that are never a vault, nor anything inside them. macOS's temporary folders are under /private.
+export const SYSTEM_ROOTS = ['/System', '/Library', '/private', '/etc', '/var', '/usr', '/bin', '/sbin', '/opt'];
+
+/**
+ * Why a resolved folder may not be a vault root, or null. Refused: the disk, the home folder and every folder above
+ * it (e.g. /Users), ~/Library and everything in it, the system folders, and any hidden folder (~/.ssh …). Both paths
+ * are real paths. Exported for tests.
+ */
+export function refusedVaultRoot(real: string, realHome: string, systemRoots: string[] = SYSTEM_ROOTS): string | null {
+  if (real === sep || isInside(real, realHome)) {
+    return 'Choose the vault folder itself, not your whole disk or home folder.';
+  }
+  if (isInside(join(realHome, 'Library'), real)) return 'A folder in ~/Library cannot be a vault.';
+  if (systemRoots.some(root => isInside(root, real))) return 'A system folder cannot be a vault.';
+  if (real.split(sep).some(part => part.startsWith('.'))) return 'A hidden folder cannot be a vault.';
+  return null;
+}
+
+/**
+ * The vault folder a user typed or Obsidian lists, resolved and checked. Throws a plain sentence otherwise.
+ * `systemRoots` is only narrowed by tests, whose temporary folders live under /private.
+ */
+export async function resolveVaultRoot(
+  input: string,
+  home: string = homedir(),
+  systemRoots: string[] = SYSTEM_ROOTS,
+): Promise<string> {
   const typed = input.trim();
   if (!typed || typed.includes('\0')) fail('invalid', 'Type the full path of your vault folder.');
   const expanded = typed === '~' ? home : typed.startsWith('~/') ? join(home, typed.slice(2)) : typed;
@@ -28,8 +53,10 @@ export async function resolveVaultRoot(input: string, home: string = homedir()):
   }
   const info = await stat(real).catch(() => null);
   if (!info?.isDirectory()) fail('invalid', 'That is a file, not a folder.');
-  if (real === sep || real === resolve(home))
-    fail('invalid', 'Choose the vault folder itself, not your whole disk or home folder.');
+  // A home reached through a symlink compares as its real path
+  const realHome = await realpath(resolve(home)).catch(() => resolve(home));
+  const refused = refusedVaultRoot(real, realHome, systemRoots);
+  if (refused) fail('invalid', refused);
   const config = await lstat(join(real, '.obsidian')).catch(() => null);
   if (!config?.isDirectory()) {
     fail(
@@ -41,9 +68,13 @@ export async function resolveVaultRoot(input: string, home: string = homedir()):
 }
 
 /** Whether a folder is (still) a usable vault, without throwing. */
-export async function isVault(path: string, home: string = homedir()): Promise<string | null> {
+export async function isVault(
+  path: string,
+  home: string = homedir(),
+  systemRoots: string[] = SYSTEM_ROOTS,
+): Promise<string | null> {
   try {
-    return await resolveVaultRoot(path, home);
+    return await resolveVaultRoot(path, home, systemRoots);
   } catch {
     return null;
   }

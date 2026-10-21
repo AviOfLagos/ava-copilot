@@ -38,6 +38,8 @@ export interface ObsidianSyncState {
   lastSyncAt: number | null;
   lastError: string | null;
   lastCounts: { written: number; read: number } | null;
+  // Nex Brain has another vault chosen (or lost this one): syncing stopped until the user chooses again
+  needsChoice: boolean;
 }
 
 export const DEFAULT_OBSIDIAN_SYNC: ObsidianSyncState = {
@@ -46,6 +48,7 @@ export const DEFAULT_OBSIDIAN_SYNC: ObsidianSyncState = {
   lastSyncAt: null,
   lastError: null,
   lastCounts: null,
+  needsChoice: false,
 };
 
 const settingStorage = createStorage<ObsidianVaultSetting>(OBSIDIAN_VAULT_KEY, DEFAULT_OBSIDIAN_VAULT, {

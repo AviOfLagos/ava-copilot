@@ -827,11 +827,12 @@ export class CompanionClient {
     });
   }
 
-  obsidianChoose(requestId: string, path: string) {
+  /** With `expectVaultId`, Nex Brain chooses the folder only if it is still that vault. */
+  obsidianChoose(requestId: string, path: string, expectVaultId?: string) {
     return this.call({
       method: 'POST',
       path: OBSIDIAN_ROUTES.choose,
-      body: { requestId, path },
+      body: { requestId, path, ...(expectVaultId ? { expectVaultId } : {}) },
       schema: obsidianChooseReplySchema,
       idempotent: true,
       bypassBreaker: true,
@@ -883,7 +884,7 @@ export class CompanionClient {
     });
   }
 
-  obsidianRemove(request: { requestId: string; vaultId: string; path: string; onlyIfMarker: string }) {
+  obsidianRemove(request: { requestId: string; vaultId: string; path: string }) {
     return this.call({
       method: 'POST',
       path: OBSIDIAN_ROUTES.remove,
