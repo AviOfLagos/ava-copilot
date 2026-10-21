@@ -17,6 +17,7 @@ import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { pruneUsageEvents } from '../usage/retention';
 import { refreshCatalog } from './catalog';
+import { keepLocalServerRules } from './localServers';
 import {
   answer,
   checkSavedOrDraft,
@@ -230,3 +231,6 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
     .catch(error => sendResponse({ ok: false, error: toAppError(error).message }));
   return true;
 });
+
+// Ollama and LM Studio on this machine answer the extension with no OLLAMA_ORIGINS to set
+keepLocalServerRules();

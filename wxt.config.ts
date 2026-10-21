@@ -79,6 +79,9 @@ export default defineConfig({
       'tts',
       // Signing in to connectors (MCP servers) with OAuth, through Brave's own sign-in window
       'identity',
+      // Ollama refuses requests with an extension's Origin: the extension's own calls to model servers on localhost
+      // go without it (src/background/models/localServers.ts). No install warning beside <all_urls>
+      'declarativeNetRequestWithHostAccess',
     ],
     // The on-device "Hey Ava" recogniser is WebAssembly; nothing else is allowed to compile code
     content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },
