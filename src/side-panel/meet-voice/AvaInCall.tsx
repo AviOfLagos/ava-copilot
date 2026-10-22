@@ -135,6 +135,31 @@ export default function AvaInCall({ meeting }: { meeting: MeetingRecord }) {
           {error || state?.error}
         </p>
       )}
+      {state?.offer?.meetingId === meeting.id && !active && (
+        <div
+          role="group"
+          aria-label={t('meetvoice_offer_title', [name])}
+          data-testid="meetvoice-offer"
+          className="border-hold/60 bg-hold/10 mt-2 rounded-xl border p-2.5">
+          <p className="text-[12.5px] font-medium">{t('meetvoice_offer_title', [name])}</p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <Button
+              variant="hold"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => void run('meetvoice_join', { meetingId: meeting.id })}>
+              {t('meetvoice_offer_yes', [name])}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => void run('meetvoice_offer_dismiss')}>
+              {t('meetvoice_offer_no')}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {here && status?.speaking && (
           <Button

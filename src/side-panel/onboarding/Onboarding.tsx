@@ -18,10 +18,14 @@ import { setWakeWord } from './wake';
 import VoiceModelsCard from '../voice-models/VoiceModelsCard';
 import ModelSetup from './ModelSetup';
 import RestoreFromBrain from '../backup/RestoreFromBrain';
+import SetupChecklist from '../setup/SetupChecklist';
 import type { ModelsRequest } from '../models/useProviders';
 
-const STEPS = 3;
+const STEPS = 4;
 const MODEL_STEP = 1;
+// The rest of the setup, as a checklist: it can be left for later, and the header's dot keeps it owed
+const SETUP_STEP = 2;
+const WAKE_STEP = 3;
 
 interface OnboardingProps {
   /** Whether a model is set up; null while the panel is still checking */
@@ -37,8 +41,8 @@ interface OnboardingProps {
 }
 
 /**
- * The first-run setup, shown once over the panel: name the assistant, connect a model, and (optionally)
- * turn on the wake word. The model step only goes on once a model works. Skip or Esc ends it at any step and it
+ * The first-run setup, shown once over the panel: name the assistant, connect a model, see the rest of the setup as a
+ * checklist (it can wait: the header's dot keeps it owed), and (optionally) turn on the wake word. The model step only goes on once a model works. Skip or Esc ends it at any step and it
  * never shows again in full, but a missing model stays owed: a "Finish setup" pill (and the welcome screen)
  * bring back the model step until one works. Opening Models & usage parks it behind the same pill.
  */
@@ -210,7 +214,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
     }
   };
 
-  const titles = ['onboard_name_title', 'onboard_model_title', 'onboard_wake_title'] as const;
+  const titles = ['onboard_name_title', 'onboard_model_title', 'onboard_setup_title', 'onboard_wake_title'] as const;
   const error = showError ? nameError(name) : '';
 
   return (
@@ -310,7 +314,16 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
           />
         )}
 
-        {step === 2 && !restoring && (
+        {step === SETUP_STEP && !restoring && (
+          <>
+            <p id="onboard-body" className="text-muted-foreground text-[13px] leading-relaxed">
+              {t('onboard_setup_body')}
+            </p>
+            <SetupChecklist api={{ request }} placement="onboarding" />
+          </>
+        )}
+
+        {step === WAKE_STEP && !restoring && (
           <>
             <p id="onboard-body" className="text-muted-foreground text-[13px] leading-relaxed">
               {t('onboard_wake_body', [displayPhrase(wake, shownName)])}

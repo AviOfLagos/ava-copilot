@@ -26,3 +26,4 @@ import './kb/register';
 import './obsidian/register';
 import './calendar/register';
 import './update/register';
+import './setup/register';

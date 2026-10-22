@@ -7,6 +7,7 @@ import Breadcrumbs from './Breadcrumbs';
 import type { Crumb } from './Breadcrumbs';
 import { useAssistantName } from '../hooks/useAssistant';
 import PersonalityPicker from '../personalities/PersonalityPicker';
+import SetupIndicator from '../setup/SetupIndicator';
 
 export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking';
 
@@ -72,6 +73,7 @@ export default function Header(props: HeaderProps) {
       )}
 
       <nav aria-label={t('nav_panel')} className="flex items-center gap-0.5">
+        <SetupIndicator />
         {props.recordingLabel ? (
           <button
             type="button"

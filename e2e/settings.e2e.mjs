@@ -99,7 +99,7 @@ test('every page opens from the nav and draws its sections; one control per page
     await shot(page, `${id}-1280`);
   }
   assert.deepEqual(seen.voice, ['voice-identity', 'tts', 'voice-engines', 'audio-devices', 'wake']);
-  assert.deepEqual(seen.general, ['names', 'theme', 'writing', 'confirm', 'cap', 'highlights', 'agent']);
+  assert.deepEqual(seen.general, ['setup', 'names', 'theme', 'writing', 'confirm', 'cap', 'highlights', 'agent']);
   assert.deepEqual(seen.memory, [
     'about-you',
     'history',
@@ -109,7 +109,7 @@ test('every page opens from the nav and draws its sections; one control per page
     'memory-data',
   ]);
   assert.deepEqual(seen.connections, ['connectors', 'obsidian', 'calendar', 'brain', 'whatsapp-remote']);
-  assert.deepEqual(seen.meetings, ['meetings', 'brief', 'inbox']);
+  assert.deepEqual(seen.meetings, ['meetings', 'meetings-ava', 'brief', 'inbox']);
   assert.deepEqual(seen.privacy, ['firewall', 'skills']);
   assert.deepEqual(seen.help, ['help-install', 'help-tasks']);
   assert.deepEqual(seen.models, ['models']);

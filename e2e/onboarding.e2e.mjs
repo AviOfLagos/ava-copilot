@@ -106,7 +106,7 @@ async function firstRun({ model = true } = {}) {
   const toModelStep = async () => {
     await panel.waitForSelector(DIALOG, { timeout: 10000 });
     await clickInDialog('Next');
-    await waitForText(/Step 2 of 3/i);
+    await waitForText(/Step 2 of 4/i);
     await panel.waitForSelector('[data-testid="model-setup"]');
   };
   return {
@@ -128,7 +128,7 @@ test('first open shows the setup; naming it "Nova" shows Nova in the panel, and 
   const { extension, panel } = run;
   try {
     await panel.waitForSelector(DIALOG, { timeout: 10000 });
-    await run.waitForText(/Step 1 of 3/i);
+    await run.waitForText(/Step 1 of 4/i);
     await run.waitForText(/Name your assistant/);
     assert.equal(await panel.$eval('#onboard-name', input => input.value), 'Ava', 'prefilled with Ava');
     assert.equal(
@@ -141,7 +141,7 @@ test('first open shows the setup; naming it "Nova" shows Nova in the panel, and 
     await run.typeName('R2D2');
     await panel.keyboard.press('Enter');
     await run.waitForText(/Use letters, spaces, hyphens and apostrophes only/);
-    assert.match(await run.text(), /Step 1 of 3/i);
+    assert.match(await run.text(), /Step 1 of 4/i);
 
     // A name the on-device model does not know keeps "Hey Ava", and says so
     await run.typeName('Zorblax');
@@ -151,7 +151,7 @@ test('first open shows the setup; naming it "Nova" shows Nova in the panel, and 
     await sleep(300);
     assert.equal(await panel.$('[data-testid="wake-note"]'), null, 'Nova is in the vocabulary');
     await panel.keyboard.press('Enter');
-    await run.waitForText(/Step 2 of 3/i);
+    await run.waitForText(/Step 2 of 4/i);
     await run.waitForText(/Add a model/);
     assert.equal((await extension.getStorage('general-settings'))?.assistantName, 'Nova', 'the name is saved on Next');
     // A model is already set up here: the step says so and lets it go on
@@ -159,7 +159,15 @@ test('first open shows the setup; naming it "Nova" shows Nova in the panel, and 
     assert.equal(await run.nextDisabled(), false);
 
     await run.clickInDialog('Next');
-    await run.waitForText(/Step 3 of 3/i);
+    // The rest of the setup as a checklist: it can wait, so Next goes on
+    await run.waitForText(/Step 3 of 4/i);
+    await panel.waitForSelector(`${DIALOG} [data-testid="setup-checklist"] [data-setup-item="local"]`, {
+      timeout: 15000,
+    });
+    assert.equal(await run.nextDisabled(), false, 'the checklist does not trap the user');
+    await shot(panel, '3b-checklist');
+    await run.clickInDialog('Next');
+    await run.waitForText(/Step 4 of 4/i);
     await run.waitForText(/Say “Hey Nova” to start talking/);
     assert.ok(await panel.$(`${DIALOG} [role="switch"][aria-label="Listen for “Hey Nova”"]`), 'the wake switch');
     assert.equal((await extension.getStorage('meeting-settings'))?.wakeWord ?? false, false, 'the wake word stays off');
@@ -200,7 +208,7 @@ test('Skip and Esc end the setup at once, keep Ava, and it does not show again',
     await panel.reload();
     await panel.waitForSelector(DIALOG, { timeout: 10000 });
     await panel.keyboard.press('Enter');
-    await run.waitForText(/Step 2 of 3/i);
+    await run.waitForText(/Step 2 of 4/i);
     await panel.keyboard.press('Escape');
     await panel.waitForFunction(selector => !document.querySelector(selector), { polling: 200 }, DIALOG);
     await panel.reload();
@@ -229,7 +237,7 @@ test('a fresh install: the model step waits for a local server, adds it in one c
     await run.waitForText(/ollama pull \S+/);
     await panel.keyboard.press('Enter');
     await sleep(300);
-    assert.match(await run.text(), /Step 2 of 3/i);
+    assert.match(await run.text(), /Step 2 of 4/i);
     await run.waitForText(/Watching for it/);
     await shot(panel, '1-local-none');
 
@@ -249,7 +257,9 @@ test('a fresh install: the model step waits for a local server, adds it in one c
     assert.equal(await run.nextDisabled(), false, 'Next goes on once a model works');
 
     await run.clickInDialog('Next');
-    await run.waitForText(/Step 3 of 3/i);
+    await run.waitForText(/Step 3 of 4/i);
+    await run.clickInDialog('Next');
+    await run.waitForText(/Step 4 of 4/i);
     await run.clickInDialog('Done');
     await panel.waitForFunction(selector => !document.querySelector(selector), { polling: 200 }, DIALOG);
     await panel.waitForSelector('textarea', { timeout: 10000 });
@@ -306,6 +316,9 @@ test('an API key is checked before it is kept: a refused key says why, a working
     assert.ok(!JSON.stringify(saved).includes('sk-good-1234'), 'the key is in the vault, not in plain storage');
 
     await run.clickInDialog('Next');
+    await run.waitForText(/Step 3 of 4/i);
+    await run.clickInDialog('Next');
+    await run.waitForText(/Step 4 of 4/i);
     await run.clickInDialog('Done');
     await panel.waitForFunction(selector => !document.querySelector(selector), { polling: 200 }, DIALOG);
     await panel.waitForSelector('textarea', { timeout: 10000 });
@@ -337,7 +350,7 @@ test('skipping without a model keeps it owed: the welcome screen and Finish setu
     await shot(panel, '6-welcome');
     await run.clickButton('Connect a model');
     await panel.waitForSelector(`${DIALOG} [data-testid="model-setup"]`, { timeout: 5000 });
-    assert.doesNotMatch(await run.text(), /Step \d of 3/i);
+    assert.doesNotMatch(await run.text(), /Step \d of 4/i);
     assert.equal(await run.nextDisabled(), true, 'Done waits for a model too');
     await shot(panel, '7-reopened');
 

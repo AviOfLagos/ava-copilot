@@ -2379,6 +2379,28 @@ area grows.
 **Pre-existing, unrelated**: `cd site && pnpm build` currently fails on this worktree (`Rolldown failed to resolve
 import "@extension/storage" from .../Composer.tsx`) with or without this feature's two site files — confirmed by
 removing them and rebuilding. Not caused by this change; left for whoever owns the site build to look at.
+### Required setup: checklist, indicator, Ava's meeting account, local-only proof
+
+Every part of the setup is a checklist item with a live check, a one-line reason and a button
+(`src/background/setup`: `checks.ts` rules, `readers.ts` reads the real status, `register.ts` job every 15 min plus
+storage-change checks, commands `setup_status|skip|unskip|open_app`; page `src/side-panel/setup`, section
+`options.html#general/setup`). Required: a working model, a local model (Ollama/LM Studio with a chat model and
+`nomic-embed-text`; one-click pull; once present it is set as the `local` role and `fallbackLocal.model` unless the
+user chose one), on-device voice models, Nex Brain paired. Recommended (Skip, and Bring back): Ava's meeting account,
+WhatsApp, calendar, Obsidian, a backup. The header shows a count (`SetupIndicator`), and the toolbar badge shows it
+while the Inbox has nothing unread (`inbox/badge.ts`). Onboarding has a checklist step after the model step; Next is
+never blocked by it.
+
+Ava's meeting account: Settings › Meetings › `#meetings/ava` (Nex Brain state, signed in and as which account, Sign in,
+Check sign-in) and "joins the Google Meet calls I join": Never (default) / Ask me / Always (`meet-voice/autojoin.ts`,
+a Dexie `creating` hook on meetings). Ask is a notification plus a card in the call's notes; Always asks instead
+when her browser is signed out; it never joins without the user's tab on that call. Nex Brain gained
+`/v1/meet/check` (account read from Meet's account button) and `/v1/apps/open` (Ollama or LM Studio only, `open -a`).
+
+Local only (Ollama + qwen3:4b, no cloud key): `models/__tests__/localOnly.test.ts` (chat, title and summary light work,
+fallback, Ollama stopped gives a plain error) and `e2e/setup.e2e.mjs` (a full browser task on the mock Ollama, then
+the checklist, Skip, header count and badge). Cloud-only today: Gemini Live Talk without local voices, a web-search
+role (no local model has it), and vision on qwen3:4b (no screenshots sent).
 
 ## 5. Risks, in order
 

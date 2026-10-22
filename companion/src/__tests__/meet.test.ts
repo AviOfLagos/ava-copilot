@@ -8,7 +8,7 @@ import type { CdpTransport } from '../meet/cdp';
 import { looksLikeWav, MeetBot } from '../meet/bot';
 import { MIC_SCRIPT, READ_STATE, UNTRUSTED_REGIONS } from '../meet/page-scripts';
 import type { MeetPhase } from '../meet/page-scripts';
-import { startTestBrain, tempDir } from './helpers';
+import { fakeRunner, startTestBrain, tempDir } from './helpers';
 
 /**
  * A pretend Chrome on the other end of the debugging pipe: it answers the commands the bot sends, plays a
@@ -360,6 +360,8 @@ function readPage(page: {
   text: string;
   regions?: string[];
   host?: string;
+  // The account button's label, as Google writes it
+  account?: string;
 }) {
   const element = (aria: string, words: string) => ({
     getAttribute: (name: string) => (name === 'aria-label' ? aria : null),
@@ -374,11 +376,13 @@ function readPage(page: {
         return (page.buttons ?? []).map(([aria, words]) => element(aria, words));
       if (selector === UNTRUSTED_REGIONS)
         return (page.regions ?? []).map(text => ({ innerText: text, textContent: text }));
+      if (selector.includes('Google Account') && page.account) return [element(page.account, '')];
       return [];
     },
   };
   return runInNewContext(READ_STATE, { location: { hostname: page.host ?? 'meet.google.com' }, document }) as {
     phase: MeetPhase;
+    account: string | null;
   };
 }
 
@@ -396,6 +400,18 @@ describe('reading the call page', () => {
     expect(inCall.phase).toBe('in_call');
     // A participant named like a control does not make her in the call either
     expect(readPage({ buttons: [['More options for Leave call', '']], text: '' }).phase).toBe('loading');
+  });
+
+  it("names the signed-in account from the account button's label, and nothing else", () => {
+    const lobby = { text: 'Ready to join?', buttons: [['', 'Join now']] as [string, string][] };
+    expect(readPage({ ...lobby, account: 'Google Account: Ava Assistant  (ava.assistant@example.com)' }).account).toBe(
+      'ava.assistant@example.com',
+    );
+    expect(readPage({ ...lobby, account: 'Google Account: Ava' }).account).toBeNull();
+    // An address typed in the chat is not her account
+    expect(
+      readPage({ ...lobby, text: 'mallory@evil.test says hi', regions: ['mallory@evil.test says hi'] }).account,
+    ).toBeNull();
   });
 
   it('reads the end screens only outside what others can write', () => {
@@ -459,8 +475,41 @@ describe('the meet routes', () => {
       }),
     });
     expect(tooBig.status).toBe(400);
+    // A sign-in check answers with the status (this fake browser shows the lobby, signed in)
+    const checked = await test.api('/v1/meet/check');
+    expect(checked.status).toBe(200);
     expect((await test.api('/v1/meet/stop')).status).toBe(200);
     const left = meetStatusReplySchema.parse(await (await test.api('/v1/meet/leave')).json());
     expect(left.status.state).toBe('left');
+  });
+});
+
+describe('opening an app on the Mac', () => {
+  let test: Awaited<ReturnType<typeof startTestBrain>>;
+  afterEach(async () => test?.stop());
+
+  it('opens only Ollama or LM Studio, by a fixed name, and only when paired', async () => {
+    const run = fakeRunner(() => ({ code: 0 }));
+    test = await startTestBrain({ run, platform: 'darwin' });
+    expect((await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'ollama' }) })).status).toBe(401);
+    await test.pair();
+    expect((await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'ollama' }) })).status).toBe(200);
+    expect((await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'lmstudio' }) })).status).toBe(200);
+    expect((await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'Terminal' }) })).status).toBe(400);
+    expect((await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'ollama; rm -rf ~' }) })).status).toBe(400);
+    const opened = run.calls.filter(call => call.command === '/usr/bin/open').map(call => call.args);
+    expect(opened).toEqual([
+      ['-a', 'Ollama'],
+      ['-a', 'LM Studio'],
+    ]);
+  });
+
+  it('says so when the app is not installed', async () => {
+    const run = fakeRunner(call => (call.command === '/usr/bin/open' ? { code: 1 } : { code: 0 }));
+    test = await startTestBrain({ run, platform: 'darwin' });
+    await test.pair();
+    const reply = await test.api('/v1/apps/open', { body: JSON.stringify({ app: 'ollama' }) });
+    expect(reply.status).not.toBe(200);
+    expect(JSON.stringify(await reply.json())).toMatch(/not installed/);
   });
 });
