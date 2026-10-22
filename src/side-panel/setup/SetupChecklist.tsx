@@ -52,12 +52,13 @@ function useRun(recheck: () => Promise<void>) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const run = useCallback(
-    async (key: string, work: () => Promise<unknown>) => {
+    async (key: string, work: () => Promise<unknown>, { fresh = true }: { fresh?: boolean } = {}) => {
       setBusy(key);
       setError('');
       try {
         await work();
-        await recheck();
+        // Skip and Bring back only change the stored list: no need to ask every service again
+        if (fresh) await recheck();
       } catch (thrown) {
         setError(errorText(thrown));
       } finally {
@@ -262,7 +263,9 @@ function ItemRow(props: RowProps & { skipped: boolean; recommended: boolean }) {
               disabled={busy !== null}
               aria-label={t(skipped ? 'setup_unskip_named' : 'setup_skip_named', [title])}
               onClick={() =>
-                void run('skip', () => api.request({ type: skipped ? 'setup_unskip' : 'setup_skip', id: item.id }))
+                void run('skip', () => api.request({ type: skipped ? 'setup_unskip' : 'setup_skip', id: item.id }), {
+                  fresh: false,
+                })
               }>
               {t(skipped ? 'setup_unskip' : 'setup_skip')}
             </Button>
