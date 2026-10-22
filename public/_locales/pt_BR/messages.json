@@ -9314,5 +9314,420 @@
   },
   "brain_autoPair_hint": {
     "message": "Sem código enquanto o Nex Brain estiver rodando aqui. Se ele pedir um, use o código abaixo."
+  },
+  "setup_title": {
+    "message": "Configuração"
+  },
+  "setup_indicator": {
+    "message": "Configuração: faltam $COUNT$ passos",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "setup_checking": {
+    "message": "Verificando o que está configurado…"
+  },
+  "setup_summary_pending": {
+    "message": "Faltam $COUNT$ passos. Você pode usar o app enquanto isso.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "setup_summary_done": {
+    "message": "Tudo configurado."
+  },
+  "setup_checkAgain": {
+    "message": "Verificar de novo"
+  },
+  "setup_group_required": {
+    "message": "Obrigatório"
+  },
+  "setup_group_recommended": {
+    "message": "Recomendado"
+  },
+  "setup_ready": {
+    "message": "Pronto."
+  },
+  "setup_notReady": {
+    "message": "não está pronto"
+  },
+  "setup_skipped": {
+    "message": "pulado"
+  },
+  "setup_skip": {
+    "message": "Pular"
+  },
+  "setup_unskip": {
+    "message": "Trazer de volta"
+  },
+  "setup_skip_named": {
+    "message": "Pular $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_unskip_named": {
+    "message": "Trazer de volta $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_item_model": {
+    "message": "Um modelo que funciona"
+  },
+  "setup_item_local": {
+    "message": "Um modelo local (Ollama ou LM Studio)"
+  },
+  "setup_item_voice": {
+    "message": "Modelos de voz no dispositivo"
+  },
+  "setup_item_brain": {
+    "message": "Nex Brain pareado"
+  },
+  "setup_item_ava": {
+    "message": "Conta de reunião da Ava"
+  },
+  "setup_item_whatsapp": {
+    "message": "WhatsApp vinculado"
+  },
+  "setup_item_calendar": {
+    "message": "Agenda conectada"
+  },
+  "setup_item_obsidian": {
+    "message": "Cofre do Obsidian escolhido"
+  },
+  "setup_item_backup": {
+    "message": "Um backup feito"
+  },
+  "setup_problem_model_missing": {
+    "message": "Nenhum modelo funciona ainda: adicione uma chave ou um servidor local em Modelos."
+  },
+  "setup_problem_local_off": {
+    "message": "O Ollama não está rodando (ou não está instalado) neste computador."
+  },
+  "setup_problem_local_not_added": {
+    "message": "Um servidor local responde, mas Modelos ainda não o usa."
+  },
+  "setup_problem_local_no_chat": {
+    "message": "O servidor local ainda não tem modelo de chat."
+  },
+  "setup_problem_local_no_embed": {
+    "message": "O servidor local ainda não tem o nomic-embed-text (a busca local precisa dele)."
+  },
+  "setup_problem_voice_missing": {
+    "message": "A transcrição de voz e uma voz de leitura ainda não foram baixadas."
+  },
+  "setup_problem_brain_unreachable": {
+    "message": "O Nex Brain não responde neste Mac: instale ou inicie."
+  },
+  "setup_problem_brain_unpaired": {
+    "message": "O Nex Brain está rodando, mas não está pareado com este navegador."
+  },
+  "setup_problem_brain_offline": {
+    "message": "O Nex Brain está pareado, mas não responde agora: inicie de novo."
+  },
+  "setup_problem_needs_brain": {
+    "message": "Precisa do Nex Brain pareado e rodando antes."
+  },
+  "setup_problem_ava_no_browser": {
+    "message": "O Nex Brain não encontrou Chrome, Brave ou Chromium para rodá-la."
+  },
+  "setup_problem_ava_signed_out": {
+    "message": "O navegador de $NAME$ não está conectado a uma conta Google.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_problem_ava_unchecked": {
+    "message": "Ainda não foi verificado se o navegador de $NAME$ está conectado.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_problem_wa_not_linked": {
+    "message": "O WhatsApp não está vinculado."
+  },
+  "setup_problem_cal_none": {
+    "message": "Nenhuma agenda conectada."
+  },
+  "setup_problem_cal_error": {
+    "message": "A agenda não pôde ser lida da última vez."
+  },
+  "setup_problem_obs_none": {
+    "message": "Nenhum cofre do Obsidian escolhido."
+  },
+  "setup_problem_backup_never": {
+    "message": "Nenhum backup foi feito ainda."
+  },
+  "setup_problem_backup_failed": {
+    "message": "O último backup falhou."
+  },
+  "setup_detail_local": {
+    "message": "Usa $MODEL$ para tarefas leves e quando a nuvem falha.",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "qwen3:4b"
+      }
+    }
+  },
+  "setup_detail_ava": {
+    "message": "Conectada como $ACCOUNT$.",
+    "placeholders": {
+      "account": {
+        "content": "$1",
+        "example": "ava@example.com"
+      }
+    }
+  },
+  "setup_detail_avaSignedIn": {
+    "message": "O navegador de $NAME$ está conectado.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_detail_calendar_mac": {
+    "message": "Lendo a Agenda do Mac pelo Nex Brain."
+  },
+  "setup_detail_calendar_ics": {
+    "message": "Lendo o endereço iCal da agenda."
+  },
+  "setup_detail_obsidian": {
+    "message": "Cofre: $TITLE$.",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_detail_backup": {
+    "message": "Último backup: $WHEN$.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "22/10/2026, 09:00"
+      }
+    }
+  },
+  "setup_action_models": {
+    "message": "Abrir Modelos"
+  },
+  "setup_action_getOllama": {
+    "message": "Baixar o Ollama"
+  },
+  "setup_action_openOllama": {
+    "message": "Abrir o Ollama"
+  },
+  "setup_action_addOllama": {
+    "message": "Usar o Ollama"
+  },
+  "setup_action_addLmStudio": {
+    "message": "Usar o LM Studio"
+  },
+  "setup_action_voice": {
+    "message": "Baixar modelos de voz"
+  },
+  "setup_action_pair": {
+    "message": "Parear com o Nex Brain neste Mac"
+  },
+  "setup_action_avaSignin": {
+    "message": "Conectar o navegador de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_action_avaCheck": {
+    "message": "Verificar login"
+  },
+  "setup_action_whatsapp": {
+    "message": "Vincular WhatsApp"
+  },
+  "setup_action_calendar": {
+    "message": "Conectar uma agenda"
+  },
+  "setup_action_obsidian": {
+    "message": "Escolher um cofre"
+  },
+  "setup_action_backup": {
+    "message": "Fazer backup agora"
+  },
+  "setup_action_brain": {
+    "message": "Configurar o Nex Brain"
+  },
+  "setup_hint_openOllama": {
+    "message": "Já instalou? Abra o app Ollama e verifique de novo."
+  },
+  "setup_hint_lmStudioModel": {
+    "message": "Baixe um modelo de chat na aba Discover do LM Studio, carregue-o e verifique de novo."
+  },
+  "setup_hint_lmStudioEmbed": {
+    "message": "Baixe o nomic-embed-text na aba Discover do LM Studio e verifique de novo."
+  },
+  "setup_hint_brainInstall": {
+    "message": "Instale o Nex Brain uma vez pela pasta do Nex Copilot no Terminal e verifique de novo:"
+  },
+  "setup_info_docker": {
+    "message": "Docker: $MESSAGE$ (só execuções isoladas precisam dele)",
+    "placeholders": {
+      "message": {
+        "content": "$1",
+        "example": "Docker is not running."
+      }
+    }
+  },
+  "onboard_setup_title": {
+    "message": "O resto da configuração"
+  },
+  "onboard_setup_body": {
+    "message": "Isto faz tudo funcionar no seu Mac. Faça agora ou depois: o ícone da lista no cabeçalho fica até terminar."
+  },
+  "meetvoice_offer_title": {
+    "message": "Trazer $NAME$ para esta chamada?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_offer_yes": {
+    "message": "Trazer $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_offer_no": {
+    "message": "Agora não"
+  },
+  "meetvoice_account_title": {
+    "message": "Conta de reunião da Ava"
+  },
+  "meetvoice_account_brain": {
+    "message": "Nex Brain"
+  },
+  "meetvoice_account_brainUnpaired": {
+    "message": "Não pareado: o navegador da Ava roda no Nex Brain."
+  },
+  "meetvoice_account_brainOnline": {
+    "message": "Pareado e rodando."
+  },
+  "meetvoice_account_brainOffline": {
+    "message": "Pareado, mas sem responder agora."
+  },
+  "meetvoice_account_browser": {
+    "message": "Navegador de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_needsBrain": {
+    "message": "Pareie o Nex Brain antes para conectar o navegador de $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_unknown": {
+    "message": "Ainda não foi verificado se o navegador de $NAME$ está conectado.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_signedIn": {
+    "message": "O navegador de $NAME$ está conectado ao Google.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_signedInAs": {
+    "message": "O navegador de $NAME$ está conectado como $ACCOUNT$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "account": {
+        "content": "$2",
+        "example": "ava@example.com"
+      }
+    }
+  },
+  "meetvoice_account_check": {
+    "message": "Verificar login"
+  },
+  "meetvoice_account_note": {
+    "message": "Você mesmo faz login, na janela do navegador de $NAME$. Use uma conta criada para ela; o Nex Copilot nunca vê nem guarda a senha.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_title": {
+    "message": "$NAME$ entra nas chamadas do Google Meet em que eu entro",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_hint": {
+    "message": "Quando você inicia notas numa chamada do Meet. $NAME$ entra como participante própria, o anfitrião a admite, ela só fala após seu clique e sai quando você sai.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_never": {
+    "message": "Nunca"
+  },
+  "meetvoice_auto_ask": {
+    "message": "Perguntar"
+  },
+  "meetvoice_auto_always": {
+    "message": "Sempre"
   }
 }

@@ -96,6 +96,8 @@ export interface MeetReading {
   asksName: boolean;
   cameraOn: boolean;
   micOff: boolean;
+  // The signed-in Google account, from the account button's own label ("Google Account: Ava (ava@example.com)")
+  account?: string | null;
 }
 
 // What other people can write on the page: chat, captions, participant names and tiles, notices that come and go.
@@ -134,7 +136,10 @@ export const READ_STATE = `(() => {
   const hasAria = re => aria.some(label => re.test(label));
   const hasWords = re => words.some(label => re.test(label));
   const asksName = [...document.querySelectorAll('input')].some(input => visible(input) && /your name/i.test(input.getAttribute('aria-label') || input.placeholder || ''));
-  const base = { asksName, cameraOn: hasAria(/^turn off camera/i), micOff: hasAria(/^turn on microphone/i) };
+  const accountLabel = [...document.querySelectorAll('a[aria-label^="Google Account"],[role="button"][aria-label^="Google Account"]')].map(el => el.getAttribute('aria-label') || '')[0] || '';
+  const accountMatch = accountLabel.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);
+  const account = accountMatch ? accountMatch[0].slice(0, 200) : null;
+  const base = { asksName, cameraOn: hasAria(/^turn off camera/i), micOff: hasAria(/^turn on microphone/i), account };
   if (hasAria(/^leave call$/i)) return { ...base, phase: 'in_call' };
   let text = ((document.body && document.body.innerText) || '');
   for (const region of document.querySelectorAll(${JSON.stringify('__UNTRUSTED__')})) {

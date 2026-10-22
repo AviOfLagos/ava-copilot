@@ -22,7 +22,9 @@ import { ObsidianVaults } from './obsidian/vault';
 import type { MeetBotDeps } from './meet/bot';
 import { brainRoutes } from './routes';
 import { SandboxManager } from './sandbox/manager';
-import { runProcess } from './sandbox/process';
+import { hostToolEnv, runProcess } from './sandbox/process';
+import { fail } from './errors';
+import type { MacApp } from '@protocol';
 import type { ProcessRunner } from './sandbox/process';
 import { EveEngine } from './sessions/eve';
 import type { SessionEngine } from './sessions/eve';
@@ -127,6 +129,12 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     now,
   });
   const calendar = new MacCalendarReader({ run, log: log.child({ part: 'calendar' }), platform: deps.platform });
+  const MAC_APP_NAMES: Record<MacApp, string> = { ollama: 'Ollama', lmstudio: 'LM Studio' };
+  const openApp = async (app: MacApp) => {
+    if ((deps.platform ?? process.platform) !== 'darwin') fail('unavailable', 'Opening an app works on a Mac only.');
+    const result = await run('/usr/bin/open', ['-a', MAC_APP_NAMES[app]], { env: hostToolEnv(), timeoutMs: 15_000 });
+    if (result.code !== 0) fail('unavailable', `${MAC_APP_NAMES[app]} is not installed on this Mac.`);
+  };
   const startedAt = now();
   server.add(...backupRoutes({ backups, secrets: backupSecrets }));
   server.add(...obsidianRoutes({ vaults }));
@@ -143,6 +151,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
       studio,
       workflows,
       meet,
+      openApp,
       whatsapp,
       registry,
       engine,

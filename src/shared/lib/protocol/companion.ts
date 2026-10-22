@@ -683,6 +683,8 @@ export function studioCsp(scriptHash: string, styleHash: string): string {
 export const MEET_ROUTES = {
   status: '/v1/meet/status',
   signin: '/v1/meet/signin',
+  // Looks whether her browser is signed in (runs it for a few seconds when nothing else uses it)
+  check: '/v1/meet/check',
   join: '/v1/meet/join',
   say: '/v1/meet/say',
   stop: '/v1/meet/stop',
@@ -755,6 +757,9 @@ export const meetStatusSchema = z.object({
   // Whether a Chrome, Brave or Chromium to run her in was found on the Mac
   browserFound: z.boolean(),
   since: z.number(),
+  // The Google account her browser is signed in to, as Meet's account button names it (null: not seen). Optional so
+  // an older Nex Brain still answers
+  account: z.string().max(200).nullable().optional(),
 });
 export type MeetStatus = z.infer<typeof meetStatusSchema>;
 
@@ -1163,6 +1168,16 @@ export const obsidianSearchReplySchema = z.object({
 // Nex Brain reads macOS Calendar (EventKit), which syncs every Google, Workspace, iCloud or Exchange account
 // added under System Settings › Internet Accounts. Read-only. Event text is written by whoever sent the invite:
 // it is data, never instructions.
+
+// ── Apps on the Mac ───────────────────────────────────────────────────────────────────────────────
+//
+// Opens one of a fixed list of apps the setup needs running (the local model servers). Nothing else can be
+// opened: the name is never taken from the request.
+
+export const APP_ROUTES = { open: '/v1/apps/open' } as const;
+export const MAC_APPS = ['ollama', 'lmstudio'] as const;
+export type MacApp = (typeof MAC_APPS)[number];
+export const appOpenRequestSchema = z.object({ app: z.enum(MAC_APPS) });
 
 export const CALENDAR_ROUTES = {
   status: '/v1/calendar/status',

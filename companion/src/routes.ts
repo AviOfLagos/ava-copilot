@@ -8,8 +8,10 @@ import {
   cursorRequestSchema,
   ghRequestSchema,
   healthRequestSchema,
+  APP_ROUTES,
   MEET_ROUTES,
   MEET_SAY_MAX_BODY_BYTES,
+  appOpenRequestSchema,
   meetJoinRequestSchema,
   meetSayRequestSchema,
   pairRequestSchema,
@@ -34,7 +36,7 @@ import {
   whatsappQuietRequestSchema,
   whatsappSendRequestSchema,
 } from '@protocol';
-import type { HealthReply } from '@protocol';
+import type { HealthReply, MacApp } from '@protocol';
 import type { ArtifactStore, StudioKeys } from './artifacts/store';
 import type { PairingStore } from './auth/pairing';
 import type { GhRunner } from './cli/gh';
@@ -62,6 +64,8 @@ export interface RouteDeps {
   studio: StudioKeys;
   workflows: MacWorkflows;
   meet: MeetBot;
+  // Opens one of the apps the setup needs (open -a), never anything named by the request
+  openApp: (app: MacApp) => Promise<void>;
   whatsapp: WhatsAppService;
   registry: ProfileRegistry;
   engine: SessionEngine | null;
@@ -491,6 +495,29 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       rate: 'run',
       async handler() {
         return json({ ok: true, status: await deps.meet.signin() });
+      },
+    },
+    {
+      method: 'POST',
+      path: MEET_ROUTES.check,
+      name: 'meet.check',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        await deps.meet.checkSignedIn();
+        return json({ ok: true, status: deps.meet.status() });
+      },
+    },
+    {
+      method: 'POST',
+      path: APP_ROUTES.open,
+      name: 'apps.open',
+      auth: 'api',
+      rate: 'run',
+      async handler({ body }) {
+        const request = parse(appOpenRequestSchema, body);
+        await deps.openApp(request.app);
+        return json({ ok: true });
       },
     },
     {

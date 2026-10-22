@@ -30,6 +30,7 @@ import {
   errorReplySchema,
   ghReplySchema,
   healthReplySchema,
+  APP_ROUTES,
   MEET_ROUTES,
   meetSayReplySchema,
   meetStatusReplySchema,
@@ -58,6 +59,7 @@ import type {
   SessionEvent,
   ToolCallRequest,
   WorkflowPutRequest,
+  MacApp,
   MeetJoinRequest,
   MeetSayRequest,
   ObsidianWriteRequest,
@@ -567,6 +569,28 @@ export class CompanionClient {
   /** Opens Ava's browser at Google's sign-in page, for the user to sign in to her account by hand. */
   meetSignin() {
     return this.call({ method: 'POST', path: MEET_ROUTES.signin, body: {}, schema: meetStatusReplySchema });
+  }
+
+  /** Looks whether her browser is signed in (Nex Brain runs it for a few seconds) and which account it is. */
+  meetCheck() {
+    return this.call({
+      method: 'POST',
+      path: MEET_ROUTES.check,
+      body: {},
+      schema: meetStatusReplySchema,
+      timeoutMs: 45_000,
+    });
+  }
+
+  /** Opens a local model server's app on the Mac (Ollama, LM Studio); nothing else can be opened. */
+  openApp(app: MacApp) {
+    return this.call({
+      method: 'POST',
+      path: APP_ROUTES.open,
+      body: { app },
+      schema: okReplySchema,
+      timeoutMs: 20_000,
+    });
   }
 
   meetJoin(request: MeetJoinRequest) {

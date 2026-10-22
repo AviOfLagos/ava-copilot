@@ -25,3 +25,4 @@ import './skills/register';
 import './kb/register';
 import './obsidian/register';
 import './calendar/register';
+import './setup/register';

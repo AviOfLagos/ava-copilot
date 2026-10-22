@@ -7,6 +7,7 @@ import {
   aboutYouStore,
   accountProfileStore,
   assistantNameOf,
+  db,
   generalSettingsStore,
   meetingStore,
   threadStore,
@@ -30,7 +31,8 @@ import { services } from '../registry/services';
 import { defaultRenderDeps, renderForCall } from './render';
 import { askedToSpeak, REFUSALS, sayInMeeting, wordsFromCall } from './say';
 import type { SayDeps, UserMeeting } from './say';
-import { isInOrJoining, meetVoiceStore } from './state';
+import { decideAutoJoin, OFFER_NOTIFICATION_PREFIX } from './autojoin';
+import { isInOrJoining, MEET_AUTO_JOIN, meetVoiceSettingsStore, meetVoiceStore } from './state';
 
 const logger = createLogger('MeetVoice');
 
@@ -166,13 +168,40 @@ command('meetvoice_signin', z.object({}), async () => {
   return state();
 });
 
-command('meetvoice_join', z.object({ meetingId: z.string().min(1).max(100) }), async ({ meetingId }) => {
+/** Brings her into the user's call: the notes must be recording a Google Meet call. */
+async function joinCall(meetingId: string): Promise<void> {
   const meeting = await meetingStore.get(meetingId);
   const url = meeting ? normalizeMeetUrl(meeting.url) : null;
   if (!meeting || meeting.status !== 'recording' || !url) throw new Error(t('meetvoice_errors_notMeet'));
   const { status } = await companionClient.meetJoin({ requestId: crypto.randomUUID(), url });
-  await meetVoiceStore.update({ status, meetingId, error: null, introduced: [] });
+  await meetVoiceStore.update({ status, meetingId, error: null, introduced: [], offer: null });
+  await chrome.notifications?.clear(`${OFFER_NOTIFICATION_PREFIX}${meetingId}`).catch(() => {});
   await jobs.schedule({ kind: WATCH_JOB, key: WATCH_KEY, cron: WATCH_CRON, catchUpMs: 60_000 });
+}
+
+command('meetvoice_join', z.object({ meetingId: z.string().min(1).max(100) }), async ({ meetingId }) => {
+  await joinCall(meetingId);
+  return state();
+});
+
+// Settings › Meetings › Ava's meeting account: looks whether her browser is signed in, and to which account
+command('meetvoice_check', z.object({}), async () => {
+  if (!(await brainSettingsStore.getSettings()).paired) return state();
+  const { status } = await companionClient.meetCheck();
+  await meetVoiceStore.update({ status, checkedAt: Date.now(), error: null });
+  return state();
+});
+
+command('meetvoice_settings', z.object({ autoJoin: z.enum(MEET_AUTO_JOIN as [string, ...string[]]) }), async input => {
+  const settings = await meetVoiceSettingsStore.update({ autoJoin: input.autoJoin as (typeof MEET_AUTO_JOIN)[number] });
+  return { settings, ...(await state()) };
+});
+
+// "Not now" on "Bring Ava into this call?"
+command('meetvoice_offer_dismiss', z.object({}), async () => {
+  const { offer } = await meetVoiceStore.getState();
+  if (offer) await chrome.notifications?.clear(`${OFFER_NOTIFICATION_PREFIX}${offer.meetingId}`).catch(() => {});
+  await meetVoiceStore.update({ offer: null });
   return state();
 });
 
@@ -195,12 +224,90 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return answerOneOff(message, sendResponse);
 });
 
+// ── Joining with the notes ("Ava joins the Google Meet calls I join") ─────────────────────────────────
+
+// Notes that just started need a moment to settle (a start can still fail and end them)
+const SETTLE_MS = 2000;
+
+/** Whether the user's own tab is still on the call the notes record. */
+async function userOnCall(meeting: MeetingRecord): Promise<boolean> {
+  if (meeting.tabId == null) return false;
+  const tab = await chrome.tabs.get(meeting.tabId).catch(() => undefined);
+  const code = meetCodeOf(meeting.url);
+  return Boolean(code && tab?.url && meetCodeOf(tab.url) === code);
+}
+
+async function offerToJoin(meeting: MeetingRecord): Promise<void> {
+  await meetVoiceStore.update({ offer: { meetingId: meeting.id, at: Date.now() } });
+  const name = await assistantName();
+  await chrome.notifications
+    ?.create(`${OFFER_NOTIFICATION_PREFIX}${meeting.id}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icon-128.png'),
+      title: t('meetvoice_offer_title', [name]),
+      message: meeting.title || ' ',
+      buttons: [{ title: t('meetvoice_offer_yes', [name]) }, { title: t('meetvoice_offer_no') }],
+      requireInteraction: true,
+      priority: 1,
+    })
+    .catch(() => {});
+}
+
+/** Runs once for new notes: brings her in, asks, or does nothing, as the user chose (never by default). */
+export async function onNotesStarted(meetingId: string): Promise<void> {
+  const settings = await meetVoiceSettingsStore.getSettings();
+  if (settings.autoJoin === 'never') return;
+  const meeting = await meetingStore.get(meetingId);
+  if (!meeting || !isMeetCall(meeting)) return;
+  const paired = (await brainSettingsStore.getSettings()).paired;
+  const status = paired ? await refresh() : null;
+  const decision = decideAutoJoin({
+    setting: settings.autoJoin,
+    paired,
+    isMeetCall: true,
+    userInCall: await userOnCall(meeting),
+    status,
+  });
+  if (decision === 'join') {
+    logger.info('Bringing Ava into the call the user takes notes in');
+    await joinCall(meeting.id);
+  } else if (decision === 'ask') {
+    await offerToJoin(meeting);
+  }
+}
+
+// The meetings manager is the only writer of meetings: a new recording row is the user starting notes
+db.meetings.hook('creating', (_key, record: Partial<MeetingRecord>) => {
+  if (record?.status !== 'recording' || typeof record.id !== 'string') return;
+  const id = record.id;
+  setTimeout(
+    () => void onNotesStarted(id).catch(error => logger.warning(`Ava did not join (${toAppError(error).kind})`)),
+    SETTLE_MS,
+  );
+});
+
+chrome.notifications?.onButtonClicked.addListener((notificationId, button) => {
+  if (!notificationId.startsWith(OFFER_NOTIFICATION_PREFIX)) return;
+  const meetingId = notificationId.slice(OFFER_NOTIFICATION_PREFIX.length);
+  void (async () => {
+    await chrome.notifications.clear(notificationId).catch(() => {});
+    const { offer } = await meetVoiceStore.getState();
+    if (offer?.meetingId !== meetingId) return;
+    // The user's click on "Bring her in": the same join as the button in the call's notes
+    if (button === 0) await joinCall(meetingId);
+    else await meetVoiceStore.update({ offer: null });
+  })().catch(async error => {
+    await meetVoiceStore.update({ offer: null, error: toAppError(error).message }).catch(() => {});
+  });
+});
+
 // ── Leaving with the notes ────────────────────────────────────────────────────────────────────────
 
 // The call page saw the user leave: she goes too, now
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (message?.type !== 'meeting_call_left' || typeof message.meetingId !== 'string') return;
   if (sender.id !== chrome.runtime.id) return;
+  void chrome.notifications?.clear(`${OFFER_NOTIFICATION_PREFIX}${message.meetingId}`).catch(() => {});
   void leaveIfNotesEnded(message.meetingId).catch(error => logger.warning('Ava did not leave with the user', error));
 });
 

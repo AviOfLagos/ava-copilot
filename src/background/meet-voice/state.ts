@@ -16,6 +16,8 @@ export interface MeetVoiceState {
   // The last thing that went wrong, as a plain sentence
   error: string | null;
   checkedAt: number | null;
+  // "Ask me": the user's call she offers to join, until they answer (the meeting panel and a notification ask)
+  offer: { meetingId: string; at: number } | null;
 }
 
 export const DEFAULT_MEET_VOICE_STATE: MeetVoiceState = {
@@ -24,6 +26,7 @@ export const DEFAULT_MEET_VOICE_STATE: MeetVoiceState = {
   introduced: [],
   error: null,
   checkedAt: null,
+  offer: null,
 };
 
 const storage = createStorage<MeetVoiceState>('meet-voice-state', DEFAULT_MEET_VOICE_STATE, {
@@ -48,3 +51,34 @@ export const meetVoiceStore = {
 /** Whether she is on her way into a call or in one. */
 export const isInOrJoining = (status: MeetStatus | null | undefined): boolean =>
   status?.state === 'joining' || status?.state === 'waiting_admission' || status?.state === 'in_call';
+
+/**
+ * Whether Ava joins the Google Meet calls the user takes notes in: never (the default: she joins only when asked in
+ * the call's notes), after asking ("Bring Ava into this call?"), or always. Only ever a call the user is in.
+ */
+export type MeetAutoJoin = 'never' | 'ask' | 'always';
+export const MEET_AUTO_JOIN: MeetAutoJoin[] = ['never', 'ask', 'always'];
+
+export interface MeetVoiceSettings {
+  autoJoin: MeetAutoJoin;
+}
+
+export const DEFAULT_MEET_VOICE_SETTINGS: MeetVoiceSettings = { autoJoin: 'never' };
+
+const settingsStorage = createStorage<MeetVoiceSettings>('meet-voice-settings', DEFAULT_MEET_VOICE_SETTINGS, {
+  storageEnum: StorageEnum.Local,
+  liveUpdate: true,
+});
+
+export const meetVoiceSettingsStore = {
+  ...settingsStorage,
+  async getSettings(): Promise<MeetVoiceSettings> {
+    const saved = { ...DEFAULT_MEET_VOICE_SETTINGS, ...(await settingsStorage.get()) };
+    return MEET_AUTO_JOIN.includes(saved.autoJoin) ? saved : DEFAULT_MEET_VOICE_SETTINGS;
+  },
+  async update(changes: Partial<MeetVoiceSettings>): Promise<MeetVoiceSettings> {
+    const next = { ...(await meetVoiceSettingsStore.getSettings()), ...changes };
+    await settingsStorage.set(next);
+    return next;
+  },
+};

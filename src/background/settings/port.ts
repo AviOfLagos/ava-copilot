@@ -35,6 +35,8 @@ export const SETTINGS_COMMAND_PREFIXES = [
   'drive_',
   'skills_',
   'inbox_watch_now',
+  // General › Setup: the checklist's checks, skips and "Open Ollama"
+  'setup_',
 ] as const;
 
 export function allowedOnSettingsPort(type: unknown): boolean {

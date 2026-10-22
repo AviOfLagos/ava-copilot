@@ -64,6 +64,8 @@ export class MeetBot {
   private code: string | null = null;
   private since: number;
   private signedIn: boolean | null = null;
+  // The account her browser is signed in to, when Meet's account button showed it
+  private account: string | null = null;
   private browser: BrowserHandle | null = null;
   // What the open browser is for: the user signing in, a call, or a quick look at whether it is signed in
   private mode: 'signin' | 'call' | 'check' | null = null;
@@ -95,6 +97,7 @@ export class MeetBot {
       signedIn: this.signedIn,
       browserFound: this.findBrowser() !== null,
       since: this.since,
+      account: this.signedIn === false ? null : this.account,
     };
   }
 
@@ -177,11 +180,19 @@ export class MeetBot {
         if (reading && reading.phase !== 'loading') break;
       }
       this.signedIn = reading ? reading.phase !== 'signin' && reading.phase !== 'elsewhere' : null;
+      this.noteAccount(reading);
       return this.signedIn;
     } finally {
       // Only its own browser: never one a join started meanwhile
       if (this.browser === browser) await this.closeBrowser();
     }
+  }
+
+  /** Remembers the account a reading named; a signed-out reading forgets it. */
+  private noteAccount(reading: MeetReading | null): void {
+    if (!reading) return;
+    if (reading.phase === 'signin' || reading.phase === 'elsewhere' || reading.asksName) this.account = null;
+    else if (typeof reading.account === 'string' && reading.account) this.account = reading.account;
   }
 
   /** Waits for a sign-in check that is running, so nothing it does can touch what comes next. */
@@ -278,6 +289,7 @@ export class MeetBot {
             return this.finish('failed', NOT_SIGNED_IN);
           }
           this.signedIn = true;
+          this.noteAccount(reading);
           if (joinPressedAt !== null && this.now() - joinPressedAt < 5000) break;
           if (reading.cameraOn) await click(CONTROLS.cameraOff);
           if (reading.micOff) await click(CONTROLS.micOn);
@@ -292,6 +304,7 @@ export class MeetBot {
           break;
         case 'in_call':
           this.signedIn = true;
+          this.noteAccount(reading);
           if (this.state !== 'in_call') {
             this.set('in_call');
             this.deps.log.info('Ava is in the call');

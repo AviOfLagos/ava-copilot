@@ -9314,5 +9314,420 @@
   },
   "brain_autoPair_hint": {
     "message": "Nex Brain 在這裡執行時不需要代碼。若它設定為需要代碼，請使用下方的代碼。"
+  },
+  "setup_title": {
+    "message": "設定清單"
+  },
+  "setup_indicator": {
+    "message": "設定：還有 $COUNT$ 個步驟",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "setup_checking": {
+    "message": "正在檢查設定狀態…"
+  },
+  "setup_summary_pending": {
+    "message": "還有 $COUNT$ 個步驟。期間仍可使用。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "setup_summary_done": {
+    "message": "全部設定完成。"
+  },
+  "setup_checkAgain": {
+    "message": "重新檢查"
+  },
+  "setup_group_required": {
+    "message": "必要"
+  },
+  "setup_group_recommended": {
+    "message": "建議"
+  },
+  "setup_ready": {
+    "message": "已就緒。"
+  },
+  "setup_notReady": {
+    "message": "尚未就緒"
+  },
+  "setup_skipped": {
+    "message": "已略過"
+  },
+  "setup_skip": {
+    "message": "略過"
+  },
+  "setup_unskip": {
+    "message": "恢復"
+  },
+  "setup_skip_named": {
+    "message": "略過 $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_unskip_named": {
+    "message": "恢復 $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_item_model": {
+    "message": "可用的模型"
+  },
+  "setup_item_local": {
+    "message": "本機模型（Ollama 或 LM Studio）"
+  },
+  "setup_item_voice": {
+    "message": "裝置上的語音模型"
+  },
+  "setup_item_brain": {
+    "message": "已配對 Nex Brain"
+  },
+  "setup_item_ava": {
+    "message": "Ava 的會議帳號"
+  },
+  "setup_item_whatsapp": {
+    "message": "已連結 WhatsApp"
+  },
+  "setup_item_calendar": {
+    "message": "已連接行事曆"
+  },
+  "setup_item_obsidian": {
+    "message": "已選擇 Obsidian 保險庫"
+  },
+  "setup_item_backup": {
+    "message": "已完成備份"
+  },
+  "setup_problem_model_missing": {
+    "message": "目前沒有可用模型：請在「模型」加入金鑰或本機伺服器。"
+  },
+  "setup_problem_local_off": {
+    "message": "這台電腦上的 Ollama 未執行（或未安裝）。"
+  },
+  "setup_problem_local_not_added": {
+    "message": "本機伺服器有回應，但「模型」尚未使用它。"
+  },
+  "setup_problem_local_no_chat": {
+    "message": "本機伺服器尚無聊天模型。"
+  },
+  "setup_problem_local_no_embed": {
+    "message": "本機伺服器尚無 nomic-embed-text（本機搜尋需要它）。"
+  },
+  "setup_problem_voice_missing": {
+    "message": "尚未下載語音轉文字與朗讀語音。"
+  },
+  "setup_problem_brain_unreachable": {
+    "message": "這台 Mac 上的 Nex Brain 沒有回應：請安裝或啟動。"
+  },
+  "setup_problem_brain_unpaired": {
+    "message": "Nex Brain 正在執行，但尚未與此瀏覽器配對。"
+  },
+  "setup_problem_brain_offline": {
+    "message": "Nex Brain 已配對但目前沒有回應：請重新啟動。"
+  },
+  "setup_problem_needs_brain": {
+    "message": "需先配對並執行 Nex Brain。"
+  },
+  "setup_problem_ava_no_browser": {
+    "message": "Nex Brain 找不到可執行她的 Chrome、Brave 或 Chromium。"
+  },
+  "setup_problem_ava_signed_out": {
+    "message": "$NAME$ 的瀏覽器尚未登入 Google 帳號。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_problem_ava_unchecked": {
+    "message": "尚未檢查 $NAME$ 的瀏覽器是否已登入。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_problem_wa_not_linked": {
+    "message": "WhatsApp 尚未連結。"
+  },
+  "setup_problem_cal_none": {
+    "message": "尚未連接行事曆。"
+  },
+  "setup_problem_cal_error": {
+    "message": "上次無法讀取行事曆。"
+  },
+  "setup_problem_obs_none": {
+    "message": "尚未選擇 Obsidian 保險庫。"
+  },
+  "setup_problem_backup_never": {
+    "message": "尚未進行任何備份。"
+  },
+  "setup_problem_backup_failed": {
+    "message": "上次備份失敗。"
+  },
+  "setup_detail_local": {
+    "message": "輕量工作與雲端失敗時使用 $MODEL$。",
+    "placeholders": {
+      "model": {
+        "content": "$1",
+        "example": "qwen3:4b"
+      }
+    }
+  },
+  "setup_detail_ava": {
+    "message": "已登入為 $ACCOUNT$。",
+    "placeholders": {
+      "account": {
+        "content": "$1",
+        "example": "ava@example.com"
+      }
+    }
+  },
+  "setup_detail_avaSignedIn": {
+    "message": "$NAME$ 的瀏覽器已登入。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_detail_calendar_mac": {
+    "message": "透過 Nex Brain 讀取 Mac 行事曆。"
+  },
+  "setup_detail_calendar_ics": {
+    "message": "讀取行事曆的 iCal 位址。"
+  },
+  "setup_detail_obsidian": {
+    "message": "保險庫：$TITLE$。",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Nex Brain"
+      }
+    }
+  },
+  "setup_detail_backup": {
+    "message": "上次備份：$WHEN$。",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "22/10/2026, 09:00"
+      }
+    }
+  },
+  "setup_action_models": {
+    "message": "開啟模型"
+  },
+  "setup_action_getOllama": {
+    "message": "下載 Ollama"
+  },
+  "setup_action_openOllama": {
+    "message": "開啟 Ollama"
+  },
+  "setup_action_addOllama": {
+    "message": "使用 Ollama"
+  },
+  "setup_action_addLmStudio": {
+    "message": "使用 LM Studio"
+  },
+  "setup_action_voice": {
+    "message": "下載語音模型"
+  },
+  "setup_action_pair": {
+    "message": "與這台 Mac 上的 Nex Brain 配對"
+  },
+  "setup_action_avaSignin": {
+    "message": "登入 $NAME$ 的瀏覽器",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "setup_action_avaCheck": {
+    "message": "檢查登入"
+  },
+  "setup_action_whatsapp": {
+    "message": "連結 WhatsApp"
+  },
+  "setup_action_calendar": {
+    "message": "連接行事曆"
+  },
+  "setup_action_obsidian": {
+    "message": "選擇保險庫"
+  },
+  "setup_action_backup": {
+    "message": "立即備份"
+  },
+  "setup_action_brain": {
+    "message": "設定 Nex Brain"
+  },
+  "setup_hint_openOllama": {
+    "message": "已安裝？請開啟 Ollama 應用程式，再重新檢查。"
+  },
+  "setup_hint_lmStudioModel": {
+    "message": "請在 LM Studio 的 Discover 分頁下載並載入聊天模型，再重新檢查。"
+  },
+  "setup_hint_lmStudioEmbed": {
+    "message": "請在 LM Studio 的 Discover 分頁下載 nomic-embed-text，再重新檢查。"
+  },
+  "setup_hint_brainInstall": {
+    "message": "在終端機中從 Nex Copilot 資料夾安裝一次 Nex Brain，再重新檢查："
+  },
+  "setup_info_docker": {
+    "message": "Docker：$MESSAGE$（僅沙箱執行需要）",
+    "placeholders": {
+      "message": {
+        "content": "$1",
+        "example": "Docker is not running."
+      }
+    }
+  },
+  "onboard_setup_title": {
+    "message": "其餘設定"
+  },
+  "onboard_setup_body": {
+    "message": "這些讓一切在你的 Mac 上運作。現在或稍後完成皆可：完成前，標頭的清單圖示會一直顯示。"
+  },
+  "meetvoice_offer_title": {
+    "message": "要讓 $NAME$ 加入這通通話嗎？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_offer_yes": {
+    "message": "讓 $NAME$ 加入",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_offer_no": {
+    "message": "現在不要"
+  },
+  "meetvoice_account_title": {
+    "message": "Ava 的會議帳號"
+  },
+  "meetvoice_account_brain": {
+    "message": "Nex Brain"
+  },
+  "meetvoice_account_brainUnpaired": {
+    "message": "尚未配對：Ava 的瀏覽器在 Nex Brain 上執行。"
+  },
+  "meetvoice_account_brainOnline": {
+    "message": "已配對並執行中。"
+  },
+  "meetvoice_account_brainOffline": {
+    "message": "已配對，但目前沒有回應。"
+  },
+  "meetvoice_account_browser": {
+    "message": "$NAME$ 的瀏覽器",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_needsBrain": {
+    "message": "請先配對 Nex Brain，才能登入 $NAME$ 的瀏覽器。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_unknown": {
+    "message": "尚未檢查 $NAME$ 的瀏覽器是否已登入。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_signedIn": {
+    "message": "$NAME$ 的瀏覽器已登入 Google。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_account_signedInAs": {
+    "message": "$NAME$ 的瀏覽器已登入為 $ACCOUNT$。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      },
+      "account": {
+        "content": "$2",
+        "example": "ava@example.com"
+      }
+    }
+  },
+  "meetvoice_account_check": {
+    "message": "檢查登入"
+  },
+  "meetvoice_account_note": {
+    "message": "請你自己在 $NAME$ 的瀏覽器視窗中登入。請使用為她建立的帳號；Nex Copilot 不會看到或保存密碼。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_title": {
+    "message": "$NAME$ 加入我參加的 Google Meet 通話",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_hint": {
+    "message": "當你在 Meet 通話中開始記錄時。$NAME$ 以自己的身分加入，由主持人允許，只有在你點擊後才發言，你離開時她也會離開。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava"
+      }
+    }
+  },
+  "meetvoice_auto_never": {
+    "message": "永不"
+  },
+  "meetvoice_auto_ask": {
+    "message": "先詢問我"
+  },
+  "meetvoice_auto_always": {
+    "message": "總是"
   }
 }
