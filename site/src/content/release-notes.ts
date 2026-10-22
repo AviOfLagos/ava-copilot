@@ -9,6 +9,6 @@ export const RELEASE = {
   notes: [
     "Settings cards reach the background: WhatsApp, Ava's Meet browser, the Mac's Calendar, Obsidian, connectors, Drive and skills.",
     'Ollama and LM Studio answer the extension with nothing to set.',
-    'Nex Brain pairs with one click, and pairs itself with Nex Copilot — no code to type.',
+    'Nex Brain pairs with one click — no code to type.',
   ],
 };

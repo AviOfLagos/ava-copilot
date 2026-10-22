@@ -35,6 +35,8 @@ export default defineConfig({
         { find: /^@app\//, replacement: `${repoRoot}src/` },
         // The app's widgets import `cn` from @extension/ui: the same helper, minus tailwind-merge (see src/lib/cn.ts)
         { find: /^@extension\/ui$/, replacement: `${siteRoot}src/lib/cn.ts` },
+        // …and a few attachment rules and stores from @extension/storage (see src/lib/storage.ts)
+        { find: /^@extension\/storage$/, replacement: `${siteRoot}src/lib/storage.ts` },
       ],
       // Files under ../src import these by bare name; resolve them from the site's own node_modules, so the site
       // builds from a clean checkout without the extension's dependencies installed
