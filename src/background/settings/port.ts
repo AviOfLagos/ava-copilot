@@ -14,7 +14,7 @@ export const SETTINGS_PORT_NAME = MODELS_PORT_NAME;
 
 // What settings sections send: models, voice engines and downloads, previews, devices, Nex Brain, identity and
 // memory, AI history, backups, the Inbox's watch, install-before-use checks, WhatsApp, Ava's Meet browser, the Mac's
-// Calendar and Obsidian through Nex Brain
+// Calendar and Obsidian through Nex Brain, and the update checker
 export const SETTINGS_COMMAND_PREFIXES = [
   'models_',
   'voice_engine_',
@@ -35,6 +35,7 @@ export const SETTINGS_COMMAND_PREFIXES = [
   'drive_',
   'skills_',
   'inbox_watch_now',
+  'update_',
 ] as const;
 
 export function allowedOnSettingsPort(type: unknown): boolean {

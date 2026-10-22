@@ -17,3 +17,4 @@ import './identity/register';
 import './capabilities/register';
 import './settings/register';
 import './meet-voice/register';
+import './update/register';

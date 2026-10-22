@@ -2327,6 +2327,59 @@ mocked); extension `obsidian/__tests__/sync.test.ts`, `calendar/__tests__/{sourc
 `vault/__tests__/brain.test.ts`, `calendar/__tests__/macCalendar.test.ts`; E2E `e2e/brain-connect.e2e.mjs` with the
 mock companion.
 
+### "Update available"
+
+Chrome never auto-updates an unpacked extension, so "update" here means: tell the user plainly, and make updating
+one step. The install story already supported that half (`site/public/install.sh` re-downloads into the same
+folder and overwrites it — re-running the installer *is* the update; only "Reload the extension" is new), so this
+adds the checking and the telling.
+
+- **The feed**: `site/src/pages/version.json.ts`, a static Astro endpoint (same pattern as `llms.txt.ts`,
+  `robots.txt.ts`) served at `https://nex-copilot-one.vercel.app/version.json`. It reads `VERSION` (the repo's own
+  `package.json`, already imported by `site.ts`) and the companion's `package.json` version directly — no separate
+  script, no extra build step, built by the ordinary `pnpm build` (Astro). The only two fields anyone edits by hand
+  are `released` and `notes`, in `site/src/content/release-notes.ts`; **bump them alongside every real version bump**
+  (`pnpm update-version`), then push — Avi's existing Vercel deploy on push publishes the new `version.json`, nothing
+  else to run. Nothing here touches `site/public/download/` (the separate, git-ignored release zip from
+  `scripts/release.mjs`); the two are unrelated artifacts that happen to live on the same site.
+- **The check**: `src/background/update/` — `schema.ts` (zod, every string length-capped), `semver.ts` (plain
+  `x.y.z` compare, no pre-release handling needed), `check.ts` (`credentials: 'omit'`, no identifying headers, an
+  `AbortSignal.timeout`, a size cap by `content-length` and by actual bytes read), `state.ts` (two `createStorage`
+  stores: a setting and a status, the same shape as `companion/state.ts`), `register.ts` (the job, the three
+  commands, the toolbar tooltip, the one-per-version notification). A job (`src/background/jobs/runner.ts`) runs it
+  every 12 hours (`registerRecovery` re-arms the cron on every background start) plus once near a real
+  `chrome.runtime.onStartup`/`onInstalled` (not every service-worker wake, which would be far more often than "at
+  browser start"). Nex Brain's own version comes from `brainStatusStore` (already known when paired and online) and
+  is compared the same way, but only shown, never a separate notification. "Check for updates" (Settings › Help,
+  default on) is the setting that keeps CLAUDE.md's "no third-party calls" honest: this is Nex Copilot's own site,
+  explained in the section's hint, and "Check now" always works even with the setting off.
+- **Telling the user**: a dismissible banner in the panel (`src/side-panel/update/UpdateBanner.tsx`, shown on
+  Home/Chat only) with "What's new" (expands the notes inline) and "Update" (opens Settings › Help's `#updates`
+  anchor); a dot on the Settings › Help nav item (`src/options/Options.tsx`, both the desktop nav and the narrow-
+  window chips) when an update is available; one `chrome.notifications` notification per new version
+  (`notifiedVersion` in the status store prevents a repeat). The toolbar uses its **tooltip**
+  (`chrome.action.setTitle`), deliberately not `setBadgeText` — the Inbox already owns that badge
+  (`src/background/inbox/badge.ts`) and the setup checklist was, at the same time, also starting to use it; the two
+  features were told to use different mechanisms rather than race each other for one API.
+- **The Settings section** (`src/side-panel/update/UpdateSettings.tsx`, registered as Help's `help-updates`,
+  first in that page): the setting toggle, installed vs. latest version with "Check now", the expandable notes,
+  the install command again (`CopyCommand`, reused from `models/LocalSection.tsx`) plus "Reload the extension"
+  (`chrome.runtime.reload()`, called directly — reload is not state, so it doesn't go through the background), and
+  the same install-command-plus-status pattern for Nex Brain.
+- i18n: every string under `update_`, in all three locales; `node scripts/check-locales.mjs` passes.
+
+Tests: `src/background/update/__tests__/semver.test.ts`, `check.test.ts` (schema rejection, oversized by header and
+by body, non-OK, bad JSON, network failure — a fake `fetch`, no real network), `register.test.ts` (notifies once
+per version, no second notification on a repeat check, toolbar tooltip on/off, Nex Brain comparison only when a
+local version is known, the setting gate vs. "manual" bypassing it) with a small local chrome stub
+(`__tests__/chrome-stub.ts`, the same idea as `companion/__tests__/chrome-stub.ts`). No E2E yet — the feed itself
+needs a real or fixture `version.json`, which the existing E2E fixture server does not serve; worth adding if this
+area grows.
+
+**Pre-existing, unrelated**: `cd site && pnpm build` currently fails on this worktree (`Rolldown failed to resolve
+import "@extension/storage" from .../Composer.tsx`) with or without this feature's two site files — confirmed by
+removing them and rebuilding. Not caused by this change; left for whoever owns the site build to look at.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

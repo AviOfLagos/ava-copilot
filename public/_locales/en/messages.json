@@ -9314,5 +9314,94 @@
   },
   "brain_autoPair_hint": {
     "message": "No code needed while Nex Brain is running here. If it was set to ask for one, use the code below."
+  },
+  "update_toolbar_title": {
+    "message": "$NAME$ — update available",
+    "placeholders": { "name": { "content": "$1", "example": "Nex Copilot" } }
+  },
+  "update_notify_title": {
+    "message": "$NAME$ $VERSION$ is available",
+    "placeholders": {
+      "name": { "content": "$1", "example": "Nex Copilot" },
+      "version": { "content": "$2", "example": "1.4.0" }
+    }
+  },
+  "update_notify_body": {
+    "message": "See what's new and update in Settings › Help."
+  },
+  "update_banner_available": {
+    "message": "$LABEL$ is available",
+    "placeholders": { "label": { "content": "$1", "example": "Nex Copilot 1.4.0" } }
+  },
+  "update_banner_whatsNew": {
+    "message": "What's new"
+  },
+  "update_banner_update": {
+    "message": "Update"
+  },
+  "update_banner_dismiss": {
+    "message": "Dismiss"
+  },
+  "update_settings_title": {
+    "message": "Updates"
+  },
+  "update_settings_current": {
+    "message": "Installed: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "1.3.0" } }
+  },
+  "update_settings_upToDate": {
+    "message": "You’re on the latest version."
+  },
+  "update_settings_latest": {
+    "message": "$VERSION$ is available (released $DATE$)",
+    "placeholders": {
+      "version": { "content": "$1", "example": "1.4.0" },
+      "date": { "content": "$2", "example": "2026-10-22" }
+    }
+  },
+  "update_settings_checkNow": {
+    "message": "Check now"
+  },
+  "update_settings_checking": {
+    "message": "Checking…"
+  },
+  "update_settings_checkEnabled_label": {
+    "message": "Check for updates"
+  },
+  "update_settings_checkEnabled_hint": {
+    "message": "Looks at Nex Copilot’s own site every 12 hours for a newer version. Nothing about this browser is sent."
+  },
+  "update_settings_whatsNew": {
+    "message": "What's new"
+  },
+  "update_settings_install_title": {
+    "message": "Update Nex Copilot"
+  },
+  "update_settings_install_step": {
+    "message": "Run this, then reload the extension:"
+  },
+  "update_settings_reload": {
+    "message": "Reload the extension"
+  },
+  "update_settings_brain_title": {
+    "message": "Update Nex Brain"
+  },
+  "update_settings_brain_current": {
+    "message": "Installed: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.1.0" } }
+  },
+  "update_settings_brain_latest": {
+    "message": "Latest: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.2.0" } }
+  },
+  "update_settings_brain_upToDate": {
+    "message": "Nex Brain is up to date."
+  },
+  "update_settings_brain_unknown": {
+    "message": "Not checked yet: pair Nex Brain, or press Check now."
+  },
+  "update_settings_error": {
+    "message": "Could not check: $ERROR$",
+    "placeholders": { "error": { "content": "$1", "example": "Could not reach the update feed." } }
   }
 }

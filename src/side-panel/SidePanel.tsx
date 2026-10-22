@@ -57,6 +57,7 @@ import TeachCard from './skills/TeachCard';
 import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
+import UpdateBanner from './update/UpdateBanner';
 
 // A thread tag: the user answered "Save as skill?" for this chat
 const SKILL_OFFERED_TAG = 'skill:offered';
@@ -883,6 +884,8 @@ const SidePanel = () => {
         workspaceId={view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace}
         onPersonalities={() => void openSettingsPage('#personalities')}
       />
+
+      {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
 
       {elsewhere?.pendingRequest && (
         <div className="px-2.5 pt-2">

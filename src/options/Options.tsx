@@ -18,6 +18,7 @@ import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import '../side-panel/registers';
+import { updateStatusStore } from '../background/update/state';
 import { LiveOrb } from '../side-panel/components/ui/live-orb';
 import { useTheme } from '../side-panel/layout/theme';
 import { registeredSettingsSections } from '../side-panel/registry';
@@ -54,6 +55,27 @@ const PAGE_ICONS: Record<SettingsPageId, ComponentType<{ className?: string }>> 
   help: CircleHelp,
 };
 
+/** Whether a newer version is known: a small dot on Settings › Help's nav item, nothing louder (the panel's
+ * banner and the toolbar tooltip already say more; see src/background/update/register.ts). */
+function useUpdateAvailable(): boolean {
+  const [available, setAvailable] = useState(false);
+  useEffect(() => {
+    const load = () => void updateStatusStore.getStatus().then(status => setAvailable(status.extensionUpdateAvailable));
+    load();
+    return updateStatusStore.subscribe(load);
+  }, []);
+  return available;
+}
+
+function NavDot() {
+  return (
+    <span
+      aria-hidden="true"
+      className="bg-primary ml-auto size-1.5 shrink-0 rounded-full shadow-[0_0_6px_rgb(var(--primary-rgb))]"
+    />
+  );
+}
+
 function sectionTexts(section: SettingsSectionDefinition): string[] {
   const page = SETTINGS_PAGES.find(item => item.id === section.page);
   return [t(section.label), page ? t(page.label) : '', ...(section.keywords ?? [])];
@@ -61,6 +83,7 @@ function sectionTexts(section: SettingsSectionDefinition): string[] {
 
 const Options = () => {
   useTheme();
+  const updateAvailable = useUpdateAvailable();
   const { route, navigate } = useSettingsRoute();
   const api = useMemo(() => createSettingsApi(navigate), [navigate]);
   const [query, setQuery] = useState('');
@@ -164,6 +187,7 @@ const Options = () => {
               )}>
               <Icon className="size-4 shrink-0" />
               <span className="truncate">{t(item.label)}</span>
+              {item.id === 'help' && updateAvailable && <NavDot />}
             </a>
           </li>
         );
@@ -206,12 +230,13 @@ const Options = () => {
                       aria-current={!words.length && page?.id === item.id ? 'page' : undefined}
                       data-page-chip
                       className={cn(
-                        'block whitespace-nowrap rounded-full border px-3 py-1 text-[12.5px]',
+                        'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1 text-[12.5px]',
                         !words.length && page?.id === item.id
                           ? 'bg-accent text-foreground'
                           : 'text-muted-foreground border-transparent',
                       )}>
                       {t(item.label)}
+                      {item.id === 'help' && updateAvailable && <NavDot />}
                     </a>
                   </li>
                 ))}
