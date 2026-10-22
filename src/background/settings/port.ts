@@ -13,7 +13,8 @@ import type { CommandContext } from '../registry';
 export const SETTINGS_PORT_NAME = MODELS_PORT_NAME;
 
 // What settings sections send: models, voice engines and downloads, previews, devices, Nex Brain, identity and
-// memory, AI history, backups, the Inbox's watch, and install-before-use checks
+// memory, AI history, backups, the Inbox's watch, install-before-use checks, WhatsApp, Ava's Meet browser, the Mac's
+// Calendar and Obsidian through Nex Brain
 export const SETTINGS_COMMAND_PREFIXES = [
   'models_',
   'voice_engine_',
@@ -25,6 +26,14 @@ export const SETTINGS_COMMAND_PREFIXES = [
   'memory_',
   'history_',
   'backup_',
+  'wava_',
+  'meetvoice_',
+  'calendar_mac_',
+  'obsidian_',
+  // Connections (connectors, Drive) and Privacy › Skills are settings pages too
+  'conn_',
+  'drive_',
+  'skills_',
   'inbox_watch_now',
 ] as const;
 

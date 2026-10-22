@@ -24,7 +24,7 @@ describe('settings port', () => {
       'confirm_action',
       'kb_wipe',
       'inbox_approve',
-      'conn_add',
+      'agents_update',
       'voice_start',
       '',
       7,
@@ -92,5 +92,33 @@ describe('settings port', () => {
     dispatch.mockResolvedValueOnce(false);
     await listener({ type: 'models_nothing', requestId: 'r3' });
     expect(posted.pop()).toEqual({ type: 'error', requestId: 'r3', error: 'Unknown request.' });
+  });
+});
+
+describe('every settings card can reach the background', () => {
+  it('allows each command a settings section sends with api.request', async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) {
+          // Places that live only in the side panel, whose port takes every command
+          if (!['__tests__', 'agents', 'inbox', 'workflows'].includes(name)) walk(path);
+        } else if (/\.tsx?$/.test(name)) files.push(path);
+      }
+    };
+    walk(join(import.meta.dirname, '../../../side-panel'));
+    const missing: string[] = [];
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8');
+      // Settings sections take { api: PanelApi }; on the full page their requests go over the settings port
+      if (!/\bPanelApi\b/.test(source)) continue;
+      for (const match of source.matchAll(/api\.request(?:<[^>]*>)?\(\s*\{\s*type:\s*'([a-z_]+)'/g)) {
+        if (!allowedOnSettingsPort(match[1])) missing.push(`${match[1]} (${file.split('side-panel/')[1]})`);
+      }
+    }
+    expect(missing).toEqual([]);
   });
 });
