@@ -9314,5 +9314,94 @@
   },
   "brain_autoPair_hint": {
     "message": "Nex Brain 在這裡執行時不需要代碼。若它設定為需要代碼，請使用下方的代碼。"
+  },
+  "update_toolbar_title": {
+    "message": "$NAME$ — 有可用更新",
+    "placeholders": { "name": { "content": "$1", "example": "Nex Copilot" } }
+  },
+  "update_notify_title": {
+    "message": "$NAME$ $VERSION$ 已可使用",
+    "placeholders": {
+      "name": { "content": "$1", "example": "Nex Copilot" },
+      "version": { "content": "$2", "example": "1.4.0" }
+    }
+  },
+  "update_notify_body": {
+    "message": "到「設定 › 說明」查看新功能並更新。"
+  },
+  "update_banner_available": {
+    "message": "$LABEL$ 已可使用",
+    "placeholders": { "label": { "content": "$1", "example": "Nex Copilot 1.4.0" } }
+  },
+  "update_banner_whatsNew": {
+    "message": "新功能"
+  },
+  "update_banner_update": {
+    "message": "更新"
+  },
+  "update_banner_dismiss": {
+    "message": "關閉"
+  },
+  "update_settings_title": {
+    "message": "更新"
+  },
+  "update_settings_current": {
+    "message": "已安裝版本：$VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "1.3.0" } }
+  },
+  "update_settings_upToDate": {
+    "message": "已是最新版本。"
+  },
+  "update_settings_latest": {
+    "message": "$VERSION$ 已可使用（發佈於 $DATE$）",
+    "placeholders": {
+      "version": { "content": "$1", "example": "1.4.0" },
+      "date": { "content": "$2", "example": "2026-10-22" }
+    }
+  },
+  "update_settings_checkNow": {
+    "message": "立即檢查"
+  },
+  "update_settings_checking": {
+    "message": "正在檢查…"
+  },
+  "update_settings_checkEnabled_label": {
+    "message": "檢查更新"
+  },
+  "update_settings_checkEnabled_hint": {
+    "message": "每 12 小時查看 Nex Copilot 自己的網站是否有新版本。不會傳送任何與此瀏覽器有關的資訊。"
+  },
+  "update_settings_whatsNew": {
+    "message": "新功能"
+  },
+  "update_settings_install_title": {
+    "message": "更新 Nex Copilot"
+  },
+  "update_settings_install_step": {
+    "message": "執行此指令，然後重新載入擴充功能："
+  },
+  "update_settings_reload": {
+    "message": "重新載入擴充功能"
+  },
+  "update_settings_brain_title": {
+    "message": "更新 Nex Brain"
+  },
+  "update_settings_brain_current": {
+    "message": "已安裝版本：$VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.1.0" } }
+  },
+  "update_settings_brain_latest": {
+    "message": "最新版本：$VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.2.0" } }
+  },
+  "update_settings_brain_upToDate": {
+    "message": "Nex Brain 已是最新版本。"
+  },
+  "update_settings_brain_unknown": {
+    "message": "尚未檢查：請先配對 Nex Brain，或按下「立即檢查」。"
+  },
+  "update_settings_error": {
+    "message": "無法檢查：$ERROR$",
+    "placeholders": { "error": { "content": "$1", "example": "無法連上更新來源。" } }
   }
 }

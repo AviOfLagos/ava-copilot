@@ -9314,5 +9314,94 @@
   },
   "brain_autoPair_hint": {
     "message": "Sem código enquanto o Nex Brain estiver rodando aqui. Se ele pedir um, use o código abaixo."
+  },
+  "update_toolbar_title": {
+    "message": "$NAME$ — atualização disponível",
+    "placeholders": { "name": { "content": "$1", "example": "Nex Copilot" } }
+  },
+  "update_notify_title": {
+    "message": "$NAME$ $VERSION$ está disponível",
+    "placeholders": {
+      "name": { "content": "$1", "example": "Nex Copilot" },
+      "version": { "content": "$2", "example": "1.4.0" }
+    }
+  },
+  "update_notify_body": {
+    "message": "Veja as novidades e atualize em Configurações › Ajuda."
+  },
+  "update_banner_available": {
+    "message": "$LABEL$ está disponível",
+    "placeholders": { "label": { "content": "$1", "example": "Nex Copilot 1.4.0" } }
+  },
+  "update_banner_whatsNew": {
+    "message": "Novidades"
+  },
+  "update_banner_update": {
+    "message": "Atualizar"
+  },
+  "update_banner_dismiss": {
+    "message": "Dispensar"
+  },
+  "update_settings_title": {
+    "message": "Atualizações"
+  },
+  "update_settings_current": {
+    "message": "Instalada: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "1.3.0" } }
+  },
+  "update_settings_upToDate": {
+    "message": "Você está na versão mais recente."
+  },
+  "update_settings_latest": {
+    "message": "$VERSION$ está disponível (lançada em $DATE$)",
+    "placeholders": {
+      "version": { "content": "$1", "example": "1.4.0" },
+      "date": { "content": "$2", "example": "2026-10-22" }
+    }
+  },
+  "update_settings_checkNow": {
+    "message": "Verificar agora"
+  },
+  "update_settings_checking": {
+    "message": "Verificando…"
+  },
+  "update_settings_checkEnabled_label": {
+    "message": "Verificar atualizações"
+  },
+  "update_settings_checkEnabled_hint": {
+    "message": "Consulta o próprio site do Nex Copilot a cada 12 horas, à procura de uma versão mais nova. Nada sobre este navegador é enviado."
+  },
+  "update_settings_whatsNew": {
+    "message": "Novidades"
+  },
+  "update_settings_install_title": {
+    "message": "Atualizar o Nex Copilot"
+  },
+  "update_settings_install_step": {
+    "message": "Execute isto e depois recarregue a extensão:"
+  },
+  "update_settings_reload": {
+    "message": "Recarregar a extensão"
+  },
+  "update_settings_brain_title": {
+    "message": "Atualizar o Nex Brain"
+  },
+  "update_settings_brain_current": {
+    "message": "Instalado: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.1.0" } }
+  },
+  "update_settings_brain_latest": {
+    "message": "Mais recente: $VERSION$",
+    "placeholders": { "version": { "content": "$1", "example": "0.2.0" } }
+  },
+  "update_settings_brain_upToDate": {
+    "message": "O Nex Brain está atualizado."
+  },
+  "update_settings_brain_unknown": {
+    "message": "Ainda não verificado: pareie o Nex Brain ou pressione Verificar agora."
+  },
+  "update_settings_error": {
+    "message": "Não foi possível verificar: $ERROR$",
+    "placeholders": { "error": { "content": "$1", "example": "Não foi possível acessar o feed de atualização." } }
   }
 }
