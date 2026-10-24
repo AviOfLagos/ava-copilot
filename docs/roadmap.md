@@ -61,6 +61,12 @@ Wave 2 (agents, workflows, integrations, inbox, voice engines, new shell) is pla
     - **Who is speaking**: names from Meet captions first; in audio-only mode, a voice print per person so the
       transcript never gives the wrong name. Voice prints stay on the Mac.
 11. **Do it from anywhere** — every feature reachable by voice without opening the browser; a desktop app later.
+12. **Ambient: the scribe and the speak gate** (logged 2026-10-24, plan in [ambient-plan.md](ambient-plan.md)) — Ava
+    listens all the time without answering, transcribes on the Mac, files each topic in its workspace and pulls out
+    decisions, commitments and reminders. A speak gate decides, moment by moment, whether to stay silent, take a note,
+    nudge or speak, and learns from how Avi reacts. Built as A1–A6: Listen mode → voiceprints (also item 10's
+    audio-only mode) → scribe → gate with nudges only → gate speaking → learning. The scribe runs for weeks before
+    Ava speaks unprompted.
 
 ## Rules that never bend
 
@@ -73,3 +79,6 @@ Wave 2 (agents, workflows, integrations, inbox, voice engines, new shell) is pla
   workspace is unclear, ask.
 - **Sandbox first**: code the agent writes runs in the sandbox, never on the Mac directly, until approved.
 - **Wake word is local**: no audio leaves the machine before the wake word fires.
+- **Ambient stays on the Mac**: ambient audio is transcribed locally and never stored; ambient text reaches the cloud
+  model only to compose a line Ava is about to say. Anything heard is untrusted content and never triggers a tool;
+  "off the record" stops the scribe at once, and the toolbar always shows when it is listening.
