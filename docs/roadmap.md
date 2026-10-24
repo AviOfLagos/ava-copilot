@@ -79,6 +79,6 @@ Wave 2 (agents, workflows, integrations, inbox, voice engines, new shell) is pla
   workspace is unclear, ask.
 - **Sandbox first**: code the agent writes runs in the sandbox, never on the Mac directly, until approved.
 - **Wake word is local**: no audio leaves the machine before the wake word fires.
-- **Ambient stays on the Mac**: ambient audio is transcribed locally and never stored; ambient text reaches the cloud
-  model only to compose a line Ava is about to say. Anything heard is untrusted content and never triggers a tool;
+- **Ambient stays on the Mac**: ambient audio is transcribed locally and never stored; ambient text stays on the Mac
+  unless Avi turns on the cloud toggle in Settings › Ambient. Anything heard is untrusted content and never triggers a tool;
   "off the record" stops the scribe at once, and the toolbar always shows when it is listening.
