@@ -136,7 +136,9 @@ main() {
   fi
 
   ZIP_FILE="$WORK_DIR/ava-copilot.zip"
-  fetch "$BASE_URL/$ZIP_PATH_REL" "$ZIP_FILE" || die "Could not download $BASE_URL/$ZIP_PATH_REL."
+  info "Downloading Ava Copilot $VERSION (about 20 MB)..."
+  fetch_large "$BASE_URL/$ZIP_PATH_REL" "$ZIP_FILE" \
+    || die "Could not download $BASE_URL/$ZIP_PATH_REL after $DOWNLOAD_TRIES tries. Your connection kept dropping; nothing was changed. Run the same command again when it is steadier."
 
   GOT_SHA256="$(sha256_of "$ZIP_FILE")"
   if [ "$GOT_SHA256" != "$ZIP_SHA256" ]; then
@@ -278,10 +280,31 @@ sha256_tool() { command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/
 
 fetch() { # fetch URL DEST
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$1" -o "$2"
+    curl -fsSL --connect-timeout 20 --retry 3 --retry-delay 2 "$1" -o "$2"
   else
-    wget -q "$1" -O "$2"
+    wget -q --timeout=30 --tries=3 "$1" -O "$2"
   fi
+}
+
+# The release itself: ~20 MB, which on a slow or flaky connection can drop part way. So it shows progress (in a
+# terminal), treats a transfer slower than 1 KB/s for a minute as dropped, and on any failure tries again up to
+# DOWNLOAD_TRIES times, resuming from the bytes it already has instead of starting over.
+DOWNLOAD_TRIES=5
+fetch_large() { # fetch_large URL DEST
+  attempt=1
+  while :; do
+    if command -v curl >/dev/null 2>&1; then
+      if [ -t 2 ]; then progress="-#"; else progress="-sS"; fi
+      curl -fL $progress --connect-timeout 20 --speed-limit 1024 --speed-time 60 -C - "$1" -o "$2" && return 0
+    else
+      if [ -t 2 ]; then progress="--show-progress"; else progress=""; fi
+      wget -q $progress -c --timeout=60 --tries=1 "$1" -O "$2" && return 0
+    fi
+    [ "$attempt" -ge "$DOWNLOAD_TRIES" ] && return 1
+    attempt=$((attempt + 1))
+    warn "The download stopped; trying again ($attempt of $DOWNLOAD_TRIES), picking up where it left off..."
+    sleep 2
+  done
 }
 
 sha256_of() { # sha256_of FILE -> hex digest on stdout
