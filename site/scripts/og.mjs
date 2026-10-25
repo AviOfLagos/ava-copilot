@@ -4,16 +4,21 @@
 //
 // No browser on this machine (a CI image, say)? The committed images in public/og/ ship as they are.
 // `--update` also writes the new images to public/og/, to refresh that fallback.
-import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from './serve.mjs';
 
-const SLUGS = ['home', 'install', 'privacy'];
+// Every card the build made (src/pages/og-card/[slug].astro decides which), as og-card/<slug>.html or og-card/<slug>/
+const cardSlugs = dir =>
+  existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true }).map(entry => entry.name.replace(/\.html$/, '')).filter(Boolean)
+    : [];
 const site = fileURLToPath(new URL('..', import.meta.url));
 const dist = join(site, 'dist');
 const update = process.argv.includes('--update');
+const SLUGS = cardSlugs(join(dist, 'og-card'));
 
 const CANDIDATES = [
   process.env.CHROME_PATH,
@@ -31,7 +36,6 @@ const CANDIDATES = [
 
 function removeTemplates() {
   rmSync(join(dist, 'og-card'), { recursive: true, force: true });
-  for (const slug of SLUGS) rmSync(join(dist, `og-card-${slug}.html`), { force: true });
 }
 
 if (!existsSync(dist)) {

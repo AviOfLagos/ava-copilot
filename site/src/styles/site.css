@@ -805,18 +805,17 @@ pre {
   text-transform: uppercase;
 }
 
-/* Breaks only at spaces (an address breaks only if it can't fit at all); continuation lines hang under the $ */
+/* Always one line, cut with an ellipsis when the box is narrower: Copy takes the whole command, and hovering shows it */
 .cmd__code {
   min-width: 0;
   margin: 0;
-  padding-left: 2ch;
   padding-right: 8px;
-  text-indent: -2ch;
+  overflow: hidden;
   color: var(--ink);
   font-size: 13px;
   line-height: 22px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* The address stays whole: it is what you are trusting */
@@ -830,22 +829,14 @@ pre {
   }
 }
 
-@media (max-width: 339px) {
-  .cmd__url {
-    white-space: normal;
-  }
-}
+
 
 /* In a narrow box (a card on a phone) the address may break, only where InstallCommand allows it */
 .cmd {
   container-type: inline-size;
 }
 
-@container (max-width: 380px) {
-  .cmd__url {
-    white-space: normal;
-  }
-}
+
 
 /* The host name never breaks, not even at a hyphen */
 .cmd__host {
@@ -1096,56 +1087,144 @@ pre {
 .site-footer {
   overflow: hidden;
   padding: var(--s8) 0 0;
-  border-top: 1px solid var(--line);
   color: var(--ink-2);
   font-size: 14px;
   line-height: 22px;
 }
 
-.site-footer__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr));
-  gap: var(--s6);
+/* One glass card: about, install and how to help on the left, the link columns on the right, a status row below */
+.footer-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(640px 320px at 0% 0%, rgb(var(--primary-rgb) / 0.09), transparent 70%),
+    linear-gradient(180deg, var(--glass-top), var(--glass-bottom)),
+    color-mix(in srgb, var(--bg) 70%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--card-shadow);
 }
 
-/* Above the columns: free and open source, with the two ways to help */
-.footer-band {
+.footer-card__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: var(--s7);
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.footer-card__about {
+  display: grid;
+  align-content: start;
+  gap: var(--s4);
+  max-width: 460px;
+}
+
+.footer-card__tagline {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+  line-height: 24px;
+}
+
+.footer-card__about .cmd {
+  padding-block: 8px 12px;
+}
+
+.footer-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.footer-card__icons {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.icon-link {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--fill);
+  transition:
+    color var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out),
+    background-color var(--dur) var(--ease-out);
+}
+
+.site-footer .icon-link {
+  color: var(--ink-2);
+}
+
+.site-footer .icon-link:hover {
+  border-color: var(--line-2);
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+.icon-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.footer-card__columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s5);
+}
+
+.footer-card__base {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s4) var(--s6);
-  margin-bottom: var(--s7);
-  padding: var(--s5) var(--s6);
-}
-
-.footer-band p {
-  margin-top: 4px;
+  gap: var(--s3) var(--s5);
+  padding: var(--s4) clamp(24px, 4vw, 48px);
+  border-top: 1px solid var(--line);
   color: var(--ink-2);
-  font-size: var(--text-small);
+  font-size: 13px;
 }
 
-.footer-band__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s2);
+.footer-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.footer-card__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgb(var(--primary-rgb) / 0.16);
 }
 
 @media (max-width: 1023px) {
-  .site-footer__grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .footer-card__top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s6);
   }
 
-  .site-footer__about {
-    grid-column: 1 / -1;
+  .footer-card__about {
+    max-width: none;
   }
 }
 
-.site-footer__about {
-  display: grid;
-  gap: var(--s3);
-  align-content: start;
-  max-width: 420px;
+@media (max-width: 599px) {
+  .footer-card__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-card__icons {
+    margin-left: 0;
+  }
 }
 
 .site-footer h2 {
@@ -1184,33 +1263,12 @@ pre {
   text-decoration-color: rgb(var(--primary-rgb) / 0.5);
 }
 
-.site-footer__base {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--s3) var(--s5);
-  margin-top: var(--s7);
-  padding-top: var(--s5);
-  border-top: 1px solid var(--line);
-  font-size: 13px;
-}
-
 /* The name again, cut at the bottom of the page; solid, so the globe sets behind it */
 .wordmark--foot {
   margin: clamp(32px, 5vw, 64px) 0 -0.17em;
   /* Fades out toward its baseline, so the name settles into the page instead of being cut off */
   -webkit-mask-image: linear-gradient(180deg, #000 12%, rgb(0 0 0 / 0.4) 48%, transparent 80%);
   mask-image: linear-gradient(180deg, #000 12%, rgb(0 0 0 / 0.4) 48%, transparent 80%);
-}
-
-@media (max-width: 719px) {
-  .site-footer__grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .site-footer__about {
-    grid-column: 1 / -1;
-  }
 }
 
 /* ─── Inner pages ───────────────────────────────────────────────────────────────────────────────────────────── */

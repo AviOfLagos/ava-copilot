@@ -909,3 +909,22 @@ export const widgetCopy = {
     later: 'Later',
   },
 };
+
+// ─── Link-preview cards (rendered by src/pages/og-card/[slug].astro into /og/<slug>.png) ──────────────────────
+
+export const ogCards: Record<string, { kicker: string; title: [string, string]; group?: string }> = {
+  features: { kicker: 'Features', title: ['Everything it does,', 'marked as it really is.'] },
+  roadmap: { kicker: 'Roadmap', title: ['What comes next.', 'Listen first, speak last.'] },
+  contribute: { kicker: 'Contribute', title: ['Build it with us.', 'Code, tests, skills and words.'] },
+  donate: { kicker: 'Donate', title: ['Keep it free.', 'No ads, no analytics, ever.'] },
+  ...Object.fromEntries(
+    features.groups.map(group => [
+      `feature-${group.id}`,
+      {
+        kicker: 'Features',
+        title: [`${group.title}.`, `${groupMeta[group.id]?.short ?? ''}.`] as [string, string],
+        group: group.id,
+      },
+    ]),
+  ),
+};

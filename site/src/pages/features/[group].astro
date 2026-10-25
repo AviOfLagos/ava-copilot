@@ -62,9 +62,9 @@ const { routines } = home;
   title={title}
   description={description}
   path={path}
-  og="home"
+  og={`feature-${group.id}`}
   ogAlt={`${PRODUCT}: ${group.title}`}
-  graph={pageGraph(path, title, description, group.title)}>
+  graph={pageGraph(path, title, description, group.title, { name: features.breadcrumb, path: projectLinks.features })}>
   <div class="wrap">
     <header class="page-head fpage-head">
       <nav class="crumbs label" aria-label="Breadcrumb">

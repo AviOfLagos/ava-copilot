@@ -315,26 +315,6 @@
   font-size: var(--text-small);
 }
 
-/* A code line in running content: mono, selectable, wraps instead of overflowing */
-.code-line {
-  display: block;
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: var(--stage-solid);
-  color: var(--page-ink);
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 22px;
-  overflow-wrap: anywhere;
-  user-select: all;
-}
-
-[data-theme='light'] .code-line {
-  background: #1a1d24;
-  color: #e5e8ef;
-}
-
 .callout--note {
   display: flex;
   gap: var(--s3);

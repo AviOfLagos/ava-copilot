@@ -81,18 +81,18 @@ export const copy = {
 };
 
 export const footer = {
-  lineage: `${PRODUCT} is a fork of Nanobrowser, the open-source browser agent, under the Apache License 2.0.`,
   upstreamLabel: 'Nanobrowser on GitHub',
   licenseLabel: 'Apache License 2.0',
-  privacyNote: 'This site sets no cookies and loads nothing from anyone else.',
   voiceNote: `${ASSISTANT}’s voice is Kokoro (Apache-2.0), rendered on our own computer.`,
   version: `Version ${VERSION}`,
-  band: {
-    title: 'Free and open source.',
-    body: 'Built in the open under Apache-2.0. Help shape it, or help keep it free.',
-    contribute: 'Contribute',
-    donate: 'Donate',
-  },
+  tagline: 'The AI browser copilot that waits for your click. Free, open source, and yours to run locally.',
+  installLabel: 'Install from the footer',
+  contribute: 'Contribute',
+  donate: 'Donate',
+  repoLabel: 'Source on GitHub',
+  feedLabel: 'Release feed (RSS)',
+  releasedLabel: 'released',
+  local: 'No cookies, no analytics',
   columns: [
     {
       title: 'Product',

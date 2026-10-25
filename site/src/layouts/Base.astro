@@ -16,7 +16,8 @@ interface Props {
   title: string;
   description: string;
   path: string;
-  og: 'home' | 'install' | 'privacy';
+  // The link-preview card: /og/<og>.png (see src/pages/og-card/[slug].astro)
+  og: string;
   ogAlt: string;
   graph?: unknown;
   noindex?: boolean;

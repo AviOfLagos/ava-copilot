@@ -20,7 +20,8 @@ const within = (href: string) => (href === '/' ? path === '/' : path === href ||
 const menuActive = (menu: (typeof menus)[number]) =>
   within(menu.href) || menu.columns.some(column => column.links.some(link => within(link.href)));
 // One menu at most is marked current: the first whose own page or links contain this page
-const activeMenu = menus.find(menuActive)?.id;
+// Donate is its own top-level link: on its page no menu is marked
+const activeMenu = within(projectLinks.donate) ? undefined : menus.find(menuActive)?.id;
 const shortHost = INSTALL_COMMAND.replace(/^curl -fsSL https?:\/\//, '').replace(/ \| bash$/, '');
 ---
 
