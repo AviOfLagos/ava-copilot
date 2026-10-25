@@ -23,6 +23,7 @@ interface OpenWaClient {
   sendText(to: string, content: string): Promise<unknown>;
   getHostNumber?(): Promise<string>;
   getMe?(): Promise<Record<string, unknown>>;
+  logout?(): Promise<unknown>;
   stop?(reason?: string): Promise<void>;
   kill?(reason?: string): Promise<unknown>;
 }
@@ -181,6 +182,9 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
         if (!client) throw new Error('WhatsApp is not linked.');
         const result = await client.sendText(chatId, text);
         return typeof result === 'string' ? result : str(result) || null;
+      },
+      async logout() {
+        await client?.logout?.();
       },
       async stop() {
         stopped = true;

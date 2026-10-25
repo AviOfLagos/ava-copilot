@@ -8958,7 +8958,7 @@
     "message": "Verificando…"
   },
   "wava_settings_unlink": {
-    "message": "Desvincular"
+    "message": "Sair"
   },
   "wava_settings_linking": {
     "message": "Iniciando…"
@@ -10046,18 +10046,66 @@
     "message": "Ouvir"
   },
   "wava_settings_firstMessage": {
-    "message": "Falta um passo: do seu celular ($OWNER$), envie qualquer mensagem para o número da Ava. Até lá o WhatsApp não deixa ela escrever para você primeiro.",
-    "placeholders": {
-      "owner": {
-        "content": "$1",
-        "example": "+234 801 234 5678"
-      }
-    }
+    "message": "O WhatsApp não deixa a Ava escrever primeiro para o seu número. Conecte seu celular abaixo."
   },
   "brain_docker_start": {
     "message": "Iniciar Docker"
   },
   "brain_docker_starting": {
     "message": "Iniciando Docker…"
+  },
+  "wava_state_linkedPlain": {
+    "message": "Vinculado"
+  },
+  "wava_settings_logout_confirm": {
+    "message": "Desconectar a Ava do WhatsApp neste Mac? Ela também sai dos Aparelhos conectados do seu celular. Para vincular de novo, escaneie um novo código."
+  },
+  "wava_settings_phone_title": {
+    "message": "Seu celular"
+  },
+  "wava_settings_phone_hint": {
+    "message": "Conecte o celular de onde você vai escrever para a Ava, para ela responder lá."
+  },
+  "wava_settings_phone_connect": {
+    "message": "Conectar meu celular"
+  },
+  "wava_settings_phone_send": {
+    "message": "Do seu celular, envie este código para o número da Ava:"
+  },
+  "wava_settings_phone_waiting": {
+    "message": "Aguardando sua mensagem… O código vale por 15 minutos."
+  },
+  "wava_settings_phone_connected": {
+    "message": "Conectado. A Ava responde você nessa conversa."
+  },
+  "wava_settings_restart": {
+    "message": "Reiniciar"
+  },
+  "wava_settings_restarting": {
+    "message": "Reiniciando…"
+  },
+  "wava_settings_restarted": {
+    "message": "WhatsApp reiniciado."
+  },
+  "wava_settings_restart_hint": {
+    "message": "Sem resposta? Reinicie o WhatsApp no seu Mac. Não precisa escanear de novo."
+  },
+  "wava_settings_lastIn": {
+    "message": "Sua última mensagem $WHEN$.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "wava_settings_lastOut": {
+    "message": "Última da Ava $WHEN$.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 min ago"
+      }
+    }
   }
 }
