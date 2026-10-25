@@ -817,6 +817,8 @@ export const WHATSAPP_ROUTES = {
   // A one-time code for the owner to send from his phone; and starting the session again with no new scan
   connect: '/v1/whatsapp/connect',
   restart: '/v1/whatsapp/restart',
+  // A queued message's voice note, picture or document, for the extension to read
+  media: '/v1/whatsapp/media',
 } as const;
 
 export const WHATSAPP_STATES = [
@@ -880,10 +882,50 @@ export const whatsappQuietRequestSchema = z.object({
 });
 export type WhatsAppQuietRequest = z.infer<typeof whatsappQuietRequestSchema>;
 
+// What the owner sent: words, a voice note (or other audio), a picture, a document, or words with a link.
+// Video, stickers, locations and contacts are answered on the Mac and never queued.
+export const WHATSAPP_MESSAGE_KINDS = ['text', 'voice', 'image', 'document', 'link'] as const;
+export type WhatsAppMessageKind = (typeof WHATSAPP_MESSAGE_KINDS)[number];
+
+// The largest file of each kind Ava Brain downloads; anything bigger is refused with a plain answer
+export const WHATSAPP_MEDIA_MAX_BYTES = {
+  voice: 16 * 1024 * 1024,
+  image: 10 * 1024 * 1024,
+  document: 25 * 1024 * 1024,
+} as const;
+export type WhatsAppMediaKind = keyof typeof WHATSAPP_MEDIA_MAX_BYTES;
+// The most of a document's text the extension is given
+export const WHATSAPP_DOCUMENT_TEXT_MAX = 200_000;
+
+export const whatsappMediaInfoSchema = z.object({
+  mediaType: z.string().max(100),
+  size: z.number().int().nonnegative(),
+  // A document's file name as the sender gave it (never logged)
+  name: z.string().max(200).nullable(),
+  // A voice note's length
+  seconds: z.number().nonnegative().nullable(),
+  // A recording made in the chat (push to talk), not an audio file
+  voiceNote: z.boolean().default(false),
+});
+export type WhatsAppMediaInfo = z.infer<typeof whatsappMediaInfoSchema>;
+
+// A link as WhatsApp previewed it. The title and description come from the page: data, never his words.
+export const whatsappLinkSchema = z.object({
+  url: z.string().max(2000),
+  title: z.string().max(300).nullable(),
+  description: z.string().max(1000).nullable(),
+});
+export type WhatsAppLink = z.infer<typeof whatsappLinkSchema>;
+
 export const whatsappMessageSchema = z.object({
   id: z.string().min(1).max(200),
+  // His words: a message, or a picture's or document's caption
   text: z.string().max(WHATSAPP_TEXT_MAX),
   at: z.number(),
+  // Older Ava Brain: text only
+  kind: z.enum(WHATSAPP_MESSAGE_KINDS).default('text'),
+  media: whatsappMediaInfoSchema.nullable().default(null),
+  link: whatsappLinkSchema.nullable().default(null),
 });
 export type WhatsAppMessage = z.infer<typeof whatsappMessageSchema>;
 
@@ -905,6 +947,33 @@ export const whatsappSendRequestSchema = z.object({
 export type WhatsAppSendRequest = z.infer<typeof whatsappSendRequestSchema>;
 
 export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
+
+// A queued message's media: a voice note or picture as base64 bytes, a document as its text. Only for a message
+// still in the queue (the owner's, not yet acked), and never larger than WHATSAPP_MEDIA_MAX_BYTES.
+export const whatsappMediaRequestSchema = z.object({
+  id: z.string().min(1).max(200),
+  as: z.enum(['bytes', 'text']),
+});
+export type WhatsAppMediaRequest = z.infer<typeof whatsappMediaRequestSchema>;
+
+const WHATSAPP_MEDIA_BASE64_MAX = Math.ceil((WHATSAPP_MEDIA_MAX_BYTES.voice * 4) / 3) + 4;
+
+export const whatsappMediaReplySchema = z.object({
+  ok: z.literal(true),
+  mediaType: z.string().max(100),
+  size: z.number().int().nonnegative(),
+  data: z
+    .string()
+    .max(WHATSAPP_MEDIA_BASE64_MAX)
+    .regex(/^[A-Za-z0-9+/]*={0,2}$/)
+    .nullable(),
+  // A document's text, and whether it was cut short; null when it could not be read
+  text: z.string().max(WHATSAPP_DOCUMENT_TEXT_MAX).nullable(),
+  truncated: z.boolean(),
+  // Where Ava Brain keeps the document on the Mac
+  savedAs: z.string().max(1000).nullable(),
+});
+export type WhatsAppMediaReply = z.infer<typeof whatsappMediaReplySchema>;
 
 // ── Backups: memory and settings that outlive an uninstall ────────────────────────────────────────
 // The extension sends a gzipped snapshot of its database and settings in chunks (it can be hundreds of MB);

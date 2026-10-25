@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { memoryLogger } from '../log';
-import { baileysDriver } from '../whatsapp/baileys';
+import { baileysDriver, readCapped } from '../whatsapp/baileys';
 import type { BaileysModule } from '../whatsapp/baileys';
-import type { WaEvents } from '../whatsapp/driver';
+import type { WaEvents, WaIncoming } from '../whatsapp/driver';
 import { tempDir } from './helpers';
 
 // Baileys is never connected to WhatsApp here: a stand-in socket replays what it would emit
@@ -21,12 +21,24 @@ class FakeSocket {
     this.sent.push({ jid, text: content.text });
     return { key: { id: `sent-${this.sent.length}` } };
   }
+  reuploads = 0;
+  async updateMediaMessage(message: unknown) {
+    this.reuploads++;
+    return message;
+  }
   async logout() {
     this.loggedOut = true;
   }
   end() {
     this.ended = true;
   }
+}
+
+// What WhatsApp's media server hands back for a file: these chunks, or an expired link the first time
+const files = new Map<string, { chunks: Buffer[]; expiredOnce?: boolean }>();
+
+async function* chunksOf(list: Buffer[]) {
+  for (const chunk of list) yield chunk;
 }
 
 function harness() {
@@ -43,6 +55,15 @@ function harness() {
     isPnUser,
     normalizeMessageContent: normalizeMessageContent as never,
     getContentType: getContentType as never,
+    downloadMediaMessage: async (message, _type, _options, ctx) => {
+      const file = files.get(message.key.id ?? '');
+      if (!file) throw new Error('not media');
+      if (file.expiredOnce) {
+        file.expiredOnce = false;
+        await ctx.reuploadRequest(message);
+      }
+      return chunksOf(file.chunks);
+    },
     Browsers: { macOS: name => ['Mac OS', name, '14'] },
   };
   const events = {
@@ -143,5 +164,102 @@ describe('Baileys driver', () => {
     expect(sockets[0].loggedOut).toBe(true);
     await driver.stop();
     dir.remove();
+  });
+
+  it('reads a voice note’s details and fetches its file only when asked, capped', async () => {
+    const { driver, events, sockets, dir } = harness();
+    await driver.start(events);
+    files.set('voice', { chunks: [Buffer.from('Ogg'), Buffer.from('S-opus')], expiredOnce: true });
+    sockets[0].emit('messages.upsert', {
+      type: 'notify',
+      messages: [
+        {
+          key: { id: 'voice', remoteJid: '2348011111111@s.whatsapp.net', fromMe: true },
+          message: {
+            audioMessage: {
+              mimetype: 'audio/ogg; codecs=opus',
+              fileLength: { toNumber: () => 9 },
+              seconds: 4,
+              ptt: true,
+            },
+          },
+          messageTimestamp: 9,
+        },
+      ],
+    });
+    const incoming = events.message.mock.calls[0][0] as WaIncoming;
+    expect(incoming).toMatchObject({
+      type: 'audio',
+      body: '',
+      media: { mediaType: 'audio/ogg; codecs=opus', size: 9, seconds: 4, voiceNote: true, name: null },
+    });
+    // An expired copy is asked for again from the phone
+    expect((await incoming.download!(100)).toString()).toBe('OggS-opus');
+    expect(sockets[0].reuploads).toBe(1);
+    await expect(incoming.download!(5)).rejects.toThrow(/larger/);
+    await driver.stop();
+    dir.remove();
+  });
+
+  it('gives no download to a text message, and reads a link’s preview and a document’s caption', async () => {
+    const { driver, events, sockets, dir } = harness();
+    await driver.start(events);
+    sockets[0].emit('messages.upsert', {
+      type: 'notify',
+      messages: [
+        {
+          key: { id: 'link', remoteJid: '2348011111111@s.whatsapp.net', fromMe: true },
+          message: {
+            extendedTextMessage: {
+              text: 'read this https://example.com/post',
+              matchedText: 'https://example.com/post',
+              title: 'A post',
+              description: 'About solar',
+            },
+          },
+        },
+        {
+          key: { id: 'doc', remoteJid: '2348011111111@s.whatsapp.net', fromMe: true },
+          message: {
+            documentWithCaptionMessage: {
+              message: {
+                documentMessage: {
+                  caption: 'what does page 2 say?',
+                  fileName: 'report.pdf',
+                  mimetype: 'application/pdf',
+                  fileLength: 2048,
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
+    const [link, doc] = events.message.mock.calls.map(call => call[0] as WaIncoming);
+    expect(link).toMatchObject({
+      type: 'chat',
+      link: { url: 'https://example.com/post', title: 'A post', description: 'About solar' },
+    });
+    expect(link.download).toBeUndefined();
+    expect(doc).toMatchObject({
+      type: 'document',
+      body: 'what does page 2 say?',
+      media: { name: 'report.pdf', mediaType: 'application/pdf', size: 2048 },
+    });
+    expect(typeof doc.download).toBe('function');
+    await driver.stop();
+    dir.remove();
+  });
+
+  it('stops reading a file as soon as it passes the cap', async () => {
+    let destroyed = false;
+    const stream = Object.assign(chunksOf([Buffer.alloc(4), Buffer.alloc(4), Buffer.alloc(4)]), {
+      destroy: () => {
+        destroyed = true;
+      },
+    });
+    await expect(readCapped(stream, 6)).rejects.toThrow(/larger/);
+    expect(destroyed).toBe(true);
+    expect((await readCapped(chunksOf([Buffer.from('ab')]), 6)).toString()).toBe('ab');
   });
 });

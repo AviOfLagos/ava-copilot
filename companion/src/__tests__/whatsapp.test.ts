@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { memoryLogger } from '../log';
@@ -11,13 +11,18 @@ import {
   CONNECT_CODE_MS,
   CONNECT_MAX_MISSES,
   CONNECTED_TEXT,
+  DOWNLOAD_FAILED_TEXT,
   FIRST_MESSAGE_TEXT,
+  linkInText,
+  NOT_YET_TEXT,
   FORWARDED_TEXT,
   inQuietHours,
   OWN_MARK,
   TEXT_ONLY_TEXT,
+  tooBigText,
   WhatsAppService,
 } from '../whatsapp/service';
+import type { ProcessRunner } from '../sandbox/process';
 import { startTestBrain, tempDir } from './helpers';
 
 const ME = '2348011111111';
@@ -74,7 +79,9 @@ afterEach(() => {
   while (dirs.length) dirs.pop()!.remove();
 });
 
-async function linked(options: { limit?: number; dir?: { path: string; remove: () => void }; quiet?: boolean } = {}) {
+async function linked(
+  options: { limit?: number; dir?: { path: string; remove: () => void }; quiet?: boolean; run?: ProcessRunner } = {},
+) {
   const dir = options.dir ?? tempDir();
   if (!options.dir) dirs.push(dir);
   let now = 1_000_000;
@@ -87,6 +94,7 @@ async function linked(options: { limit?: number; dir?: { path: string; remove: (
     findBrowser: () => null,
     now: () => now,
     limitPerHour: options.limit,
+    run: options.run,
   });
   await service.init();
   // Quiet hours are tested on their own: off here, whatever the time zone makes of the test clock
@@ -135,7 +143,9 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     driver.deliver({ id: 'mine-elsewhere', chatId: '2348099999999@c.us', fromMe: true, body: 'my reply to a friend' });
     driver.deliver({ id: 'status', chatId: 'status@broadcast', fromMe: false, body: 'a status' });
     await settle();
-    expect(service.pull()).toEqual([{ id: 'own-1', text: 'what is on today?', at: expect.any(Number) }]);
+    expect(service.pull()).toEqual([
+      { id: 'own-1', text: 'what is on today?', at: expect.any(Number), kind: 'text', media: null, link: null },
+    ]);
     const kept = readFileSync(join(dir.path, 'whatsapp', 'state.json'), 'utf8');
     for (const word of ['secret from a friend', 'group talk', 'my reply to a friend', 'friend', '2348099999999']) {
       expect(kept).not.toContain(word);
@@ -311,13 +321,23 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     expect(service.status().state).toBe('not_linked');
   });
 
-  it('answers media once with “text only” and does not queue it', async () => {
-    const { driver, service, settle } = await linked();
-    driver.deliver({ id: 'img', type: 'image', body: '' });
-    driver.deliver({ id: 'img', type: 'image', body: '' });
+  it('answers what it cannot read in plain words, once, and keeps nothing of it', async () => {
+    const { driver, service, settle, dir } = await linked();
+    for (const type of ['video', 'sticker', 'location', 'contact']) {
+      driver.deliver({ id: type, type, body: '', download: async () => Buffer.from('x') });
+      driver.deliver({ id: type, type, body: '' });
+    }
+    driver.deliver({ id: 'odd', type: 'poll', body: '' });
     await settle();
     expect(service.pull()).toEqual([]);
-    expect(driver.sent).toEqual([{ chatId: SELF, text: TEXT_ONLY_TEXT }]);
+    expect(driver.sent.map(item => item.text)).toEqual([
+      NOT_YET_TEXT.video,
+      NOT_YET_TEXT.sticker,
+      NOT_YET_TEXT.location,
+      NOT_YET_TEXT.contact,
+      TEXT_ONLY_TEXT,
+    ]);
+    expect(existsSync(join(dir.path, 'whatsapp', 'media'))).toBe(false);
   });
 
   it('says once that the browser is closed when the extension has not pulled for two minutes', async () => {
@@ -552,5 +572,200 @@ describe('Ava on WhatsApp: the owner and quiet hours', () => {
     await service.send({ text: 'needs your click', kind: 'approval' });
     expect(driver.sent.map(item => item.text)).toEqual(['answer', 'needs your click']);
     expect(() => service.setQuietHours('25:00', '07:00')).toThrow();
+  });
+});
+
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+const ogg = Buffer.from('OggS fake opus voice note');
+
+describe('Ava on WhatsApp: voice notes, photos, documents and links', () => {
+  it('queues a voice note with its file beside it, gives the file only while it waits, and drops it at the ack', async () => {
+    const { driver, service, dir, log } = await linked();
+    driver.deliver({
+      id: 'v1',
+      type: 'audio',
+      body: '',
+      media: { mediaType: 'audio/ogg; codecs=opus', size: ogg.length, name: null, seconds: 3, voiceNote: true },
+      download: async () => ogg,
+    });
+    await tick();
+    const [item] = service.pull();
+    expect(item).toMatchObject({
+      id: 'v1',
+      kind: 'voice',
+      text: '',
+      media: { mediaType: 'audio/ogg; codecs=opus', size: ogg.length, seconds: 3, voiceNote: true },
+    });
+    const files = readdirSync(join(dir.path, 'whatsapp', 'media'));
+    expect(files).toHaveLength(1);
+    // Named by a hash, kept for this user only
+    expect(files[0]).not.toContain('v1');
+    expect(statSync(join(dir.path, 'whatsapp', 'media', files[0])).mode & 0o077).toBe(0);
+    const media = await service.media({ id: 'v1', as: 'bytes' });
+    expect(Buffer.from(media.data!, 'base64')).toEqual(ogg);
+    await expect(service.media({ id: 'v1', as: 'text' })).rejects.toThrow(/document/);
+    await expect(service.media({ id: 'nope', as: 'bytes' })).rejects.toThrow(/no file/);
+    service.ack(['v1']);
+    expect(readdirSync(join(dir.path, 'whatsapp', 'media'))).toEqual([]);
+    await expect(service.media({ id: 'v1', as: 'bytes' })).rejects.toThrow(/no file/);
+    expect(driver.sent).toEqual([]);
+    expect(log.lines.join('\n')).not.toContain('OggS');
+  });
+
+  it('queues a photo with its caption as his words', async () => {
+    const { driver, service } = await linked();
+    driver.deliver({
+      id: 'p1',
+      type: 'image',
+      body: '  what plant is this?  ',
+      media: { mediaType: 'image/jpeg', size: 4, name: null, seconds: null, voiceNote: false },
+      download: async () => Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+    });
+    await tick();
+    expect(service.pull()).toEqual([
+      {
+        id: 'p1',
+        text: 'what plant is this?',
+        at: expect.any(Number),
+        kind: 'image',
+        media: { mediaType: 'image/jpeg', size: 4, name: null, seconds: null, voiceNote: false },
+        link: null,
+      },
+    ]);
+    expect((await service.media({ id: 'p1', as: 'bytes' })).data).toBe(Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64'));
+  });
+
+  it('keeps a document on the Mac under a safe name, reads its text there, and logs neither', async () => {
+    const calls: { command: string; args: string[] }[] = [];
+    const run: ProcessRunner = async (command, args) => {
+      calls.push({ command, args });
+      return { code: 0, stdout: 'Page 2 says the inverter is 5 kVA.', stderr: '', timedOut: false, cancelled: false, truncated: false, durationMs: 1 };
+    };
+    const { driver, service, dir, log } = await linked({ run });
+    driver.deliver({
+      id: 'd1',
+      type: 'document',
+      body: 'what does page 2 say?',
+      media: { mediaType: 'application/pdf', size: 9, name: '../../secret plan.pdf', seconds: null, voiceNote: false },
+      download: async () => Buffer.from('%PDF-1.7 '),
+    });
+    driver.deliver({
+      id: 'd2',
+      type: 'document',
+      body: '',
+      media: { mediaType: 'text/plain', size: 11, name: 'notes.txt', seconds: null, voiceNote: false },
+      download: async () => Buffer.from('hello notes'),
+    });
+    await tick();
+    const files = readdirSync(join(dir.path, 'whatsapp', 'files'));
+    expect(files).toHaveLength(2);
+    expect(files.every(name => !name.includes('/') && !name.startsWith('.'))).toBe(true);
+    expect(files.some(name => name.endsWith('secret plan.pdf'))).toBe(true);
+    const pdf = await service.media({ id: 'd1', as: 'text' });
+    expect(pdf).toMatchObject({ text: 'Page 2 says the inverter is 5 kVA.', truncated: false, data: null });
+    expect(pdf.savedAs).toContain(join(dir.path, 'whatsapp', 'files'));
+    // Read with PDFKit, the path as an argument and never in the script
+    expect(calls[0].command).toBe('/usr/bin/osascript');
+    expect(calls[0].args.at(-1)).toBe(pdf.savedAs);
+    expect(calls[0].args.slice(0, -1).join(' ')).not.toContain('secret');
+    expect((await service.media({ id: 'd2', as: 'text' })).text).toBe('hello notes');
+    await expect(service.media({ id: 'd1', as: 'bytes' })).rejects.toThrow(/text/);
+    // The ack does not take a kept document away
+    service.ack(['d1', 'd2']);
+    expect(readdirSync(join(dir.path, 'whatsapp', 'files'))).toHaveLength(2);
+    const logged = log.lines.join('\n');
+    for (const word of ['secret', 'notes.txt', 'page 2', 'inverter']) expect(logged).not.toContain(word);
+  });
+
+  it('refuses a file over the cap before downloading it, and says when a download fails', async () => {
+    const { driver, service } = await linked();
+    let downloads = 0;
+    driver.deliver({
+      id: 'big',
+      type: 'document',
+      body: '',
+      media: { mediaType: 'application/pdf', size: 40 * 1024 * 1024, name: 'big.pdf', seconds: null, voiceNote: false },
+      download: async () => {
+        downloads++;
+        return Buffer.alloc(1);
+      },
+    });
+    driver.deliver({
+      id: 'broken',
+      type: 'image',
+      body: '',
+      media: { mediaType: 'image/jpeg', size: null, name: null, seconds: null, voiceNote: false },
+      download: async () => {
+        throw new Error('expired');
+      },
+    });
+    await tick();
+    expect(downloads).toBe(0);
+    expect(service.pull()).toEqual([]);
+    expect(driver.sent.map(item => item.text)).toEqual([tooBigText('document', 40 * 1024 * 1024), DOWNLOAD_FAILED_TEXT]);
+    expect(tooBigText('document', 40 * 1024 * 1024)).toBe('That file is 40 MB; I can take up to 25 MB.');
+  });
+
+  it('never downloads a file from anyone else, nor one he forwarded', async () => {
+    const { driver, service } = await linked();
+    let downloads = 0;
+    const download = async () => {
+      downloads++;
+      return Buffer.from('x');
+    };
+    const media = { mediaType: 'audio/ogg', size: 1, name: null, seconds: 1, voiceNote: true };
+    driver.deliver({ id: 'friend', type: 'audio', chatId: '2348099999999@c.us', fromMe: false, media, download });
+    driver.deliver({ id: 'fwd', type: 'audio', forwarded: true, media, download });
+    await tick();
+    expect(downloads).toBe(0);
+    expect(service.pull()).toEqual([]);
+    expect(driver.sent).toEqual([{ chatId: SELF, text: FORWARDED_TEXT }]);
+  });
+
+  it('marks a message with a link as one: WhatsApp’s preview, or an address typed without one', async () => {
+    const { driver, service } = await linked();
+    driver.deliver({
+      id: 'l1',
+      body: 'read this https://example.com/post',
+      link: { url: 'https://example.com/post', title: 'A post', description: 'About solar' },
+    });
+    driver.deliver({ id: 'l2', body: 'and (https://example.org/a?b=1).' });
+    driver.deliver({ id: 'l3', body: 'no link here, just javascript:alert(1)' });
+    await tick();
+    const [one, two, three] = service.pull();
+    expect(one).toMatchObject({
+      kind: 'link',
+      text: 'read this https://example.com/post',
+      link: { url: 'https://example.com/post', title: 'A post', description: 'About solar' },
+    });
+    expect(two).toMatchObject({ kind: 'link', link: { url: 'https://example.org/a?b=1', title: null } });
+    expect(three).toMatchObject({ kind: 'text', link: null });
+    expect(linkInText('see www.example.com')).toBeNull();
+  });
+
+  it('gives a queued file through a paired route only', async () => {
+    const driver = new FakeDriver();
+    const brain = await startTestBrain({ whatsappDriver: () => driver });
+    try {
+      await brain.pair();
+      await brain.api('/v1/whatsapp/link');
+      driver.link();
+      driver.deliver({
+        id: 'rv',
+        type: 'audio',
+        body: '',
+        media: { mediaType: 'audio/ogg', size: ogg.length, name: null, seconds: 2, voiceNote: true },
+        download: async () => ogg,
+      });
+      await tick();
+      const body = JSON.stringify({ id: 'rv', as: 'bytes' });
+      expect((await brain.api('/v1/whatsapp/media', { body, token: null })).status).toBe(401);
+      const reply = (await (await brain.api('/v1/whatsapp/media', { body })).json()) as { data: string };
+      expect(Buffer.from(reply.data, 'base64')).toEqual(ogg);
+      await brain.api('/v1/whatsapp/ack', { body: JSON.stringify({ ids: ['rv'] }) });
+      expect((await brain.api('/v1/whatsapp/media', { body })).status).toBe(404);
+    } finally {
+      await brain.stop();
+    }
   });
 });

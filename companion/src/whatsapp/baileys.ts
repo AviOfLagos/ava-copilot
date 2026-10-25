@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Logger } from '../log';
 import { numberOfJid } from './driver';
-import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming } from './driver';
+import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming, WaLink, WaMediaInfo } from './driver';
 
 /**
  * Ava's WhatsApp session through Baileys: WhatsApp's own multi-device protocol over a websocket, with no browser.
@@ -44,6 +44,8 @@ interface BaileysSocket {
   user?: { id: string; lid?: string } | null;
   ev: { on(event: string, listener: (payload: never) => void): void };
   sendMessage(jid: string, content: { text: string }): Promise<{ key?: BaileysKey } | undefined>;
+  // Asks the phone to upload a file again when WhatsApp's copy has expired
+  updateMediaMessage(message: BaileysMessage): Promise<BaileysMessage>;
   logout(): Promise<void>;
   end(error: Error | undefined): void;
 }
@@ -56,6 +58,12 @@ export interface BaileysModule {
   // Unwraps disappearing, view-once and edited messages; names the kind of content inside
   normalizeMessageContent(content: Record<string, unknown> | null | undefined): Record<string, unknown> | undefined;
   getContentType(content: Record<string, unknown> | undefined): string | undefined;
+  downloadMediaMessage(
+    message: BaileysMessage,
+    type: 'stream',
+    options: Record<string, unknown>,
+    ctx: { reuploadRequest: (message: BaileysMessage) => Promise<BaileysMessage>; logger: unknown },
+  ): Promise<AsyncIterable<Buffer> & { destroy?: () => void }>;
   Browsers: { macOS(browser: string): [string, string, string] };
 }
 
@@ -85,26 +93,64 @@ const MEDIA: Record<string, string> = {
   contactsArrayMessage: 'contact',
 };
 
-/** A Baileys message as the service reads it. */
+// A count WhatsApp sends as a number, a Long, or a string
+function countOf(value: unknown): number | null {
+  const number =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number(value)
+        : typeof (value as { toNumber?: unknown } | null)?.toNumber === 'function'
+          ? (value as { toNumber: () => number }).toNumber()
+          : NaN;
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+const textOf = (value: unknown, max: number) =>
+  typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
+
+/** What WhatsApp says about a file: its type, size, name and length. */
+function mediaInfoOf(media: Record<string, unknown>): WaMediaInfo {
+  return {
+    mediaType: textOf(media.mimetype, 100),
+    size: countOf(media.fileLength),
+    name: textOf(media.fileName, 200) ?? textOf(media.title, 200),
+    seconds: countOf(media.seconds),
+    voiceNote: media.ptt === true,
+  };
+}
+
+/** The link WhatsApp previewed in a text message, if any: the address and what the page says it is. */
+function linkOf(extended: Record<string, unknown> | undefined): WaLink | undefined {
+  const url = textOf(extended?.canonicalUrl, 2000) ?? textOf(extended?.matchedText, 2000);
+  if (!url) return undefined;
+  return { url, title: textOf(extended?.title, 300), description: textOf(extended?.description, 1000) };
+}
+
+/** A Baileys message as the service reads it. `download` fetches its file, when it has one. */
 export function incomingOfBaileys(
   raw: BaileysMessage,
   lib: Pick<BaileysModule, 'jidNormalizedUser' | 'isPnUser' | 'normalizeMessageContent' | 'getContentType'>,
+  download?: (maxBytes: number) => Promise<Buffer>,
 ): WaIncoming {
   const key = raw.key ?? {};
   const chatId = key.remoteJid ? toServiceJid(lib.jidNormalizedUser(key.remoteJid)) : '';
   const content = lib.normalizeMessageContent(raw.message) ?? {};
   const kind = lib.getContentType(content);
   const extended = content.extendedTextMessage as { text?: unknown; contextInfo?: Record<string, unknown> } | undefined;
+  const media = kind ? MEDIA[kind] : undefined;
+  const file = media ? ((content[kind!] ?? {}) as Record<string, unknown>) : undefined;
   const text =
     typeof content.conversation === 'string'
       ? content.conversation
       : typeof extended?.text === 'string'
         ? extended.text
-        : null;
-  const media = kind ? MEDIA[kind] : undefined;
-  const context = (extended?.contextInfo ??
-    (media ? (content[kind!] as { contextInfo?: Record<string, unknown> }).contextInfo : undefined)) as
+        : typeof file?.caption === 'string'
+          ? file.caption
+          : null;
+  const context = (extended?.contextInfo ?? file?.contextInfo) as
     { isForwarded?: unknown; forwardingScore?: unknown } | undefined;
+  const link = kind === 'extendedTextMessage' ? linkOf(extended as Record<string, unknown>) : undefined;
   // The sender's phone id, when WhatsApp sends one beside a @lid id
   const phoneJid = [key.remoteJidAlt, key.participantAlt, key.participant, key.remoteJid].find(jid =>
     lib.isPnUser(jid ?? undefined),
@@ -121,7 +167,25 @@ export function incomingOfBaileys(
     body: text ?? '',
     at: typeof at === 'number' ? at : typeof at?.toNumber === 'function' ? at.toNumber() : Number(at ?? 0),
     senderNumber: phoneJid ? numberOfJid(lib.jidNormalizedUser(phoneJid)) : null,
+    ...(file ? { media: mediaInfoOf(file) } : {}),
+    ...(link ? { link } : {}),
+    ...(file && download ? { download } : {}),
   };
+}
+
+/** A file's bytes, stopping as soon as it passes maxBytes (WhatsApp's own size can be wrong). */
+export async function readCapped(chunks: AsyncIterable<Buffer> & { destroy?: () => void }, maxBytes: number) {
+  const parts: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of chunks) {
+    size += chunk.length;
+    if (size > maxBytes) {
+      chunks.destroy?.();
+      throw new Error('The file is larger than Ava takes.');
+    }
+    parts.push(chunk);
+  }
+  return Buffer.concat(parts);
 }
 
 async function loadBaileys(): Promise<BaileysModule> {
@@ -197,7 +261,19 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
           current.ev.on('messages.upsert', ((upsert: { messages: BaileysMessage[]; type: string }) => {
             // 'notify' is what just arrived; 'append' is history being synced
             if (!mine() || upsert.type !== 'notify') return;
-            for (const message of upsert.messages) events.message(incomingOfBaileys(message, lib));
+            for (const message of upsert.messages) {
+              const download = async (maxBytes: number) =>
+                readCapped(
+                  await lib.downloadMediaMessage(
+                    message,
+                    'stream',
+                    {},
+                    { reuploadRequest: next => current.updateMediaMessage(next), logger: silent },
+                  ),
+                  maxBytes,
+                );
+              events.message(incomingOfBaileys(message, lib, download));
+            }
           }) as never);
         };
         connect();
