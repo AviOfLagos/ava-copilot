@@ -21,7 +21,7 @@ import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { answerOneOff, registerCommand, registerRecovery } from '../registry';
 import { services } from '../registry/services';
-import { syncBrainVault } from './sync';
+import { syncBrainVault, vaultToAdopt } from './sync';
 
 const logger = createLogger('Obsidian');
 
@@ -109,7 +109,8 @@ command('obsidian_vaults', z.object({}), async () => {
   return { vaults, chosen };
 });
 
-command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), async ({ path }) => {
+/** Chooses the vault in Ava Brain and syncs it from now on. */
+async function useVault(path: string): Promise<void> {
   const { vault } = await companionClient.obsidianChoose(crypto.randomUUID(), path);
   const before = await obsidianVaultStore.getSetting();
   if (before.vaultId !== vault.id) await obsidianSyncStore.set({ ...DEFAULT_OBSIDIAN_SYNC });
@@ -125,6 +126,10 @@ command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), 
   await jobs.schedule({ kind: OBSIDIAN_SYNC_JOB, key: SYNC_KEY, cron: SYNC_CRON, catchUpMs: 60_000 });
   // The first sync can take a while on a large vault: it runs on, and the card shows how it went
   void syncNow().catch(error => logger.warning('First vault sync failed', toAppError(error).kind));
+}
+
+command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), async ({ path }) => {
+  await useVault(path);
   return snapshot();
 });
 
@@ -154,10 +159,38 @@ registerJobHandler(OBSIDIAN_SYNC_JOB, async () => {
   await syncNow();
 });
 
+/**
+ * Ava Brain is paired but its vault is not chosen, while this browser had its own folder: choose the vault of the
+ * same name in Ava Brain, so it stays connected through restarts and updates with no access click. The browser
+ * folder keeps its own setting until the user lets it go.
+ */
+async function adoptBrowserVault(): Promise<void> {
+  const setting = await obsidianVaultStore.getSetting();
+  if (setting.source === 'brain' || !(await brainSettingsStore.getSettings()).paired) return;
+  const stored = (await chrome.storage.local.get(VAULT_STATE_KEY))[VAULT_STATE_KEY] as VaultState | undefined;
+  if (!stored?.name) return;
+  const { vaults, chosen } = await companionClient.obsidianVaults();
+  const vault = vaultToAdopt(vaults, chosen, stored.name);
+  if (!vault) return;
+  await useVault(vault.path);
+  logger.info('Chose the same vault in Ava Brain');
+}
+
+const adoptQuietly = () =>
+  void adoptBrowserVault().catch(error => logger.warning('Choosing the vault in Ava Brain', toAppError(error).kind));
+
+// Pairing Ava Brain (now or later) moves the browser folder's vault over
+chrome.storage?.onChanged?.addListener((changes, area) => {
+  if (area !== 'local' || !changes['brain-settings']) return;
+  const before = changes['brain-settings'].oldValue as { paired?: boolean } | undefined;
+  const after = changes['brain-settings'].newValue as { paired?: boolean } | undefined;
+  if (after?.paired && !before?.paired) adoptQuietly();
+});
+
 // After a restart or a restore: keep syncing the vault Ava Brain uses (scheduling the same key replaces the job)
 registerRecovery('obsidian', async () => {
   const setting = await obsidianVaultStore.getSetting();
-  if (setting.source !== 'brain') return;
+  if (setting.source !== 'brain') return adoptQuietly();
   await recordState(setting.name);
   await jobs.schedule({ kind: OBSIDIAN_SYNC_JOB, key: SYNC_KEY, cron: SYNC_CRON, catchUpMs: 60_000 });
 });

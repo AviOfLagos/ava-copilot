@@ -21,6 +21,7 @@ const LINKED: WhatsAppStatus = {
   queued: 0,
   sentLastHour: 0,
   sendLimitPerHour: 20,
+  needsFirstMessage: false,
 };
 
 const thread = (fields: Partial<ThreadRecord> = {}): ThreadRecord =>

@@ -23,6 +23,7 @@ import type { RetryPolicy } from '@extension/shared';
 import { createLogger } from '../log';
 import { priceFor } from '../usage/pricing';
 import { fetchJson } from './http';
+import { localServerRulesReady, reinstallLocalServerRules } from './localServers';
 import {
   listProviderModels,
   LM_STUDIO_LOCAL_URL,
@@ -151,8 +152,8 @@ export async function checkProvider(
       },
     };
   }
-  try {
-    const models = await listProviderModels(
+  const list = () =>
+    listProviderModels(
       {
         providerId,
         type,
@@ -162,6 +163,18 @@ export async function checkProvider(
       },
       options,
     );
+  try {
+    // A server on this machine is asked only once the rules that let the extension in are there
+    if (isLocalProvider({ ...config, type })) await localServerRulesReady();
+    let models;
+    try {
+      models = await list();
+    } catch (thrown) {
+      // Ollama refused: the rules may have gone (a browser restart mid-check); put them back and ask once more
+      if (type !== ProviderTypeEnum.Ollama || toAppError(thrown).status !== 403) throw thrown;
+      await reinstallLocalServerRules();
+      models = await list();
+    }
     // Azure is never asked: its deployments are what the user typed
     const status: 'ok' | 'unknown' = type === ProviderTypeEnum.AzureOpenAI ? 'unknown' : 'ok';
     const entries = toEntries(providerId, config, models, at).map(entry => ({ ...entry, health: status }));
@@ -202,6 +215,7 @@ export async function probeLocalServers(
   options: Pick<RefreshOptions, 'signal' | 'fetch' | 'now'> = {},
 ): Promise<LocalServerProbe[]> {
   const at = options.now?.() ?? Date.now();
+  await localServerRulesReady();
   const probe = async (
     kind: LocalServerProbe['kind'],
     baseUrl: string,

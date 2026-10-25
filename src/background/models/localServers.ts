@@ -78,9 +78,23 @@ export async function installLocalServerRules(): Promise<void> {
   await dnr.updateSessionRules({ removeRuleIds, addRules: rules });
 }
 
+// This start's rules: a check of a local server waits for them, or Ollama answers it 403 and shows as refused
+let rulesReady: Promise<void> = Promise.resolve();
+
+/** Resolves once the rules are in (never rejects, so a check is never held up by a failed install). */
+export function localServerRulesReady(): Promise<void> {
+  return rulesReady;
+}
+
+/** Puts the rules in again, e.g. when Ollama refused a check anyway. */
+export function reinstallLocalServerRules(): Promise<void> {
+  rulesReady = installLocalServerRules().catch(error => logger.warning('Local model rules', error));
+  return rulesReady;
+}
+
 /** Session rules go when the browser closes: put them back on every start, and when a local provider changes. */
 export function keepLocalServerRules(): void {
-  const install = () => void installLocalServerRules().catch(error => logger.warning('Local model rules', error));
+  const install = () => void reinstallLocalServerRules();
   install();
   chrome.storage?.onChanged?.addListener((changes, area) => {
     if (area === 'local' && Object.keys(changes).some(key => key === 'llm-api-keys' || key === 'brain-settings')) {

@@ -5,6 +5,8 @@ import {
   db,
   getProviderTypeByProviderId,
   hasPlaintextKeys,
+  isLocalProvider,
+  llmProviderStore,
   LLM_PROVIDERS_STORAGE_KEY,
   migrateProviderKeys,
   modelHealthStore,
@@ -172,6 +174,29 @@ registerRecovery('models', async () => {
     // First run also looks for Ollama and LM Studio on this machine
     await refreshSoon({ probeLocal: !localProbeDone }, 5000);
   }
+});
+
+// Opening the panel checks again a local server that was down or refused, so a stale status does not stay
+const RECHECK_LOCAL_AFTER_MS = 60_000;
+
+async function recheckFailedLocal(): Promise<void> {
+  const [{ providers: health }, providers] = await Promise.all([
+    modelHealthStore.getHealth(),
+    llmProviderStore.getAllProviders(),
+  ]);
+  const now = Date.now();
+  const providerIds = Object.entries(providers)
+    .filter(([id, config]) => {
+      const last = health[id];
+      return isLocalProvider(config) && last?.status === 'error' && now - last.checkedAt > RECHECK_LOCAL_AFTER_MS;
+    })
+    .map(([id]) => id);
+  if (providerIds.length) await refreshSoon({ providerIds });
+}
+
+chrome.runtime?.onConnect?.addListener(port => {
+  if (port.name !== 'side-panel-connection' || port.sender?.id !== chrome.runtime.id) return;
+  void recheckFailedLocal().catch(error => logger.warning('Rechecking local models', toAppError(error).kind));
 });
 
 // ── Commands ──────────────────────────────────────────────────────────────────────────────────────

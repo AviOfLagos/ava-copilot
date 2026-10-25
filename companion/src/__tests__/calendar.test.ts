@@ -37,6 +37,28 @@ const reader = (answer: (call: FakeCall) => { stdout?: string; stderr?: string; 
   return { run, calendar: new MacCalendarReader({ run, log: memoryLogger(), platform: 'darwin' }) };
 };
 
+describe('MacCalendarReader when Calendar is slow', () => {
+  it('answers a timed-out read with the last good one for the same hours', async () => {
+    let slow = false;
+    const { calendar } = reader(() => (slow ? { timedOut: true } : { stdout: granted([event()]) }));
+    const first = await calendar.events(0, 10 * HOUR, null);
+    slow = true;
+    expect(await calendar.events(0, 10 * HOUR, null)).toEqual(first);
+    // Other hours have no last good read to stand in
+    await expect(calendar.events(HOUR, 10 * HOUR, null)).rejects.toMatchObject({ kind: 'timeout' });
+  });
+
+  it('forgets the last good read once access is gone', async () => {
+    let answer: { stdout?: string; timedOut?: boolean } = { stdout: granted([event()]) };
+    const { calendar } = reader(() => answer);
+    await calendar.events(0, 10 * HOUR, null);
+    answer = { stdout: JSON.stringify({ status: 0, calendars: [], events: [], truncated: false }) };
+    await expect(calendar.events(0, 10 * HOUR, null)).rejects.toMatchObject({ kind: 'forbidden' });
+    answer = { timedOut: true };
+    await expect(calendar.events(0, 10 * HOUR, null)).rejects.toMatchObject({ kind: 'timeout' });
+  });
+});
+
 describe('parseCalendarOutput', () => {
   it('maps EventKit’s statuses to words', () => {
     expect(parseCalendarOutput('{"status":0}').access).toBe('not_determined');

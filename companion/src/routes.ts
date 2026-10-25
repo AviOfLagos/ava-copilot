@@ -9,6 +9,7 @@ import {
   ghRequestSchema,
   healthRequestSchema,
   APP_ROUTES,
+  DOCKER_ROUTES,
   MEET_ROUTES,
   MEET_SAY_MAX_BODY_BYTES,
   appOpenRequestSchema,
@@ -506,6 +507,16 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler() {
         await deps.meet.checkSignedIn();
         return json({ ok: true, status: deps.meet.status() });
+      },
+    },
+    {
+      method: 'POST',
+      path: DOCKER_ROUTES.start,
+      name: 'docker.start',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, docker: await deps.sandbox.startDocker() });
       },
     },
     {

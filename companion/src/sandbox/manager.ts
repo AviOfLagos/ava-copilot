@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { copyFile, lstat, mkdir, open, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEFAULT_SANDBOX_POLICY, isSafeRelativePath, sandboxPolicySchema } from '@protocol';
+import { DEFAULT_SANDBOX_POLICY, DOCKER_START_TIMEOUT_MS, isSafeRelativePath, sandboxPolicySchema } from '@protocol';
 import type { DockerState, SandboxPolicy, SandboxRunReply } from '@protocol';
 import { privateDir } from '../config';
 import { AppError, DOCKER_DOWN_MESSAGE, fail } from '../errors';
@@ -22,6 +22,7 @@ export const MAX_OUTPUT_BYTES = 1_000_000;
 export const MAX_READ_BYTES = 1_000_000;
 export const MAX_WRITE_BYTES = 2_000_000;
 const DOCKER_CACHE_MS = 10_000;
+const DOCKER_START_POLL_MS = 2000;
 
 export interface RunRequest {
   profileId: string;
@@ -55,6 +56,29 @@ export class SandboxManager {
     const state = await probeDocker(this.deps.run, this.deps.image);
     this.dockerCache = { at: this.now(), state };
     return state;
+  }
+
+  /** Starts the Docker this Mac uses (Colima, Docker Desktop or OrbStack) and waits until it answers. */
+  async startDocker(): Promise<DockerState> {
+    const before = await this.docker(true);
+    if (before.state !== 'down') return before;
+    const env = hostToolEnv();
+    if (before.runtime === 'colima') {
+      const result = await this.deps.run('colima', ['start'], { env, timeoutMs: DOCKER_START_TIMEOUT_MS - 10_000 });
+      if (result.code !== 0) fail('unavailable', 'Colima did not start. Run `colima start` in a terminal to see why.');
+    } else {
+      const app = before.runtime === 'orbstack' ? 'OrbStack' : 'Docker';
+      const result = await this.deps.run('/usr/bin/open', ['-a', app], { env, timeoutMs: 15_000 });
+      if (result.code !== 0)
+        fail('unavailable', `${app === 'Docker' ? 'Docker Desktop' : app} is not installed on this Mac.`);
+    }
+    // An app is up a little after it opens; Colima answers as soon as its start returns
+    const deadline = this.now() + DOCKER_START_TIMEOUT_MS - 20_000;
+    for (;;) {
+      const state = await this.docker(true);
+      if (state.state === 'up' || this.now() >= deadline) return state;
+      await new Promise(resolve => setTimeout(resolve, DOCKER_START_POLL_MS));
+    }
   }
 
   workspace(profileId: string): string {

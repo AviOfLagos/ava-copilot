@@ -15,6 +15,10 @@ const REFRESH_MS = 10 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 // Reminders already given, kept in session storage so a restarted worker does not repeat them
 const REMINDED_KEY = 'calendar-reminded';
+// Said at most this often: Ava Brain cannot read the Mac's Calendar until it is allowed again
+export const CALENDAR_ACCESS_NOTICE = 'calendar-access';
+const ACCESS_NOTICE_KEY = 'calendar-access-noticed';
+const ACCESS_NOTICE_EVERY_MS = 6 * HOUR;
 
 /** A calendar title made safe to speak or show: one line, no quotes, at most 80 characters. */
 export function quoteTitle(title: string): string {
@@ -78,6 +82,7 @@ export class CalendarWatcher {
       return null;
     }
     const read = await readFromSources(sources, now - HOUR, now + 36 * HOUR);
+    if (read.macNeedsAccess) await this.noticeAccess(now);
     if (read.error !== null) {
       // Kept as they were: one failed read does not empty the day
       await upcomingEventsStore.set({
@@ -143,7 +148,37 @@ export class CalendarWatcher {
     for (const listener of this.listeners) listener(reminder);
   }
 
+  /**
+   * Ava Brain lost Calendar permission (macOS asks again when the program it runs as changes, e.g. a Node update):
+   * one notice, whose button shows the macOS prompt on the Mac.
+   */
+  private async noticeAccess(now: number): Promise<void> {
+    const last = ((await chrome.storage.local.get(ACCESS_NOTICE_KEY))[ACCESS_NOTICE_KEY] as number | undefined) ?? 0;
+    if (now - last < ACCESS_NOTICE_EVERY_MS) return;
+    await chrome.storage.local.set({ [ACCESS_NOTICE_KEY]: now });
+    await chrome.notifications.create(CALENDAR_ACCESS_NOTICE, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icon-128.png'),
+      title: 'Ava can’t read your Calendar',
+      message: 'Ava Brain needs Calendar permission again. Press Allow, then choose Allow on your Mac.',
+      buttons: [{ title: 'Allow on the Mac' }],
+      priority: 1,
+    });
+  }
+
+  private async allowAccess(): Promise<void> {
+    await chrome.notifications.clear(CALENDAR_ACCESS_NOTICE);
+    const { access } = await companionClient.calendarRequestAccess();
+    if (access === 'granted') {
+      await chrome.storage.local.remove(ACCESS_NOTICE_KEY);
+      await this.refresh();
+    }
+  }
+
   private async onNotificationButton(notificationId: string, button: number): Promise<void> {
+    if (notificationId === CALENDAR_ACCESS_NOTICE && button === 0) {
+      return void (await this.allowAccess().catch(error => logger.warning('Allowing Calendar', error)));
+    }
     if (!notificationId.startsWith('calendar:') || button !== 0) return;
     const event = this.events.find(item => `calendar:${item.id}` === notificationId);
     if (event?.joinUrl) await chrome.tabs.create({ url: event.joinUrl, active: true });

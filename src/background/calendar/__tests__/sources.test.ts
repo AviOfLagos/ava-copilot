@@ -68,7 +68,18 @@ describe('readFromSources', () => {
 
   it('says the first problem when nothing answers', async () => {
     const read = await readFromSources([failing('mac', 'Allow Calendars'), failing('ics', 'Feed gone')], 0, HOUR);
-    expect(read).toEqual({ events: [], source: null, error: 'Allow Calendars' });
+    expect(read).toEqual({ events: [], source: null, error: 'Allow Calendars', macNeedsAccess: true });
+  });
+
+  it('says the Mac needs access only when the Mac refused, not when it was slow', async () => {
+    const slow: CalendarSource = {
+      name: 'mac',
+      read: async () => {
+        throw new AppError('timeout', 'The Mac’s Calendar took too long to answer. Try again.');
+      },
+    };
+    expect((await readFromSources([slow], 0, HOUR)).macNeedsAccess).toBe(false);
+    expect((await readFromSources([failing('ics', 'Feed gone')], 0, HOUR)).macNeedsAccess).toBe(false);
   });
 });
 

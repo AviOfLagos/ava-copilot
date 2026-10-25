@@ -119,6 +119,12 @@ command('brain_check', z.object({}), async () => {
   return snapshot();
 });
 
+command('brain_docker_start', z.object({}), async () => {
+  await companionClient.dockerStart();
+  await refreshStatus(companionClient, { fresh: true, manual: true });
+  return snapshot();
+});
+
 command('brain_artifacts', z.object({}), async () => {
   const { artifacts } = await companionClient.listArtifacts();
   return { artifacts: artifacts.slice(0, 20) };

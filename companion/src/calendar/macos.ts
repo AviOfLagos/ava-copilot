@@ -1,6 +1,6 @@
 import { CALENDAR_LIMITS, meetingLinkIn } from '@protocol';
 import type { CalendarAccess, MacCalendar, MacEvent } from '@protocol';
-import { fail } from '../errors';
+import { AppError, fail } from '../errors';
 import type { Logger } from '../log';
 import { hostToolEnv } from '../sandbox/process';
 import type { ProcessRunner } from '../sandbox/process';
@@ -18,6 +18,8 @@ export const OSASCRIPT = '/usr/bin/osascript';
 const STATUS_TIMEOUT_MS = 30_000;
 // The prompt waits for the user's click
 const REQUEST_TIMEOUT_MS = 120_000;
+// A read that times out (Calendar is slow after a restart or a wake) answers with the last good one this recent
+const LAST_GOOD_MS = 30 * 60_000;
 
 // Runs in osascript: plain ES5-ish JavaScript with the ObjC bridge. argv: mode, from ms, to ms, calendar ids JSON
 export const EVENTKIT_SCRIPT = `
@@ -171,7 +173,20 @@ export function parseCalendarOutput(stdout: string): CalendarRead {
 }
 
 export class MacCalendarReader {
-  constructor(private readonly deps: { run: ProcessRunner; log: Logger; platform?: NodeJS.Platform }) {}
+  private lastGood: { key: string; at: number; read: CalendarRead } | null = null;
+
+  constructor(
+    private readonly deps: { run: ProcessRunner; log: Logger; platform?: NodeJS.Platform; now?: () => number },
+  ) {}
+
+  private now(): number {
+    return this.deps.now?.() ?? Date.now();
+  }
+
+  /** Asks Calendar once in the background, so the first real read is not the slow cold one. */
+  warmUp(): void {
+    void this.status().catch(() => {});
+  }
 
   private async script(args: string[], timeoutMs: number): Promise<CalendarRead> {
     if ((this.deps.platform ?? process.platform) !== 'darwin') {
@@ -210,11 +225,29 @@ export class MacCalendarReader {
   }
 
   async events(from: number, to: number, calendarIds: string[] | null): Promise<CalendarRead> {
-    const read = await this.script(
-      ['events', String(Math.floor(from)), String(Math.floor(to)), calendarIds ? JSON.stringify(calendarIds) : ''],
-      STATUS_TIMEOUT_MS,
-    );
-    if (read.access !== 'granted') fail('forbidden', read.message ?? CALENDAR_STEPS);
+    const args = [
+      'events',
+      String(Math.floor(from)),
+      String(Math.floor(to)),
+      calendarIds ? JSON.stringify(calendarIds) : '',
+    ];
+    // The same calendars over the same hours (to the minute) can stand in for each other
+    const key = JSON.stringify([Math.floor(from / 60_000), Math.floor(to / 60_000), calendarIds]);
+    let read: CalendarRead;
+    try {
+      read = await this.script(args, STATUS_TIMEOUT_MS);
+    } catch (error) {
+      const last = this.lastGood;
+      if (AppError.isInstance(error) && error.kind === 'timeout' && last && this.now() - last.at < LAST_GOOD_MS) {
+        if (last.key === key) return last.read;
+      }
+      throw error;
+    }
+    if (read.access !== 'granted') {
+      this.lastGood = null;
+      fail('forbidden', read.message ?? CALENDAR_STEPS);
+    }
+    this.lastGood = { key, at: this.now(), read };
     return read;
   }
 }

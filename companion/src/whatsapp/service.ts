@@ -41,6 +41,10 @@ export const OWN_MARK = '\u2063\u200b\u2063';
 
 export const AWAY_TEXT = "Your browser is closed, I'll answer when it opens.";
 export const TEXT_ONLY_TEXT = 'I can only read text for now.';
+// WhatsApp (through open-wa) will not open a chat with a number this account has never talked to
+export const FIRST_MESSAGE_TEXT =
+  "Ava can't start a chat with your number yet. From your phone, send any message to Ava's number once, then try again.";
+const NEW_CHAT_REFUSED = /licen[cs]e|unknown_number|new number/i;
 export const FORWARDED_TEXT =
   'I only act on messages you type yourself. If you want me to look at a forwarded one, tell me in your own words.';
 // Kinds that may go in quiet hours: an answer he asked for, and something waiting for his click
@@ -70,6 +74,8 @@ interface Saved {
   // No messages first in this window, kept here too so the Mac holds to it whatever the extension does
   quietStart: string;
   quietEnd: string;
+  // A send to the owner was refused until he writes to Ava's number first (FIRST_MESSAGE_TEXT)
+  needsFirstMessage: boolean;
 }
 
 const EMPTY: Saved = {
@@ -86,6 +92,7 @@ const EMPTY: Saved = {
   echoes: [],
   quietStart: '22:00',
   quietEnd: '07:00',
+  needsFirstMessage: false,
 };
 
 export interface WhatsAppServiceDeps {
@@ -173,6 +180,7 @@ export class WhatsAppService {
       queued: this.saved.queue.length,
       sentLastHour: this.recentSends().length,
       sendLimitPerHour: this.limit,
+      needsFirstMessage: this.saved.needsFirstMessage && Boolean(this.saved.ownerNumber),
     };
   }
 
@@ -245,6 +253,7 @@ export class WhatsAppService {
     if (next !== this.saved.ownerNumber) {
       this.saved.ownerNumber = next;
       this.saved.ownerAliases = [];
+      this.saved.needsFirstMessage = false;
       // What came from a chat that is no longer the owner's goes: it must not be answered or acted on
       this.saved.queue = this.saved.queue.filter(item => this.isOwnerChat(item.chatId));
       this.saved.chats = this.saved.chats.filter(item => this.isOwnerChat(item.chatId));
@@ -318,7 +327,20 @@ export class WhatsAppService {
     this.saved.sentAt = [...recent, this.now()];
     this.remember(`text:${hashOf(body)}`);
     this.save();
-    const id = await driver.sendText(chatId, `${body}${OWN_MARK}`);
+    let id: unknown;
+    try {
+      id = await driver.sendText(chatId, `${body}${OWN_MARK}`);
+    } catch (error) {
+      // A send that did not go out does not count toward the hour
+      this.saved.sentAt = this.saved.sentAt.slice(0, -1);
+      if (!this.isSelfChat(chatId) && NEW_CHAT_REFUSED.test(errorText(error))) {
+        this.saved.needsFirstMessage = true;
+        this.save();
+        fail('forbidden', FIRST_MESSAGE_TEXT);
+      }
+      this.save();
+      throw error;
+    }
     if (id) {
       this.remember(`id:${id}`);
       this.save();
@@ -371,6 +393,8 @@ export class WhatsAppService {
       await this.sendTo(chatId, FORWARDED_TEXT).catch(() => {});
       return;
     }
+    // He wrote to Ava's number, so the chat exists and her sends to him go through now
+    if (this.saved.needsFirstMessage && !this.isSelfChat(chatId)) this.saved.needsFirstMessage = false;
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
     if (!text) {
       this.save();
@@ -432,7 +456,8 @@ export class WhatsAppService {
   // ── Bookkeeping ──
 
   private defaultChat(): string | null {
-    if (this.saved.ownerNumber) return cUs(this.saved.ownerNumber);
+    // The chat he wrote from (its @lid id) exists for sure; his number's own id may not yet
+    if (this.saved.ownerNumber) return this.saved.ownerAliases.at(-1) ?? cUs(this.saved.ownerNumber);
     return this.saved.number ? cUs(this.saved.number) : null;
   }
 
@@ -470,4 +495,10 @@ export class WhatsAppService {
     writeFileSync(temp, JSON.stringify(this.saved), { mode: 0o600 });
     renameSync(temp, this.file);
   }
+}
+
+/** An error's code and words, whatever shape the driver threw it in. */
+function errorText(error: unknown): string {
+  if (error instanceof Error) return `${(error as { code?: unknown }).code ?? ''} ${error.message}`;
+  return typeof error === 'string' ? error : JSON.stringify(error ?? '');
 }

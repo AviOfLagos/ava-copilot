@@ -129,6 +129,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     now,
   });
   const calendar = new MacCalendarReader({ run, log: log.child({ part: 'calendar' }), platform: deps.platform });
+  calendar.warmUp();
   const MAC_APP_NAMES: Record<MacApp, string> = { ollama: 'Ollama', lmstudio: 'LM Studio' };
   const openApp = async (app: MacApp) => {
     if ((deps.platform ?? process.platform) !== 'darwin') fail('unavailable', 'Opening an app works on a Mac only.');

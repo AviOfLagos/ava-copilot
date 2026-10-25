@@ -149,14 +149,24 @@ export const okReplySchema = z.object({ ok: z.literal(true) });
 
 // ── Health ────────────────────────────────────────────────────────────────────────────────────────
 
+export const DOCKER_RUNTIMES = ['colima', 'desktop', 'orbstack'] as const;
+export type DockerRuntime = (typeof DOCKER_RUNTIMES)[number];
+
 export const dockerStateSchema = z.object({
   state: z.enum(['up', 'down', 'missing']),
   // What to do about it, e.g. "Docker is not running. Start Docker Desktop, then try again."
   message: z.string().max(400),
   version: z.string().max(40).nullable(),
   imageReady: z.boolean(),
+  // Which Docker this Mac uses, from its Docker context, so Start can start that one (older Ava Brain: absent)
+  runtime: z.enum(DOCKER_RUNTIMES).nullable().optional(),
 });
 export type DockerState = z.infer<typeof dockerStateSchema>;
+
+// Starts the Docker the user has and answers once it is up (Colima takes a minute or two)
+export const DOCKER_ROUTES = { start: '/v1/docker/start' } as const;
+export const DOCKER_START_TIMEOUT_MS = 180_000;
+export const dockerStartReplySchema = z.object({ ok: z.literal(true), docker: dockerStateSchema });
 
 export const engineStateSchema = z.object({
   kind: z.enum(['eve', 'none']),
@@ -840,6 +850,8 @@ export const whatsappStatusSchema = z.object({
   queued: z.number().int().nonnegative(),
   sentLastHour: z.number().int().nonnegative(),
   sendLimitPerHour: z.number().int().positive(),
+  // Ava's sends to the owner's number were refused until he messages her number once (older Ava Brain: absent)
+  needsFirstMessage: z.boolean().default(false),
 });
 export type WhatsAppStatus = z.infer<typeof whatsappStatusSchema>;
 
