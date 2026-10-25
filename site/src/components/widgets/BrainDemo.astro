@@ -1,0 +1,34 @@
+---
+// Nex Brain's sandbox: a command run in a container with its limits shown as chips, the output, and the result
+// waiting for your click (amber: the only colour for "waits for you"). Without JavaScript: the finished run.
+import { Box, Check, Play } from 'lucide-react';
+import { widgetCopy } from '../../content/project';
+
+const copy = widgetCopy.brain;
+---
+
+<div class="wcard bw" data-brain>
+  <div class="bw__head">
+    <span class="bw__title"><Box aria-hidden="true" strokeWidth={1.8} />{copy.title}</span>
+  </div>
+  <ul class="bw__limits" aria-label="Limits">
+    {copy.limits.map(limit => <li>{limit}</li>)}
+  </ul>
+  <div class="bw__term">
+    <p class="bw__cmd"><span aria-hidden="true">$</span> {copy.command}</p>
+    <ol class="bw__out">
+      {copy.lines.map(line => <li data-brain-line>{line}</li>)}
+    </ol>
+    <p class="bw__result" data-brain-result>{copy.result}</p>
+  </div>
+  <div class="bw__actions needs-js">
+    <button class="wbtn" type="button" data-brain-run data-running={copy.running} data-label={copy.run}>
+      <Play aria-hidden="true" strokeWidth={1.8} />
+      <span data-brain-run-label>{copy.run}</span>
+    </button>
+    <button class="wbtn wbtn--hold" type="button" data-brain-approve data-approved={copy.approved} disabled>
+      <Check aria-hidden="true" strokeWidth={1.8} />
+      <span data-brain-approve-label>{copy.approve}</span>
+    </button>
+  </div>
+</div>

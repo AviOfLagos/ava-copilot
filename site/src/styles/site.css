@@ -479,44 +479,6 @@ pre {
   flex: none;
 }
 
-.site-nav ul {
-  display: flex;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.site-nav a {
-  display: inline-flex;
-  align-items: center;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: var(--radius-pill);
-  color: var(--ink-2);
-  font-size: 14px;
-  text-decoration: none;
-  transition:
-    color var(--dur) var(--ease-out),
-    background-color var(--dur) var(--ease-out);
-}
-
-.site-nav a:hover,
-.site-nav a[aria-current='page'] {
-  color: var(--ink);
-}
-
-.site-nav a:hover {
-  background: var(--fill-hover);
-}
-
-@media (max-width: 759px) {
-  .site-nav,
-  .site-header .site-header__install {
-    display: none;
-  }
-}
-
 /* Phones: the links fold into a menu under the bar */
 .site-menu {
   position: relative;
@@ -604,11 +566,7 @@ pre {
   justify-content: space-between;
 }
 
-@media (min-width: 760px) {
-  .site-menu {
-    display: none;
-  }
-}
+
 
 /* Theme: a three-way radio group */
 .theme {
@@ -1240,6 +1198,9 @@ pre {
 /* The name again, cut at the bottom of the page; solid, so the globe sets behind it */
 .wordmark--foot {
   margin: clamp(32px, 5vw, 64px) 0 -0.17em;
+  /* Fades out toward its baseline, so the name settles into the page instead of being cut off */
+  -webkit-mask-image: linear-gradient(180deg, #000 12%, rgb(0 0 0 / 0.4) 48%, transparent 80%);
+  mask-image: linear-gradient(180deg, #000 12%, rgb(0 0 0 / 0.4) 48%, transparent 80%);
 }
 
 @media (max-width: 719px) {

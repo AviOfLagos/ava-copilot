@@ -1,0 +1,237 @@
+---
+// One feature group's page: a short head, the group's working widget (the home page's where one exists), what to
+// try in it, every feature in the group marked live/preview/planned, and the neighbouring groups.
+import { ArrowLeft, ArrowRight, MousePointer2 } from 'lucide-react';
+import AmbientDemo from '../../components/widgets/AmbientDemo.astro';
+import BrainDemo from '../../components/widgets/BrainDemo.astro';
+import MeetingDemo from '../../components/widgets/MeetingDemo.astro';
+import UpdateDemo from '../../components/widgets/UpdateDemo.astro';
+import WorkspaceDemo from '../../components/widgets/WorkspaceDemo.astro';
+import InboxStack from '../../components/InboxStack.astro';
+import Integrations from '../../components/Integrations.astro';
+import KnowledgeGraph from '../../components/KnowledgeGraph.astro';
+import ModelPicker from '../../components/ModelPicker.astro';
+import PrivacyLabel from '../../components/PrivacyLabel.astro';
+import RoutineFlow from '../../components/RoutineFlow.astro';
+import StepsBento from '../../components/StepsBento.astro';
+import { featureHref, features, groupMeta, projectLinks, statusLabel, tryHints } from '../../content/project';
+import type { FeatureGroup, Status } from '../../content/project';
+import { PRODUCT, demo, home, links } from '../../content/site';
+import GateDemo from '../../islands/GateDemo';
+import VoiceDemo from '../../islands/VoiceDemo';
+import Base from '../../layouts/Base.astro';
+import { iconFor } from '../../lib/feature-icons';
+import { pageGraph } from '../../lib/seo';
+import '../../styles/home.css';
+import '../../styles/pages.css';
+import '../../styles/widgets.css';
+import '../../styles/features.css';
+
+export function getStaticPaths() {
+  return features.groups.map((group, index) => ({
+    params: { group: group.id },
+    props: {
+      group,
+      prev: features.groups[(index - 1 + features.groups.length) % features.groups.length],
+      next: features.groups[(index + 1) % features.groups.length],
+    },
+  }));
+}
+
+interface Props {
+  group: FeatureGroup;
+  prev: FeatureGroup;
+  next: FeatureGroup;
+}
+const { group, prev, next } = Astro.props;
+const path = featureHref(group.id);
+const widget = groupMeta[group.id]?.widget ?? '';
+// Widgets that need the whole width get it; the others sit beside what to try
+const wide = ['trail', 'routine', 'graph', 'integrations', 'gate'].includes(widget);
+const title = `${group.title} — ${PRODUCT} features`;
+const description = `${group.lede} ${group.items.map(item => item.name).join(', ')}.`;
+const counts = (['live', 'preview', 'planned'] as Status[])
+  .map(status => ({ status, n: group.items.filter(item => item.status === status).length }))
+  .filter(item => item.n > 0);
+const Icon = iconFor(group.id);
+const hints = tryHints[group.id] ?? [];
+const { routines } = home;
+---
+
+<Base
+  title={title}
+  description={description}
+  path={path}
+  og="home"
+  ogAlt={`${PRODUCT}: ${group.title}`}
+  graph={pageGraph(path, title, description, group.title)}>
+  <div class="wrap">
+    <header class="page-head fpage-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><a href={projectLinks.features}>{features.breadcrumb}</a></li>
+          <li><span aria-current="page">{group.title}</span></li>
+        </ol>
+      </nav>
+      <span class="fpage-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>
+      <h1 class="display">{group.title}</h1>
+      <p class="lede">{group.lede}</p>
+      <p class="fpage-counts">
+        {
+          counts.map(item => (
+            <span class={`status status--${item.status}`}>
+              {item.n} {statusLabel[item.status]}
+            </span>
+          ))
+        }
+      </p>
+    </header>
+
+    <section class={`fstage${wide ? ' fstage--wide' : ''}`} aria-label={`${group.title}, shown working`}>
+      <div class="fstage__widget">
+        {widget === 'trail' && <StepsBento />}
+        {
+          widget === 'gate' && (
+            <div class="gate-stage fstage__gate">
+              <GateDemo client:visible copy={demo} />
+              <noscript>
+                <p class="gd-caption">{demo.noscript}</p>
+              </noscript>
+            </div>
+          )
+        }
+        {
+          widget === 'voice' && (
+            <div class="card card--voice">
+              <VoiceDemo client:visible copy={home.voice.stage} />
+            </div>
+          )
+        }
+        {widget === 'ambient' && <AmbientDemo />}
+        {widget === 'meeting' && <MeetingDemo />}
+        {widget === 'graph' && <KnowledgeGraph />}
+        {widget === 'workspaces' && <WorkspaceDemo />}
+        {
+          widget === 'routine' && (
+            <div class="bento bento--routines">
+              <article class="card card--routine" aria-labelledby="routine-title">
+                <p class="card__label" id="routine-title">
+                  {routines.routine.label}
+                </p>
+                <RoutineFlow />
+              </article>
+              <div class="bento__col">
+                <article class="card card--inbox" aria-label={routines.inbox.title}>
+                  <InboxStack />
+                </article>
+              </div>
+            </div>
+          )
+        }
+        {
+          widget === 'models' && (
+            <article class="card card--models">
+              <ModelPicker />
+            </article>
+          )
+        }
+        {
+          widget === 'integrations' && (
+            <article class="card card--integrations">
+              <Integrations />
+            </article>
+          )
+        }
+        {widget === 'brain' && <BrainDemo />}
+        {widget === 'trust' && <UpdateDemo />}
+      </div>
+      {
+        hints.length > 0 && (
+          <aside class="fstage__try" aria-label="Try it">
+            <p class="fstage__try-title">
+              <MousePointer2 aria-hidden="true" strokeWidth={1.8} />
+              Try it
+            </p>
+            <ul>
+              {hints.map(hint => (
+                <li>{hint}</li>
+              ))}
+            </ul>
+          </aside>
+        )
+      }
+    </section>
+
+    <section class="block" aria-labelledby="list-title">
+      <div class="block-head">
+        <h2 class="h2" id="list-title">What’s in it</h2>
+      </div>
+      <ul class="frows">
+        {
+          group.items.map(item => (
+            <li class={`frow frow--${item.status}`}>
+              <span class={`status status--${item.status}`}>{statusLabel[item.status]}</span>
+              <span class="frow__text">
+                <span class="frow__name">{item.name}</span>
+                <span class="frow__body">{item.body}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      group.id === 'trust' && (
+        <section class="block" aria-labelledby="leaves-title">
+          <div class="block-head">
+            <h2 class="h2" id="leaves-title">
+              What leaves your computer
+            </h2>
+          </div>
+          <div class="fpage-privacy">
+            <PrivacyLabel level={3} />
+          </div>
+        </section>
+      )
+    }
+
+    <nav class="pager block" aria-label="More features">
+      <a class="pager__link pager__link--prev" href={featureHref(prev.id)}>
+        <span class="pager__dir">
+          <ArrowLeft aria-hidden="true" strokeWidth={2} />
+          Previous
+        </span>
+        <span class="pager__title">{prev.title}</span>
+      </a>
+      <a class="pager__link pager__link--all" href={projectLinks.features}>
+        <span class="pager__dir">All features</span>
+        <span class="pager__title">{features.groups.length} groups</span>
+      </a>
+      <a class="pager__link pager__link--next" href={featureHref(next.id)}>
+        <span class="pager__dir">
+          Next
+          <ArrowRight aria-hidden="true" strokeWidth={2} />
+        </span>
+        <span class="pager__title">{next.title}</span>
+      </a>
+    </nav>
+
+    <p class="page-actions">
+      <a class="btn btn--cta" href={links.install}>
+        <span class="btn__label">Install {PRODUCT}</span>
+        <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+      </a>
+    </p>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>
+
+<script>
+  import { startFeatureWidgets } from '../../scripts/feature-widgets';
+  import { startWidgets } from '../../scripts/widgets';
+
+  startWidgets();
+  startFeatureWidgets();
+</script>

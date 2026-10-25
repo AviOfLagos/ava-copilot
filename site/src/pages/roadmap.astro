@@ -28,6 +28,24 @@ const path = projectLinks.roadmap;
       <p class="lede">{roadmap.lede}</p>
     </header>
 
+    <section class="track" aria-labelledby="track-title">
+      <div class="track__head">
+        <h2 class="h3" id="track-title">{roadmap.track.title}</h2>
+        <p>{roadmap.track.lede}</p>
+      </div>
+      <ol class="track__steps">
+        {
+          roadmap.track.steps.map(step => (
+            <li class={`track__step track__step--${step.state}`} aria-current={step.state === 'now' ? 'step' : undefined}>
+              <span class="track__node" aria-hidden="true" />
+              <span class="track__name">{step.name}</span>
+              <span class="track__state">{roadmap.track.stateLabel[step.state]}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
     <div class="block">
       <div class="roadmap">
         {
@@ -57,7 +75,7 @@ const path = projectLinks.roadmap;
       <div class="block-head">
         <h2 class="h2" id="shipped-title">{roadmap.doneTitle}</h2>
       </div>
-      <ul class="shipped">
+      <ul class="shipped shipped--timeline">
         {
           roadmap.done.map(item => (
             <li>

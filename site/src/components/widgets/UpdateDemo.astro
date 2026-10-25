@@ -1,0 +1,28 @@
+---
+// The panel's update banner, as it looks when a new version is out: what changed, the one-line update and Reload.
+// A picture of the real banner: its buttons do nothing here.
+import { Download, RotateCw, Sparkles } from 'lucide-react';
+import { widgetCopy } from '../../content/project';
+import { INSTALL_COMMAND } from '../../content/site';
+
+const copy = widgetCopy.update;
+---
+
+<div class="wcard uw">
+  <div class="uw__head">
+    <span class="uw__icon" aria-hidden="true"><Sparkles strokeWidth={1.8} /></span>
+    <span>
+      <span class="uw__title">{copy.title}</span>
+      <span class="uw__version">{copy.version}</span>
+    </span>
+  </div>
+  <ul class="uw__notes">
+    {copy.notes.map(note => <li>{note}</li>)}
+  </ul>
+  <p class="wlabel">{copy.commandLabel}</p>
+  <code class="uw__cmd"><Download aria-hidden="true" strokeWidth={1.8} />{INSTALL_COMMAND}</code>
+  <div class="uw__actions" aria-hidden="true">
+    <span class="wbtn wbtn--ghost">{copy.later}</span>
+    <span class="wbtn wbtn--mint"><RotateCw strokeWidth={1.8} />{copy.reload}</span>
+  </div>
+</div>

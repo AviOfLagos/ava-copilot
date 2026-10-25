@@ -1,5 +1,6 @@
 ---
 import { ArrowRight, Bug, Code2, FlaskConical, Info, Languages, Megaphone, ScrollText, ShieldAlert } from 'lucide-react';
+import InstallCommand from '../components/InstallCommand.astro';
 import { contribute, projectLinks } from '../content/project';
 import { PRODUCT } from '../content/site';
 import Base from '../layouts/Base.astro';
@@ -69,11 +70,15 @@ const icons = {
       </div>
       <ol class="steps">
         {
-          contribute.setupSteps.map(step => (
+          contribute.setupSteps.map((step, index) => (
             <li>
               <div>
                 <h3>{step.title}</h3>
-                {step.command ? <code class="code-line">{step.command}</code> : <p>{step.text}</p>}
+                {step.command ? (
+                  <InstallCommand id={`setup-${index}`} command={step.command} label={step.title} />
+                ) : (
+                  <p>{step.text}</p>
+                )}
               </div>
             </li>
           ))

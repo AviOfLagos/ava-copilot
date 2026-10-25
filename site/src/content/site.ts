@@ -98,8 +98,8 @@ export const footer = {
       title: 'Product',
       links: [
         { href: '/features', label: 'All features' },
-        { href: '/#gate', label: 'The gate' },
-        { href: '/features#ambient', label: 'Ambient listening' },
+        { href: '/features/gate', label: 'The gate' },
+        { href: '/features/ambient', label: 'Ambient listening' },
         { href: '/#integrations', label: 'Integrations' },
         { href: '/#faq', label: 'Questions' },
       ],

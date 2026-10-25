@@ -1,0 +1,64 @@
+---
+// A meeting being written down: captions with speaker names on the left, the note filling on the right (summary,
+// what was decided, action items you can tick). Without JavaScript: the finished note. Plays once in view.
+import { CheckCircle2, RotateCcw, Video } from 'lucide-react';
+import { widgetCopy } from '../../content/project';
+
+const copy = widgetCopy.meeting;
+---
+
+<div class="wcard mw" data-meeting>
+  <div class="mw__head">
+    <span class="mw__call"><Video aria-hidden="true" strokeWidth={1.8} />{copy.call}</span>
+    <span class="mw__live"><span class="mw__rec" aria-hidden="true"></span>{copy.live}</span>
+  </div>
+  <div class="mw__grid">
+    <section class="mw__captions" aria-label={copy.captionsLabel}>
+      <p class="wlabel">{copy.captionsLabel}</p>
+      <ol>
+        {
+          copy.captions.map(caption => (
+            <li class="mw__caption" data-meeting-caption>
+              <span class={`mw__who${caption.who === 'You' ? ' mw__who--you' : ''}`}>{caption.who}</span>
+              <span>{caption.text}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+    <section class="mw__note" aria-label={copy.noteLabel}>
+      <p class="wlabel">{copy.noteLabel}</p>
+      <p class="mw__summary" data-meeting-part>{copy.summary}</p>
+      <div data-meeting-part>
+        <p class="mw__sub">{copy.decisionsLabel}</p>
+        <ul class="mw__decisions">
+          {copy.decisions.map(item => <li>{item}</li>)}
+        </ul>
+      </div>
+      <div data-meeting-part>
+        <p class="mw__sub">{copy.actionsLabel}</p>
+        <ul class="mw__actions">
+          {
+            copy.actions.map(item => (
+              <li>
+                <label>
+                  <input type="checkbox" />
+                  <CheckCircle2 aria-hidden="true" strokeWidth={1.8} />
+                  <span>
+                    <span class="mw__owner">{item.who}</span> {item.text}
+                  </span>
+                </label>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+  </div>
+  <div class="wfoot needs-js">
+    <button class="wbtn wbtn--ghost" type="button" data-meeting-replay hidden>
+      <RotateCcw aria-hidden="true" strokeWidth={1.8} />
+      {copy.replay}
+    </button>
+  </div>
+</div>
