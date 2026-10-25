@@ -121,6 +121,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   switch_model: 'settings',
   change_setting: 'settings',
   set_personality: 'settings',
+  set_listening_mode: 'settings',
   list_personalities: 'settings',
   list_connectors: 'settings',
   list_workspaces: 'settings',

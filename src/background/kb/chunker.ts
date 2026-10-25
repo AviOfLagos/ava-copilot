@@ -1,4 +1,11 @@
-import type { KnowledgeAnchor, MeetingNote, MeetingRecord, ThreadMessage, TranscriptSegment } from '@extension/storage';
+import type {
+  AmbientUtterance,
+  KnowledgeAnchor,
+  MeetingNote,
+  MeetingRecord,
+  ThreadMessage,
+  TranscriptSegment,
+} from '@extension/storage';
 
 // Characters per chunk: about 400 tokens, small enough for a citation to point somewhere useful
 export const CHUNK_CHARS = 1600;
@@ -159,6 +166,47 @@ export function chunkMeeting(
     const tooLate = segment.tStart - windowStart > TRANSCRIPT_WINDOW_SECONDS;
     if (lines.length > 0 && (tooLong || tooLate)) flush();
     if (lines.length === 0) windowStart = segment.tStart;
+    lines.push(line);
+  }
+  flush();
+  return chunks;
+}
+
+/** The local time of day, "14:05", for an ambient line. */
+function timeOfDay(at: number): string {
+  const date = new Date(at);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * An ambient session as chunks of a couple of minutes each, every one citing when it was said. Speakers are left
+ * out while they are all 'unknown' (before voiceprints), so the text reads as plain talk.
+ */
+export function chunkAmbient(
+  sessionId: string,
+  utterances: Pick<AmbientUtterance, 'startedAt' | 'speaker' | 'text'>[],
+): DraftChunk[] {
+  const chunks: DraftChunk[] = [];
+  let lines: string[] = [];
+  let windowStart = 0;
+  const flush = () => {
+    if (lines.length === 0) return;
+    chunks.push({
+      text: lines.join('\n'),
+      label: timeOfDay(windowStart),
+      anchor: { kind: 'ambient', sessionId, at: windowStart },
+    });
+    lines = [];
+  };
+  for (const utterance of [...utterances].sort((a, b) => a.startedAt - b.startedAt)) {
+    const text = utterance.text.trim();
+    if (!text) continue;
+    const who = utterance.speaker === 'unknown' ? '' : `${utterance.speaker}: `;
+    const line = `[${timeOfDay(utterance.startedAt)}] ${who}${text}`;
+    const tooLong = lines.join('\n').length + line.length + 1 > CHUNK_CHARS;
+    const tooLate = utterance.startedAt - windowStart > TRANSCRIPT_WINDOW_SECONDS * 1000;
+    if (lines.length > 0 && (tooLong || tooLate)) flush();
+    if (lines.length === 0) windowStart = utterance.startedAt;
     lines.push(line);
   }
   flush();

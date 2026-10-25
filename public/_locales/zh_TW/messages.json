@@ -9860,5 +9860,125 @@
   },
   "meetvoice_auto_always": {
     "message": "總是"
+  },
+  "ambient_kb_title": {
+    "message": "在你身邊聽到的內容，$DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "10/25/2026, 14:05"
+      }
+    }
+  },
+  "ambient_kb_type": {
+    "message": "聽到的內容"
+  },
+  "ambient_section": {
+    "message": "環境聆聽"
+  },
+  "ambient_mode": {
+    "message": "聆聽你身邊的對話"
+  },
+  "ambient_mode_hint": {
+    "message": "在這台 Mac 上記下附近說的話，只在這台 Mac 上處理，除非你說喚醒詞，否則不會回應。說「Ava, off the record」即可暫停。"
+  },
+  "ambient_mode_off": {
+    "message": "關閉"
+  },
+  "ambient_mode_listen": {
+    "message": "只聆聽"
+  },
+  "ambient_mode_companion": {
+    "message": "陪伴"
+  },
+  "ambient_offRecord": {
+    "message": "不記錄"
+  },
+  "ambient_offRecord_hint": {
+    "message": "在你關閉此開關或說「back on the record」之前，不會記下任何內容。"
+  },
+  "ambient_offRecord_since": {
+    "message": "自 $TIME$ 起不記錄，目前不會記下任何內容。",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "14:05"
+      }
+    }
+  },
+  "ambient_cloud": {
+    "message": "允許雲端模型使用 Ava 聽到的內容"
+  },
+  "ambient_cloud_hint": {
+    "message": "關閉：Ava 聽到的內容永遠不會離開這台 Mac。開啟：內容會加入你的記憶，可被搜尋、建立向量並用來回答你。"
+  },
+  "ambient_recent": {
+    "message": "最近聽到的"
+  },
+  "ambient_recent_none": {
+    "message": "目前還沒有。"
+  },
+  "ambient_recent_session": {
+    "message": "$DAY$，$FROM$–$TO$ · $COUNT$ 句",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Oct 25"
+      },
+      "from": {
+        "content": "$2",
+        "example": "14:05"
+      },
+      "to": {
+        "content": "$3",
+        "example": "14:30"
+      },
+      "count": {
+        "content": "$4",
+        "example": "12"
+      }
+    }
+  },
+  "ambient_forget": {
+    "message": "忘記最近 $MINUTES$ 分鐘",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forgot": {
+    "message": "最近 $MINUTES$ 分鐘的內容已從這裡和你的記憶中刪除。",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forget_failed": {
+    "message": "無法刪除，請再試一次。"
+  },
+  "ambient_error_mic": {
+    "message": "麥克風被封鎖了。請允許 Nex Copilot 使用麥克風後再試一次。"
+  },
+  "ambient_error_stt": {
+    "message": "聆聽需要在這台 Mac 上安裝語音辨識器。請到「設定 › 語音引擎」安裝。"
+  },
+  "ambient_error_start": {
+    "message": "聆聽沒有啟動：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "No microphone"
+      }
+    }
+  },
+  "ambient_indicator_listening": {
+    "message": "Ava 正在這台 Mac 上聆聽並做筆記"
+  },
+  "ambient_indicator_offRecord": {
+    "message": "不記錄：Ava 目前不會記下任何內容"
   }
 }

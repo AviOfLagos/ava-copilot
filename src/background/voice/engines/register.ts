@@ -133,7 +133,7 @@ registerCommand(
   z.object({
     type: z.literal('voice_models_needed'),
     requestId: z.string().optional(),
-    feature: z.enum(['talk', 'dictation', 'wake']),
+    feature: z.enum(['talk', 'dictation', 'wake', 'ambient']),
   }),
   async (input, context) => {
     forgetInstalledVoiceModels();

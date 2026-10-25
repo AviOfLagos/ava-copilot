@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookmarkPlus, Bot, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Bot, Ear, FileText, Globe, MessageSquare, StickyNote, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
@@ -34,6 +34,7 @@ const TYPE_ICONS: Record<KnowledgeSourceType, LucideIcon> = {
   page: Globe,
   note: StickyNote,
   'ai-session': Bot,
+  ambient: Ear,
 };
 
 const TYPE_LABELS = {
@@ -42,6 +43,7 @@ const TYPE_LABELS = {
   page: 'kb_type_page',
   note: 'kb_type_note',
   'ai-session': 'history_type_session',
+  ambient: 'ambient_kb_type',
 } as const;
 
 function shortDate(ms: number): string {

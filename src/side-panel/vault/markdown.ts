@@ -31,6 +31,7 @@ const FOLDERS: Record<GraphNode['type'], string> = {
   page: 'Pages',
   note: 'Notes',
   'ai-session': 'AI sessions',
+  ambient: 'Heard',
   person: 'People',
   project: 'Projects',
   organization: 'Organizations',

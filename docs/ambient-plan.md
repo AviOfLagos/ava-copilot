@@ -19,9 +19,10 @@ than guesses.
 - **Ambient audio never leaves the Mac.** Ambient speech is transcribed by the local engines only
   (`src/offscreen/stt`, Moonshine/Whisper). No cloud model hears ambient audio. Raw audio is never stored; only
   transcripts are kept.
-- **Ambient text stays local by default.** Topic splitting, filing and gate scoring use the local model from setup.
-  The text reaches the cloud model only to compose a line Ava is about to say, and only the last ~2 minutes of it.
-  Settings › Ambient › "Keep ambient words on this Mac" turns that off as well.
+- **Ambient text stays on the Mac.** Topic splitting, filing, gate scoring and composing Ava's lines all use the
+  local model from setup. Ambient text reaches a cloud model only if Avi turns on Settings › Ambient › "Let the cloud
+  model use what Ava hears" (off by default), and then only the last ~2 minutes of it, to compose a line or seed a
+  conversation. With it off, a conversation the gate opens starts from Avi's addressed words alone.
 - **Ambient words are untrusted content.** Anything heard, Avi's voice included, is data, as a page is. It never
   triggers a tool. A request becomes a request only when Avi addresses Ava and the gate hands the moment to a voice
   conversation, where `reviewAction` and `voice/guard.ts` apply as today.
@@ -115,8 +116,8 @@ a recorded decision, or an open question Ava can answer from the KB).
 
 Returns `{ addressed: 0–1, value: 0–1, kind: 'answer' | 'reminder' | 'correction' | 'suggestion' | 'joke' }`.
 
-- `addressed ≥ 0.8` → hand off: open a voice conversation (economy or Live, as set) seeded with the transcript
-  window. From there everything is the existing voice path, tools and gate included.
+- `addressed ≥ 0.8` → hand off: open a voice conversation (economy or Live, as set), seeded with the transcript
+  window only when the cloud toggle is on or the conversation is economy (local). From there everything is the existing voice path, tools and gate included.
 - Otherwise it is proactive, judged by kind against learned thresholds (starting at reminder 0.6, correction 0.8,
   suggestion 0.85, joke 0.9).
 
@@ -134,8 +135,8 @@ Learning). This is the realistic version of the friend in the corner: a raised h
 - If the floor doesn't free within 20 s, step down to a nudge. If the moment has passed (the topic moved on), drop
   it.
 - Anyone speaking over Ava stops her at once, as today.
-- A proactive line is one or two sentences, composed with the identity prompt and the transcript window as
-  untrusted content. It may use read-only tools (calendar, KB) and never a tool that writes.
+- A proactive line is one or two sentences, composed by the local model (the cloud one only with the toggle on)
+  with the identity prompt and the transcript window as untrusted content. It may use read-only tools (calendar, KB) and never a tool that writes.
 
 ### Budget (Settings › Ambient)
 
@@ -175,7 +176,7 @@ Follows the wave 2 contract: its own directories, plugged in from `register.ts`,
 | `src/background/ambient/gate/{rules,score,ladder,policy}.ts` | Stage 1, Stage 2, the ladder and timing, thresholds and reactions |
 | `src/storage/lib/ambient/` | Dexie tables: `ambientSessions`, `utterances` (TTL 30 days), `gateEvents`, `voiceprints` |
 | `src/side-panel/…/ambient` | mode indicator; Ambient page with today's transcript, Unsorted, and the gate log with reasons |
-| Settings › Ambient | mode, budget, quiet hours, "keep ambient words on this Mac", "teach Ava your voice" |
+| Settings › Ambient | mode, budget, quiet hours, "let the cloud model use what Ava hears" (off), "teach Ava your voice" |
 
 **Later:** when roadmap item 11 (the desktop app) lands, the ears move from Brave's offscreen document into Nex
 Brain as a native audio helper. The protocol between ears and background stays the same, so only the transport
@@ -210,8 +211,7 @@ Targets once A5 ships:
 - under 5% of addressed moments missed;
 - at least 90% of fixture topics filed in the right workspace.
 
-## Open questions for Avi
+## Decided by Avi (2026-10-24)
 
-- **Guests:** should Ava say she takes notes when a new voice appears? Default: no announcement; the toolbar shows
-  that she is listening.
-- **Cloud for composing lines:** on by default, as above, or local only from the start?
+- **Guests:** no announcement when a new voice appears; the toolbar shows that Ava is listening.
+- **Cloud:** ambient text stays local only, unless Avi turns the cloud toggle on.

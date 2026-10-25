@@ -23,6 +23,7 @@ import './meet-voice/register';
 import './capabilities/register';
 import './skills/register';
 import './kb/register';
+import './ambient/register';
 import './obsidian/register';
 import './calendar/register';
 import './update/register';

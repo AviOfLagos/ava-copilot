@@ -598,8 +598,8 @@ const SidePanel = () => {
 
   const openCitation = (citation: KbCitation) => {
     const { anchor } = citation;
-    if (anchor.kind === 'note') {
-      // A note lives in memory itself
+    if (anchor.kind === 'note' || anchor.kind === 'ambient') {
+      // A note, or what Ava heard, lives in memory itself
       go('memory');
     } else if (anchor.kind === 'page') {
       void chrome.tabs.create({ url: anchor.url });

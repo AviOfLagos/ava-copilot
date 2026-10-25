@@ -29,7 +29,7 @@ import type { EconomyEngines } from './wire';
 
 export const SETUP_COMMAND = 'node scripts/voice-models-setup.mjs';
 
-export type VoiceFeature = 'talk' | 'dictation' | 'wake';
+export type VoiceFeature = 'talk' | 'dictation' | 'wake' | 'ambient';
 
 export interface ModelsNeeded {
   // Without these the feature cannot run on the device
@@ -67,6 +67,8 @@ export function modelsNeeded(
     ? []
     : [sttModelId(settings.stt === 'gemini' ? 'moonshine' : settings.stt, settings.moonshineSize)];
   if (feature === 'dictation') return geminiSpeechToText ? none : { required: stt, optional: [] };
+  // Ambient listening never uses Gemini: it always needs a recogniser on the device
+  if (feature === 'ambient') return { required: stt, optional: [] };
   if (resolveVoiceMode(settings, { hasGeminiKey, localReady: sttReady }) === 'live') return none;
   const engine = voiceTtsEngine(tts.engine);
   const chosen = tts.engineChosen ?? true;
