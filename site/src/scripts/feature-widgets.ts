@@ -124,7 +124,7 @@ function setupMeeting(root: HTMLElement) {
   onFirstView(root, () => void play());
 }
 
-// ─── Nex Brain: run in the sandbox, then approve ──────────────────────────────────────────────────────────────
+// ─── Ava Brain: run in the sandbox, then approve ──────────────────────────────────────────────────────────────
 
 function setupBrain(root: HTMLElement) {
   const lines = Array.from(root.querySelectorAll<HTMLElement>('[data-brain-line]'));

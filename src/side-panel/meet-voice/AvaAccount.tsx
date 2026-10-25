@@ -12,7 +12,7 @@ import type { PanelApi } from '../registry';
 import { HINT, Row, SELECT } from '../settings/sections/ui';
 
 /**
- * Settings › Meetings › Ava's meeting account: the browser Nex Brain runs her in, whether it is signed in and to which
+ * Settings › Meetings › Ava's meeting account: the browser Ava Brain runs her in, whether it is signed in and to which
  * account, the button that opens it at Google's sign-in (the user signs in there, by hand: the extension never sees or
  * keeps the password), and whether she joins the user's Google Meet calls by herself.
  */

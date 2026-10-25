@@ -54,7 +54,7 @@ function BraveSteps() {
 }
 
 /**
- * Settings › Obsidian. With Nex Brain paired the vault is read and written on the Mac (the vaults it found, or a
+ * Settings › Obsidian. With Ava Brain paired the vault is read and written on the Mac (the vaults it found, or a
  * folder typed); otherwise this browser's folder picker, with Brave's flag steps when Brave keeps it off.
  */
 export default function VaultSettings() {
@@ -66,7 +66,7 @@ export default function VaultSettings() {
     const readPaired = () => void brainSettingsStore.getSettings().then(value => setPaired(value.paired));
     const readSetting = () =>
       void obsidianVaultStore.getSetting().then(setSetting, () => setSetting({ ...DEFAULT_OBSIDIAN_VAULT }));
-    // Whether this browser still holds a folder of its own (shown under Nex Brain's so it can be let go)
+    // Whether this browser still holds a folder of its own (shown under Ava Brain's so it can be let go)
     void vaultStatus().then(status => setBrowserName(status.source === 'browser' ? status.name : null));
     readPaired();
     readSetting();

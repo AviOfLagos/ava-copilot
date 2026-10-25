@@ -26,8 +26,8 @@ import type { SetupBrainInfo } from './state';
 
 /**
  * The readings the checks need, from the same places the features read: the model settings, the local server's own
- * model list, the background's voice model list, Nex Brain's status, and the stores each feature keeps. `fresh`
- * also asks Nex Brain again (Ava's browser, WhatsApp) — the scheduled check and "Check again" do; a storage change
+ * model list, the background's voice model list, Ava Brain's status, and the stores each feature keeps. `fresh`
+ * also asks Ava Brain again (Ava's browser, WhatsApp) — the scheduled check and "Check again" do; a storage change
  * only reads what is stored, so a check never triggers another.
  */
 
@@ -126,7 +126,7 @@ export async function readVoice(): Promise<{ stt: boolean; tts: boolean }> {
 
 export async function readBrain(): Promise<SetupReadings['brain'] & { info: SetupBrainInfo }> {
   const [settings, status] = await Promise.all([brainSettingsStore.getSettings(), brainStatusStore.getStatus()]);
-  // Unpaired: whether Nex Brain answers at all, so the step says "pair" rather than "install"
+  // Unpaired: whether Ava Brain answers at all, so the step says "pair" rather than "install"
   const reachable = settings.paired ? status.state !== 'offline' : await companionClient.reachable().catch(() => false);
   return {
     paired: settings.paired,

@@ -15,7 +15,7 @@ const GOOD_BODY = {
   version: '1.4.0',
   released: '2026-10-22',
   notes: ['One thing that changed.'],
-  extension: { url: 'https://nex-copilot-one.vercel.app/install.sh', command: 'curl -fsSL https://x | bash' },
+  extension: { url: 'https://ava.nexprove.com/install.sh', command: 'curl -fsSL https://x | bash' },
   brain: { version: '0.2.0', command: 'cd companion && pnpm install' },
 };
 
@@ -62,7 +62,7 @@ describe('runCheck', () => {
     expect(stub.setTitle.calls.at(-1)?.title).not.toContain('update available');
   });
 
-  it('compares Nex Brain only when a local version is known', async () => {
+  it('compares Ava Brain only when a local version is known', async () => {
     vi.stubGlobal('fetch', async () => jsonResponse(GOOD_BODY));
 
     const unknown = await runCheck();

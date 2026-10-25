@@ -10,8 +10,8 @@ const logger = createLogger('LocalServers');
  * user sets OLLAMA_ORIGINS. The extension's own requests to model servers on this machine go without an Origin, so
  * Ollama and LM Studio answer with no setting to change.
  *
- * Only this extension's requests, only to localhost, and only to the model servers' ports: Nex Brain's port never,
- * since Nex Brain checks the Origin to know the request is Nex Copilot's.
+ * Only this extension's requests, only to localhost, and only to the model servers' ports: Ava Brain's port never,
+ * since Ava Brain checks the Origin to know the request is Ava Copilot's.
  */
 
 // Ollama, LM Studio

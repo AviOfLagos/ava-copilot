@@ -69,14 +69,14 @@ import type {
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
 
 /**
- * The extension's side of Nex Brain: one HTTP client over the shared protocol, in the background only
+ * The extension's side of Ava Brain: one HTTP client over the shared protocol, in the background only
  * (it reads the token from the vault). Reads are retried with back-off (RETRY_POLICIES.companion); calls
  * that do something are sent once, with a request id, so a repeat by hand gets the first answer and never
  * runs twice. A breaker per address stops calling a companion that keeps failing, and remembers it in
  * session storage across worker restarts.
  */
 
-export const NOT_RUNNING_MESSAGE = 'Nex Brain is not running on your Mac. Start it, then try again.';
+export const NOT_RUNNING_MESSAGE = 'Ava Brain is not running on your Mac. Start it, then try again.';
 const BREAKER_KEY = 'brain-breaker';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -151,7 +151,7 @@ export class CompanionClient {
     const headers: Record<string, string> = {};
     if (options.auth !== false) {
       const token = await this.deps.token();
-      if (!token) throw new AppError('auth', 'Nex Brain is not paired with this browser yet.', { retryable: false });
+      if (!token) throw new AppError('auth', 'Ava Brain is not paired with this browser yet.', { retryable: false });
       headers.Authorization = `Bearer ${token}`;
     }
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -182,14 +182,14 @@ export class CompanionClient {
       if (!response.ok) {
         const parsed = errorReplySchema.safeParse(reply);
         const kind = parsed.success ? parsed.data.error.kind : response.status === 401 ? 'auth' : 'unavailable';
-        const message = parsed.success ? parsed.data.error.message : `Nex Brain answered ${response.status}.`;
+        const message = parsed.success ? parsed.data.error.message : `Ava Brain answered ${response.status}.`;
         throw new AppError(kind, message, {
           status: response.status,
           retryAfterMs: parsed.success ? parsed.data.error.retryAfterMs : undefined,
         });
       }
       const checked = options.schema.safeParse(reply);
-      if (!checked.success) throw new AppError('invalid', 'Nex Brain sent an answer this version does not understand.');
+      if (!checked.success) throw new AppError('invalid', 'Ava Brain sent an answer this version does not understand.');
       return checked.data;
     };
 
@@ -211,7 +211,7 @@ export class CompanionClient {
   // ── Pairing and health ──
 
   /** Trades a one-time code for a token, kept in the vault. */
-  async pair(code: string, client = 'Nex Copilot'): Promise<z.infer<typeof pairReplySchema>> {
+  async pair(code: string, client = 'Ava Copilot'): Promise<z.infer<typeof pairReplySchema>> {
     const reply = await this.call({
       method: 'POST',
       path: COMPANION_ROUTES.pair,
@@ -225,8 +225,8 @@ export class CompanionClient {
     return reply;
   }
 
-  /** Pairs with no code: Nex Brain accepts it from this extension's own origin unless the Mac turned it off. */
-  async autoPair(client = 'Nex Copilot'): Promise<z.infer<typeof pairReplySchema>> {
+  /** Pairs with no code: Ava Brain accepts it from this extension's own origin unless the Mac turned it off. */
+  async autoPair(client = 'Ava Copilot'): Promise<z.infer<typeof pairReplySchema>> {
     const reply = await this.call({
       method: 'POST',
       path: COMPANION_ROUTES.autoPair,
@@ -387,7 +387,7 @@ export class CompanionClient {
         async () => {
           const token = await this.deps.token();
           if (!token)
-            throw new AppError('auth', 'Nex Brain is not paired with this browser yet.', { retryable: false });
+            throw new AppError('auth', 'Ava Brain is not paired with this browser yet.', { retryable: false });
           let response: Response;
           try {
             response = await this.deps.fetch(
@@ -546,7 +546,7 @@ export class CompanionClient {
     const url = new URL(reply.url);
     const base = new URL(await this.baseUrl());
     if (url.origin !== base.origin || !url.pathname.startsWith(`${COMPANION_ROUTES.studio}/`)) {
-      throw new AppError('forbidden', 'Nex Brain gave an address that is not its own.');
+      throw new AppError('forbidden', 'Ava Brain gave an address that is not its own.');
     }
     return url.toString();
   }
@@ -571,7 +571,7 @@ export class CompanionClient {
     return this.call({ method: 'POST', path: MEET_ROUTES.signin, body: {}, schema: meetStatusReplySchema });
   }
 
-  /** Looks whether her browser is signed in (Nex Brain runs it for a few seconds) and which account it is. */
+  /** Looks whether her browser is signed in (Ava Brain runs it for a few seconds) and which account it is. */
   meetCheck() {
     return this.call({
       method: 'POST',
@@ -640,7 +640,7 @@ export class CompanionClient {
     });
   }
 
-  // ── Ava on WhatsApp (Nex Brain talks to the owner only) ──
+  // ── Ava on WhatsApp (Ava Brain talks to the owner only) ──
 
   whatsappStatus(signal?: AbortSignal) {
     return this.call({
@@ -688,7 +688,7 @@ export class CompanionClient {
     });
   }
 
-  /** Quiet hours, so Nex Brain holds to them too. */
+  /** Quiet hours, so Ava Brain holds to them too. */
   whatsappSetQuiet(request: WhatsAppQuietRequest) {
     return this.call({
       method: 'POST',
@@ -700,7 +700,7 @@ export class CompanionClient {
     });
   }
 
-  /** The owner's messages waiting: pulling also tells Nex Brain the browser is open. Not retried: the next poll is. */
+  /** The owner's messages waiting: pulling also tells Ava Brain the browser is open. Not retried: the next poll is. */
   whatsappInbox(signal?: AbortSignal) {
     return this.call({
       method: 'POST',
@@ -736,7 +736,7 @@ export class CompanionClient {
 
   // ── Backups (src/background/backup) ──
 
-  /** Whether Nex Brain answers on its port at all, paired or not: an answer without a token is a 401. */
+  /** Whether Ava Brain answers on its port at all, paired or not: an answer without a token is a 401. */
   async reachable(): Promise<boolean> {
     try {
       await this.call({
@@ -778,7 +778,7 @@ export class CompanionClient {
     });
   }
 
-  /** Nex Brain accepts the last part again, so a part whose answer was lost may be sent twice. */
+  /** Ava Brain accepts the last part again, so a part whose answer was lost may be sent twice. */
   backupChunk(uploadId: string, index: number, data: string) {
     return this.call({
       method: 'PUT',
@@ -866,7 +866,7 @@ export class CompanionClient {
     });
   }
 
-  /** With `expectVaultId`, Nex Brain chooses the folder only if it is still that vault. */
+  /** With `expectVaultId`, Ava Brain chooses the folder only if it is still that vault. */
   obsidianChoose(requestId: string, path: string, expectVaultId?: string) {
     return this.call({
       method: 'POST',

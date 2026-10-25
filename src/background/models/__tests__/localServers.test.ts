@@ -3,7 +3,7 @@ import { COMPANION_DEFAULT_PORT } from '@src/shared/lib/protocol/companion';
 import { localModelPorts, originRules } from '../localServers';
 
 describe('local model servers answer the extension', () => {
-  it("covers Ollama, LM Studio and local providers' own ports, never Nex Brain's", () => {
+  it("covers Ollama, LM Studio and local providers' own ports, never Ava Brain's", () => {
     const ports = localModelPorts(
       [
         'http://localhost:8080/v1',

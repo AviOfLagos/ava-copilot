@@ -15,9 +15,9 @@ import type { PanelApi } from '../registry';
 import { encodeQr, qrPath } from './qr';
 
 /**
- * Settings › Connections › WhatsApp (Ava messages you): link Nex Brain's own WhatsApp Web session by scanning a
+ * Settings › Connections › WhatsApp (Ava messages you): link Ava Brain's own WhatsApp Web session by scanning a
  * code under Linked devices, see whether it is linked, choose what Ava messages you about and when she keeps
- * quiet, and unlink. Ava only ever talks to you there. The background and Nex Brain do the work; this page sends
+ * quiet, and unlink. Ava only ever talks to you there. The background and Ava Brain do the work; this page sends
  * commands and shows the replies (the code to scan is only ever in a reply, never stored).
  */
 

@@ -1,11 +1,11 @@
 import type { CalendarAccess, MacCalendar } from '@src/shared/lib/protocol/companion';
 
-/** What the Calendar card shows for the Mac's Calendar, from Nex Brain's answer. */
+/** What the Calendar card shows for the Mac's Calendar, from Ava Brain's answer. */
 export type MacCardState =
-  // Nex Brain is not paired: the iCal address is the way (with a hint to pair)
+  // Ava Brain is not paired: the iCal address is the way (with a hint to pair)
   | 'unpaired'
   | 'loading'
-  // Nex Brain did not answer
+  // Ava Brain did not answer
   | 'offline'
   // macOS has not asked yet: the "Allow access" button shows its prompt
   | 'needs_permission'

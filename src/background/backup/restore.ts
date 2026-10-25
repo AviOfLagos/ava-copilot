@@ -23,7 +23,7 @@ import { FILE_KEEP_STORAGE_KEYS, FILE_KEEP_TABLES, unbindMovedConnectors, unbind
  * connector whose endpoint changed (./trust.ts).
  */
 
-// Vault entries a restore never touches: the pairing with Nex Brain belongs to this install
+// Vault entries a restore never touches: the pairing with Ava Brain belongs to this install
 export const PROTECTED_SECRET_REFS = new Set([BRAIN_TOKEN_REF]);
 const ONBOARDING_KEY = 'onboarding';
 

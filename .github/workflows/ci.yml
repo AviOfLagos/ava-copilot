@@ -1,0 +1,58 @@
+# Checks every pull request (including ones from forks) before a maintainer reviews it: types, unit tests,
+# locales, and that the extension and the website build. Read-only: it uses no secrets and posts nothing.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [feat/restyle]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extension:
+    name: Extension (types, tests, locales, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: pnpm (the version pinned in package.json)
+        run: corepack enable
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Types
+        run: pnpm type-check
+      - name: Unit tests
+        run: pnpm test
+      - name: Locales
+        run: node scripts/check-locales.mjs
+      - name: Build
+        run: pnpm build
+
+  site:
+    name: Website (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      # The site imports the app's theme and i18n, so the app's packages come first
+      - name: Install (app)
+        run: pnpm install --frozen-lockfile
+      - name: Install (site)
+        working-directory: site
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        working-directory: site
+        run: pnpm build

@@ -1,4 +1,4 @@
-// Nex Brain, the companion on the Mac, against a mock that speaks the real protocol: pairing from
+// Ava Brain, the companion on the Mac, against a mock that speaks the real protocol: pairing from
 // Settings, its status, a routine's step.sandbox run on the Mac, and an artifact in an Avi Studio tab that
 // cannot load a remote image. Needs `import './companion/register';` in src/side-panel/registers.ts.
 import assert from 'node:assert/strict';
@@ -8,7 +8,7 @@ import { startMockCompanion } from './mock-companion.mjs';
 import { startMockLlm } from './mock-llm.mjs';
 
 const EXTENSION_ORIGIN = 'chrome-extension://fckijnclcihjnokahdnbogpbeiimfdio';
-const SECTION = 'section[aria-label="Nex Brain (Mac)"]';
+const SECTION = 'section[aria-label="Ava Brain (Mac)"]';
 
 let mock;
 let companion;
@@ -96,11 +96,11 @@ function type(page, label, value) {
   );
 }
 
-// Settings › Connections › Nex Brain, on the full-page Settings
+// Settings › Connections › Ava Brain, on the full-page Settings
 let settings;
 const sectionText = () => settings.evaluate(selector => document.querySelector(selector)?.innerText ?? '', SECTION);
 
-test('pairs with Nex Brain from Settings and shows it connected', async () => {
+test('pairs with Ava Brain from Settings and shows it connected', async () => {
   assert.equal(extension.origin, EXTENSION_ORIGIN, 'the extension ID is pinned, so the companion knows its origin');
   settings = await extension.openSettings('#connections/brain');
   const panel = settings;
@@ -215,7 +215,7 @@ test("a routine's step.sandbox waits for the click, then runs on the Mac and ret
 });
 
 test('an artifact opens in an Avi Studio tab and cannot load a remote image', async () => {
-  // Settings › Connections › Nex Brain lists what agents made (read again now that a run made one)
+  // Settings › Connections › Ava Brain lists what agents made (read again now that a run made one)
   const panel = settings;
   const label = 'Open Remote image test in Avi Studio';
   await panel.reload();

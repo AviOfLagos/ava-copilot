@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Extension description",
-    "message": "A Gemini-powered assistant in the side panel that runs tasks on any website."
+    "message": "An AI copilot in your browser’s side panel: it works on real pages, talks, takes notes and remembers, and waits for your click."
   },
   "app_metadata_name": {
     "description": "Extension name",
-    "message": "Nex Copilot"
+    "message": "Ava Copilot"
   },
   "errors_unknown": {
     "message": "Unknown error occurred"
@@ -38,7 +38,7 @@
     "message": "Back to chat"
   },
   "welcome_title": {
-    "message": "Welcome to Nex Copilot!"
+    "message": "Welcome to Ava Copilot!"
   },
   "welcome_instruction": {
     "message": "To get started, add your Gemini API key in the settings page."
@@ -167,7 +167,7 @@
     "message": "Enable Voice Input"
   },
   "permissions_microphone_description": {
-    "message": "Nex Copilot needs microphone access to convert your speech to text."
+    "message": "Ava Copilot needs microphone access to convert your speech to text."
   },
   "permissions_microphone_grantButton": {
     "message": "Grant Microphone Permission"
@@ -1204,7 +1204,7 @@
     "message": "A meeting is already being recorded. Stop it first."
   },
   "meeting_needsInvoke": {
-    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Nex Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Ava Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
   },
   "meeting_untitled": {
     "message": "Meeting"
@@ -1267,7 +1267,7 @@
     "message": "The recording was interrupted. The notes cover what was recorded before it."
   },
   "meeting_warning_nothingCaptured": {
-    "message": "Nothing has been captured yet: no audio and no captions. Click the Nex Copilot icon on the call tab to record its audio, or turn on the call's captions."
+    "message": "Nothing has been captured yet: no audio and no captions. Click the Ava Copilot icon on the call tab to record its audio, or turn on the call's captions."
   },
   "meeting_auto_notifyTitle": {
     "message": "Taking notes on this call"
@@ -1276,7 +1276,7 @@
     "message": "Recording the call's audio."
   },
   "meeting_auto_notifyCaptions": {
-    "message": "Reading the call's captions. Click the Nex Copilot icon on the call to record its audio too."
+    "message": "Reading the call's captions. Click the Ava Copilot icon on the call to record its audio too."
   },
   "meeting_auto_notifyNote": {
     "message": "You can add a note on what it's about in the side panel. Notes go on either way."
@@ -1297,7 +1297,7 @@
     "message": "Nothing is being recorded"
   },
   "meeting_alert_nothingBody": {
-    "message": "The captions of your $1 call are off and could not be turned on, so nothing is being taken down. Click the Nex Copilot icon on the call tab to record its audio, or turn on captions in the call (the CC button, or press C)."
+    "message": "The captions of your $1 call are off and could not be turned on, so nothing is being taken down. Click the Ava Copilot icon on the call tab to record its audio, or turn on captions in the call (the CC button, or press C)."
   },
   "meeting_alert_recorderBody": {
     "message": "The recorder stopped working on your $1 call: $2"
@@ -1324,7 +1324,7 @@
     "message": "Don't take notes on this call"
   },
   "meeting_auto_captionsOnly": {
-    "message": "From the call's captions only. Click the Nex Copilot icon on the call tab to record its audio."
+    "message": "From the call's captions only. Click the Ava Copilot icon on the call tab to record its audio."
   },
   "meeting_auto_recordAudio": {
     "message": "Record audio"
@@ -1384,7 +1384,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records. If you bring your assistant into the call, she joins as her own participant and says she is an AI assistant before she speaks."
+    "message": "Ava Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records. If you bring your assistant into the call, she joins as her own participant and says she is an AI assistant before she speaks."
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -1873,7 +1873,7 @@
     "message": "What should I take off your plate?"
   },
   "home_orb": {
-    "message": "Nex Copilot"
+    "message": "Ava Copilot"
   },
   "home_suggestions": {
     "message": "Suggestions for this page"
@@ -2737,7 +2737,7 @@
     "message": "Connect your Obsidian vault"
   },
   "vault_connect_hint": {
-    "message": "Your memory is written into an “Nex Copilot” folder in it, linked for Obsidian’s graph, and your own notes join the knowledge base. Nothing leaves this computer."
+    "message": "Your memory is written into an “Ava Copilot” folder in it, linked for Obsidian’s graph, and your own notes join the knowledge base. Nothing leaves this computer."
   },
   "vault_connect": {
     "message": "Choose vault"
@@ -3783,7 +3783,7 @@
     "message": "no"
   },
   "flow_page_title": {
-    "message": "Workflows · Nex Copilot"
+    "message": "Workflows · Ava Copilot"
   },
   "shell_profile_open": {
     "message": "Account menu"
@@ -4574,7 +4574,7 @@
     "message": "Coming soon"
   },
   "conn_mac_hint": {
-    "message": "Local MCP servers and command-line tools will run through Nex Brain on your Mac, in its sandbox."
+    "message": "Local MCP servers and command-line tools will run through Ava Brain on your Mac, in its sandbox."
   },
   "conn_add_titleNamed": {
     "message": "Add $1"
@@ -5239,7 +5239,7 @@
     "message": "Installed"
   },
   "brain_settings_title": {
-    "message": "Nex Brain (Mac)"
+    "message": "Ava Brain (Mac)"
   },
   "brain_state_unpaired": {
     "message": "Not paired"
@@ -7060,7 +7060,7 @@
     "message": "A draft is drawn for you to check; nothing runs until you click Create."
   },
   "flow_needsBrain": {
-    "message": "Needs Nex Brain: pair it in Settings › Nex Brain"
+    "message": "Needs Ava Brain: pair it in Settings › Ava Brain"
   },
   "conn_setup_needsUrl": {
     "message": "What is the server's address? Paste it here and I'll add it and sign you in if it asks."
@@ -8259,7 +8259,7 @@
     "message": "Connections"
   },
   "settings_page_connections_hint": {
-    "message": "Connectors, your Obsidian vault, your calendar, and Nex Brain on your Mac."
+    "message": "Connectors, your Obsidian vault, your calendar, and Ava Brain on your Mac."
   },
   "settings_page_meetings": {
     "message": "Meetings & brief"
@@ -8361,7 +8361,7 @@
     "message": "Search by meaning, locally"
   },
   "settings_install_brain": {
-    "message": "Nex Brain on your Mac"
+    "message": "Ava Brain on your Mac"
   },
   "settings_install_obsidian": {
     "message": "Folder access for Obsidian"
@@ -8541,25 +8541,25 @@
     }
   },
   "requirement_brain_step_install": {
-    "message": "Install Nex Brain on your Mac (the companion folder of Nex Copilot) and start it."
+    "message": "Install Ava Brain on your Mac (the companion folder of Ava Copilot) and start it."
   },
   "requirement_brain_step_code": {
-    "message": "Type the code and the port in Connections › Nex Brain, then Pair."
+    "message": "Type the code and the port in Connections › Ava Brain, then Pair."
   },
   "requirement_brain_open": {
-    "message": "Open Nex Brain"
+    "message": "Open Ava Brain"
   },
   "settings_section_memoryIndex": {
     "message": "What joins memory"
   },
   "meeting_needsInvokeAudio": {
-    "message": "Chrome hands over a call's audio only after you click the Nex Copilot icon in the toolbar on the call tab. The call tab is in front now: click the icon there (or press Alt+Shift+M) and its audio joins these notes."
+    "message": "Chrome hands over a call's audio only after you click the Ava Copilot icon in the toolbar on the call tab. The call tab is in front now: click the icon there (or press Alt+Shift+M) and its audio joins these notes."
   },
   "meeting_alert_nothingNoCaptions": {
-    "message": "Captions are on in your $1 call, but none have arrived for 2 minutes. If people are talking, click the Nex Copilot icon on the call tab to record its audio."
+    "message": "Captions are on in your $1 call, but none have arrived for 2 minutes. If people are talking, click the Ava Copilot icon on the call tab to record its audio."
   },
   "meeting_alert_nothingNoAudio": {
-    "message": "No audio has been recorded from your $1 call. Click the Nex Copilot icon on the call tab to start it again."
+    "message": "No audio has been recorded from your $1 call. Click the Ava Copilot icon on the call tab to start it again."
   },
   "meeting_alert_nothingTranscription": {
     "message": "The audio of your $1 call is kept, but it cannot be written down yet. Set up speech-to-text in Settings › Voice (a model on this computer needs no key), or add a Gemini key."
@@ -8568,16 +8568,16 @@
     "message": "The call audio stopped recording"
   },
   "meeting_alert_audioLostBody": {
-    "message": "The audio of your $1 call stopped (the tab reloaded or changed devices). Notes go on from its captions. Click the Nex Copilot icon on the call tab to record the audio again."
+    "message": "The audio of your $1 call stopped (the tab reloaded or changed devices). Notes go on from its captions. Click the Ava Copilot icon on the call tab to record the audio again."
   },
   "meeting_alert_noteFailedTitle": {
     "message": "The meeting notes could not be written"
   },
   "meeting_alert_noteFailedBody": {
-    "message": "The summary of your $1 call failed: $2 Everything said is kept. Open Nex Copilot and press Retry."
+    "message": "The summary of your $1 call failed: $2 Everything said is kept. Open Ava Copilot and press Retry."
   },
   "meeting_warning_captionsOff": {
-    "message": "The call's captions are off and could not be turned on. Turn them on in the call (the CC button, or press C), or click the Nex Copilot icon on the call tab to record its audio."
+    "message": "The call's captions are off and could not be turned on. Turn them on in the call (the CC button, or press C), or click the Ava Copilot icon on the call tab to record its audio."
   },
   "meeting_warning_audioLost": {
     "message": "The call's audio stopped mid-call (a reload or a device change); notes went on from its captions."
@@ -8601,7 +8601,7 @@
     "message": "Waiting for the first words"
   },
   "meeting_auto_waitingCaptionsBody": {
-    "message": "Captions are on. Notes start with the first words said. Click the Nex Copilot icon on the call tab to record its audio instead."
+    "message": "Captions are on. Notes start with the first words said. Click the Ava Copilot icon on the call tab to record its audio instead."
   },
   "meetvoice_title": {
     "message": "$NAME$ in this call",
@@ -8643,7 +8643,7 @@
     }
   },
   "meetvoice_signinHint": {
-    "message": "Sign in opens $NAME$'s own browser on your Mac at Google's sign-in page. Sign in there to her own account (for example ava@yourcompany.com), never your own, then close that window. Nex Copilot never sees the password.",
+    "message": "Sign in opens $NAME$'s own browser on your Mac at Google's sign-in page. Sign in there to her own account (for example ava@yourcompany.com), never your own, then close that window. Ava Copilot never sees the password.",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -8768,7 +8768,7 @@
     }
   },
   "meetvoice_noBrowser": {
-    "message": "Nex Brain found no Chrome, Brave or Chromium on your Mac to run her in."
+    "message": "Ava Brain found no Chrome, Brave or Chromium on your Mac to run her in."
   },
   "meetvoice_errors_notMeet": {
     "message": "She can only join a Google Meet call whose notes are being taken now."
@@ -8795,7 +8795,7 @@
     "message": "Words, exactly as said"
   },
   "meetvoice_needsBrain": {
-    "message": "$NAME$ joins your call through Nex Brain, the helper app on your Mac. Set it up once, then come back here.",
+    "message": "$NAME$ joins your call through Ava Brain, the helper app on your Mac. Set it up once, then come back here.",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -8804,7 +8804,7 @@
     }
   },
   "meetvoice_setUpBrain": {
-    "message": "Set up Nex Brain"
+    "message": "Set up Ava Brain"
   },
   "wava_error_noTab": {
     "message": "There is no browser window to work in."
@@ -8925,10 +8925,10 @@
     "message": "Code to scan with WhatsApp"
   },
   "wava_settings_needsBrain": {
-    "message": "Ava messages you through Nex Brain on your Mac. Pair Nex Brain first."
+    "message": "Ava messages you through Ava Brain on your Mac. Pair Ava Brain first."
   },
   "wava_settings_openBrain": {
-    "message": "Set up Nex Brain"
+    "message": "Set up Ava Brain"
   },
   "wava_state_linked": {
     "message": "Linked as $NUMBER$",
@@ -9027,10 +9027,10 @@
     "message": "Backups on your Mac"
   },
   "backup_desc": {
-    "message": "Nex Brain keeps a copy of your memory and settings on this Mac, so they come back if you reinstall Nex Copilot. It backs up a few minutes after changes and once a day."
+    "message": "Ava Brain keeps a copy of your memory and settings on this Mac, so they come back if you reinstall Ava Copilot. It backs up a few minutes after changes and once a day."
   },
   "backup_notPaired": {
-    "message": "Pair Nex Brain (Settings › Connections › Nex Brain) to back up to this Mac."
+    "message": "Pair Ava Brain (Settings › Connections › Ava Brain) to back up to this Mac."
   },
   "backup_last": {
     "message": "Last backup: $WHEN$ · $SIZE$",
@@ -9056,7 +9056,7 @@
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Nex Brain is not running on your Mac."
+        "example": "Ava Brain is not running on your Mac."
       }
     }
   },
@@ -9096,7 +9096,7 @@
     "message": "Restore"
   },
   "backup_restore_confirm": {
-    "message": "Replace everything on this browser with the backup from $WHEN$? The chats, memory and settings here now are replaced, and Nex Copilot restarts.",
+    "message": "Replace everything on this browser with the backup from $WHEN$? The chats, memory and settings here now are replaced, and Ava Copilot restarts.",
     "placeholders": {
       "when": {
         "content": "$1",
@@ -9114,7 +9114,7 @@
     "message": "Restoring…"
   },
   "backup_restored": {
-    "message": "Restored. Nex Copilot restarts now; open the panel again."
+    "message": "Restored. Ava Copilot restarts now; open the panel again."
   },
   "backup_export": {
     "message": "Export a backup file"
@@ -9148,19 +9148,19 @@
     }
   },
   "backup_onboard_offer": {
-    "message": "Restore from Nex Brain on this Mac"
+    "message": "Restore from Ava Brain on this Mac"
   },
   "backup_onboard_offer_hint": {
     "message": "Reinstalled? Bring back your chats, memory and settings."
   },
   "backup_onboard_title": {
-    "message": "Restore from Nex Brain"
+    "message": "Restore from Ava Brain"
   },
   "backup_onboard_checking": {
-    "message": "Looking for Nex Brain on this Mac…"
+    "message": "Looking for Ava Brain on this Mac…"
   },
   "backup_onboard_unreachable": {
-    "message": "Nex Brain is not answering on this Mac. Start it (run \"avi-brain start\", or \"pnpm start\" in the companion folder), then try again."
+    "message": "Ava Brain is not answering on this Mac. Start it (run \"avi-brain start\", or \"pnpm start\" in the companion folder), then try again."
   },
   "backup_onboard_retry": {
     "message": "Try again"
@@ -9181,16 +9181,16 @@
     "message": "Your vaults on this Mac"
   },
   "vault_brain_hint": {
-    "message": "Nex Brain reads and writes the vault on your Mac: no folder permission, nothing to allow again after a restart, and it stays chosen after a reinstall."
+    "message": "Ava Brain reads and writes the vault on your Mac: no folder permission, nothing to allow again after a restart, and it stays chosen after a reinstall."
   },
   "vault_brain_found": {
     "message": "Your vaults"
   },
   "vault_brain_looking": {
-    "message": "Asking Nex Brain for your vaults…"
+    "message": "Asking Ava Brain for your vaults…"
   },
   "vault_brain_none": {
-    "message": "Nex Brain found no vaults in Obsidian’s list. Type the vault’s folder below."
+    "message": "Ava Brain found no vaults in Obsidian’s list. Type the vault’s folder below."
   },
   "vault_brain_missing": {
     "message": "Not found on this Mac any more"
@@ -9214,28 +9214,28 @@
     "message": "The full path of a folder with an .obsidian folder in it, like ~/Documents/My Vault."
   },
   "vault_brain_on": {
-    "message": "Through Nex Brain on your Mac, every 10 minutes, with the panel closed too."
+    "message": "Through Ava Brain on your Mac, every 10 minutes, with the panel closed too."
   },
   "vault_brain_lastError": {
     "message": "The last sync failed: $ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Nex Brain is not running"
+        "example": "Ava Brain is not running"
       }
     }
   },
   "conn_setup_obsidianBrain": {
-    "message": "Nex Brain can reach your vault on the Mac. In Settings › Connections › Obsidian, press Use next to your vault."
+    "message": "Ava Brain can reach your vault on the Mac. In Settings › Connections › Obsidian, press Use next to your vault."
   },
   "settings_calendar_mac_title": {
     "message": "Read from your Mac’s Calendar"
   },
   "settings_calendar_mac_hint": {
-    "message": "Through Nex Brain: every account in macOS Calendar, Google Workspace too, with nothing to copy."
+    "message": "Through Ava Brain: every account in macOS Calendar, Google Workspace too, with nothing to copy."
   },
   "settings_calendar_mac_unpaired": {
-    "message": "Pair Nex Brain (Settings › Nex Brain) to read your Mac’s Calendar. Until then, use the secret iCal address below."
+    "message": "Pair Ava Brain (Settings › Ava Brain) to read your Mac’s Calendar. Until then, use the secret iCal address below."
   },
   "settings_calendar_mac_checking": {
     "message": "Asking your Mac’s Calendar…"
@@ -9250,7 +9250,7 @@
     "message": "Answer the prompt on your Mac…"
   },
   "settings_calendar_mac_step_allow": {
-    "message": "Press Allow access, then choose Allow in the macOS prompt (it names “node”, which Nex Brain runs as)."
+    "message": "Press Allow access, then choose Allow in the macOS prompt (it names “node”, which Ava Brain runs as)."
   },
   "settings_calendar_mac_step_settings": {
     "message": "No prompt, or refused before? Open System Settings › Privacy & Security › Calendars and turn on “node” with Full Access."
@@ -9301,26 +9301,26 @@
     "message": "With several Google accounts signed in, pick the one whose calendar you want (in sign-in order)."
   },
   "settings_calendar_secretDisabled": {
-    "message": "This Google account has no secret iCal address: its Workspace admin turned them off. Read your Mac’s Calendar through Nex Brain instead (add the account in System Settings › Internet Accounts), or paste an address from another calendar."
+    "message": "This Google account has no secret iCal address: its Workspace admin turned them off. Read your Mac’s Calendar through Ava Brain instead (add the account in System Settings › Internet Accounts), or paste an address from another calendar."
   },
   "vault_brain_chooseAgain": {
-    "message": "Choose your vault again: Nex Brain has another vault chosen now, or cannot find this one. Syncing stopped."
+    "message": "Choose your vault again: Ava Brain has another vault chosen now, or cannot find this one. Syncing stopped."
   },
   "vault_brain_chooseAgain_button": {
     "message": "Choose again"
   },
   "brain_autoPair": {
-    "message": "Pair with Nex Brain on this Mac"
+    "message": "Pair with Ava Brain on this Mac"
   },
   "brain_autoPair_hint": {
-    "message": "No code needed while Nex Brain is running here. If it was set to ask for one, use the code below."
+    "message": "No code needed while Ava Brain is running here. If it was set to ask for one, use the code below."
   },
   "update_toolbar_title": {
     "message": "$NAME$ — update available",
     "placeholders": {
       "name": {
         "content": "$1",
-        "example": "Nex Copilot"
+        "example": "Ava Copilot"
       }
     }
   },
@@ -9329,7 +9329,7 @@
     "placeholders": {
       "name": {
         "content": "$1",
-        "example": "Nex Copilot"
+        "example": "Ava Copilot"
       },
       "version": {
         "content": "$2",
@@ -9345,7 +9345,7 @@
     "placeholders": {
       "label": {
         "content": "$1",
-        "example": "Nex Copilot 1.4.0"
+        "example": "Ava Copilot 1.4.0"
       }
     }
   },
@@ -9396,13 +9396,13 @@
     "message": "Check for updates"
   },
   "update_settings_checkEnabled_hint": {
-    "message": "Looks at Nex Copilot’s own site every 12 hours for a newer version. Nothing about this browser is sent."
+    "message": "Looks at Ava Copilot’s own site every 12 hours for a newer version. Nothing about this browser is sent."
   },
   "update_settings_whatsNew": {
     "message": "What's new"
   },
   "update_settings_install_title": {
-    "message": "Update Nex Copilot"
+    "message": "Update Ava Copilot"
   },
   "update_settings_install_step": {
     "message": "Run this, then reload the extension:"
@@ -9411,7 +9411,7 @@
     "message": "Reload the extension"
   },
   "update_settings_brain_title": {
-    "message": "Update Nex Brain"
+    "message": "Update Ava Brain"
   },
   "update_settings_brain_current": {
     "message": "Installed: $VERSION$",
@@ -9432,10 +9432,10 @@
     }
   },
   "update_settings_brain_upToDate": {
-    "message": "Nex Brain is up to date."
+    "message": "Ava Brain is up to date."
   },
   "update_settings_brain_unknown": {
-    "message": "Not checked yet: pair Nex Brain, or press Check now."
+    "message": "Not checked yet: pair Ava Brain, or press Check now."
   },
   "update_settings_error": {
     "message": "Could not check: $ERROR$",
@@ -9502,7 +9502,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9511,7 +9511,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9525,7 +9525,7 @@
     "message": "On-device voice models"
   },
   "setup_item_brain": {
-    "message": "Nex Brain paired"
+    "message": "Ava Brain paired"
   },
   "setup_item_ava": {
     "message": "Ava's meeting account"
@@ -9561,19 +9561,19 @@
     "message": "Speech-to-text and a read-aloud voice are not downloaded yet."
   },
   "setup_problem_brain_unreachable": {
-    "message": "Nex Brain does not answer on this Mac: install or start it."
+    "message": "Ava Brain does not answer on this Mac: install or start it."
   },
   "setup_problem_brain_unpaired": {
-    "message": "Nex Brain is running but not paired with this browser."
+    "message": "Ava Brain is running but not paired with this browser."
   },
   "setup_problem_brain_offline": {
-    "message": "Nex Brain is paired but does not answer now: start it again."
+    "message": "Ava Brain is paired but does not answer now: start it again."
   },
   "setup_problem_needs_brain": {
-    "message": "Needs Nex Brain paired and running first."
+    "message": "Needs Ava Brain paired and running first."
   },
   "setup_problem_ava_no_browser": {
-    "message": "Nex Brain found no Chrome, Brave or Chromium to run her in."
+    "message": "Ava Brain found no Chrome, Brave or Chromium to run her in."
   },
   "setup_problem_ava_signed_out": {
     "message": "$NAME$'s browser is not signed in to a Google account.",
@@ -9639,7 +9639,7 @@
     }
   },
   "setup_detail_calendar_mac": {
-    "message": "Reading the Mac's Calendar through Nex Brain."
+    "message": "Reading the Mac's Calendar through Ava Brain."
   },
   "setup_detail_calendar_ics": {
     "message": "Reading the calendar's iCal address."
@@ -9649,7 +9649,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9681,7 +9681,7 @@
     "message": "Download voice models"
   },
   "setup_action_pair": {
-    "message": "Pair with Nex Brain on this Mac"
+    "message": "Pair with Ava Brain on this Mac"
   },
   "setup_action_avaSignin": {
     "message": "Sign $NAME$'s browser in",
@@ -9708,7 +9708,7 @@
     "message": "Back up now"
   },
   "setup_action_brain": {
-    "message": "Set up Nex Brain"
+    "message": "Set up Ava Brain"
   },
   "setup_hint_openOllama": {
     "message": "Installed already? Open the Ollama app, then Check again."
@@ -9720,7 +9720,7 @@
     "message": "Download nomic-embed-text in LM Studio's Discover tab, then Check again."
   },
   "setup_hint_brainInstall": {
-    "message": "Install Nex Brain once from the Nex Copilot folder in Terminal, then Check again:"
+    "message": "Install Ava Brain once from the Ava Copilot folder in Terminal, then Check again:"
   },
   "setup_info_docker": {
     "message": "Docker: $MESSAGE$ (only sandboxed runs need it)",
@@ -9762,10 +9762,10 @@
     "message": "Ava's meeting account"
   },
   "meetvoice_account_brain": {
-    "message": "Nex Brain"
+    "message": "Ava Brain"
   },
   "meetvoice_account_brainUnpaired": {
-    "message": "Not paired: Ava's browser runs on Nex Brain."
+    "message": "Not paired: Ava's browser runs on Ava Brain."
   },
   "meetvoice_account_brainOnline": {
     "message": "Paired and running."
@@ -9783,7 +9783,7 @@
     }
   },
   "meetvoice_account_needsBrain": {
-    "message": "Pair Nex Brain first to sign $NAME$'s browser in.",
+    "message": "Pair Ava Brain first to sign $NAME$'s browser in.",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -9826,7 +9826,7 @@
     "message": "Check sign-in"
   },
   "meetvoice_account_note": {
-    "message": "You sign in yourself, in $NAME$'s own browser window. Use an account made for her; Nex Copilot never sees or keeps the password.",
+    "message": "You sign in yourself, in $NAME$'s own browser window. Use an account made for her; Ava Copilot never sees or keeps the password.",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -9961,7 +9961,7 @@
     "message": "That could not be forgotten. Try again."
   },
   "ambient_error_mic": {
-    "message": "The microphone is blocked. Allow it for Nex Copilot, then try again."
+    "message": "The microphone is blocked. Allow it for Ava Copilot, then try again."
   },
   "ambient_error_stt": {
     "message": "Listening needs a speech recogniser on this Mac. Install one in Settings › Voice engines."
@@ -9980,5 +9980,20 @@
   },
   "ambient_indicator_offRecord": {
     "message": "Off the record: Ava is not writing anything down"
+  },
+  "feedback_title": {
+    "message": "Report a problem"
+  },
+  "feedback_body": {
+    "message": "Something broken, or an idea? It becomes a GitHub issue that anyone can pick up and fix."
+  },
+  "feedback_bug": {
+    "message": "Report a problem"
+  },
+  "feedback_idea": {
+    "message": "Suggest an idea"
+  },
+  "feedback_note": {
+    "message": "Opens GitHub with your version and browser filled in. Nothing is sent until you submit it there; you need a GitHub account."
   }
 }

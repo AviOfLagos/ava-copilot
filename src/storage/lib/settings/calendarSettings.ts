@@ -8,7 +8,7 @@ export interface CalendarSettingsConfig {
   // How long before a meeting the reminder comes
   remindMinutes: number;
   reminders: boolean;
-  // Read the Mac's Calendar through Nex Brain when it is paired (the iCal address is then the fallback)
+  // Read the Mac's Calendar through Ava Brain when it is paired (the iCal address is then the fallback)
   macEnabled: boolean;
   // The Mac calendars that count; null for all of them
   macCalendarIds: string[] | null;
@@ -53,7 +53,7 @@ export interface UpcomingEvent {
   joinUrl: string | null;
 }
 
-// Where the events came from: the Mac's Calendar (through Nex Brain) or the iCal address
+// Where the events came from: the Mac's Calendar (through Ava Brain) or the iCal address
 export type CalendarSourceName = 'mac' | 'ics';
 
 // What the background last read from the calendar, for the panel to show without fetching

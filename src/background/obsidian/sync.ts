@@ -4,11 +4,11 @@ import { EXPORT_ROOT, readFrontmatter } from '@src/side-panel/vault/markdown';
 import type { CompanionClient } from '../companion/client';
 
 /**
- * One sync of the Obsidian vault through Nex Brain, the same two halves as the browser folder's
- * (src/side-panel/vault/vault.ts): the copilot's memory out to the vault's `Nex Copilot` folder, and the user's
+ * One sync of the Obsidian vault through Ava Brain, the same two halves as the browser folder's
+ * (src/side-panel/vault/vault.ts): the copilot's memory out to the vault's `Ava Copilot` folder, and the user's
  * own changed notes into the knowledge base. The same rules hold: only changed files are written, a file the user
- * wrote is never replaced or removed (Nex Brain checks the marker in its front matter too), and nothing outside
- * the vault is touched (Nex Brain confines every path). Notes become knowledge-base items, which reach a model
+ * wrote is never replaced or removed (Ava Brain checks the marker in its front matter too), and nothing outside
+ * the vault is touched (Ava Brain confines every path). Notes become knowledge-base items, which reach a model
  * only wrapped as untrusted content.
  */
 
@@ -70,7 +70,7 @@ async function writeOut(deps: BrainVaultSyncDeps, vaultId: string, written: Reco
       count++;
     } catch (error) {
       const appError = toAppError(error);
-      // A note of the user's own at this path is left alone; one Nex Brain will not take (too large, a bad name) too
+      // A note of the user's own at this path is left alone; one Ava Brain will not take (too large, a bad name) too
       if (appError.kind === 'forbidden' || appError.kind === 'invalid') {
         delete next[path];
         continue;
@@ -130,11 +130,11 @@ async function readIn(deps: BrainVaultSyncDeps, vaultId: string, seen: Record<st
 }
 
 export const CHOOSE_AGAIN_MESSAGE =
-  'Choose your vault again: Nex Brain has another vault chosen now, or cannot find this one.';
+  'Choose your vault again: Ava Brain has another vault chosen now, or cannot find this one.';
 
 /**
- * What to do when Nex Brain says the vault is not the chosen one. Its vault is chosen again from the saved path only
- * when Nex Brain has none chosen (it was reinstalled or paired anew) and the path still resolves to this very vault.
+ * What to do when Ava Brain says the vault is not the chosen one. Its vault is chosen again from the saved path only
+ * when Ava Brain has none chosen (it was reinstalled or paired anew) and the path still resolves to this very vault.
  * A different vault chosen there (by the user, or by another paired browser) is never undone: this browser stops
  * syncing and asks the user to choose again. Returns whether syncing may go on.
  */
@@ -157,7 +157,7 @@ async function recoverChoice(deps: BrainVaultSyncDeps, setting: ObsidianVaultSet
 }
 
 /**
- * One full sync. Stops (and the card asks to choose again) when Nex Brain's vault is no longer this browser's:
+ * One full sync. Stops (and the card asks to choose again) when Ava Brain's vault is no longer this browser's:
  * see recoverChoice.
  */
 export async function syncBrainVault(deps: BrainVaultSyncDeps): Promise<{ written: number; read: number }> {

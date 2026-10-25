@@ -36,10 +36,10 @@ const context = (node: WorkflowNode) => ({
 });
 
 describe('checks before a step asks for the user’s click', () => {
-  it('a sandbox step needs Nex Brain paired, and says where to pair it', async () => {
+  it('a sandbox step needs Ava Brain paired, and says where to pair it', async () => {
     const node: WorkflowNode = { id: 'code', type: 'step.sandbox', label: 'Code', command: 'make' };
     await expect(prechecksFor(deps())['step.sandbox']!(context(node))).rejects.toThrow(NEEDS_NEX_BRAIN);
-    expect(NEEDS_NEX_BRAIN).toMatch(/Settings › Nex Brain/);
+    expect(NEEDS_NEX_BRAIN).toMatch(/Settings › Ava Brain/);
     await expect(
       prechecksFor(deps({ brainPaired: async () => true }))['step.sandbox']!(context(node)),
     ).resolves.toBeUndefined();

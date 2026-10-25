@@ -1,4 +1,4 @@
-// "Update available": checks Nex Copilot's own site (../update/check.ts) every 12 hours and at browser start,
+// "Update available": checks Ava Copilot's own site (../update/check.ts) every 12 hours and at browser start,
 // then tells the user one way that is hard to miss (the panel's banner, a dot on Settings › Help, one
 // notification per new version) and one that does not fight the setup checklist for the toolbar — this uses
 // the toolbar's *tooltip* (chrome.action.setTitle), never setBadgeText, which the Inbox already owns

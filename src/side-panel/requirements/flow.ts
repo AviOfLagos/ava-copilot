@@ -1,6 +1,6 @@
 /**
  * Install before use: one flow for everything a setting can need installed first (a voice model, the wake
- * word's model, an Ollama model, the embedding model, Nex Brain, Obsidian access). A setting calls
+ * word's model, an Ollama model, the embedding model, Ava Brain, Obsidian access). A setting calls
  * `choose(requirement, save)`: when the requirement is ready the choice is saved at once; when not, the flow asks
  * (the card shows "Needs KittenTTS, 28 MB — Install / Cancel"), and the choice is saved only after the install
  * finished and the requirement reads as ready. Cancel at any point leaves the old choice. Things that cannot be

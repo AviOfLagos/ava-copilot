@@ -20,3 +20,4 @@ import './meet-voice/register';
 import './update/register';
 import './setup/register';
 import './ambient/register';
+import './feedback/register';

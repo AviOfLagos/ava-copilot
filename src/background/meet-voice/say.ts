@@ -31,7 +31,7 @@ export interface SayDeps {
   thread: () => Promise<Pick<ThreadRecord, 'origin'> | undefined>;
   // What the user typed or said in this turn, without attachments or quoted outside content
   userWords: () => Promise<string>;
-  // Fresh from Nex Brain
+  // Fresh from Ava Brain
   status: () => Promise<MeetStatus>;
   // The call the user is in (their recording notes), or null
   userMeeting: () => Promise<UserMeeting | null>;

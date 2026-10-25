@@ -69,7 +69,7 @@ const NO_EVAL = {
 
 // Runs before the recogniser: the model URL it is given (wake/model.tar.gz) is answered from the copy the extension
 // downloaded on first use (OPFS voice-models/vosk/, once its .ready.json is there), else from the package
-export const OPFS_PRELUDE = `// Nex Copilot: wake/model.tar.gz from the model downloaded on first use, when there is one (data, never code)
+export const OPFS_PRELUDE = `// Ava Copilot: wake/model.tar.gz from the model downloaded on first use, when there is one (data, never code)
 (function () {
   var packed = self.fetch.bind(self);
   self.fetch = function (input, init) {

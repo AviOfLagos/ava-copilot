@@ -4,8 +4,8 @@ import type { AuthFn } from 'eve/channels/auth';
 import { eveChannel } from 'eve/channels/eve';
 
 /**
- * Only Nex Brain talks to this eve process: it holds the per-boot secret, and it never sends an Origin
- * (a browser always would). The extension speaks to Nex Brain, which checks its pairing token and origin.
+ * Only Ava Brain talks to this eve process: it holds the per-boot secret, and it never sends an Origin
+ * (a browser always would). The extension speaks to Ava Brain, which checks its pairing token and origin.
  */
 
 const PROFILE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -19,7 +19,7 @@ function sameSecret(given: string, expected: string): boolean {
 const aviBrainOnly: AuthFn<Request> = async request => {
   const expected = process.env.AVI_BRAIN_EVE_SECRET;
   // Started without a secret: nobody gets in
-  if (!expected) throw new ForbiddenError({ code: 'not_configured', message: 'Not started by Nex Brain.' });
+  if (!expected) throw new ForbiddenError({ code: 'not_configured', message: 'Not started by Ava Brain.' });
   if (request.headers.get('origin') !== null) throw new ForbiddenError({ code: 'origin', message: 'Not allowed.' });
   const header = request.headers.get('authorization') ?? '';
   const given = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';

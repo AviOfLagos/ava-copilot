@@ -5,7 +5,7 @@ import type { VersionInfo } from './schema';
 /**
  * What the extension knows about updates: whether to look (a setting, shown on Settings › Help), and what the
  * last check found (for the banner, the Settings section, the toolbar tooltip, and "only notify once per
- * version"). The background is the only writer; pages read these stores directly, the same way Nex Brain's
+ * version"). The background is the only writer; pages read these stores directly, the same way Ava Brain's
  * settings and status do (src/background/companion/state.ts).
  */
 
@@ -24,7 +24,7 @@ export interface UpdateStatus {
   info: VersionInfo | null;
   extensionUpdateAvailable: boolean;
   brainUpdateAvailable: boolean;
-  // Nex Brain's own reported version, last time it was known (null: never paired, or offline at the last check)
+  // Ava Brain's own reported version, last time it was known (null: never paired, or offline at the last check)
   brainVersion: string | null;
   // Which `info.version` a notification has already been sent for, so a repeat check never sends it twice
   notifiedVersion: string | null;

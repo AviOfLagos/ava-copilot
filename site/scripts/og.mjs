@@ -67,11 +67,20 @@ try {
 }
 
 const server = await serve(dist);
-const browser = await puppeteer.launch({
-  executablePath,
-  headless: true,
-  args: ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--force-color-profile=srgb'],
-});
+let browser;
+try {
+  browser = await puppeteer.launch({
+    executablePath,
+    headless: true,
+    args: ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--force-color-profile=srgb'],
+  });
+} catch (error) {
+  // A browser that will not start (a CI image's sandbox, say) is the same as none: the committed cards ship
+  console.warn(`og: the browser did not start (${error.message.split('\n')[0]}); shipping the images in public/og as they are`);
+  await server.close();
+  removeTemplates();
+  process.exit(0);
+}
 let failed = false;
 try {
   const page = await browser.newPage();

@@ -11,7 +11,7 @@ const quiet = () => new Float32Array(CHUNK);
 
 const OPTIONS: EconomyOptions = {
   mode: 'economy',
-  instructions: 'You are Nex Copilot.',
+  instructions: 'You are Ava Copilot.',
   tools: [{ name: 'get_status', description: 'Says which tasks are running.' }],
   economy: {
     stt: { engine: 'moonshine', model: 'moonshine-tiny', webgpu: false },

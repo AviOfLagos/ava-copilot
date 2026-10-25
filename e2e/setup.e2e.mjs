@@ -96,9 +96,9 @@ test('the setup checklist reads the real status, sets the local model, and Skip 
   await until(async () => (await item('local'))?.ready === 'true', 'the local model ready');
   assert.match((await item('local')).line, /qwen3:4b/);
   assert.equal((await item('model')).ready, 'true', 'a working model (local)');
-  // Not paired here: Nex Brain is owed, and what runs on it says it waits for it
+  // Not paired here: Ava Brain is owed, and what runs on it says it waits for it
   assert.equal((await item('brain')).ready, 'false');
-  assert.match((await item('whatsapp')).line, /Nex Brain/);
+  assert.match((await item('whatsapp')).line, /Ava Brain/);
   await shot(page, '1-checklist');
 
   // Once present, it does light work and finishes failed cloud calls
@@ -159,7 +159,7 @@ test("Settings › Meetings shows Ava's meeting account and the join choice, off
   await page.waitForSelector('[data-testid="ava-account"]', { timeout: 10000 });
   const text = await page.evaluate(() => document.querySelector('[data-testid="ava-account"]').innerText);
   assert.match(text, /You sign in yourself/);
-  assert.match(text, /Pair Nex Brain first/);
+  assert.match(text, /Pair Ava Brain first/);
   assert.equal(await page.$eval('#meetvoice-auto', select => select.value), 'never');
   await page.select('#meetvoice-auto', 'ask');
   await until(async () => (await extension.getStorage('meet-voice-settings'))?.autoJoin === 'ask', 'the choice saved');

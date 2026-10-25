@@ -45,7 +45,7 @@ async function handle(message: Message): Promise<unknown> {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     }
-    // Speech made into a WAV file and handed back, not played (Ava's words for a call, sent to Nex Brain)
+    // Speech made into a WAV file and handed back, not played (Ava's words for a call, sent to Ava Brain)
     case 'local_tts_render': {
       if (!isEngine(message.engine)) return { ok: false, error: 'Unknown voice engine' };
       const started = performance.now();

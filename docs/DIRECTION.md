@@ -1,4 +1,4 @@
-# Nex Copilot — visual direction: Graphite glass
+# Ava Copilot — visual direction: Graphite glass
 
 Mockups: https://claude.ai/artifact/KnRwLQkugxdVNsyuRGqyQC (home, a task as a run trail, voice, today, settings).
 

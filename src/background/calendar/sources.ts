@@ -6,7 +6,7 @@ import { eventsBetween, joinLinkIn } from './ics';
 import type { CalendarEvent } from './ics';
 
 /**
- * Where the calendar's events come from. The Mac's Calendar through Nex Brain comes first when it is paired and
+ * Where the calendar's events come from. The Mac's Calendar through Ava Brain comes first when it is paired and
  * the user has not turned it off: it reads every account macOS syncs (Google Workspace too, where the secret iCal
  * address is often disabled) and needs nothing scraped from a page. The iCal address is the fallback. Either way
  * the events are the same shape, and their text is data written by whoever sent the invite.

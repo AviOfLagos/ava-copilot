@@ -2,7 +2,7 @@ import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 
 /**
- * The Obsidian vault Nex Brain reads and writes on the Mac (src/background/obsidian). Unlike the browser's
+ * The Obsidian vault Ava Brain reads and writes on the Mac (src/background/obsidian). Unlike the browser's
  * folder handle (IndexedDB `avi-vault`), this is a plain setting, so it is in every backup and a reinstall finds
  * the same vault again. A backup *file* never sets it (backup/trust.ts keeps the one on this browser).
  */
@@ -10,7 +10,7 @@ import { createStorage } from '../base/base';
 export const OBSIDIAN_VAULT_KEY = 'obsidian-vault';
 
 export interface ObsidianVaultSetting {
-  // 'brain': Nex Brain on the Mac; null: none (the browser folder, if any, is the panel's own)
+  // 'brain': Ava Brain on the Mac; null: none (the browser folder, if any, is the panel's own)
   source: 'brain' | null;
   vaultId: string | null;
   // The vault's folder on the Mac, to choose it again after a reinstall or on a new pairing
@@ -38,7 +38,7 @@ export interface ObsidianSyncState {
   lastSyncAt: number | null;
   lastError: string | null;
   lastCounts: { written: number; read: number } | null;
-  // Nex Brain has another vault chosen (or lost this one): syncing stopped until the user chooses again
+  // Ava Brain has another vault chosen (or lost this one): syncing stopped until the user chooses again
   needsChoice: boolean;
 }
 

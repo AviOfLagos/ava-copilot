@@ -21,7 +21,7 @@ function Result({ result }: { result: { text: string; alert: boolean } | null })
   );
 }
 
-/** Settings › Obsidian with Nex Brain paired and no vault chosen: the vaults it found, and a folder to type. */
+/** Settings › Obsidian with Ava Brain paired and no vault chosen: the vaults it found, and a folder to type. */
 export function BrainVaultPicker() {
   const [vaults, setVaults] = useState<ObsidianVault[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -151,7 +151,7 @@ export function BrainVaultConnected({ setting }: { setting: ObsidianVaultSetting
     : sync?.lastCounts
       ? { text: t('vault_synced', [String(sync.lastCounts.written), String(sync.lastCounts.read)]), alert: false }
       : null;
-  // Nex Brain has another vault chosen now (by the user or another browser): this browser stopped syncing
+  // Ava Brain has another vault chosen now (by the user or another browser): this browser stopped syncing
   if (sync?.needsChoice) {
     return (
       <div data-vault="brain-choose-again" className={row}>

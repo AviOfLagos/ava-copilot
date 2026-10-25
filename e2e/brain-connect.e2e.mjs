@@ -1,4 +1,4 @@
-// Obsidian and the calendar through Nex Brain: with a mock companion paired, Settings › Connections › Obsidian lists
+// Obsidian and the calendar through Ava Brain: with a mock companion paired, Settings › Connections › Obsidian lists
 // the vault it found and one click uses it (the copilot's memory is written into the vault and the user's note comes
 // into the knowledge base, with no folder picker); Settings › Calendar shows macOS's permission state, "Allow access"
 // asks for it, the calendars list, and the next meeting is read from the Mac. Nothing real is touched: the vault and
@@ -74,7 +74,7 @@ function readStore(page, store) {
 
 const text = page => page.evaluate(() => document.body.innerText);
 
-test('pairs with Nex Brain', async () => {
+test('pairs with Ava Brain', async () => {
   const panel = await extension.browser.newPage();
   await panel.goto(`${extension.origin}/sidepanel.html`);
   await panel.waitForSelector('textarea', { timeout: 15000 });
@@ -82,13 +82,13 @@ test('pairs with Nex Brain', async () => {
   await panel.close();
 });
 
-test('Obsidian: picks the vault Nex Brain found, writes the memory into it and reads the user’s note', async () => {
+test('Obsidian: picks the vault Ava Brain found, writes the memory into it and reads the user’s note', async () => {
   const settings = await extension.openSettings('#connections/obsidian');
   try {
     await settings.waitForSelector('[data-vault="brain-pick"] [data-vault-choice]', { timeout: 15000 });
     assert.match(await text(settings), /Your vaults/);
     assert.match(await text(settings), new RegExp(MOCK_VAULT.path));
-    // No folder picker and no Brave flag steps while Nex Brain is paired
+    // No folder picker and no Brave flag steps while Ava Brain is paired
     assert.equal(await settings.$('[data-vault-brave]'), null);
     await extension.clickOn(settings, `Use ${MOCK_VAULT.name}`);
     await settings.waitForSelector('[data-vault="brain"]', { timeout: 15000 });

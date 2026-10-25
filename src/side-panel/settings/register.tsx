@@ -1,6 +1,6 @@
 // The settings sections Settings itself owns, one component per setting, registered like every stream's so the
 // full-page Settings (src/options) and Ava's list of sections come from one registry. Other streams register their
-// own sections (personalities, voice engines, Nex Brain…) with a `page` from ../registry.ts.
+// own sections (personalities, voice engines, Ava Brain…) with a `page` from ../registry.ts.
 import { registerSettingsSection } from '../registry';
 import { ConnectorsSection, CalendarSection, ObsidianSection } from './sections/ConnectionSections';
 import {

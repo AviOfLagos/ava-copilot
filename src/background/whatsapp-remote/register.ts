@@ -1,4 +1,4 @@
-// Ava on WhatsApp (through Nex Brain) registers its commands, poll job, chat hooks and notice sink here
+// Ava on WhatsApp (through Ava Brain) registers its commands, poll job, chat hooks and notice sink here
 // (see ../registry and ../jobs/runner). Plan A, Ava inside the user's WhatsApp Web tab, is ../whatsapp.
 import { z } from 'zod';
 import { t } from '@extension/i18n';
@@ -70,7 +70,7 @@ export const whatsappBridge = new WhatsAppBridge({
   warn: (message, error) => logger.warning(message, toAppError(error).kind),
 });
 
-/** Polls Nex Brain when it is paired: always on the minute job, every few seconds while linked. */
+/** Polls Ava Brain when it is paired: always on the minute job, every few seconds while linked. */
 async function tick(fromJob: boolean): Promise<void> {
   if (!(await brainSettingsStore.getSettings()).paired) return;
   if (!fromJob) {
@@ -80,7 +80,7 @@ async function tick(fromJob: boolean): Promise<void> {
   }
   await whatsappBridge.poll().catch(error => {
     const appError = toAppError(error);
-    // Nex Brain closed or not linked: the next tick tries again
+    // Ava Brain closed or not linked: the next tick tries again
     if (appError.kind !== 'network') logger.warning(`WhatsApp poll failed (${appError.kind})`);
   });
 }
@@ -145,7 +145,7 @@ async function withStatus(call: Promise<{ status: WhatsAppStatus }>) {
   return { status, settings: await whatsappRemoteSettingsStore.getSettings() };
 }
 
-/** Tells Nex Brain the quiet hours, so it holds to them whatever the extension does. */
+/** Tells Ava Brain the quiet hours, so it holds to them whatever the extension does. */
 async function pushQuietHours(): Promise<void> {
   const { quietStart, quietEnd } = await whatsappRemoteSettingsStore.getSettings();
   await companionClient.whatsappSetQuiet({ quietStart, quietEnd });

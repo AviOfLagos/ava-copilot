@@ -13,7 +13,7 @@ import { readIfExists, writePrivateFile } from './store';
 /**
  * The extension's API keys and sign-ins, kept apart from the snapshots: one file, `backups/secrets.enc`,
  * encrypted with AES-256-GCM under a random key that lives only in the macOS Keychain (service
- * "Nex Brain backup"). The file alone is useless, and the Keychain entry alone holds no key of any service.
+ * "Ava Brain backup"). The file alone is useless, and the Keychain entry alone holds no key of any service.
  *
  * The Keychain key goes to `security` on its standard input (`security -i`), never on a command line, where
  * other processes could read it in `ps`. Values are never logged.

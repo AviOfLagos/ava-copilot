@@ -1,7 +1,9 @@
-## To encourage contributors to use issue templates, we don't allow blank issues
+# Every issue starts from a form, so it has what someone needs to pick it up and fix it
 blank_issues_enabled: false
-
 contact_links:
-  - name: GitHub Discussions
-    url: https://github.com/nanobrowser/nanobrowser/discussions
-    about: For questions and discussions that don't belong in issues, please use our Discussions forum.
+  - name: Report a security problem privately
+    url: https://github.com/AviOfLagos/ava-copilot/security/advisories/new
+    about: Please don't open a public issue for a vulnerability.
+  - name: Install guide
+    url: https://ava.nexprove.com/install
+    about: Every way to install and update, step by step.

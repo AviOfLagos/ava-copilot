@@ -287,7 +287,7 @@ describe('notes', () => {
     writeFileSync(join(vault, 'Nex Copilot', 'Mentions.md'), 'Not front matter:\nsource: avi-copilot');
     for (const path of ['Nex Copilot/Mine.md', 'Nex Copilot/Mentions.md']) {
       await expect(store.write(id, { path, text: 'replaced', mode: 'overwrite' })).rejects.toThrow(
-        /not one Nex Copilot wrote/,
+        /not one Ava Copilot wrote/,
       );
     }
     expect(readFileSync(join(vault, 'Nex Copilot', 'Mine.md'), 'utf8')).toBe('the user wrote this here');
@@ -314,7 +314,7 @@ describe('notes', () => {
   it('removes only its own notes', async () => {
     mkdirSync(join(vault, 'Nex Copilot'), { recursive: true });
     writeFileSync(join(vault, 'Nex Copilot', 'Mine.md'), 'the user wrote this here');
-    await expect(store.remove(id, 'Nex Copilot/Mine.md')).rejects.toThrow(/not one Nex Copilot wrote/);
+    await expect(store.remove(id, 'Nex Copilot/Mine.md')).rejects.toThrow(/not one Ava Copilot wrote/);
     ours('Nex Copilot/Ours.md');
     expect(await store.remove(id, 'Nex Copilot/Ours.md')).toBe(true);
     expect(await store.remove(id, 'Nex Copilot/Ours.md')).toBe(false);

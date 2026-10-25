@@ -32,7 +32,7 @@ interface RawEvent {
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-// The meeting link of an event: shared with Nex Brain, which reads the Mac's Calendar
+// The meeting link of an event: shared with Ava Brain, which reads the Mac's Calendar
 export const joinLinkIn = meetingLinkIn;
 
 /** Lines of the feed with folded continuation lines joined back. */

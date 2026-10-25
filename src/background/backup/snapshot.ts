@@ -6,7 +6,7 @@ import { decodeValue, encodeValue, gunzip, gzip, isGzip } from './codec';
 import { redactSecrets } from './trust';
 
 /**
- * A snapshot of everything Nex Copilot keeps on this browser that an uninstall would wipe: every table of the
+ * A snapshot of everything Ava Copilot keeps on this browser that an uninstall would wipe: every table of the
  * database and every key of `chrome.storage.local`, found by listing them (so a table or a store added later is
  * in the next snapshot without anyone remembering to add it), minus the short deny-lists below. API keys and
  * sign-ins are never in it: they go to the Mac's Keychain separately (./service.ts).
@@ -18,7 +18,7 @@ import { redactSecrets } from './trust';
  * - The "avi-vault" and "avi-history" databases: the Obsidian and AI-history folders the user picked are
  *   browser permissions (FileSystemDirectoryHandle), which cannot be carried; they are picked again.
  * - The secrets vault ("avi-secrets"): its key cannot leave the browser; its values travel through the
- *   Keychain instead, and the Nex Brain pairing token never does (pairing again proves the user is at the Mac).
+ *   Keychain instead, and the Ava Brain pairing token never does (pairing again proves the user is at the Mac).
  * - The search index: it is in memory and rebuilt from the knowledge tables on start. Embeddings are stored in
  *   `kbChunks` and are kept, since making them again costs model calls.
  */
@@ -44,14 +44,14 @@ export const EXCLUDED_TABLES: Record<string, { reason: string; onRestore: 'keep'
 
 /** Keys of chrome.storage.local left out: state of this install, not the user's memory or settings. */
 export const EXCLUDED_STORAGE_KEYS: Record<string, string> = {
-  'brain-settings': 'Pairing with Nex Brain: a reinstall pairs again, which proves the user is at the Mac.',
-  'brain-status': "Nex Brain's last health check.",
+  'brain-settings': 'Pairing with Ava Brain: a reinstall pairs again, which proves the user is at the Mac.',
+  'brain-status': "Ava Brain's last health check.",
   'backup-status': 'How the last backup went.',
   'meet-voice-state': "Ava's live state in a call.",
   'calendar-upcoming': 'Calendar events read ahead; read again.',
   'model-health': 'Which model calls failed lately; measured again.',
   'capabilities-panel': "The panel's list of places, written when the panel starts.",
-  // The browser folder's summary only: the vault Nex Brain uses ('obsidian-vault') is a setting and is kept
+  // The browser folder's summary only: the vault Ava Brain uses ('obsidian-vault') is a setting and is kept
   'vault-state': 'Whether an Obsidian folder is connected: the folder itself is a browser permission, picked again.',
 };
 
@@ -217,7 +217,7 @@ export async function buildSnapshot(source: SnapshotSource): Promise<BuiltSnapsh
 }
 
 export const NEWER_SNAPSHOT_MESSAGE =
-  'This backup comes from a newer version of Nex Copilot. Update the extension, then restore it.';
+  'This backup comes from a newer version of Ava Copilot. Update the extension, then restore it.';
 
 /**
  * Reads a snapshot from gzipped or plain JSON bytes: size-limited, schema-checked, nothing in it run.
@@ -235,7 +235,7 @@ export async function parseSnapshot(input: Uint8Array<ArrayBuffer>): Promise<Sna
   try {
     raw = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
-    throw new AppError('invalid', 'This file is not a Nex Copilot backup.', { retryable: false });
+    throw new AppError('invalid', 'This file is not a Ava Copilot backup.', { retryable: false });
   }
   return checkSnapshot(raw);
 }
@@ -248,7 +248,7 @@ export function checkSnapshot(raw: unknown): Snapshot {
   }
   const parsed = snapshotSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new AppError('invalid', 'This file is not a Nex Copilot backup, or it is damaged.', { retryable: false });
+    throw new AppError('invalid', 'This file is not a Ava Copilot backup, or it is damaged.', { retryable: false });
   }
   const snapshot = parsed.data;
   const encoded = new Set(snapshot.db.encoded);

@@ -63,9 +63,9 @@ export function carriesMarker(head: string): boolean {
   return !!match && match[1].split(/\r?\n/).includes(OBSIDIAN_MARKER);
 }
 
-/** Nex Brain writes and removes only in the copilot's folder, whatever the request says. */
+/** Ava Brain writes and removes only in the copilot's folder, whatever the request says. */
 function requireWriteRoot(path: string): void {
-  if (!isInObsidianWriteRoot(path)) fail('forbidden', `Nex Brain only writes in the ${OBSIDIAN_WRITE_ROOT} folder.`);
+  if (!isInObsidianWriteRoot(path)) fail('forbidden', `Ava Brain only writes in the ${OBSIDIAN_WRITE_ROOT} folder.`);
 }
 
 const isMissing = (error: unknown) => (error as NodeJS.ErrnoException)?.code === 'ENOENT';
@@ -129,7 +129,7 @@ export class ObsidianVaults {
   }
 
   /**
-   * Makes a folder the vault Nex Copilot reads and writes. It must be an Obsidian vault and, when `expectVaultId` is
+   * Makes a folder the vault Ava Copilot reads and writes. It must be an Obsidian vault and, when `expectVaultId` is
    * given, still that vault: otherwise nothing changes.
    */
   async choose(path: string, expectVaultId?: string): Promise<ObsidianVault> {
@@ -155,11 +155,11 @@ export class ObsidianVaults {
   async root(vaultId: string): Promise<string> {
     const kept = this.chosen();
     if (!kept)
-      fail('not_found', 'No Obsidian vault is chosen in Nex Brain. Choose one in Settings › Connections › Obsidian.');
+      fail('not_found', 'No Obsidian vault is chosen in Ava Brain. Choose one in Settings › Connections › Obsidian.');
     const root = await isVault(kept.path, this.home, this.systemRoots);
     if (!root) fail('not_found', 'The chosen Obsidian vault is gone or is no longer a vault. Choose it again.');
     if (vaultIdOf(root) !== vaultId)
-      fail('not_found', 'A different Obsidian vault is chosen in Nex Brain now. Choose it again.');
+      fail('not_found', 'A different Obsidian vault is chosen in Ava Brain now. Choose it again.');
     return root;
   }
 
@@ -281,7 +281,7 @@ export class ObsidianVaults {
     const existing = await lstat(target).catch(() => null);
     if (existing && request.mode === 'create') fail('invalid', 'A note already exists at that path.');
     if (existing && !carriesMarker(await this.head(target))) {
-      fail('forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+      fail('forbidden', 'That note is not one Ava Copilot wrote, so it was left alone.');
     }
     await mkdir(dirname(target), { recursive: true });
     // The folders made must still be inside the vault, with no link on the way
@@ -316,7 +316,7 @@ export class ObsidianVaults {
     const info = await lstat(target).catch(() => null);
     if (!info) return false;
     if (!carriesMarker(await this.head(target))) {
-      fail('forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+      fail('forbidden', 'That note is not one Ava Copilot wrote, so it was left alone.');
     }
     await unlink(target);
     this.walked = null;

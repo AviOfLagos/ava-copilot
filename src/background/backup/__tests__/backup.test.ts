@@ -222,7 +222,7 @@ describe('restore', () => {
 describe('reading a snapshot file', () => {
   it('refuses junk, bad table names and files that unpack too far', async () => {
     const text = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)) as Uint8Array<ArrayBuffer>;
-    await expect(parseSnapshot(text({ hello: 1 }))).rejects.toThrow(/not a Nex Copilot backup/);
+    await expect(parseSnapshot(text({ hello: 1 }))).rejects.toThrow(/not a Ava Copilot backup/);
     await expect(parseSnapshot(new TextEncoder().encode('{nope') as Uint8Array<ArrayBuffer>)).rejects.toThrow();
     const { snapshot } = await snapshotOf(freshDb());
     const bad = { ...snapshot, db: { ...snapshot.db, tables: { 'drop table': [] } } };
@@ -234,7 +234,7 @@ describe('reading a snapshot file', () => {
   });
 });
 
-describe('backups to Nex Brain', () => {
+describe('backups to Ava Brain', () => {
   function fakeBrain() {
     const stored: { meta: Record<string, unknown>; parts: string[] }[] = [];
     let secrets: Record<string, string> = {};
@@ -353,7 +353,7 @@ describe('backups to Nex Brain', () => {
     });
     expect(await backups.backupNow(false)).toBeNull();
     expect(brain.calls).toEqual([]);
-    await expect(backups.backupNow(true)).rejects.toThrow(/Pair Nex Brain/);
+    await expect(backups.backupNow(true)).rejects.toThrow(/Pair Ava Brain/);
   });
 
   it('restores from the Mac onto a fresh install, keys included, the pairing token untouched', async () => {

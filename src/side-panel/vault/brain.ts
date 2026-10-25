@@ -3,15 +3,15 @@ import type { ObsidianVault } from '@src/shared/lib/protocol/companion';
 import type { VaultSupport } from './vault';
 
 /**
- * The Obsidian card's choices when Nex Brain is in play. With Nex Brain paired, the vault is read and written on
+ * The Obsidian card's choices when Ava Brain is in play. With Ava Brain paired, the vault is read and written on
  * the Mac (src/background/obsidian): no folder picker, no access click after a restart. Without it, the browser
  * folder (./vault.ts) is the way, with Brave's flag steps when Brave keeps the picker off.
  */
 
 export type VaultCardMode =
-  // Nex Brain reads and writes the chosen vault
+  // Ava Brain reads and writes the chosen vault
   | 'brain'
-  // Nex Brain is paired: pick one of the vaults it found, or type a folder
+  // Ava Brain is paired: pick one of the vaults it found, or type a folder
   | 'brain_pick'
   // Not paired: the browser folder picker (or Brave's steps)
   | 'browser';
@@ -24,7 +24,7 @@ export function vaultCardMode(input: {
   return input.paired ? 'brain_pick' : 'browser';
 }
 
-/** Whether the browser folder part still shows under Nex Brain's: only when one is connected, so it can be let go. */
+/** Whether the browser folder part still shows under Ava Brain's: only when one is connected, so it can be let go. */
 export function showBrowserFolder(mode: VaultCardMode, browserName: string | null, support: VaultSupport): boolean {
   if (mode === 'browser') return true;
   return mode === 'brain_pick' && !!browserName && support !== 'unsupported';
@@ -38,7 +38,7 @@ export function vaultChoices(vaults: ObsidianVault[]): ObsidianVault[] {
     .sort((a, b) => Number(b.usable) - Number(a.usable) || a.name.localeCompare(b.name));
 }
 
-/** A folder path as typed: trimmed; only full paths (/ or ~/) go to Nex Brain, which checks the rest. */
+/** A folder path as typed: trimmed; only full paths (/ or ~/) go to Ava Brain, which checks the rest. */
 export function typedVaultPath(input: string): string | null {
   const path = input.trim();
   if (!path || path.length > 1000) return null;

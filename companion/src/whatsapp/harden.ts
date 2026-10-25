@@ -83,7 +83,7 @@ export function guardedFetch(
       return new Response(vendored.body, { status: 200, headers: { 'content-type': 'application/json' } });
     }
     // Fails closed: a network error, so open-wa goes on with nothing from there
-    throw new TypeError('Blocked by Nex Brain: open-wa may not reach this address.');
+    throw new TypeError('Blocked by Ava Brain: open-wa may not reach this address.');
   }) as Fetch;
   Object.defineProperty(guarded, GUARDED, { value: true });
   return guarded;
@@ -147,7 +147,7 @@ export function lookupAllowed(hostname: string): boolean {
 }
 
 const blockedError = () =>
-  Object.assign(new Error('Blocked by Nex Brain: open-wa may not reach this address.'), { code: 'ENOTFOUND' });
+  Object.assign(new Error('Blocked by Ava Brain: open-wa may not reach this address.'), { code: 'ENOTFOUND' });
 
 type RequestFn = (...args: unknown[]) => http.ClientRequest;
 

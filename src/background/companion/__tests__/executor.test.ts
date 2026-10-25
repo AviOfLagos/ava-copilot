@@ -71,7 +71,7 @@ describe('step.sandbox executor', () => {
     expect(requests[0]).toMatchObject({ profileId: 'agent-7' });
   });
 
-  it('fails plainly when Nex Brain is not running, before sending anything', async () => {
+  it('fails plainly when Ava Brain is not running, before sending anything', async () => {
     const { client, requests } = fakeClient({
       health: async () => {
         throw new AppError('network', NOT_RUNNING_MESSAGE);

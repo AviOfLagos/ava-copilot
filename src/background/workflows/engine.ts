@@ -76,7 +76,7 @@ export interface StepExecutor {
   // Calls a model: counted against the run's model budget and the user's daily cap
   usesModel?: boolean;
   /**
-   * Says why the step cannot run at all (Nex Brain not paired, no such agent or connector) by throwing, before
+   * Says why the step cannot run at all (Ava Brain not paired, no such agent or connector) by throwing, before
    * the user is asked to allow it: an approval for a step that would then fail is a click for nothing.
    */
   check?: (context: Omit<StepContext, 'state' | 'saveState'>) => Promise<void>;

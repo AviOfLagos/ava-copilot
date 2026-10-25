@@ -1,8 +1,8 @@
-# Contributing to Nex Copilot
+# Contributing to Ava Copilot
 
-Thanks for helping. Nex Copilot is an AI copilot in the browser's side panel, a fork of
+Thanks for helping. Ava Copilot is an AI copilot in the browser's side panel, a fork of
 [Nanobrowser](https://github.com/nanobrowser/nanobrowser) (Apache-2.0). The website's
-[Contribute page](https://nex-copilot-one.vercel.app/contribute) has the same guide with more context.
+[Contribute page](https://ava.nexprove.com/contribute) has the same guide with more context.
 
 ## Ways to help
 
@@ -17,7 +17,7 @@ Thanks for helping. Nex Copilot is an AI copilot in the browser's side panel, a 
 Node.js 24 and pnpm 10 (pinned in `package.json`; run `corepack enable` once if you don't have pnpm).
 
 ```bash
-git clone https://github.com/AviOfLagos/nex-copilot.git && cd nex-copilot
+git clone https://github.com/AviOfLagos/ava-copilot.git && cd ava-copilot
 corepack enable && pnpm install
 pnpm dev      # builds dist/ and rebuilds on change
 ```

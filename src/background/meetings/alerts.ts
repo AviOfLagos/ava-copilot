@@ -106,7 +106,7 @@ export async function deliverMeetingEvent(event: MeetingEvent): Promise<void> {
         `nothing:${event.meetingId}`,
         t('meeting_alert_nothingTitle'),
         t(NOTHING_BODIES[event.reason], [platform]),
-        `nothing is being taken down on the user's ${platform} call (${NOTHING_SPOKEN[event.reason]}). Tell the user now, in one short sentence, and say to click the Nex Copilot icon on the call to record its audio.`,
+        `nothing is being taken down on the user's ${platform} call (${NOTHING_SPOKEN[event.reason]}). Tell the user now, in one short sentence, and say to click the Ava Copilot icon on the call to record its audio.`,
       );
       return;
     case 'audio_lost':
@@ -114,7 +114,7 @@ export async function deliverMeetingEvent(event: MeetingEvent): Promise<void> {
         `audio:${event.meetingId}`,
         t('meeting_alert_audioLostTitle'),
         t('meeting_alert_audioLostBody', [platform]),
-        `the audio recording of the user's ${platform} call stopped; notes go on from its captions. Tell the user in one short sentence and say to click the Nex Copilot icon on the call to record the audio again.`,
+        `the audio recording of the user's ${platform} call stopped; notes go on from its captions. Tell the user in one short sentence and say to click the Ava Copilot icon on the call to record the audio again.`,
       );
       return;
     case 'note_failed':

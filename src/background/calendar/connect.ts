@@ -105,7 +105,7 @@ export function calendarOf(url: string): string {
 
 export const SECRET_DISABLED_MESSAGE =
   'This Google account has no secret iCal address: its Google Workspace admin turned them off. ' +
-  'Pair Nex Brain and read the Mac’s Calendar instead (add the account under System Settings › Internet Accounts), ' +
+  'Pair Ava Brain and read the Mac’s Calendar instead (add the account under System Settings › Internet Accounts), ' +
   'or ask your admin.';
 
 export interface ConnectResult {

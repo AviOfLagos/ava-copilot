@@ -207,7 +207,7 @@ export function validateProfile(input: unknown, now = Date.now()): ProfileCheck 
   }
 
   if (fields.executor === 'companion') {
-    issues.push('Agents that run commands on the Mac need the Nex Brain companion, which is not set up yet.');
+    issues.push('Agents that run commands on the Mac need the Ava Brain companion, which is not set up yet.');
   }
 
   if (issues.length) return { ok: false, issues };

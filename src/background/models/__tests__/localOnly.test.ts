@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Nex Copilot with no cloud at all: only Ollama, with qwen3:4b and nomic-embed-text. A chat answer, light work (a
+ * Ava Copilot with no cloud at all: only Ollama, with qwen3:4b and nomic-embed-text. A chat answer, light work (a
  * title, a summary) and the fallback path all run on it, and every model request goes to the local server only.
  */
 

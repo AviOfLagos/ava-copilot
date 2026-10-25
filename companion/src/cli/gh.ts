@@ -6,7 +6,7 @@ import type { ProcessRunner } from '../sandbox/process';
 import { describeFindings, scanForSecrets } from '../security/secrets';
 
 /**
- * `gh` is the only program Nex Brain runs on the Mac itself, and only these subcommands of it:
+ * `gh` is the only program Ava Brain runs on the Mac itself, and only these subcommands of it:
  * reading issues, pull requests, runs and the repository freely; opening an issue or commenting only with
  * the user's click and a clean secret scan. Nothing that writes code (git push, gh repo create, pr create
  * or merge, releases, gh api) is on the list: those never run from here.
@@ -72,10 +72,10 @@ export function classifyGh(args: string[]): GhCheck {
     : WRITE.some(([g, a]) => g === group && a === action)
       ? 'write'
       : null;
-  if (!kind) return { ok: false, reason: `"gh ${group} ${action}" is not allowed from Nex Brain.` };
+  if (!kind) return { ok: false, reason: `"gh ${group} ${action}" is not allowed from Ava Brain.` };
   for (const arg of args.slice(2)) {
     const flag = arg.split('=')[0];
-    if (FORBIDDEN_FLAGS.has(flag)) return { ok: false, reason: `The flag ${flag} is not allowed from Nex Brain.` };
+    if (FORBIDDEN_FLAGS.has(flag)) return { ok: false, reason: `The flag ${flag} is not allowed from Ava Brain.` };
     if (hasControlCharacters(arg)) return { ok: false, reason: 'An argument has control characters.' };
   }
   return { ok: true, kind };
@@ -91,7 +91,7 @@ export function createGhRunner(deps: { run: ProcessRunner; log: Logger }): GhRun
       const check = classifyGh(args);
       if (!check.ok) fail('forbidden', check.reason);
       if (check.kind === 'write') {
-        if (!approved) fail('forbidden', 'This posts to GitHub, so it needs your click in Nex Copilot first.');
+        if (!approved) fail('forbidden', 'This posts to GitHub, so it needs your click in Ava Copilot first.');
         const findings = scanForSecrets(args.slice(2).join('\n'));
         if (findings.length) fail('forbidden', describeFindings(findings));
       }

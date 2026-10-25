@@ -1,0 +1,41 @@
+name: Install or update problem
+description: The install command, the download, Load unpacked or an update didn't work.
+title: "Install: "
+labels: ["install", "needs-triage"]
+body:
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you installed
+      options:
+        - One command (curl … install.sh | bash)
+        - Downloaded the zip
+        - Windows PowerShell (install.ps1)
+        - From the source (pnpm build)
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System and browser
+      placeholder: "Ubuntu 24.04, Chrome 131"
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What the installer or browser said
+      description: Paste the terminal output or the error on the extensions page.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: checkboxes
+    id: fix
+    attributes:
+      label: Fixing it
+      options:
+        - label: I'd like to try fixing this myself.

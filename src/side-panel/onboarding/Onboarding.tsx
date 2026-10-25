@@ -58,7 +58,7 @@ export default function Onboarding({ hasModel, request, onOpenModels, reopenAt =
   const [showError, setShowError] = useState(false);
   const [wakeOn, setWakeOn] = useState(false);
   const [wakeError, setWakeError] = useState('');
-  // A reinstall: nothing here yet, so the first thing offered is bringing it back from Nex Brain
+  // A reinstall: nothing here yet, so the first thing offered is bringing it back from Ava Brain
   const [fresh, setFresh] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const dialog = useRef<HTMLDivElement>(null);

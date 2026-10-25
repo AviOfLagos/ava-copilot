@@ -34,7 +34,7 @@ const ICS = [
 ].join('\r\n');
 
 describe('planSources', () => {
-  it('puts the Mac first when Nex Brain is paired, the iCal address after', () => {
+  it('puts the Mac first when Ava Brain is paired, the iCal address after', () => {
     expect(planSources({ paired: true, settings: settings('https://x/basic.ics') })).toEqual(['mac', 'ics']);
     expect(planSources({ paired: true, settings: settings('') })).toEqual(['mac']);
     expect(planSources({ paired: false, settings: settings('https://x/basic.ics') })).toEqual(['ics']);
@@ -73,13 +73,13 @@ describe('readFromSources', () => {
 });
 
 describe('macSource', () => {
-  it('asks Nex Brain for the window and the calendars that count, and finds join links itself', async () => {
+  it('asks Ava Brain for the window and the calendars that count, and finds join links itself', async () => {
     const calendarEvents = vi.fn(async () => ({
       ok: true as const,
       truncated: false,
       events: [
         macEvent({ id: 'late', start: 5 * HOUR, end: 6 * HOUR }),
-        // A join link Nex Brain sent is not taken on trust: it is found again from the text
+        // A join link Ava Brain sent is not taken on trust: it is found again from the text
         macEvent({ id: 'early', joinUrl: 'https://evil.example/j/1', notes: 'https://meet.google.com/abc-defg-hij' }),
       ],
     }));

@@ -3,12 +3,14 @@ import { versionInfoSchema } from './schema';
 import type { VersionInfo } from './schema';
 
 /**
- * Nex Copilot's own site, published alongside it (site/src/pages/version.json.ts, built from the repo's own
+ * Ava Copilot's own site, published alongside it (site/src/pages/version.json.ts, built from the repo's own
  * version and site/src/content/release-notes.ts). Not a third-party call: it is the product checking its own
  * download page, no account and no identifiers involved — see the "Check for updates" setting
  * (src/side-panel/update/UpdateSettings.tsx) for where that is explained to the user.
  */
-export const UPDATE_FEED_URL = 'https://nex-copilot-one.vercel.app/version.json';
+// The old address (nex-copilot-one.vercel.app) serves the same site, so copies that still check it hear about
+// this version too
+export const UPDATE_FEED_URL = 'https://ava.nexprove.com/version.json';
 const TIMEOUT_MS = 8_000;
 // The feed is a few hundred bytes of JSON; anything past this is refused rather than parsed
 const MAX_BYTES = 20_000;

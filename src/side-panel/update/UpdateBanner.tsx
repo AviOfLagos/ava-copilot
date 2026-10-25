@@ -7,7 +7,7 @@ import { openSettingsPage } from '@src/shared/lib/settings-page';
 import type { PanelApi } from '../registry';
 
 /**
- * "Nex Copilot 1.4 is available — What's new · Update": dismissible, and only while a newer version than the
+ * "Ava Copilot 1.4 is available — What's new · Update": dismissible, and only while a newer version than the
  * one actually installed (`chrome.runtime.getManifest().version`, compared in the background) exists. The
  * background does the checking and the deciding (src/background/update/register.ts); this only reads its
  * stored result and reacts to the two clicks.

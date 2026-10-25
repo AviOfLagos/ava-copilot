@@ -5,7 +5,7 @@ import { defineAgent, defineDynamic } from 'eve';
 import { loadModel, profileIdOf } from './lib/avi-brain';
 
 /**
- * Nex Brain's one generic worker agent. Each session runs as one of the user's agent profiles: Nex Brain
+ * Ava Brain's one generic worker agent. Each session runs as one of the user's agent profiles: Ava Brain
  * puts the profile id on the session, and the model, instructions and tools come from it.
  */
 export default defineAgent({

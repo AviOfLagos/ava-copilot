@@ -107,7 +107,7 @@ export default function WorkflowDetail({ id, api, onBack, wide = false, onOpenFu
     [] as RunStep[],
   );
 
-  // A sandbox step runs in Nex Brain: the diagram says so while this browser is not paired with it
+  // A sandbox step runs in Ava Brain: the diagram says so while this browser is not paired with it
   const [brainPaired, setBrainPaired] = useState(true);
   useEffect(() => {
     const load = () => void brainSettingsStore.getSettings().then(settings => setBrainPaired(settings.paired));

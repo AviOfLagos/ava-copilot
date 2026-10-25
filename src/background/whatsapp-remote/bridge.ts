@@ -7,10 +7,10 @@ import { mayNotify } from './notices';
 import type { WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
 
 /**
- * Ava on WhatsApp, in the background: pulls the owner's messages from Nex Brain into the day's WhatsApp chat
+ * Ava on WhatsApp, in the background: pulls the owner's messages from Ava Brain into the day's WhatsApp chat
  * (origin 'whatsapp'), sends the chat's answer back when a turn ends, says on WhatsApp when the chat waits for
  * his click in the browser (it never approves anything from there), and passes on the moments he asked to hear
- * about. Everything it touches comes in as deps, so it is tested without Chrome or Nex Brain.
+ * about. Everything it touches comes in as deps, so it is tested without Chrome or Ava Brain.
  */
 
 export interface BridgeDeps {
@@ -212,7 +212,7 @@ export class WhatsAppBridge {
     try {
       await this.deps.send({ text: body, kind, ...(replyTo ? { replyTo } : {}) });
     } catch (error) {
-      // Not linked, the hourly limit, Nex Brain closed: the chat in the panel still has it
+      // Not linked, the hourly limit, Ava Brain closed: the chat in the panel still has it
       this.deps.warn(`A WhatsApp ${kind} was not sent`, error);
     }
   }

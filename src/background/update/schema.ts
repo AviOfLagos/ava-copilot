@@ -5,7 +5,7 @@ const SEMVER_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 const semver = () => z.string().regex(SEMVER_PATTERN).max(20);
 
 /**
- * The shape of https://nex-copilot-one.vercel.app/version.json (built by site/src/pages/version.json.ts from the
+ * The shape of https://ava.nexprove.com/version.json (built by site/src/pages/version.json.ts from the
  * repo's own package.json version and site/src/content/release-notes.ts). Every string is length-capped, so an
  * unexpectedly large or malformed feed is refused by `.safeParse` in ./check.ts rather than stored or shown.
  */

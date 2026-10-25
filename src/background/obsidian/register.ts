@@ -1,6 +1,6 @@
-// Obsidian through Nex Brain: the vault on the Mac is read and written by the companion, so it works in Brave
+// Obsidian through Ava Brain: the vault on the Mac is read and written by the companion, so it works in Brave
 // (no folder picker), needs no access click after a restart, and survives a reinstall (the choice is a setting).
-// The browser folder (src/side-panel/vault) stays as the fallback when Nex Brain is not paired.
+// The browser folder (src/side-panel/vault) stays as the fallback when Ava Brain is not paired.
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';
 import {
@@ -90,7 +90,7 @@ export function syncNow(): Promise<{ written: number; read: number }> {
   return running;
 }
 
-/** The summary the guided setup reads ("Set it up with Ava"): connected through Nex Brain needs no access click. */
+/** The summary the guided setup reads ("Set it up with Ava"): connected through Ava Brain needs no access click. */
 async function recordState(name: string | null): Promise<void> {
   const state: VaultState = { support: 'ok', name, access: name ? 'granted' : null };
   await chrome.storage.local.set({ [VAULT_STATE_KEY]: state }).catch(() => {});
@@ -128,7 +128,7 @@ command('obsidian_use', z.object({ path: z.string().trim().min(1).max(1000) }), 
   return snapshot();
 });
 
-// `local`: only this browser lets go (Nex Brain's choice may be another browser's, and stays)
+// `local`: only this browser lets go (Ava Brain's choice may be another browser's, and stays)
 command('obsidian_disconnect', z.object({ local: z.boolean().optional() }), async ({ local }) => {
   if (!local) await companionClient.obsidianForget().catch(() => {});
   await obsidianVaultStore.update({ source: null, vaultId: null, path: null, name: null, chosenAt: null });
@@ -154,7 +154,7 @@ registerJobHandler(OBSIDIAN_SYNC_JOB, async () => {
   await syncNow();
 });
 
-// After a restart or a restore: keep syncing the vault Nex Brain uses (scheduling the same key replaces the job)
+// After a restart or a restore: keep syncing the vault Ava Brain uses (scheduling the same key replaces the job)
 registerRecovery('obsidian', async () => {
   const setting = await obsidianVaultStore.getSetting();
   if (setting.source !== 'brain') return;

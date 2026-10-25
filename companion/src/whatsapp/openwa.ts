@@ -9,7 +9,7 @@ import { hardenLaunch, installNetworkGuard } from './harden';
  * The WhatsApp Web client: open-wa (@open-wa/wa-automate), which runs WhatsApp Web in a headless Chrome,
  * Brave or Chromium of its own (a separate profile under the session dir, never the user's). The user chose
  * this unofficial client and accepts that WhatsApp may restrict a number that uses one. Loaded only when a
- * session starts, so Nex Brain runs without it until WhatsApp is linked. Nothing here logs a message, a
+ * session starts, so Ava Brain runs without it until WhatsApp is linked. Nothing here logs a message, a
  * number or the code to scan.
  */
 
@@ -132,7 +132,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
           disableSpins: true,
           popup: false,
           skipUpdateCheck: true,
-          // Never end Nex Brain's own process
+          // Never end Ava Brain's own process
           killProcessOnBrowserClose: false,
           killProcessOnTimeout: false,
           killProcessOnBan: false,

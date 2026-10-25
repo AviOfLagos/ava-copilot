@@ -4,10 +4,10 @@ import type { MeetStatus } from '@src/shared/lib/protocol/companion';
 
 /**
  * What the extension knows about Ava in a call, for the background and the meeting panel. Written by the
- * background only (from Nex Brain's answers); the panel reads it live. Nothing secret, nothing the call said.
+ * background only (from Ava Brain's answers); the panel reads it live. Nothing secret, nothing the call said.
  */
 export interface MeetVoiceState {
-  // Nex Brain's last answer about her meeting browser
+  // Ava Brain's last answer about her meeting browser
   status: MeetStatus | null;
   // The user's meeting (its notes) she was brought into: she leaves when those notes end
   meetingId: string | null;

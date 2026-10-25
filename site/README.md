@@ -1,6 +1,6 @@
-# Nex Copilot website
+# Ava Copilot website
 
-The marketing and install site for Nex Copilot: `/`, `/install`, `/privacy`, a 404, `robots.txt`, a sitemap,
+The marketing and install site for Ava Copilot: `/`, `/install`, `/privacy`, a 404, `robots.txt`, a sitemap,
 `llms.txt` and link-preview images. Static HTML, a few small islands and scripts, no analytics and nothing loaded from
 anyone else. Decisions live in `docs/` (`BRIEF.md`, `DIRECTION.md` — v2, "Ava gives the tour" — and
 `ARCHITECTURE.md`).
@@ -32,7 +32,7 @@ Every script sets `ASTRO_TELEMETRY_DISABLED=1` (so does `astro.config.mjs`): Ast
 ## `SITE_URL`
 
 One variable sets the canonicals, the sitemap, `robots.txt`, `llms.txt`, the OG image URLs and the host in the
-install command. Default `https://nex-copilot-one.vercel.app`.
+install command. Default `https://ava.nexprove.com`.
 
 ```bash
 SITE_URL=https://avicopilot.example pnpm build

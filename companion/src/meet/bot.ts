@@ -388,9 +388,9 @@ export class MeetBot {
     }
   }
 
-  /** When Nex Brain stops: out of any call, browser closed. */
+  /** When Ava Brain stops: out of any call, browser closed. */
   async shutdown(): Promise<void> {
-    if (ACTIVE.has(this.state)) await this.leave('Nex Brain stopped.');
+    if (ACTIVE.has(this.state)) await this.leave('Ava Brain stopped.');
     await this.closeBrowser();
   }
 }
