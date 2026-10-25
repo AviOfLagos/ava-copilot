@@ -12,6 +12,8 @@ from this file yet.
 | Talk to anyone | One wake word, "Hey Ava". Then a name routes: "Scout, find…" goes to Scout; no name, Ava routes by intent and says who took it. No per-agent wake words: each one is a model, a false-trigger risk and more mic time. |
 | Several agents have something to say | Ava holds the floor. One voice at a time, from a queue. Order: needs your click > answer to you > update. After an agent speaks, the next waits until you answer or a pause passes (default 2 min, setting). Background agents default to silent: they queue, they don't talk. |
 | "Ava, stop" / "everyone quiet" | Stops whoever speaks and pauses the queue. Per-agent mute from its card. Modes: Talk, Quiet (notifications only), Do not disturb. |
+| Say it your way | Commands are understood by meaning, not exact words. "Ava stop", "give me a sec", "hold on" all stop; "push the reminder forward a bit" snoozes it; "let's get back to that" resumes what was paused. A small local intent classifier runs first (fast, offline); the model is asked only when it isn't sure. Replaces today's exact-phrase matching (`matchAmbientSwitch`). |
+| Someone is speaking | A small speaking widget appears only while a voice plays and leaves when it stops: who is talking (name, colour, avatar), Pause / Play, Skip (next in the queue), Hide (for this turn). If an appear-and-leave widget proves unreliable, fall back to a fixed one. |
 | "Ava, what's new?" | One digest in Ava's voice: who did what, what waits for you. No agent whispering one thing at a time. |
 | Who just spoke? | Every spoken line is also a caption in the feed, with the agent's name, colour and avatar; tap to replay. The voice preview on each profile teaches you the voices. |
 | Reply to an agent | Each agent has a DM thread (the Inbox becomes the team chat). Messages are labelled From Avi / From Ava / From the agent. Ava can post into a DM ("Avi says: …"); the agent answers there; its answer is spoken only through the floor queue, or relayed in Ava's digest. |
@@ -62,12 +64,14 @@ extension stays as the browser's hands, paired as today. Computer use: evaluate 
 
 **P0 — now (trust):**
 1. Connections survive updates; connection health with one-click fixes. Diagnose calendar timeouts, Ollama, Docker.
-2. WhatsApp: stop messaging your own number.
+   Issue #12. Whether Vercel eve can carry the connections (OAuth, refresh, approvals): issue #13.
+2. WhatsApp: stop messaging your own number (in #12).
 3. Account check before acting, enforced.
 4. Short answers by default for Ava and every agent (a "Brief answers" setting, on by default).
 
 **P1 — next (a team, not a crowd):**
-5. The floor: one voice at a time, a speaking queue, Stop, Quiet / Do not disturb, captions with who spoke.
+5. The floor: one voice at a time, a speaking queue, Stop, Quiet / Do not disturb, captions with who spoke;
+   the speaking widget (pause, play, skip, hide); commands understood by meaning, not exact words.
 6. Agent DMs in the Inbox (From Avi / Ava / agent), and Ava relaying.
 7. Agent profile page: voice with Preview, mode, workspace and accounts, schedule, queue, run log, instructions.
 8. Global agent standards file; name routing by voice.
