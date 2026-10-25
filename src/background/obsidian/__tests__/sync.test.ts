@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AppError } from '@extension/shared';
 import { DEFAULT_OBSIDIAN_SYNC, DEFAULT_OBSIDIAN_VAULT } from '@extension/storage';
 import type { ObsidianSyncState, ObsidianVaultSetting, Workspace } from '@extension/storage';
-import { CHOOSE_AGAIN_MESSAGE, MAX_NOTE_BYTES, syncBrainVault } from '../sync';
+import { CHOOSE_AGAIN_MESSAGE, MAX_NOTE_BYTES, syncBrainVault, vaultToAdopt } from '../sync';
 import type { BrainVaultSyncDeps } from '../sync';
 
 const OURS = '---\nsource: avi-copilot\n---\n';
@@ -237,5 +237,30 @@ describe('syncBrainVault', () => {
     const { deps, getState } = harness({ setting: { path: null }, chosenId: null });
     await expect(syncBrainVault(deps)).rejects.toThrow(CHOOSE_AGAIN_MESSAGE);
     expect(getState().lastError).toBe(CHOOSE_AGAIN_MESSAGE);
+  });
+});
+
+describe('vaultToAdopt', () => {
+  const vault = (name: string, overrides: Partial<{ id: string; usable: boolean }> = {}) => ({
+    id: `v-${name}-${overrides.id ?? '1'}`,
+    name,
+    path: `/Users/me/${name}`,
+    found: 'obsidian' as const,
+    usable: overrides.usable ?? true,
+  });
+
+  it('picks the one vault named like the browser folder, whatever the case', () => {
+    expect(vaultToAdopt([vault('Notes'), vault('Work')], null, 'notes')?.name).toBe('Notes');
+  });
+
+  it('picks nothing without a folder name, with two of that name, or when it is not usable', () => {
+    expect(vaultToAdopt([vault('Notes')], null, null)).toBeNull();
+    expect(vaultToAdopt([vault('Notes'), vault('Notes', { id: '2' })], null, 'Notes')).toBeNull();
+    expect(vaultToAdopt([vault('Notes', { usable: false })], null, 'Notes')).toBeNull();
+  });
+
+  it('never replaces a different vault Ava Brain already has chosen', () => {
+    expect(vaultToAdopt([vault('Notes'), vault('Work')], vault('Work'), 'Notes')).toBeNull();
+    expect(vaultToAdopt([vault('Notes')], vault('Notes'), 'Notes')?.name).toBe('Notes');
   });
 });

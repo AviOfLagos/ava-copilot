@@ -221,6 +221,11 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
                 ? t('wava_settings_talksTo_owner', [formatNumber(status.ownerNumber)])
                 : t('wava_settings_talksTo_self')}
             </p>
+            {status?.needsFirstMessage && status.ownerNumber ? (
+              <p className="text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
+                {t('wava_settings_firstMessage', [formatNumber(status.ownerNumber)])}
+              </p>
+            ) : null}
             <Button
               variant="glass"
               size="sm"

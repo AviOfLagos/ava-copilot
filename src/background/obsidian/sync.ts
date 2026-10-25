@@ -1,6 +1,7 @@
 import { AppError, toAppError } from '@extension/shared';
 import type { ObsidianSyncState, ObsidianVaultSetting, Workspace } from '@extension/storage';
 import { EXPORT_ROOT, readFrontmatter } from '@src/side-panel/vault/markdown';
+import type { ObsidianVault } from '@src/shared/lib/protocol/companion';
 import type { CompanionClient } from '../companion/client';
 
 /**
@@ -202,4 +203,20 @@ export async function syncBrainVault(deps: BrainVaultSyncDeps): Promise<{ writte
     await deps.state.update({ lastSyncAt: now(), lastError: appError.message });
     throw appError;
   }
+}
+
+/**
+ * The vault to choose in Ava Brain for the folder this browser already had, by name: only one usable vault of
+ * that name, and only when Ava Brain has none chosen or has that very one (another browser's choice stays).
+ */
+export function vaultToAdopt(
+  vaults: ObsidianVault[],
+  chosen: ObsidianVault | null,
+  browserName: string | null,
+): ObsidianVault | null {
+  const name = browserName?.trim().toLowerCase();
+  if (!name) return null;
+  if (chosen) return chosen.usable && chosen.name.trim().toLowerCase() === name ? chosen : null;
+  const same = vaults.filter(vault => vault.usable && vault.name.trim().toLowerCase() === name);
+  return same.length === 1 ? same[0] : null;
 }

@@ -10044,5 +10044,20 @@
   },
   "speak_settings_preview": {
     "message": "試聽"
+  },
+  "wava_settings_firstMessage": {
+    "message": "還差一步：用你的手機（$OWNER$）傳任何訊息到 Ava 的號碼。在那之前，WhatsApp 不允許她先傳訊息給你。",
+    "placeholders": {
+      "owner": {
+        "content": "$1",
+        "example": "+234 801 234 5678"
+      }
+    }
+  },
+  "brain_docker_start": {
+    "message": "啟動 Docker"
+  },
+  "brain_docker_starting": {
+    "message": "正在啟動 Docker…"
   }
 }

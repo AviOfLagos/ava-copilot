@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SANDBOX_POLICY } from '@protocol';
 import { AppError, DOCKER_DOWN_MESSAGE, DOCKER_MISSING_MESSAGE } from '../errors';
 import { memoryLogger } from '../log';
-import { probeDocker, sandboxRunArgs } from '../sandbox/docker';
+import { dockerDownMessage, probeDocker, runtimeOfContext, sandboxRunArgs } from '../sandbox/docker';
 import { resolveInside, SandboxManager } from '../sandbox/manager';
 import { dockerUp, fakeRunner, tempDir } from './helpers';
 
@@ -81,7 +81,31 @@ describe('probeDocker', () => {
       fakeRunner(() => ({ code: 1, stderr: 'Cannot connect to the Docker daemon' })),
       'img',
     );
-    expect(state).toEqual({ state: 'down', message: DOCKER_DOWN_MESSAGE, version: null, imageReady: false });
+    expect(state).toEqual({
+      state: 'down',
+      message: DOCKER_DOWN_MESSAGE,
+      version: null,
+      imageReady: false,
+      runtime: null,
+    });
+  });
+
+  it('names the Docker this Mac uses when it is down', async () => {
+    const state = await probeDocker(
+      fakeRunner(call => (call.args[0] === 'context' ? { stdout: 'colima\n' } : { code: 1 })),
+      'img',
+    );
+    expect(state).toMatchObject({ state: 'down', runtime: 'colima' });
+    expect(state.message).toBe(dockerDownMessage('colima'));
+    expect(state.message).toMatch(/Colima/);
+  });
+
+  it('reads the runtime from the context name', () => {
+    expect(runtimeOfContext('colima')).toBe('colima');
+    expect(runtimeOfContext('colima-dev')).toBe('colima');
+    expect(runtimeOfContext('orbstack')).toBe('orbstack');
+    expect(runtimeOfContext('desktop-linux')).toBe('desktop');
+    expect(runtimeOfContext('my-remote')).toBeNull();
   });
 
   it('says Docker is missing', async () => {
@@ -124,6 +148,40 @@ describe('SandboxManager', () => {
       kind: 'unavailable',
       message: DOCKER_DOWN_MESSAGE,
     });
+  });
+
+  it('starts Colima when that is the Docker this Mac uses, then reports it up', async () => {
+    let started = false;
+    const run = fakeRunner(call => {
+      if (call.command === 'colima') {
+        started = true;
+        return { code: 0 };
+      }
+      if (call.args[0] === 'context') return { stdout: 'colima' };
+      if (call.args[0] === 'version') return started ? { stdout: '29.7.0' } : { code: 1 };
+      return { code: 0 };
+    });
+    const sandbox = new SandboxManager({ run, image: 'img', dataDir: dir(), log: memoryLogger() });
+    const state = await sandbox.startDocker();
+    expect(state).toMatchObject({ state: 'up', imageReady: true });
+    expect(run.calls.find(call => call.command === 'colima')!.args).toEqual(['start']);
+  });
+
+  it('opens Docker Desktop when that is the one, and never runs anything else', async () => {
+    let opened = false;
+    const run = fakeRunner(call => {
+      if (call.command === '/usr/bin/open') {
+        opened = true;
+        return { code: 0 };
+      }
+      if (call.args[0] === 'context') return { stdout: 'desktop-linux' };
+      if (call.args[0] === 'version') return opened ? { stdout: '29.7.0' } : { code: 1 };
+      return { code: 0 };
+    });
+    const sandbox = new SandboxManager({ run, image: 'img', dataDir: dir(), log: memoryLogger() });
+    await sandbox.startDocker();
+    expect(run.calls.find(call => call.command === '/usr/bin/open')!.args).toEqual(['-a', 'Docker']);
+    expect(run.calls.some(call => call.command === 'colima')).toBe(false);
   });
 
   it('stops a command at its time limit and kills its container', async () => {

@@ -160,6 +160,20 @@ describe('checkProvider', () => {
     expect(requests).toHaveLength(0);
   });
 
+  it('asks Ollama once more after putting the origin rules back when it refused', async () => {
+    const { fetch, requests } = fakeFetch({
+      'http://localhost:11434/api/tags': [{ status: 403 }, { json: { models: [{ name: 'qwen3.8:8b' }] } }],
+      'http://localhost:11434/api/show': { status: 404 },
+    });
+    const check = await checkProvider(
+      'ollama',
+      { apiKey: '', type: 'ollama' as never, baseUrl: 'http://localhost:11434/v1' },
+      { fetch, retryPolicy: quickRetry },
+    );
+    expect(check.health).toMatchObject({ status: 'ok' });
+    expect(requests.filter(request => request.url.endsWith('/api/tags'))).toHaveLength(2);
+  });
+
   it('reports a network failure as unreachable', async () => {
     const { fetch } = fakeFetch({ 'http://localhost:1234/': networkDown });
     const check = await checkProvider(

@@ -1,4 +1,4 @@
-import type { DockerState, SandboxPolicy } from '@protocol';
+import type { DockerRuntime, DockerState, SandboxPolicy } from '@protocol';
 import { AppError, DOCKER_DOWN_MESSAGE, DOCKER_MISSING_MESSAGE } from '../errors';
 import { hostToolEnv } from './process';
 import type { ProcessRunner } from './process';
@@ -96,7 +96,8 @@ export async function probeDocker(run: ProcessRunner, image: string): Promise<Do
     throw error;
   }
   if (version.code !== 0 || !version.stdout.trim()) {
-    return { state: 'down', message: DOCKER_DOWN_MESSAGE, version: null, imageReady: false };
+    const runtime = await dockerRuntime(run);
+    return { state: 'down', message: dockerDownMessage(runtime), version: null, imageReady: false, runtime };
   }
   const inspect = await run('docker', ['image', 'inspect', '--format', '{{.Id}}', image], { env, timeoutMs: 8000 });
   const imageReady = inspect.code === 0;
@@ -108,4 +109,36 @@ export async function probeDocker(run: ProcessRunner, image: string): Promise<Do
     version: version.stdout.trim().slice(0, 40),
     imageReady,
   };
+}
+
+/** Which Docker the user's Docker context points at; null when it is not one Start knows. */
+export function runtimeOfContext(name: string): DockerRuntime | null {
+  const context = name.trim().toLowerCase();
+  if (context.startsWith('colima')) return 'colima';
+  if (context === 'orbstack') return 'orbstack';
+  if (context === 'desktop-linux' || context === 'default') return 'desktop';
+  return null;
+}
+
+async function dockerRuntime(run: ProcessRunner): Promise<DockerRuntime | null> {
+  try {
+    const result = await run('docker', ['context', 'show'], { env: hostToolEnv(), timeoutMs: 5000 });
+    return result.code === 0 ? runtimeOfContext(result.stdout) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** What to say when Docker does not answer, naming the one this Mac uses. */
+export function dockerDownMessage(runtime: DockerRuntime | null): string {
+  switch (runtime) {
+    case 'colima':
+      return 'Docker (Colima) is not running. Press Start Docker, or run `colima start`.';
+    case 'orbstack':
+      return 'OrbStack is not running. Press Start Docker.';
+    case 'desktop':
+      return 'Docker Desktop is not running. Press Start Docker.';
+    default:
+      return DOCKER_DOWN_MESSAGE;
+  }
 }

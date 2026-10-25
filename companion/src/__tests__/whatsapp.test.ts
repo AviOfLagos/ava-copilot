@@ -7,6 +7,7 @@ import { numberOfJid } from '../whatsapp/driver';
 import { incomingOf, qrOf } from '../whatsapp/openwa';
 import {
   AWAY_TEXT,
+  FIRST_MESSAGE_TEXT,
   FORWARDED_TEXT,
   inQuietHours,
   OWN_MARK,
@@ -199,6 +200,32 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     expect(service.pull().map(item => item.text)).toEqual(['it is me']);
     await expect(service.sendTo('99999@lid', 'hi')).rejects.toMatchObject({ kind: 'forbidden' });
     await service.sendTo('77777@lid', 'hi');
+  });
+
+  it('asks the owner to write first when WhatsApp will not open a new chat, and clears it once he does', async () => {
+    const { driver, service, settle } = await linked();
+    service.setOwner(OTHER_OWNER);
+    const send = driver.sendText.bind(driver);
+    driver.sendText = async () => {
+      throw new Error('send_text_unknown_number_requires_license');
+    };
+    await expect(service.send({ text: 'a notice', kind: 'brief' })).rejects.toMatchObject({
+      kind: 'forbidden',
+      message: FIRST_MESSAGE_TEXT,
+    });
+    expect(service.status()).toMatchObject({ needsFirstMessage: true, sentLastHour: 0 });
+    // Any other failure is not this one
+    driver.sendText = async () => {
+      throw new Error('socket closed');
+    };
+    await expect(service.send({ text: 'again', kind: 'brief' })).rejects.toThrow('socket closed');
+    driver.sendText = send;
+    driver.deliver({ id: 'w', chatId: '55555@lid', fromMe: false, body: 'hi Ava', senderNumber: OTHER_OWNER });
+    await settle();
+    expect(service.status().needsFirstMessage).toBe(false);
+    // The chat he wrote from is the one that exists: her next notice goes there
+    await service.send({ text: 'got it', kind: 'brief' });
+    expect(driver.sent.at(-1)).toEqual({ chatId: '55555@lid', text: 'got it' });
   });
 
   it('answers media once with “text only” and does not queue it', async () => {

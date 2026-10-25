@@ -104,14 +104,23 @@ export async function readFromSources(
   sources: CalendarSource[],
   from: number,
   to: number,
-): Promise<{ events: CalendarEvent[]; source: CalendarSourceName | null; error: string | null }> {
+): Promise<{
+  events: CalendarEvent[];
+  source: CalendarSourceName | null;
+  error: string | null;
+  // The Mac refused because Ava Brain lost (or never had) Calendar permission: one click on the Mac fixes it
+  macNeedsAccess?: boolean;
+}> {
   let firstError: string | null = null;
+  let macNeedsAccess = false;
   for (const source of sources) {
     try {
       return { events: await source.read(from, to), source: source.name, error: null };
     } catch (error) {
-      firstError ??= toAppError(error).message;
+      const appError = toAppError(error);
+      firstError ??= appError.message;
+      if (source.name === 'mac' && appError.kind === 'forbidden') macNeedsAccess = true;
     }
   }
-  return { events: [], source: null, error: firstError };
+  return { events: [], source: null, error: firstError, macNeedsAccess };
 }

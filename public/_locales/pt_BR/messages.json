@@ -10044,5 +10044,20 @@
   },
   "speak_settings_preview": {
     "message": "Ouvir"
+  },
+  "wava_settings_firstMessage": {
+    "message": "Falta um passo: do seu celular ($OWNER$), envie qualquer mensagem para o número da Ava. Até lá o WhatsApp não deixa ela escrever para você primeiro.",
+    "placeholders": {
+      "owner": {
+        "content": "$1",
+        "example": "+234 801 234 5678"
+      }
+    }
+  },
+  "brain_docker_start": {
+    "message": "Iniciar Docker"
+  },
+  "brain_docker_starting": {
+    "message": "Iniciando Docker…"
   }
 }

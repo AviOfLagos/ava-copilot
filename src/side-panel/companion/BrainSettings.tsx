@@ -4,6 +4,7 @@ import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import { brainSettingsStore, brainStatusStore } from '@src/background/companion/state';
 import type { BrainSettings as BrainSettingsValue, BrainStatus } from '@src/background/companion/state';
+import { DOCKER_START_TIMEOUT_MS } from '@src/shared/lib/protocol/companion';
 import type { Artifact } from '@src/shared/lib/protocol/companion';
 import { Button } from '../components/ui/button';
 import type { PanelApi } from '../registry';
@@ -63,7 +64,7 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
   const { settings, status } = useBrainState();
   const [code, setCode] = useState('');
   const [port, setPort] = useState('');
-  const [busy, setBusy] = useState<'pair' | 'check' | 'unpair' | null>(null);
+  const [busy, setBusy] = useState<'pair' | 'check' | 'unpair' | 'docker' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
 
@@ -72,11 +73,12 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
   }, [settings, port]);
 
   const run = useCallback(
-    async (kind: 'pair' | 'check' | 'unpair', message: Record<string, unknown>) => {
+    async (kind: 'pair' | 'check' | 'unpair' | 'docker', message: Record<string, unknown>) => {
       setBusy(kind);
       setError(null);
       try {
-        await api.request(message, 20_000);
+        // Starting Docker waits for it to come up (Colima takes a minute or two)
+        await api.request(message, kind === 'docker' ? DOCKER_START_TIMEOUT_MS + 20_000 : 20_000);
         if (kind === 'pair') setCode('');
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
@@ -202,6 +204,18 @@ export default function BrainSettings({ api }: { api: PanelApi }) {
                     ? t('brain_docker_noImage')
                     : t('brain_docker_down')}
               </span>
+            </div>
+          ) : null}
+          {status.docker && status.docker.state === 'down' ? (
+            <div className="flex items-center justify-between gap-3 px-3 pb-2.5" data-brain-docker="down">
+              <p className="text-muted-foreground text-[11.5px]">{status.docker.message}</p>
+              <Button
+                size="sm"
+                variant="glass"
+                disabled={busy !== null}
+                onClick={() => void run('docker', { type: 'brain_docker_start' })}>
+                {busy === 'docker' ? t('brain_docker_starting') : t('brain_docker_start')}
+              </Button>
             </div>
           ) : null}
           {status.engine ? (

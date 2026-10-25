@@ -8,6 +8,9 @@ import {
   artifactOpenReplySchema,
   BACKUP_ROUTES,
   CALENDAR_ROUTES,
+  DOCKER_ROUTES,
+  DOCKER_START_TIMEOUT_MS,
+  dockerStartReplySchema,
   calendarEventsReplySchema,
   calendarStatusReplySchema,
   OBSIDIAN_ROUTES,
@@ -956,6 +959,18 @@ export class CompanionClient {
       idempotent: true,
       bypassBreaker: options.bypassBreaker,
       timeoutMs: 40_000,
+    });
+  }
+
+  /** Starts the Mac's Docker (Colima, Docker Desktop or OrbStack); answers once it is up or gave up. */
+  dockerStart() {
+    return this.call({
+      method: 'POST',
+      path: DOCKER_ROUTES.start,
+      body: {},
+      schema: dockerStartReplySchema,
+      bypassBreaker: true,
+      timeoutMs: DOCKER_START_TIMEOUT_MS + 10_000,
     });
   }
 
