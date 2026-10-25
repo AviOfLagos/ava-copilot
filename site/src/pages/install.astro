@@ -1,12 +1,15 @@
 ---
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Bell, Download, MonitorSmartphone, PanelRight, Rss, Terminal, Code2 } from 'lucide-react';
 import InstallCommand from '../components/InstallCommand.astro';
 import { PRODUCT, install, links } from '../content/site';
 import Base from '../layouts/Base.astro';
 import { pageGraph } from '../lib/seo';
+import '../styles/pages.css';
 
 const path = links.install;
-const { tabs, script, load, update, remove, voices, brain } = install;
+const { tabs, script, load, update, remove, voices, brain, paths, notify } = install;
+const pathIcons = { download: Download, terminal: Terminal, source: Code2 };
+const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
 ---
 
 <Base
@@ -28,7 +31,39 @@ const { tabs, script, load, update, remove, voices, brain } = install;
       <p class="lede">{install.lede}</p>
     </header>
 
-    <section class="block" aria-labelledby="download-title">
+    <section class="block" aria-labelledby="paths-title">
+      <div class="block-head">
+        <h2 class="h2" id="paths-title">{install.pathsTitle}</h2>
+      </div>
+      <ul class="paths">
+        {
+          paths.map(item => {
+            const Icon = pathIcons[item.id as keyof typeof pathIcons];
+            return (
+              <li>
+                <a class="path panel-card" href={item.href} style="height: 100%">
+                  <span class="way__icon" aria-hidden="true">
+                    <Icon />
+                  </span>
+                  <h3 class="h3">{item.title}</h3>
+                  <p>{item.body}</p>
+                  <span>
+                    <span class="arrow-link">
+                      {item.action} <ArrowRight aria-hidden="true" />
+                    </span>
+                    <span class="label" style="display: block; margin-top: 6px; text-transform: none; letter-spacing: 0">
+                      {item.then}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+
+    <section class="block" id="download" aria-labelledby="download-title">
       <div class="block-head">
         <p class="label">Step 1</p>
         <h2 class="h2" id="download-title">Download it</h2>
@@ -122,6 +157,36 @@ const { tabs, script, load, update, remove, voices, brain } = install;
         }
       </div>
       <p class="callout" style="margin-top: 16px">{load.first}</p>
+    </section>
+
+    <section class="block" id={notify.id} aria-labelledby="notify-title">
+      <div class="block-head">
+        <p class="label">After</p>
+        <h2 class="h2" id="notify-title">{notify.title}</h2>
+        <p class="prose">{notify.body}</p>
+      </div>
+      <ul class="ways ways--four">
+        {
+          notify.items.map((item, index) => {
+            const Icon = notifyIcons[index];
+            return (
+              <li class="way panel-card">
+                <span class="way__icon" aria-hidden="true">
+                  <Icon />
+                </span>
+                <h3 class="h3">{item.title}</h3>
+                <p>{item.text}</p>
+              </li>
+            );
+          })
+        }
+      </ul>
+      <p style="margin-top: var(--s5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s5)">
+        <a class="arrow-link" href={notify.feed.href}>
+          {notify.feed.label} <ArrowRight aria-hidden="true" />
+        </a>
+        <span class="label" style="text-transform: none; letter-spacing: 0">{notify.store}</span>
+      </p>
     </section>
 
     <section class="block" aria-labelledby="keep-title">

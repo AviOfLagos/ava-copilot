@@ -1,0 +1,548 @@
+/* The project pages: features, roadmap, contribute and donate. Built on site.css's tokens, glass and type. */
+
+/* ─── Status marks: live is mint (the product's "done"), preview is plain, planned is dashed ─────────────────── */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.status--live {
+  border-color: rgb(var(--primary-rgb) / 0.45);
+  background: rgb(var(--primary-rgb) / 0.12);
+  color: var(--mint-ink);
+}
+
+.status--preview {
+  color: var(--ink);
+}
+
+.status--planned {
+  border-style: dashed;
+}
+
+.status--planned::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+[data-theme='light'] .status--live {
+  color: #0b7a5e;
+}
+
+/* ─── The legend and the jump chips under a page's heading ──────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3) var(--s5);
+  margin: var(--s5) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: var(--text-small);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.jump {
+  position: sticky;
+  top: 84px;
+  z-index: 5;
+  margin-top: var(--s6);
+  padding: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, var(--glass-top), var(--glass-bottom)), color-mix(in srgb, var(--bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jump::-webkit-scrollbar {
+  display: none;
+}
+
+.jump ul {
+  display: flex;
+  gap: 2px;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jump a {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  color: var(--ink-2);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jump a:hover {
+  color: var(--ink);
+  background: var(--fill-hover);
+}
+
+/* ─── Feature groups ────────────────────────────────────────────────────────────────────────────────────────── */
+
+.feature-group {
+  scroll-margin-top: 150px;
+}
+
+.feature-group .block-head .kicker {
+  color: var(--ink-2);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature {
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+  padding: var(--s5);
+}
+
+.feature__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.feature h3 {
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.feature p {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+  line-height: 24px;
+}
+
+.feature--planned {
+  background: transparent;
+  box-shadow: none;
+  border-style: dashed;
+}
+
+@media (max-width: 959px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The rules that never bend: numbered, large */
+.rules-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rule;
+  border-top: 1px solid var(--line);
+}
+
+.rules-list li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--s4);
+  padding: var(--s5) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  counter-increment: rule;
+}
+
+.rules-list li::before {
+  content: counter(rule, decimal-leading-zero);
+  color: var(--mint-ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 2.2;
+}
+
+[data-theme='light'] .rules-list li::before {
+  color: #0b7a5e;
+}
+
+/* ─── Roadmap ───────────────────────────────────────────────────────────────────────────────────────────────── */
+
+.roadmap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  align-items: start;
+}
+
+.roadmap__column {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+}
+
+.roadmap__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s2) var(--s2) var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+
+.roadmap__head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.roadmap__column ul {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap__item {
+  display: grid;
+  gap: 4px;
+  padding: var(--s3) var(--s3) var(--s4);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--fill);
+}
+
+.roadmap__item h3 {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.roadmap__item p {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.roadmap__column--now .roadmap__head h2::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 10px;
+  border-radius: 50%;
+  background: var(--mint);
+  vertical-align: middle;
+  box-shadow: 0 0 0 4px rgb(var(--primary-rgb) / 0.18);
+}
+
+@media (max-width: 899px) {
+  .roadmap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.shipped {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.shipped li {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--s4);
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.shipped time {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 28px;
+}
+
+@media (max-width: 559px) {
+  .shipped li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* ─── Contribute ────────────────────────────────────────────────────────────────────────────────────────────── */
+
+.ways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.way {
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+  padding: var(--s5);
+}
+
+.way__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: var(--s2);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--fill);
+  color: var(--mint-ink);
+}
+
+[data-theme='light'] .way__icon {
+  color: #0b7a5e;
+}
+
+.way__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.way p {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+  line-height: 24px;
+}
+
+@media (min-width: 1100px) {
+  .ways--four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .ways {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 559px) {
+  .ways {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.steps {
+  display: grid;
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps > li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+  counter-increment: step;
+}
+
+.steps > li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.steps h3 {
+  margin-bottom: var(--s2);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.steps p {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+}
+
+/* A code line in running content: mono, selectable, wraps instead of overflowing */
+.code-line {
+  display: block;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--stage-solid);
+  color: var(--page-ink);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+[data-theme='light'] .code-line {
+  background: #1a1d24;
+  color: #e5e8ef;
+}
+
+.callout--note {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+  margin-top: var(--s5);
+}
+
+.callout--note svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+}
+
+/* ─── Donate ────────────────────────────────────────────────────────────────────────────────────────────────── */
+
+.channels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.channel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--s3);
+  padding: var(--s5);
+}
+
+.channel p {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+  line-height: 24px;
+}
+
+.channel .coming {
+  min-height: 44px;
+  justify-content: center;
+  font-size: 13px;
+}
+
+@media (max-width: 799px) {
+  .channels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ─── Install: three ways in, and how you hear about updates ────────────────────────────────────────────────── */
+
+.paths {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.path {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--s2);
+  padding: var(--s5);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
+}
+
+.path:hover {
+  border-color: var(--line-2);
+}
+
+.path p {
+  color: var(--ink-2);
+  font-size: var(--text-small);
+  line-height: 24px;
+}
+
+.path .arrow-link {
+  margin-top: var(--s2);
+}
+
+@media (max-width: 859px) {
+  .paths {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

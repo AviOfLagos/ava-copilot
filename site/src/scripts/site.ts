@@ -185,6 +185,27 @@ function setupTabs() {
   });
 }
 
+/** The phone menu (a <details> in the header): closes on Esc, on a click outside it, and when a link is followed. */
+function setupMenu() {
+  const menu = document.querySelector<HTMLDetailsElement>('[data-site-menu]');
+  if (!menu) return;
+  const close = () => {
+    if (menu.open) menu.open = false;
+  };
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !menu.open) return;
+    close();
+    menu.querySelector('summary')?.focus();
+  });
+  document.addEventListener('click', event => {
+    if (menu.open && !menu.contains(event.target as Node)) close();
+  });
+  menu.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
+  // A wide window has the links in the bar: a menu left open there is closed
+  matchMedia('(min-width: 760px)').addEventListener('change', event => event.matches && close());
+}
+
 setupTheme();
 setupCopy();
 setupTabs();
+setupMenu();

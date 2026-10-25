@@ -22,7 +22,7 @@ import { gzipSync } from 'node:zlib';
 import puppeteer, { PredefinedNetworkConditions } from 'puppeteer-core';
 import { serve } from './serve.mjs';
 
-const ROUTES = ['/', '/install', '/privacy', '/no-such-page'];
+const ROUTES = ['/', '/install', '/privacy', '/features', '/roadmap', '/contribute', '/donate', '/no-such-page'];
 const WIDTHS = [390, 768, 1280, 1440];
 const THEMES = ['dark', 'light'];
 // The home page's parts, in order: [id, globe spot expected on wide screens]

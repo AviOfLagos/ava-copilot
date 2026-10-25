@@ -1,0 +1,77 @@
+---
+import { ArrowRight } from 'lucide-react';
+import { projectLinks, roadmap } from '../content/project';
+import { PRODUCT } from '../content/site';
+import Base from '../layouts/Base.astro';
+import { pageGraph } from '../lib/seo';
+import '../styles/pages.css';
+
+const path = projectLinks.roadmap;
+---
+
+<Base
+  title={roadmap.title}
+  description={roadmap.description}
+  path={path}
+  og="home"
+  ogAlt={roadmap.ogAlt}
+  graph={pageGraph(path, roadmap.title, roadmap.description, roadmap.breadcrumb)}>
+  <div class="wrap">
+    <header class="page-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><span aria-current="page">{roadmap.breadcrumb}</span></li>
+        </ol>
+      </nav>
+      <h1 class="display">{roadmap.heading}</h1>
+      <p class="lede">{roadmap.lede}</p>
+    </header>
+
+    <div class="block">
+      <div class="roadmap">
+        {
+          roadmap.columns.map(column => (
+            <section
+              class={`roadmap__column roadmap__column--${column.id} panel-card`}
+              aria-labelledby={`${column.id}-title`}>
+              <div class="roadmap__head">
+                <h2 id={`${column.id}-title`}>{column.title}</h2>
+                <span class="label">{column.items.length}</span>
+              </div>
+              <ul>
+                {column.items.map(item => (
+                  <li class="roadmap__item">
+                    <h3>{item.name}</h3>
+                    <p>{item.body}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+
+    <section class="block" aria-labelledby="shipped-title">
+      <div class="block-head">
+        <h2 class="h2" id="shipped-title">{roadmap.doneTitle}</h2>
+      </div>
+      <ul class="shipped">
+        {
+          roadmap.done.map(item => (
+            <li>
+              <time datetime={item.date}>{item.date}</time>
+              <span>{item.text}</span>
+            </li>
+          ))
+        }
+      </ul>
+      <p style="margin-top: var(--s6); display: flex; flex-wrap: wrap; gap: var(--s5)">
+        <a class="arrow-link" href={projectLinks.features}>Every feature, live and planned <ArrowRight aria-hidden="true" /></a>
+        <a class="arrow-link" href={projectLinks.contribute}>Help build one <ArrowRight aria-hidden="true" /></a>
+      </p>
+    </section>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>
