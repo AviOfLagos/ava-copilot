@@ -47,6 +47,12 @@ export const FIRST_MESSAGE_TEXT =
 export const CONNECTED_TEXT = "Connected. I'll answer you here.";
 // The code the owner sends from his phone to say "this chat is mine" stays good this long
 export const CONNECT_CODE_MS = 15 * 60_000;
+// Letters and digits that cannot be mistaken for each other (no 0/O, 1/I/L)
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_LENGTH = 8;
+// Code-like messages from other chats while a code waits: this many and the code is thrown away
+export const CONNECT_MAX_MISSES = 5;
+const CODE_LIKE = /^\s*AVA-/i;
 const NEW_CHAT_REFUSED = /licen[cs]e|unknown_number|new number/i;
 export const FORWARDED_TEXT =
   'I only act on messages you type yourself. If you want me to look at a forwarded one, tell me in your own words.';
@@ -80,7 +86,7 @@ interface Saved {
   // A send to the owner was refused until he writes to Ava's number first (FIRST_MESSAGE_TEXT)
   needsFirstMessage: boolean;
   // The code he sends from his phone to make that chat his (WhatsApp may hide his number behind a @lid id)
-  connectCode: { code: string; until: number } | null;
+  connectCode: { code: string; until: number; misses?: number } | null;
   // When his last message came in and Ava's last went out (times only)
   lastInAt: number | null;
   lastOutAt: number | null;
@@ -215,7 +221,8 @@ export class WhatsAppService {
    */
   startConnect(): WhatsAppStatus {
     if (this.state !== 'linked') fail('unavailable', 'WhatsApp is not linked on your Mac.');
-    this.saved.connectCode = { code: `AVA-${randomInt(1000, 10_000)}`, until: this.now() + CONNECT_CODE_MS };
+    const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
+    this.saved.connectCode = { code: `AVA-${code}`, until: this.now() + CONNECT_CODE_MS, misses: 0 };
     this.save();
     return this.status();
   }
@@ -495,12 +502,28 @@ export class WhatsAppService {
     this.saved.ownerAliases = [...this.saved.ownerAliases.filter(id => id !== chatId), chatId].slice(-5);
   }
 
-  /** His connect code, sent from his phone: that chat becomes his, and Ava says so there. */
+  /**
+   * His connect code, sent from his phone: that chat becomes his, and Ava says so there. The message must be the
+   * code and nothing else (no list of guesses), typed rather than forwarded, from his number when WhatsApp shows
+   * one; a few wrong code-like messages and the code is gone, so it cannot be guessed.
+   */
   private async connectFrom(message: WaIncoming): Promise<boolean> {
     const code = this.pendingCode();
     if (!code || message.fromMe || message.isGroup || message.type !== 'chat') return false;
     if (/@(g\.us|broadcast|newsletter)$/.test(message.chatId) || this.isSelfChat(message.chatId)) return false;
-    if (!message.body.toUpperCase().includes(code)) return false;
+    if (!CODE_LIKE.test(message.body)) return false;
+    const owner = this.saved.ownerNumber;
+    const wrongSender = Boolean(owner && message.senderNumber && message.senderNumber !== owner);
+    if (message.body.trim().toUpperCase() !== code || message.forwarded || wrongSender) {
+      const pending = this.saved.connectCode!;
+      pending.misses = (pending.misses ?? 0) + 1;
+      if (pending.misses >= CONNECT_MAX_MISSES) {
+        this.saved.connectCode = null;
+        this.deps.log.warn('WhatsApp connect code thrown away after wrong tries');
+      }
+      this.save();
+      return true;
+    }
     // A code in synced history is not him sending it now
     const at = millisOf(message.at);
     if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;

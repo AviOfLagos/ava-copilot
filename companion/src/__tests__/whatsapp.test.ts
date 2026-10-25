@@ -8,6 +8,7 @@ import { incomingOf, qrOf } from '../whatsapp/openwa';
 import {
   AWAY_TEXT,
   CONNECT_CODE_MS,
+  CONNECT_MAX_MISSES,
   CONNECTED_TEXT,
   FIRST_MESSAGE_TEXT,
   FORWARDED_TEXT,
@@ -243,7 +244,7 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     expect(service.pull()).toEqual([]);
 
     const { connectCode } = service.startConnect();
-    expect(connectCode).toMatch(/^AVA-\d{4}$/);
+    expect(connectCode).toMatch(/^AVA-[A-HJ-NP-Z2-9]{8}$/);
     expect(service.status()).toMatchObject({ phoneConnected: false, connectCode });
     // Another chat sending something else does not connect
     driver.deliver({ id: 'x', chatId: '33333@lid', fromMe: false, body: 'AVA-0000', senderNumber: null });
@@ -267,6 +268,25 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     await service.send({ text: 'A notice', kind: 'brief' });
     expect(driver.sent.slice(-2).map(item => item.chatId)).toEqual(['44444@lid', '44444@lid']);
     expect(service.status().lastOutAt).not.toBeNull();
+  });
+
+  it('cannot be guessed: only the exact code, typed, and a few wrong tries end it', async () => {
+    const { driver, service, settle } = await linked();
+    service.setOwner(OTHER_OWNER);
+    const { connectCode } = service.startConnect();
+    const from = { chatId: '22222@lid', fromMe: false, senderNumber: null };
+    // A list of guesses that contains the code, a forwarded code, and the code from someone else's number
+    driver.deliver({ ...from, id: 'g1', body: `AVA-AAAAAAAA ${connectCode} AVA-BBBBBBBB` });
+    driver.deliver({ ...from, id: 'g2', body: connectCode!, forwarded: true });
+    driver.deliver({ ...from, id: 'g3', body: connectCode!, senderNumber: '2348099999999' });
+    await settle();
+    expect(service.status()).toMatchObject({ phoneConnected: false, connectCode });
+    for (let i = 3; i < CONNECT_MAX_MISSES; i++) driver.deliver({ ...from, id: `w${i}`, body: `AVA-WRONG${i}` });
+    await settle();
+    expect(service.status().connectCode).toBeNull();
+    driver.deliver({ ...from, id: 'late', body: connectCode! });
+    await settle();
+    expect(service.status().phoneConnected).toBe(false);
   });
 
   it('lets a connect code lapse after 15 minutes', async () => {
