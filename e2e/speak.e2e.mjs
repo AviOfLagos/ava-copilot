@@ -96,6 +96,11 @@ async function clickRobust(page, label, timeout = 5000) {
 before(async () => {
   mock = await startMockLlm(scenarios);
   extension = await launchExtension(mock);
+  // These tests are about the system voices (chrome.tts): pick them, so a build with a local voice installed
+  // (which read-aloud otherwise prefers) still speaks through chrome.tts
+  await extension.setStorage({
+    'tts-settings': { readAloud: 'voice', engine: 'system', engineChosen: true, voice: '', rate: 1, lastSpokenMessageId: null },
+  });
 });
 
 after(async () => {

@@ -1,6 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
+import type { InstalledVoiceModels } from './voiceEngineSettings';
 
 // When answers are read aloud without being asked: never, only after the user spoke, or always
 export type ReadAloudMode = 'off' | 'voice' | 'always';
@@ -29,6 +30,21 @@ export const DEFAULT_TTS_SETTINGS: TtsSettingsConfig = {
   rate: 1,
   lastSpokenMessageId: null,
 };
+
+/**
+ * Which engine reads answers aloud. The user's pick, once they made one; until then a voice on this computer when one
+ * is installed (KittenTTS, then Kokoro), because the system voices are the roughest; the system voices only when
+ * neither is there.
+ */
+export function effectiveTtsEngine(
+  settings: Pick<TtsSettingsConfig, 'engine' | 'engineChosen'>,
+  installed: InstalledVoiceModels | null,
+): TtsEngineId {
+  if (settings.engineChosen) return settings.engine;
+  if (installed?.kitten) return 'kitten';
+  if (installed?.kokoro) return 'kokoro';
+  return settings.engine;
+}
 
 export type TtsSettingsStorage = BaseStorage<TtsSettingsConfig> & {
   getSettings: () => Promise<TtsSettingsConfig>;

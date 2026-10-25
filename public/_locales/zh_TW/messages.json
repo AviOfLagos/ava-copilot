@@ -9995,5 +9995,54 @@
   },
   "feedback_note": {
     "message": "會開啟 GitHub，並已填好你的版本與瀏覽器。在你於該處送出之前不會傳送任何內容；需要 GitHub 帳號。"
+  },
+  "whatsnew_title": {
+    "message": "已更新為 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot 0.2.1"
+      }
+    }
+  },
+  "whatsnew_from": {
+    "message": "你原本使用 $VERSION$。以下是變更內容：",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "whatsnew_noNotes": {
+    "message": "此版本的說明在「設定 › 說明 › 更新」。"
+  },
+  "whatsnew_ok": {
+    "message": "知道了"
+  },
+  "whatsnew_more": {
+    "message": "版本說明"
+  },
+  "whatsnew_close": {
+    "message": "關閉新功能說明"
+  },
+  "whatsnew_notify_title": {
+    "message": "$NAME$ 已更新為 $VERSION$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot"
+      },
+      "version": {
+        "content": "$2",
+        "example": "0.2.1"
+      }
+    }
+  },
+  "whatsnew_notify_body": {
+    "message": "開啟側邊欄看看有什麼新功能。"
+  },
+  "speak_settings_preview": {
+    "message": "試聽"
   }
 }

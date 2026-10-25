@@ -24,7 +24,8 @@ const jsonResponse = (value: unknown) =>
 
 const { brainStatusStore } = await import('../../companion/state');
 const { updateSettingsStore } = await import('../state');
-const { runCheck } = await import('../register');
+const { noteUpdated, runCheck } = await import('../register');
+const { updateStatusStore } = await import('../state');
 
 describe('runCheck', () => {
   beforeEach(async () => {
@@ -95,5 +96,33 @@ describe('runCheck', () => {
     const manual = await runCheck({ manual: true });
     expect(manual.checkedAt).not.toBeNull();
     expect(manual.extensionUpdateAvailable).toBe(true);
+  });
+});
+
+describe('noteUpdated', () => {
+  beforeEach(() => {
+    stub.local.clear();
+    stub.notifications.calls.length = 0;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('remembers an update from an older version, says so once, and reads this version’s notes', async () => {
+    vi.stubGlobal('fetch', async () => jsonResponse({ ...GOOD_BODY, version: '1.3.0' }));
+    expect(await noteUpdated('1.2.0', 1000)).toBe(true);
+    const status = await updateStatusStore.getStatus();
+    expect(status.justUpdated).toEqual({ from: '1.2.0', to: '1.3.0', at: 1000 });
+    expect(status.info?.version).toBe('1.3.0');
+    expect(stub.notifications.calls.map(call => call.id)).toEqual(['updated:1.3.0']);
+  });
+
+  it('ignores a reload of the same version, and an unknown previous one', async () => {
+    vi.stubGlobal('fetch', async () => jsonResponse(GOOD_BODY));
+    expect(await noteUpdated('1.3.0')).toBe(false);
+    expect(await noteUpdated(undefined)).toBe(false);
+    expect((await updateStatusStore.getStatus()).justUpdated).toBeNull();
+    expect(stub.notifications.calls).toHaveLength(0);
   });
 });

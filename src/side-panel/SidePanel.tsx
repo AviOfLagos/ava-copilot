@@ -58,6 +58,7 @@ import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
 import UpdateBanner from './update/UpdateBanner';
+import WhatsNewCard from './update/WhatsNewCard';
 
 // A thread tag: the user answered "Save as skill?" for this chat
 const SKILL_OFFERED_TAG = 'skill:offered';
@@ -885,6 +886,7 @@ const SidePanel = () => {
         onPersonalities={() => void openSettingsPage('#personalities')}
       />
 
+      {(view === 'home' || view === 'chat') && <WhatsNewCard api={panelApi} />}
       {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
 
       {elsewhere?.pendingRequest && (
