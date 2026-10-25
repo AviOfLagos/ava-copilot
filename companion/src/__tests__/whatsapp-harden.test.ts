@@ -124,6 +124,17 @@ describe('the session browser', () => {
     await driver.launch({ args: ['--disable-gpu'] });
     expect(launched).toEqual([{ args: ['--disable-gpu', BLOCKED_HOSTS_RULE], pipe: true }]);
 
+    // The kept profile goes to every launch, so the link survives a restart; one the caller set stays
+    const Kept = hardenedDriverClass(FakePuppeteerDriver, '/data/whatsapp/session/browser');
+    const kept = new Kept() as unknown as FakePuppeteerDriver;
+    await kept.init();
+    await kept.launch({ args: [] });
+    await kept.launch({ args: [], userDataDir: '/elsewhere' });
+    expect(launched.slice(1).map(options => options.userDataDir)).toEqual([
+      '/data/whatsapp/session/browser',
+      '/elsewhere',
+    ]);
+
     class Unsecurable {
       async init() {}
     }

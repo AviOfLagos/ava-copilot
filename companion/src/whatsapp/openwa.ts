@@ -29,8 +29,8 @@ interface OpenWaClient {
 
 interface OpenWaModule {
   create: (config: Record<string, unknown>) => Promise<OpenWaClient>;
-  // The browser driver open-wa runs, made safe (./harden.ts); a new one per session
-  driver: () => unknown;
+  // The browser driver open-wa runs, made safe (./harden.ts); a new one per session, with its kept profile
+  driver: (userDataDir: string) => unknown;
   ev?: {
     on: (event: string, listener: (...args: unknown[]) => void) => void;
     off?: (event: string, listener: (...args: unknown[]) => void) => void;
@@ -116,7 +116,7 @@ export function openWaDriver(log: Logger, load: () => Promise<OpenWaModule> = lo
           listeners.push([name, onQr]);
         }
         const config = {
-          driver: module.driver(),
+          driver: module.driver(join(options.sessionDir, 'browser')),
           sessionId: SESSION_ID,
           sessionDataPath: options.sessionDir,
           userDataDir: join(options.sessionDir, 'browser'),
@@ -204,8 +204,10 @@ type DriverClass = new () => { init(ctx?: unknown): Promise<void> };
 /**
  * open-wa's own Puppeteer driver, with every launch hardened (a debugging pipe instead of a port, no
  * certificate bypass, telemetry hosts unresolvable). Fails rather than fall back to the unhardened driver.
+ * The driver does not pass open-wa's `userDataDir` on, so Puppeteer would use a throwaway profile and the link
+ * would be lost at every restart: the kept profile folder is given to every launch here.
  */
-export function hardenedDriverClass(Base: DriverClass): DriverClass {
+export function hardenedDriverClass(Base: DriverClass, userDataDir?: string): DriverClass {
   return class HardenedPuppeteerDriver extends Base {
     override async init(ctx?: unknown): Promise<void> {
       await super.init(ctx);
@@ -215,7 +217,8 @@ export function hardenedDriverClass(Base: DriverClass): DriverClass {
         throw new Error('The WhatsApp browser cannot be secured.');
       const launch = puppeteer.launch.bind(puppeteer);
       self.puppeteer = Object.assign(Object.create(puppeteer) as PuppeteerLike, {
-        launch: (options: Record<string, unknown>) => launch(hardenLaunch(options)),
+        launch: (options: Record<string, unknown>) =>
+          launch(hardenLaunch(userDataDir && !options.userDataDir ? { ...options, userDataDir } : options)),
       });
     }
   };
@@ -231,6 +234,9 @@ async function loadOpenWa(): Promise<OpenWaModule> {
   const fromOpenWa = createRequire(createRequire(import.meta.url).resolve('@open-wa/wa-automate'));
   const { PuppeteerDriver } = fromOpenWa('@open-wa/driver-puppeteer') as { PuppeteerDriver?: DriverClass };
   if (typeof PuppeteerDriver !== 'function') throw new Error('The WhatsApp browser driver is not installed.');
-  const Hardened = hardenedDriverClass(PuppeteerDriver);
-  return { create: module.create, ev: module.ev, driver: () => new Hardened() };
+  return {
+    create: module.create,
+    ev: module.ev,
+    driver: userDataDir => new (hardenedDriverClass(PuppeteerDriver, userDataDir))(),
+  };
 }
