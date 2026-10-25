@@ -134,7 +134,7 @@ export async function gunzip(data: Uint8Array<ArrayBuffer>, limit: number): Prom
   return readAll(
     new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip')),
     limit,
-    'This backup unpacks to more than Nex Copilot can read.',
+    'This backup unpacks to more than Ava Copilot can read.',
   );
 }
 

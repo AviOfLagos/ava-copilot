@@ -24,7 +24,7 @@ export interface FlowNodeData extends Record<string, unknown> {
   status: RunStepStatus | null;
   // A kind of step not built yet: it would stop a run
   unavailable: boolean;
-  // What the step needs before it can run (e.g. Nex Brain paired), shown instead of its detail
+  // What the step needs before it can run (e.g. Ava Brain paired), shown instead of its detail
   note: string | null;
 }
 

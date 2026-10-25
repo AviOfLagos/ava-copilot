@@ -76,7 +76,7 @@ export interface StoredTokens {
 // A client as kept in the vault, with the redirect and the sign-in server it was registered for
 type StoredClient = OAuthClientInformationMixed & { redirect_uris?: string[]; registered_for?: string | null };
 
-const CLIENT_NAME = 'Nex Copilot';
+const CLIENT_NAME = 'Ava Copilot';
 
 function randomState(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));

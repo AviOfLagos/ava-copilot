@@ -1,5 +1,5 @@
 ---
-import { ArrowRight, Bug, Code2, FlaskConical, Info, Languages, Megaphone, ScrollText, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Bug, Code2, FlaskConical, Languages, Megaphone, ScrollText, ShieldAlert } from 'lucide-react';
 import InstallCommand from '../components/InstallCommand.astro';
 import { contribute, projectLinks } from '../content/project';
 import { PRODUCT } from '../content/site';
@@ -35,10 +35,6 @@ const icons = {
       </nav>
       <h1 class="display">{contribute.heading}</h1>
       <p class="lede">{contribute.lede}</p>
-      <p class="callout callout--note">
-        <Info aria-hidden="true" />
-        <span>{contribute.repoNote}</span>
-      </p>
     </header>
 
     <section class="block" aria-labelledby="ways-title">
@@ -138,6 +134,34 @@ const icons = {
         </a>
         <a class="btn btn--glass" href={projectLinks.roadmap}>
           <span class="btn__label">See the roadmap</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+      </p>
+    </section>
+
+    <section class="block" id="tools" aria-labelledby="tools-title">
+      <div class="block-head">
+        <h2 class="h2" id="tools-title">{contribute.toolsTitle}</h2>
+        <p class="prose">{contribute.toolsLede}</p>
+      </div>
+      <ul class="facts-list">
+        {
+          contribute.tools.map(tool => (
+            <li>
+              <h3>{tool.name}</h3>
+              <p>{tool.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="label" style="margin-top: var(--s4); text-transform: none; letter-spacing: 0">{contribute.toolsNote}</p>
+      <p style="margin-top: var(--s5); display: flex; flex-wrap: wrap; gap: var(--s3)">
+        <a class="btn btn--cta" href={projectLinks.goodFirst} rel="noopener">
+          <span class="btn__label">Good first issues</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+        <a class="btn btn--glass" href={projectLinks.newIssue} rel="noopener">
+          <span class="btn__label">Report a problem</span>
           <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
         </a>
       </p>

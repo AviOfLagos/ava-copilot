@@ -199,7 +199,7 @@ export async function localChatRequirement(fetchImpl?: typeof fetch): Promise<Re
   return { ...pull, id: 'local-chat', label: DEFAULT_LOCAL_CHAT_MODEL, isReady };
 }
 
-/** Nex Brain, the companion on the Mac: installed and paired there, by the user. */
+/** Ava Brain, the companion on the Mac: installed and paired there, by the user. */
 export function brainRequirement(): Requirement {
   return {
     id: 'brain',
@@ -210,7 +210,7 @@ export function brainRequirement(): Requirement {
   };
 }
 
-/** Folder access for the Obsidian vault: Brave keeps it behind a flag, unless Nex Brain reaches the vault on the Mac. */
+/** Folder access for the Obsidian vault: Brave keeps it behind a flag, unless Ava Brain reaches the vault on the Mac. */
 export function obsidianRequirement(): Requirement {
   return {
     id: 'obsidian',

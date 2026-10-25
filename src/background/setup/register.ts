@@ -18,12 +18,12 @@ const logger = createLogger('Setup');
 
 export const SETUP_JOB = 'setup_check';
 const SETUP_KEY = 'setup:check';
-// Often enough that the dot follows what changed outside the extension (Ollama started, Nex Brain stopped)
+// Often enough that the dot follows what changed outside the extension (Ollama started, Ava Brain stopped)
 const SETUP_CRON = '*/15 * * * *';
 // Storage changes come in bursts (a save writes several keys): one check after they settle
 const SETTLE_MS = 1500;
 
-// What the checks read: a change to any of these checks again (without asking Nex Brain)
+// What the checks read: a change to any of these checks again (without asking Ava Brain)
 const WATCHED_KEYS = new Set([
   'llm-api-keys',
   'agent-models',
@@ -126,7 +126,7 @@ function command<S extends z.ZodType>(
 
 const itemId = z.string().min(1).max(20);
 
-// "Check again" and opening the checklist: asks Nex Brain too
+// "Check again" and opening the checklist: asks Ava Brain too
 command('setup_status', z.object({ fresh: z.boolean().optional() }), async ({ fresh }) => ({
   state: await checkSetup(fresh !== false),
 }));
@@ -146,7 +146,7 @@ command('setup_unskip', z.object({ id: itemId }), async ({ id }) => {
   return { state };
 });
 
-// "Open Ollama": Nex Brain opens the app on the Mac (only Ollama or LM Studio, by name from a fixed list)
+// "Open Ollama": Ava Brain opens the app on the Mac (only Ollama or LM Studio, by name from a fixed list)
 command('setup_open_app', z.object({ app: z.enum(MAC_APPS) }), async ({ app }) => {
   await companionClient.openApp(app);
   // The server takes a few seconds to answer once the app is open; the checklist checks again itself

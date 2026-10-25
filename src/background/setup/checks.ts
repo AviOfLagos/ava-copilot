@@ -24,7 +24,7 @@ export interface SetupReadings {
   local: LocalReading;
   voice: { stt: boolean; tts: boolean };
   brain: { paired: boolean; state: BrainState; reachable: boolean };
-  // Nex Brain's last answer about Ava's meeting browser (null: none yet)
+  // Ava Brain's last answer about Ava's meeting browser (null: none yet)
   ava: MeetStatus | null;
   whatsapp: WhatsAppState | null;
   calendar: { source: 'mac' | 'ics' | null; error: string | null; configured: boolean };

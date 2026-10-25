@@ -1,4 +1,4 @@
-// The Mac's Calendar through Nex Brain, for Settings › Connections › Calendar: whether macOS lets Nex Brain read
+// The Mac's Calendar through Ava Brain, for Settings › Connections › Calendar: whether macOS lets Ava Brain read
 // it, the calendars it has, and the one-time permission prompt. The watcher (./watcher.ts) reads the events.
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';

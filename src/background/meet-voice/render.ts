@@ -16,7 +16,7 @@ import { toVoiceOffscreen } from '../voice/engines/offscreen';
 
 /**
  * Ava's words for a call, made into a WAV clip in her current personality's voice, never played here: the clip
- * goes to Nex Brain, which plays it into her meeting browser's microphone. The on-device voices (KittenTTS,
+ * goes to Ava Brain, which plays it into her meeting browser's microphone. The on-device voices (KittenTTS,
  * Kokoro) render in the offscreen document; Gemini renders with the user's Gemini key. The computer's system
  * voice (chrome.tts) can only play aloud, so it cannot speak in a call: then another engine is tried, and when
  * none can, the call is refused with a plain sentence.

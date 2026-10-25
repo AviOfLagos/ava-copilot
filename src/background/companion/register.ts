@@ -1,4 +1,4 @@
-// The companion stream (Nex Brain) registers its commands, jobs, recovery and the step.sandbox executor
+// The companion stream (Ava Brain) registers its commands, jobs, recovery and the step.sandbox executor
 // here (see ../registry and ../jobs/runner).
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';
@@ -73,12 +73,12 @@ command(
     });
     await scheduleHealth();
     await refreshStatus(companionClient, { fresh: true, manual: true });
-    logger.info('Paired with Nex Brain');
+    logger.info('Paired with Ava Brain');
     return snapshot();
   },
 );
 
-/** Pairs with Nex Brain on this Mac without a code, when it is running and allows it. */
+/** Pairs with Ava Brain on this Mac without a code, when it is running and allows it. */
 async function autoPair(): Promise<boolean> {
   if ((await brainSettingsStore.getSettings()).paired) return true;
   const reply = await companionClient.autoPair();
@@ -90,7 +90,7 @@ async function autoPair(): Promise<boolean> {
   });
   await scheduleHealth();
   await refreshStatus(companionClient, { fresh: true, manual: true });
-  logger.info('Paired with Nex Brain automatically');
+  logger.info('Paired with Ava Brain automatically');
   return true;
 }
 
@@ -139,11 +139,11 @@ registerJobHandler(HEALTH_JOB, async () => {
 });
 
 // After a restart: keep checking while paired (scheduling the same key again replaces the job)
-// Never pairs on its own here: whatever listens on the port could be pretending to be Nex Brain, so pairing waits for
-// the user's click (the Nex Brain card, or Restore on a fresh install)
+// Never pairs on its own here: whatever listens on the port could be pretending to be Ava Brain, so pairing waits for
+// the user's click (the Ava Brain card, or Restore on a fresh install)
 registerRecovery('companion', async () => {
   if ((await brainSettingsStore.getSettings()).paired) await scheduleHealth();
 });
 
-// Routines' step.sandbox runs in Nex Brain's sandbox
+// Routines' step.sandbox runs in Ava Brain's sandbox
 registerStepExecutor('step.sandbox', sandboxStepExecutor(companionClient));

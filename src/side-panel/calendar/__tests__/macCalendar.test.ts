@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { byAccount, macCardState, toggleCalendar } from '../macCalendar';
 
 describe('macCardState', () => {
-  it('follows Nex Brain’s answer', () => {
+  it('follows Ava Brain’s answer', () => {
     expect(macCardState({ reply: null, error: null })).toBe('loading');
-    expect(macCardState({ reply: null, error: 'Nex Brain is not running on your Mac.' })).toBe('offline');
+    expect(macCardState({ reply: null, error: 'Ava Brain is not running on your Mac.' })).toBe('offline');
     expect(macCardState({ reply: { paired: false }, error: null })).toBe('unpaired');
     expect(macCardState({ reply: { paired: true, access: 'granted' }, error: null })).toBe('ready');
     expect(macCardState({ reply: { paired: true, access: 'not_determined' }, error: null })).toBe('needs_permission');

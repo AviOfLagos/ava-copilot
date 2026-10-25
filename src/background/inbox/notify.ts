@@ -25,7 +25,7 @@ export async function notifyHighPriority(item: InboxItem, now: number = Date.now
     .create(`inbox:${item.id}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icon-128.png'),
-      title: 'Nex Copilot',
+      title: 'Ava Copilot',
       message: item.title.slice(0, 200),
       priority: 1,
     })

@@ -6,7 +6,7 @@ import type { ConnectorRecord, ProviderConfig } from '@extension/storage';
  * 1. No secret travels inside a snapshot or a file: fields whose names say they hold one (apiKey, token,
  *    accessToken, refreshToken, secret, password, clientSecret, authorization, cookie…, any case, at any depth) are
  *    emptied before a snapshot is written. Keys go only through the Keychain path (./service.ts).
- * 2. A file from disk is not the user's own Nex Brain: anyone could have made it. Restoring one keeps this
+ * 2. A file from disk is not the user's own Ava Brain: anyone could have made it. Restoring one keeps this
  *    browser's security settings (firewall, what asks first, installed skills, approved connector tools), and
  *    never takes a key binding, sign-in, workspace scope or tool rule from the file: a provider or connector keeps
  *    this browser's own only when its endpoint is the one it has here now, so a crafted file cannot point a saved
@@ -79,7 +79,7 @@ export function redactSecrets<T>(value: T): T {
 
 /**
  * Storage keys a file restore leaves as they are on this browser. The Obsidian vault on the Mac is one: a file must
- * not point Nex Brain at a folder (a Nex Brain backup, which this Mac made, restores it).
+ * not point Ava Brain at a folder (a Ava Brain backup, which this Mac made, restores it).
  */
 export const FILE_KEEP_STORAGE_KEYS = new Set([
   'firewall-settings',

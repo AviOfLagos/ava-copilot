@@ -79,7 +79,7 @@ export interface SetupDeps {
   defaultWorkspaceId(): Promise<string | null>;
   redirectUrl(): string;
   vaultState(): Promise<VaultState>;
-  // Nex Brain is paired: it reaches the vault on the Mac, with no folder picker or Brave flag
+  // Ava Brain is paired: it reaches the vault on the Mac, with no folder picker or Brave flag
   brainPaired?(): Promise<boolean>;
   isBrave(): boolean;
   providerHasKey(provider: string): Promise<boolean>;

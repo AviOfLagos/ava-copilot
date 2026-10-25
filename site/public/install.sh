@@ -1,5 +1,5 @@
 #!/bin/sh
-# Nex Copilot installer for macOS and Linux.
+# Ava Copilot installer for macOS and Linux.
 #
 # Downloads the latest release, verifies its SHA-256, and unpacks it to a stable folder so the
 # browser's own "Load unpacked" always points at the same place — re-running this script later is
@@ -7,8 +7,8 @@
 # page, because Chrome does not watch an unpacked folder for changes).
 #
 # Usage:
-#   curl -fsSL https://nex-copilot-one.vercel.app/install.sh | bash
-#   curl -fsSL https://nex-copilot-one.vercel.app/install.sh | sh
+#   curl -fsSL https://ava.nexprove.com/install.sh | bash
+#   curl -fsSL https://ava.nexprove.com/install.sh | sh
 #   sh install.sh [options]
 #
 # Options:
@@ -27,9 +27,9 @@
 #   --help, -h         Print this message and exit.
 #
 # Env:
-#   NEX_COPILOT_BASE_URL   Overrides the download host, e.g. for testing against a local server:
-#                          NEX_COPILOT_BASE_URL=http://127.0.0.1:8080 sh install.sh --dir /tmp/test
-#   AVI_COPILOT_BASE_URL   Old name, still accepted if NEX_COPILOT_BASE_URL is not set.
+#   AVA_COPILOT_BASE_URL   Overrides the download host, e.g. for testing against a local server:
+#                          AVA_COPILOT_BASE_URL=http://127.0.0.1:8080 sh install.sh --dir /tmp/test
+#   NEX_COPILOT_BASE_URL, AVI_COPILOT_BASE_URL   Old names, still accepted.
 #
 # This targets a normal macOS or Linux shell: curl or wget, shasum or sha256sum, and unzip, all of
 # which ship on macOS and nearly every Linux desktop/server distribution by default. `set -eu` and
@@ -40,7 +40,7 @@ set -eu
 # `curl | sh` is cut off mid-download, the shell has a truncated *function body* with no closing
 # brace — a syntax error — and runs nothing, rather than executing whatever partial script it got.
 main() {
-  BASE_URL="${NEX_COPILOT_BASE_URL:-${AVI_COPILOT_BASE_URL:-https://nex-copilot-one.vercel.app}}"
+  BASE_URL="${AVA_COPILOT_BASE_URL:-${NEX_COPILOT_BASE_URL:-${AVI_COPILOT_BASE_URL:-https://ava.nexprove.com}}}"
   BASE_URL="${BASE_URL%/}"
   TARGET_DIR=""
   BROWSER_CHOICE=""
@@ -120,7 +120,7 @@ main() {
   info "Checking the latest release at $BASE_URL ..."
   LATEST_JSON="$WORK_DIR/latest.json"
   fetch "$BASE_URL/download/latest.json" "$LATEST_JSON" \
-    || die "Could not reach $BASE_URL/download/latest.json. Check your connection, or that NEX_COPILOT_BASE_URL is right, and try again."
+    || die "Could not reach $BASE_URL/download/latest.json. Check your connection, or that AVA_COPILOT_BASE_URL is right, and try again."
 
   VERSION="$(json_string "$LATEST_JSON" version)"
   ZIP_PATH_REL="$(json_string "$LATEST_JSON" file)"
@@ -130,12 +130,12 @@ main() {
 
   INSTALLED_VERSION="$(installed_version)"
   if [ -n "$INSTALLED_VERSION" ]; then
-    info "Nex Copilot $INSTALLED_VERSION is installed at $TARGET_DIR; updating to ${VERSION}..."
+    info "Ava Copilot $INSTALLED_VERSION is installed at $TARGET_DIR; updating to ${VERSION}..."
   else
-    info "Installing Nex Copilot $VERSION to ${TARGET_DIR}..."
+    info "Installing Ava Copilot $VERSION to ${TARGET_DIR}..."
   fi
 
-  ZIP_FILE="$WORK_DIR/nex-copilot.zip"
+  ZIP_FILE="$WORK_DIR/ava-copilot.zip"
   fetch "$BASE_URL/$ZIP_PATH_REL" "$ZIP_FILE" || die "Could not download $BASE_URL/$ZIP_PATH_REL."
 
   GOT_SHA256="$(sha256_of "$ZIP_FILE")"
@@ -152,7 +152,7 @@ The download may be incomplete or corrupted - try again. If this keeps happening
   unzip -q -o "$ZIP_FILE" -d "$EXTRACT_DIR" || die "The downloaded zip could not be unpacked (it may be corrupted). Try again."
   [ -f "$EXTRACT_DIR/manifest.json" ] || die "The downloaded release doesn't look like an extension (no manifest.json) - please report this."
   # The marker that lets a later update or --uninstall know this folder is ours to replace
-  printf 'Installed by the Nex Copilot installer. Remove the folder with: install.sh --uninstall\n' >"$EXTRACT_DIR/$MARKER"
+  printf 'Installed by the Ava Copilot installer. Remove the folder with: install.sh --uninstall\n' >"$EXTRACT_DIR/$MARKER"
 
   mkdir -p "$(dirname "$TARGET_DIR")"
   SWAP_DIR="${TARGET_DIR}.new.$$"
@@ -160,7 +160,7 @@ The download may be incomplete or corrupted - try again. If this keeps happening
   mv "$EXTRACT_DIR" "$SWAP_DIR"
   rm -rf "$TARGET_DIR"
   mv "$SWAP_DIR" "$TARGET_DIR"
-  ok "Installed Nex Copilot $VERSION to $TARGET_DIR"
+  ok "Installed Ava Copilot $VERSION to $TARGET_DIR"
 
   if [ "$WITH_VOICES" -eq 1 ]; then
     install_voices "$LATEST_JSON"
@@ -173,10 +173,11 @@ The download may be incomplete or corrupted - try again. If this keeps happening
 
 # A file the installer puts in every folder it makes. An update or --uninstall only ever replaces or
 # removes a folder that is missing, empty, or has this file: never a folder of the user's own.
-MARKER="nex-copilot-install.txt"
-# The old marker name, from before the Avi Copilot -> Nex Copilot rename: still recognized, so an
-# existing install made by the old installer can still be updated or uninstalled by this one.
-OLD_MARKER="avi-copilot-install.txt"
+MARKER="ava-copilot-install.txt"
+# The markers of the installers from before the renames (Avi Copilot -> Nex Copilot -> Ava Copilot): still
+# recognized, so an install made by an older installer can still be updated or uninstalled by this one.
+OLD_MARKER="nex-copilot-install.txt"
+OLDER_MARKER="avi-copilot-install.txt"
 
 # Whether a folder may be replaced or removed by this script (see MARKER)
 is_ours() { # is_ours DIR
@@ -184,12 +185,13 @@ is_ours() { # is_ours DIR
   [ -d "$1" ] || return 1
   [ -f "$1/$MARKER" ] && return 0
   [ -f "$1/$OLD_MARKER" ] && return 0
+  [ -f "$1/$OLDER_MARKER" ] && return 0
   [ -z "$(ls -A "$1" 2>/dev/null)" ]
 }
 
 guard_target() {
   case "$TARGET_DIR" in
-    "" | "/" | "$HOME") die "Refusing to install into ${TARGET_DIR:-/}: give it a folder of its own, e.g. --dir \"$HOME/nex-copilot\"." ;;
+    "" | "/" | "$HOME") die "Refusing to install into ${TARGET_DIR:-/}: give it a folder of its own, e.g. --dir \"$HOME/ava-copilot\"." ;;
   esac
   case "$HOME/" in
     "$TARGET_DIR"/*) die "Refusing to use $TARGET_DIR: your home folder is inside it." ;;
@@ -210,11 +212,11 @@ usage() {
   # Not read from the script's own header comment: $0 isn't a readable file when this runs from a
   # pipe (`curl ... | sh`), which is the primary documented way to run it.
   cat <<'USAGE'
-Nex Copilot installer for macOS and Linux.
+Ava Copilot installer for macOS and Linux.
 
 Usage:
-  curl -fsSL https://nex-copilot-one.vercel.app/install.sh | bash
-  curl -fsSL https://nex-copilot-one.vercel.app/install.sh | sh
+  curl -fsSL https://ava.nexprove.com/install.sh | bash
+  curl -fsSL https://ava.nexprove.com/install.sh | sh
   sh install.sh [options]
 
 Options:
@@ -233,13 +235,14 @@ Options:
   --help, -h         Print this message and exit.
 
 Env:
-  NEX_COPILOT_BASE_URL   Overrides the download host, e.g. for testing against a local server:
-                         NEX_COPILOT_BASE_URL=http://127.0.0.1:8080 sh install.sh --dir /tmp/test
-  AVI_COPILOT_BASE_URL   Old name, still accepted if NEX_COPILOT_BASE_URL is not set.
+  AVA_COPILOT_BASE_URL   Overrides the download host, e.g. for testing against a local server:
+                         AVA_COPILOT_BASE_URL=http://127.0.0.1:8080 sh install.sh --dir /tmp/test
+  NEX_COPILOT_BASE_URL, AVI_COPILOT_BASE_URL   Old names, still accepted.
 
 Default install location:
-  macOS:  ~/Library/Application Support/Nex Copilot/extension
-  Linux:  ${XDG_DATA_HOME:-~/.local/share}/nex-copilot/extension
+  macOS:  ~/Library/Application Support/Ava Copilot/extension
+  Linux:  ${XDG_DATA_HOME:-~/.local/share}/ava-copilot/extension
+  (An install from before the rename, in "Nex Copilot" / nex-copilot, is updated where it is.)
 USAGE
 }
 
@@ -247,9 +250,21 @@ USAGE
 
 default_target_dir() {
   case "$(uname -s)" in
-    Darwin) printf '%s' "$HOME/Library/Application Support/Nex Copilot/extension" ;;
-    *) printf '%s' "${XDG_DATA_HOME:-$HOME/.local/share}/nex-copilot/extension" ;;
+    Darwin)
+      new="$HOME/Library/Application Support/Ava Copilot/extension"
+      old="$HOME/Library/Application Support/Nex Copilot/extension"
+      ;;
+    *)
+      new="${XDG_DATA_HOME:-$HOME/.local/share}/ava-copilot/extension"
+      old="${XDG_DATA_HOME:-$HOME/.local/share}/nex-copilot/extension"
+      ;;
   esac
+  # An install from before the rename keeps its folder, so the browser's "Load unpacked" path stays valid
+  if [ ! -e "$new" ] && [ -d "$old" ] && { [ -f "$old/$OLD_MARKER" ] || [ -f "$old/$OLDER_MARKER" ] || [ -f "$old/$MARKER" ]; }; then
+    printf '%s' "$old"
+  else
+    printf '%s' "$new"
+  fi
 }
 
 need_tool() { # need_tool CHECK_FN LABEL PURPOSE

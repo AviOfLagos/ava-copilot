@@ -96,7 +96,7 @@ describe('no secret inside a snapshot', () => {
     expect(redactSecrets(plain)).toBe(plain);
   });
 
-  it('applies to every table row and storage value of a snapshot (Nex Brain and files alike)', async () => {
+  it('applies to every table row and storage value of a snapshot (Ava Brain and files alike)', async () => {
     const db = freshDb();
     await db.connectors.put({
       id: 'c1',
@@ -252,7 +252,7 @@ describe('a file from disk is untrusted', () => {
     expect(await db.toolFingerprints.get('c1:send')).toBeUndefined();
   });
 
-  it('a Nex Brain snapshot (the user’s own) still restores in full', async () => {
+  it('a Ava Brain snapshot (the user’s own) still restores in full', async () => {
     const snapshot = await crafted();
     const { db, storage, vault } = await here();
     await restoreSnapshot(snapshot, target(db, storage, vault), null);

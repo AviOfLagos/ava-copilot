@@ -2427,6 +2427,31 @@ retention, cloud permission), `storage/lib/ambient/__tests__` (sessions, forget,
 looping recording is written down by Moonshine with no POST to any model, the indicator, off the record, Settings).
 Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 
+### Rename: Nex Copilot → Ava Copilot, Nex Brain → Ava Brain; ava.nexprove.com; feedback through GitHub (2026-10-25)
+
+- Avi's call: the product is **Ava Copilot**, the Mac companion **Ava Brain**, the site **ava.nexprove.com** (the
+  Vercel project keeps nex-copilot-one.vercel.app as an alias, so copies that still check the old address get
+  updates), and the repository **AviOfLagos/ava-copilot** (renamed; GitHub redirects the old name), to be made public.
+- Renamed every user-visible string (176 files): locales, UI, prompts, site content, installers, docs (README,
+  PRIVACY, NOTICE, CONTRIBUTING, SECURITY, distribution, roadmap). Old planning docs and this log keep their history.
+- Kept, as stored identifiers whose rename would lose data or break existing installs: the Obsidian folder
+  `Nex Copilot/` (`EXPORT_ROOT`, `OBSIDIAN_WRITE_ROOT`: notes already live there), the backup format
+  `nex-copilot-backup`, the Keychain service `Nex Brain backup`, the authoring prompt markers, the companion's
+  built file `dist/nex-brain.mjs` (LaunchAgents point at it; `ava-brain`, `nex-brain` and `avi-brain` are all bin
+  names for it), and everything the previous rename kept (IndexedDB names, `avi-copilot` markers, data dirs).
+- Installers: new installs go to "Ava Copilot" / `ava-copilot`; an existing "Nex Copilot" folder with an
+  installer marker is updated where it is, so the browser's Load unpacked path stays valid. Marker
+  `ava-copilot-install.txt`, older markers still recognized; `AVA_COPILOT_BASE_URL`, older env names still read.
+- Update feed: `src/background/update/check.ts` now reads https://ava.nexprove.com/version.json.
+- Feedback: `.github/ISSUE_TEMPLATE` forms (problem, install problem, idea) whose field ids the extension fills in
+  (Settings › Help › Report a problem, `src/side-panel/feedback`: version and browser, nothing sent until the
+  user submits on GitHub); a pull request template; CODEOWNERS; `.github/workflows/ci.yml` (types, unit tests,
+  locales, extension build, site build) on every pull request, read-only, no secrets. Removed `.github/FUNDING.yml`
+  (it pointed GitHub's Sponsor button at Nanobrowser's author) and the upstream READMEs; new README.
+- Version 0.2.1, so installed copies show the update notice.
+- Known, not from this change: `companion/src/__tests__/sessions.test.ts` reads a spike recording deleted on
+  2026-10-17 (631aa92) and fails; CI does not run the companion's tests.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

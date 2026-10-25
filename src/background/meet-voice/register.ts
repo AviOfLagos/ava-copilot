@@ -1,6 +1,6 @@
 // Ava speaking in a Google Meet call (docs/meet-voice-plan.md, option A): the panel's commands, the say_in_meeting
 // action and voice tools, and leaving the call when the user's notes end. She joins as her own participant, run by
-// Nex Brain (companion/src/meet); nothing here touches the user's Meet tab.
+// Ava Brain (companion/src/meet); nothing here touches the user's Meet tab.
 import { z } from 'zod';
 import { t } from '@extension/i18n';
 import {

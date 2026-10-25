@@ -7,13 +7,13 @@ import type { BrainVaultSyncDeps } from '../sync';
 
 const OURS = '---\nsource: avi-copilot\n---\n';
 
-/** A vault in memory behind a fake Nex Brain client: nothing touches a disk or the network. */
+/** A vault in memory behind a fake Ava Brain client: nothing touches a disk or the network. */
 function harness(options: {
   files?: Map<string, string>;
   notes?: Record<string, { text: string; mtime: number; size?: number }>;
   setting?: Partial<ObsidianVaultSetting>;
   state?: Partial<ObsidianSyncState>;
-  // The vault Nex Brain has chosen (null: none, as after a reinstall of Nex Brain)
+  // The vault Ava Brain has chosen (null: none, as after a reinstall of Ava Brain)
   chosenId?: string | null;
   // The vault the saved path resolves to now
   pathVaultId?: string;
@@ -36,7 +36,7 @@ function harness(options: {
   const writes: string[] = [];
   const removes: string[] = [];
   const check = (vaultId: string) => {
-    if (vaultId !== chosenId) throw new AppError('not_found', 'No Obsidian vault is chosen in Nex Brain.');
+    if (vaultId !== chosenId) throw new AppError('not_found', 'No Obsidian vault is chosen in Ava Brain.');
   };
   const client: BrainVaultSyncDeps['client'] = {
     async obsidianNotes(vaultId, { cursor } = {}) {
@@ -136,7 +136,7 @@ function harness(options: {
 }
 
 describe('syncBrainVault', () => {
-  it('does nothing without a vault chosen through Nex Brain', async () => {
+  it('does nothing without a vault chosen through Ava Brain', async () => {
     const { deps, writes } = harness({ setting: { source: null } });
     expect(await syncBrainVault(deps)).toEqual({ written: 0, read: 0 });
     expect(writes).toEqual([]);
@@ -200,7 +200,7 @@ describe('syncBrainVault', () => {
     expect(saved).toEqual([]);
   });
 
-  it('chooses the vault again from its path when Nex Brain has none chosen and the path is still this vault', async () => {
+  it('chooses the vault again from its path when Ava Brain has none chosen and the path is still this vault', async () => {
     const { deps, chooseCalls, chosen, getState } = harness({
       chosenId: null,
       notes: { 'A.md': { text: 'a', mtime: 1 } },

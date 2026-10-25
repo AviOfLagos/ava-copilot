@@ -3,7 +3,7 @@ import type { ListedTool } from './fingerprint';
 
 /**
  * Tools the browser cannot run itself: MCP servers on the Mac (stdio) and command-line tools. They run through
- * Nex Brain, the Mac companion (WS7), inside its sandbox. This is the interface the connectors call; the
+ * Ava Brain, the Mac companion (WS7), inside its sandbox. This is the interface the connectors call; the
  * companion registers an implementation once it is paired. Until then those connectors say they need it, and
  * nothing here reaches the Mac.
  *

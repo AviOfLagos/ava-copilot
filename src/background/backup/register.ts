@@ -1,4 +1,4 @@
-// Backups to Nex Brain: panel commands, the automatic and daily jobs, and the change tracking that plans them
+// Backups to Ava Brain: panel commands, the automatic and daily jobs, and the change tracking that plans them
 // (see ../registry and ../jobs/runner). Needs one import line in ../registers.ts: `import './backup/register';`
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';
@@ -163,7 +163,7 @@ command(
   z.object({ snapshotId: backupIdSchema, confirmed: z.literal(true) }),
   async ({ snapshotId }) => {
     const summary = await backupService.restoreFromBrain(snapshotId);
-    logger.info('Restored a backup from Nex Brain');
+    logger.info('Restored a backup from Ava Brain');
     reloadSoon();
     return { summary };
   },

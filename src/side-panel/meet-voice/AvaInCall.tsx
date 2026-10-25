@@ -13,9 +13,9 @@ import { useAssistantName } from '../hooks/useAssistant';
 import { sendMeetVoice } from './send';
 
 /**
- * In a Google Meet call's notes: bring Ava into the call as her own participant (run by Nex Brain on the Mac), see
+ * In a Google Meet call's notes: bring Ava into the call as her own participant (run by Ava Brain on the Mac), see
  * where she is (joining, waiting for the host, in the call, why it failed), stop her mid-sentence, and have her leave.
- * Without Nex Brain paired it says what she needs and links to its setup. The background does the talking; this reads
+ * Without Ava Brain paired it says what she needs and links to its setup. The background does the talking; this reads
  * its stored state.
  */
 

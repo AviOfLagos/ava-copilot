@@ -7,7 +7,7 @@ import type { ModelsRequest } from '../models/useProviders';
 import { BackupList } from './BackupList';
 
 /**
- * The first-run restore, for a reinstall: find Nex Brain on this Mac, pair (on its own, or with the code it prints), pick a
+ * The first-run restore, for a reinstall: find Ava Brain on this Mac, pair (on its own, or with the code it prints), pick a
  * backup and put it back. The extension then starts again with everything restored, so the rest of the
  * setup is not shown (the restored settings say it was done).
  */
@@ -41,7 +41,7 @@ export default function RestoreFromBrain({ request, onCancel }: { request: Model
       if (!reachable) setPhase('unreachable');
       else if (paired) await list();
       else {
-        // Nex Brain allows Nex Copilot to pair with no code unless the Mac turned that off; then the code is asked
+        // Ava Brain allows Ava Copilot to pair with no code unless the Mac turned that off; then the code is asked
         const auto = await request({ type: 'brain_auto_pair' }, 20_000).then(
           () => true,
           () => false,

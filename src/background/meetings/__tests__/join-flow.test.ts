@@ -116,7 +116,7 @@ describe('JoinFlow', () => {
   it('says loudly when notes cannot start', async () => {
     const { flow, events } = setup({
       start: async () => {
-        throw new Error('Click the Nex Copilot icon on the meeting tab');
+        throw new Error('Click the Ava Copilot icon on the meeting tab');
       },
     });
     const result = await flow.joined(7, URL);
@@ -126,7 +126,7 @@ describe('JoinFlow', () => {
         kind: 'start_failed',
         tabId: 7,
         platform: 'Google Meet',
-        reason: 'Click the Nex Copilot icon on the meeting tab',
+        reason: 'Click the Ava Copilot icon on the meeting tab',
       },
     ]);
   });

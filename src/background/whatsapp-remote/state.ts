@@ -24,7 +24,7 @@ export const DEFAULT_WHATSAPP_REMOTE_SETTINGS: WhatsAppRemoteSettings = {
 };
 
 export interface WhatsAppRemoteState {
-  // The last status Nex Brain gave, without the code to scan
+  // The last status Ava Brain gave, without the code to scan
   status: WhatsAppStatus | null;
   checkedAt: number | null;
   // The chat WhatsApp messages go to: one a day

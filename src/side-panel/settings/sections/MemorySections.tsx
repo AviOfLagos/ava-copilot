@@ -121,7 +121,7 @@ export function MemoryIndexSection() {
 }
 
 /**
- * Export everything as a backup file (the same snapshot Nex Brain keeps, without API keys), bring one back (or an
+ * Export everything as a backup file (the same snapshot Ava Brain keeps, without API keys), bring one back (or an
  * older knowledge-only export, merged as before), or wipe the knowledge base.
  */
 export function MemoryDataSection({ api }: { api: PanelApi }) {

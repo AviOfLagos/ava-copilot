@@ -10,7 +10,7 @@ import { numberOfJid } from './driver';
 import type { WaAccount, WaDriver, WaDriverFactory, WaIncoming } from './driver';
 
 /**
- * Ava on WhatsApp, in Nex Brain. One person only, the owner: the linked account's own "Message yourself"
+ * Ava on WhatsApp, in Ava Brain. One person only, the owner: the linked account's own "Message yourself"
  * chat, and the user's other number when he set one (Ava then has a number of her own). Every message from
  * any other chat is dropped before anything about it is kept: not its text, not its id, not a log line.
  * Sending goes only to the owner; a send to any other chat is refused (sendTo). The owner's text messages
@@ -52,7 +52,7 @@ interface Queued extends WhatsAppMessage {
 
 interface Saved {
   version: 1;
-  // A session exists to restore when Nex Brain starts
+  // A session exists to restore when Ava Brain starts
   linked: boolean;
   number: string | null;
   selfIds: string[];
@@ -147,7 +147,7 @@ export class WhatsAppService {
     this.dir = join(deps.dataDir, 'whatsapp');
     this.file = join(this.dir, 'state.json');
     this.sessionDir = join(this.dir, 'session');
-    // Until the extension pulls once, it counts as last seen when Nex Brain started
+    // Until the extension pulls once, it counts as last seen when Ava Brain started
     this.lastPullAt = this.now();
   }
 

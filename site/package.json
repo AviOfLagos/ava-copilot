@@ -1,8 +1,8 @@
 {
-  "name": "nex-copilot-site",
+  "name": "ava-copilot-site",
   "private": true,
   "version": "0.1.0",
-  "description": "The marketing and install website for Nex Copilot: static pages, the live gate demo and link previews.",
+  "description": "The marketing and install website for Ava Copilot: static pages, the live gate demo and link previews.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {

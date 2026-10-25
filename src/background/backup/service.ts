@@ -10,7 +10,7 @@ import type { SnapshotSource } from './snapshot';
 import type { BackupSettings, BackupStatus } from './state';
 
 /**
- * Backs this browser up to Nex Brain and restores it from there: the snapshot in 4 MB parts, checked by its
+ * Backs this browser up to Ava Brain and restores it from there: the snapshot in 4 MB parts, checked by its
  * SHA-256 at both ends, and the API keys apart from it (into the Mac's Keychain) when the user keeps that on.
  * Only the background runs this: it alone may read the vault.
  */
@@ -39,7 +39,7 @@ export interface BackupDeps {
   now?: () => number;
 }
 
-export const NOT_PAIRED_MESSAGE = 'Pair Nex Brain first (Settings › Connections › Nex Brain).';
+export const NOT_PAIRED_MESSAGE = 'Pair Ava Brain first (Settings › Connections › Ava Brain).';
 
 /** The vault's keys and sign-ins that a backup keeps: all but the pairing token, and only names it can carry. */
 export async function collectSecrets(

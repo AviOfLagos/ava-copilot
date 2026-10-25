@@ -30,8 +30,8 @@ import { ITEM_TITLES, itemLine, useSetupState } from './useSetupState';
 
 type Api = Pick<PanelApi, 'request'>;
 
-// The command that installs Nex Brain from the repo (companion/README.md)
-export const BRAIN_INSTALL_COMMAND = 'cd <nex-copilot>/companion && pnpm install && sh scripts/install-launchagent.sh';
+// The command that installs Ava Brain from the repo (companion/README.md)
+export const BRAIN_INSTALL_COMMAND = 'cd <ava-copilot>/companion && pnpm install && sh scripts/install-launchagent.sh';
 
 const openTab = (url: string) => void chrome.tabs.create({ url }).catch(() => {});
 

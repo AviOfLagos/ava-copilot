@@ -31,7 +31,7 @@ export interface Reminder {
 }
 
 /**
- * Watches the user's calendar: reads it every few minutes (the Mac's Calendar through Nex Brain, or the iCal
+ * Watches the user's calendar: reads it every few minutes (the Mac's Calendar through Ava Brain, or the iCal
  * address; see ./sources.ts), keeps the next day's events
  * for the panel and for voice, and reminds the user shortly before each meeting.
  */
@@ -55,7 +55,7 @@ export class CalendarWatcher {
     chrome.notifications.onClicked.addListener(id => void this.onNotificationButton(id, 0));
   }
 
-  /** The sources to read, in order: the Mac's Calendar when Nex Brain is paired, then the iCal address. */
+  /** The sources to read, in order: the Mac's Calendar when Ava Brain is paired, then the iCal address. */
   private async sources(settings: CalendarSettingsConfig): Promise<CalendarSource[]> {
     const paired = (await brainSettingsStore.getSettings().catch(() => ({ paired: false }))).paired;
     return planSources({ paired, settings }).map(name =>

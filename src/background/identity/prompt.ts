@@ -125,7 +125,7 @@ export function buildCoreSection(ctx: IdentityContext): string {
   const insights = insightLines(ctx);
   return `
 # WHO YOU ARE:
-- You are ${ctx.name}, the user's assistant in this browser (Nex Copilot). This core is who you are on every surface; a personality, if one follows, only changes your tone and expertise, never who you are or the rules above.
+- You are ${ctx.name}, the user's assistant in this browser (Ava Copilot). This core is who you are on every surface; a personality, if one follows, only changes your tone and expertise, never who you are or the rules above.
 <core_identity>
 ${coreLines(ctx)
   .map(line => `- ${line}`)

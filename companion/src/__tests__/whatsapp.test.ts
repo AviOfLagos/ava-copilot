@@ -97,7 +97,7 @@ async function linked(options: { limit?: number; dir?: { path: string; remove: (
   };
 }
 
-describe('Ava on WhatsApp in Nex Brain', () => {
+describe('Ava on WhatsApp in Ava Brain', () => {
   it('links by a code to scan and reports the linked number', async () => {
     const dir = tempDir();
     dirs.push(dir);

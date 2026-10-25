@@ -60,15 +60,15 @@ describe('refreshStatus', () => {
     expect((await brainStatusStore.getStatus()).docker?.state).toBe('down');
   });
 
-  it('is offline when Nex Brain does not answer', async () => {
+  it('is offline when Ava Brain does not answer', async () => {
     const status = await refreshStatus(
       fakeClient(async () => {
-        throw new AppError('network', 'Nex Brain is not running on your Mac. Start it, then try again.');
+        throw new AppError('network', 'Ava Brain is not running on your Mac. Start it, then try again.');
       }).client,
     );
     expect(status).toMatchObject({
       state: 'offline',
-      message: 'Nex Brain is not running on your Mac. Start it, then try again.',
+      message: 'Ava Brain is not running on your Mac. Start it, then try again.',
     });
   });
 

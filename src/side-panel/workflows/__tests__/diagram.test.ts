@@ -124,8 +124,8 @@ describe('buildDiagram', () => {
   });
 
   it('shows what a step needs in place of its detail', () => {
-    const { nodes } = buildDiagram({ spec, notes: { pick: 'Needs Nex Brain' } });
-    expect(nodes.find(node => node.id === 'pick')!.data.note).toBe('Needs Nex Brain');
+    const { nodes } = buildDiagram({ spec, notes: { pick: 'Needs Ava Brain' } });
+    expect(nodes.find(node => node.id === 'pick')!.data.note).toBe('Needs Ava Brain');
     expect(nodes.find(node => node.id === 'hn')!.data.note).toBeNull();
   });
 });

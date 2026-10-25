@@ -4,7 +4,7 @@ import { StorageEnum } from '@extension/storage/lib/base/enums';
 /**
  * The setup checklist (Settings › General › Setup, the first-run setup and the header's dot): what is set up, what
  * is not and why, and what the user skipped. Written by the background only, from the real status of each part
- * (models, Nex Brain, Ava's browser, WhatsApp, the calendar, Obsidian, backups); pages read it live.
+ * (models, Ava Brain, Ava's browser, WhatsApp, the calendar, Obsidian, backups); pages read it live.
  */
 
 export const SETUP_ITEM_IDS = [
@@ -57,7 +57,7 @@ export interface SetupItemState {
   detail: string | null;
 }
 
-/** Facts about what Nex Brain reports, shown as information beside its item (never a reason on their own). */
+/** Facts about what Ava Brain reports, shown as information beside its item (never a reason on their own). */
 export interface SetupBrainInfo {
   reachable: boolean;
   docker: 'up' | 'down' | 'missing' | null;

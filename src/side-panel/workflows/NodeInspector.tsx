@@ -49,7 +49,7 @@ export interface NodeInspectorProps {
   node: WorkflowNode;
   step?: RunStep;
   editable: boolean;
-  // What the step needs before it can run, e.g. Nex Brain paired
+  // What the step needs before it can run, e.g. Ava Brain paired
   note?: string | null;
   api: PanelApi;
   onClose: () => void;

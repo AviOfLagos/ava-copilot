@@ -592,7 +592,7 @@ test('an offer nobody answered gives way to the next meeting link instead of hid
   await page.close();
 });
 
-test('a sandbox step without Nex Brain says so before asking for a click', async () => {
+test('a sandbox step without Ava Brain says so before asking for a click', async () => {
   const page = await editorPage();
   await createWorkflow(
     page,
@@ -610,21 +610,21 @@ test('a sandbox step without Nex Brain says so before asking for a click', async
   // The diagram says what it needs before anything runs
   assert.match(
     await session.panel.evaluate(() => document.querySelector('[data-flow-node="build"]').innerText),
-    /Needs Nex Brain/,
+    /Needs Ava Brain/,
   );
   await session.click('Run now');
   const [run] = await until(async () => {
     const runs = await runsOf(page, 'wf-sandbox');
     return runs[0]?.status === 'failed' ? runs : null;
   }, 'the run fails at once');
-  // Before: it waited for "Hold to allow", and only then said Nex Brain was not paired
-  assert.match(run.error.message, /Nex Brain.*Settings › Nex Brain/);
+  // Before: it waited for "Hold to allow", and only then said Ava Brain was not paired
+  assert.match(run.error.message, /Ava Brain.*Settings › Ava Brain/);
   assert.equal(
     (await readStore(page, 'inbox')).filter(item => item.source === 'workflow:wf-sandbox' && item.kind === 'approval')
       .length,
     0,
   );
-  await session.panel.waitForFunction(() => document.body.innerText.includes('Settings › Nex Brain'), {
+  await session.panel.waitForFunction(() => document.body.innerText.includes('Settings › Ava Brain'), {
     polling: 300,
     timeout: 10000,
   });

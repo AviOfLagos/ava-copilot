@@ -201,7 +201,7 @@ describe('sayInMeeting', () => {
   it('does not mark the introduction said when sending failed, and sends nothing after she left', async () => {
     const failing = harness({
       send: async () => {
-        throw new Error('Nex Brain is not running');
+        throw new Error('Ava Brain is not running');
       },
     });
     await expect(sayInMeeting(failing.deps, 'Hello.')).rejects.toThrow(/not running/);
@@ -273,7 +273,7 @@ describe('renderForCall', () => {
 });
 
 describe('stopping her', () => {
-  it('goes straight to Nex Brain, even while the breaker is open', async () => {
+  it('goes straight to Ava Brain, even while the breaker is open', async () => {
     const calls: string[] = [];
     let snapshot: unknown;
     const status = inCall();

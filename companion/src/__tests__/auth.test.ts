@@ -185,9 +185,9 @@ describe('pairing with no code', () => {
   afterEach(async () => test?.stop());
 
   const autoPair = (origin?: string | null) =>
-    test.api('/v1/pair/auto', { method: 'POST', token: null, origin, body: JSON.stringify({ client: 'Nex Copilot' }) });
+    test.api('/v1/pair/auto', { method: 'POST', token: null, origin, body: JSON.stringify({ client: 'Ava Copilot' }) });
 
-  it('gives Nex Copilot a token it then recognises, and replaces the browser paired before', async () => {
+  it('gives Ava Copilot a token it then recognises, and replaces the browser paired before', async () => {
     test = await startTestBrain();
     const first = pairReplySchema.parse(await (await autoPair()).json());
     expect((await test.api('/v1/health', { token: first.token })).status).toBe(200);

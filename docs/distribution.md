@@ -1,6 +1,6 @@
 # Distribution
 
-How Nex Copilot gets onto someone else's machine, today and next. `docs/task.md` section 6 originally assumed
+How Ava Copilot gets onto someone else's machine, today and next. `docs/task.md` section 6 originally assumed
 "sideloaded only, no Chrome Web Store submission" — this doc revisits that now that the ask is to make the
 extension installable by other people, not just the owner.
 
@@ -44,7 +44,7 @@ turns the second step (the one click) into zero clicks.
 | Privacy policy URL | The site's `/privacy` route (`site/docs/ARCHITECTURE.md` already plans it: what it stores, what leaves, what never does, permissions explained). Must be live at a public URL before submission. |
 | Listing assets | Short + detailed description, at least one 1280×800 or 640×400 screenshot, a 128×128 icon (have it: `public/icon-128.png`). No promotional screenshots exist yet — **needs the owner** (design, or screenshots of the real app). |
 | Permission justifications | One sentence per sensitive permission, in the dashboard's Privacy Practices tab. Table below; `site/src/content/site.ts`'s planned `permissions (name, why)` field for `/privacy` should read from the same table, so the two never drift apart. |
-| Single purpose description | CWS requires one sentence saying what the extension does, used to check every permission is actually needed for that one purpose. Draft: "Nex Copilot is a browser copilot that reads and acts on the pages you direct it to, with your click required before anything it does leaves your control." |
+| Single purpose description | CWS requires one sentence saying what the extension does, used to check every permission is actually needed for that one purpose. Draft: "Ava Copilot is a browser copilot that reads and acts on the pages you direct it to, with your click required before anything it does leaves your control." |
 
 ### Permission justifications
 
@@ -104,7 +104,7 @@ who runs the install script, breaking OAuth and the companion for all of them, n
    before submitting, saves a round trip.
 2. **`topSites`.** Looks adjacent to browsing-history harvesting if the justification is vague. The voice
    disambiguation use case is narrow and should be stated narrowly.
-3. **The debugger infobar as a user-trust problem, not just a review problem.** Chrome shows "Nex Copilot is
+3. **The debugger infobar as a user-trust problem, not just a review problem.** Chrome shows "Ava Copilot is
    debugging this browser" on every tab it attaches to. First-time users who weren't expecting it will be alarmed.
    The site should say this plainly before install, not let it be a surprise (`docs/task.md` section 5 already
    calls this "expected behaviour that needs a clear message, not a bug to fix" for the product itself; the same
@@ -171,9 +171,9 @@ matter for the sideload path.
   few hours) and applies them silently. This is the actual "updates" win of being in a store — not the install
   step.
 
-## The optional Mac companion, "Nex Brain"
+## The optional Mac companion, "Ava Brain"
 
-`companion/` is a separate local Node process the extension can pair with (`Settings › Nex Brain`) for things a
+`companion/` is a separate local Node process the extension can pair with (`Settings › Ava Brain`) for things a
 browser extension cannot do by itself: a Docker sandbox per agent, `gh` with a click-to-approve allowlist, local
 (stdio) MCP servers, routines that run with Brave closed, and artifacts shown in an "Avi Studio" tab. It needs
 **Node 24+ and Docker Desktop (or OrbStack/Colima)** and is installed separately (`cd companion && pnpm install &&
@@ -181,7 +181,7 @@ sh scripts/install-launchagent.sh`), pairing with an 8-character one-time code. 
 it.
 
 **Recommendation: keep it out of the "install for other people" v1.** It was only just built (`docs/task.md`,
-"Wave 2 — WS7 Nex Brain," 2026-10-12) and still has pieces not wired up (routines syncing, its MCP tools as a
+"Wave 2 — WS7 Ava Brain," 2026-10-12) and still has pieces not wired up (routines syncing, its MCP tools as a
 connector, sandboxed agent sessions). It also assumes a fair amount of comfort with Docker and the terminal —
 exactly the audience this distribution effort is trying to not require. Document it on the site as "optional, for
 people comfortable with Docker," link to `companion/README.md`, and revisit broader packaging (a signed macOS app,

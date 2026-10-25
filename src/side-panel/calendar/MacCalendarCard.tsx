@@ -10,7 +10,7 @@ import type { MacStatusReply } from './macCalendar';
 const hint = 'text-[11.5px] text-muted-foreground';
 
 /**
- * Settings › Calendar, first part: the Mac's Calendar through Nex Brain, which reads every account macOS syncs
+ * Settings › Calendar, first part: the Mac's Calendar through Ava Brain, which reads every account macOS syncs
  * (Google Workspace included, where secret iCal addresses are often off). Shows macOS's permission state and the
  * steps, and which calendars count.
  */
@@ -37,7 +37,7 @@ export function MacCalendarCard({
 
   useEffect(() => {
     check();
-    // Pairing or unpairing Nex Brain changes which way the calendar is read
+    // Pairing or unpairing Ava Brain changes which way the calendar is read
     return brainSettingsStore.subscribe(check);
   }, [check]);
 

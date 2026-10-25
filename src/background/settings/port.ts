@@ -12,9 +12,9 @@ import type { CommandContext } from '../registry';
 // The port's name stayed when it grew from Models into all of Settings, so an open page keeps working
 export const SETTINGS_PORT_NAME = MODELS_PORT_NAME;
 
-// What settings sections send: models, voice engines and downloads, previews, devices, Nex Brain, identity and
+// What settings sections send: models, voice engines and downloads, previews, devices, Ava Brain, identity and
 // memory, AI history, backups, the Inbox's watch, install-before-use checks, WhatsApp, Ava's Meet browser, the Mac's
-// Calendar and Obsidian through Nex Brain, the update checker, and ambient listening
+// Calendar and Obsidian through Ava Brain, the update checker, and ambient listening
 export const SETTINGS_COMMAND_PREFIXES = [
   'models_',
   'voice_engine_',

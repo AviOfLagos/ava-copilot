@@ -57,7 +57,7 @@ describe('setup checks', () => {
     expect(problems({ ...base, local: { ...base.local, embed: false } }).local).toBe('local_no_embed');
   });
 
-  it('Nex Brain: install, pair, or start again', () => {
+  it('Ava Brain: install, pair, or start again', () => {
     const base = ready();
     expect(problems({ ...base, brain: { paired: false, state: 'unpaired', reachable: false } }).brain).toBe(
       'brain_unreachable',
@@ -67,7 +67,7 @@ describe('setup checks', () => {
     );
     const offline = problems({ ...base, brain: { paired: true, state: 'offline', reachable: false } });
     expect(offline.brain).toBe('brain_offline');
-    // What runs on Nex Brain waits for it, and says so
+    // What runs on Ava Brain waits for it, and says so
     expect(offline.ava).toBe('needs_brain');
     expect(offline.whatsapp).toBe('needs_brain');
   });

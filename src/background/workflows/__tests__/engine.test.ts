@@ -456,7 +456,7 @@ describe('WorkflowEngine', () => {
       retry: null,
       taints: true,
       check: async () => {
-        if (!paired) throw new AppError('unavailable', 'This step needs Nex Brain.');
+        if (!paired) throw new AppError('unavailable', 'This step needs Ava Brain.');
       },
       execute: async () => {
         ran += 1;
@@ -469,7 +469,7 @@ describe('WorkflowEngine', () => {
     const failed = await engine.execute(run.id, new AbortController().signal);
     expect(failed).toMatchObject({
       status: 'failed',
-      error: { message: 'Run the script: This step needs Nex Brain.' },
+      error: { message: 'Run the script: This step needs Ava Brain.' },
     });
     expect((await stepsOf(run.id)).code).toMatchObject({ status: 'failed', approval: null, attempts: 0 });
     expect(events).not.toContain('approval:code');

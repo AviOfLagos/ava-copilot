@@ -1,11 +1,11 @@
 {
   "app_metadata_description": {
     "description": "Extension description",
-    "message": "使用 AI 自動化網頁任務！Nex Copilot 是一款開放原始碼的瀏覽器擴充功能，能協助您擷取資料、填寫表單等。"
+    "message": "瀏覽器側邊欄裡的 AI 副駕駛：在真實網頁上做事、能對話、記筆記、會記住，並等你點擊才送出。"
   },
   "app_metadata_name": {
     "description": "Extension name",
-    "message": "Nex Copilot"
+    "message": "Ava Copilot"
   },
   "errors_unknown": {
     "message": "發生未知錯誤"
@@ -38,7 +38,7 @@
     "message": "回到對話"
   },
   "welcome_title": {
-    "message": "歡迎使用 Nex Copilot！"
+    "message": "歡迎使用 Ava Copilot！"
   },
   "welcome_instruction": {
     "message": "開始使用前，請先完成 API 金鑰的設定。"
@@ -167,7 +167,7 @@
     "message": "啟用語音輸入"
   },
   "permissions_microphone_description": {
-    "message": "Nex Copilot 需要麥克風存取權限，才能將語音轉換為文字。"
+    "message": "Ava Copilot 需要麥克風存取權限，才能將語音轉換為文字。"
   },
   "permissions_microphone_grantButton": {
     "message": "授予麥克風權限"
@@ -1204,7 +1204,7 @@
     "message": "A meeting is already being recorded. Stop it first."
   },
   "meeting_needsInvoke": {
-    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Nex Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
+    "message": "Chrome lets an extension record a tab only after you click its toolbar icon on that tab. Click the Ava Copilot icon on the meeting tab, then press Take notes again. Or press Alt+Shift+M on the meeting tab."
   },
   "meeting_untitled": {
     "message": "Meeting"
@@ -1267,7 +1267,7 @@
     "message": "The recording was interrupted. The notes cover what was recorded before it."
   },
   "meeting_warning_nothingCaptured": {
-    "message": "尚未擷取到任何內容：沒有音訊，也沒有字幕。請在通話分頁上點擊 Nex Copilot 圖示以錄製音訊，或開啟通話字幕。"
+    "message": "尚未擷取到任何內容：沒有音訊，也沒有字幕。請在通話分頁上點擊 Ava Copilot 圖示以錄製音訊，或開啟通話字幕。"
   },
   "meeting_auto_notifyTitle": {
     "message": "正在為這通通話做筆記"
@@ -1276,7 +1276,7 @@
     "message": "正在錄製通話音訊。"
   },
   "meeting_auto_notifyCaptions": {
-    "message": "正在讀取通話字幕。在通話上點擊 Nex Copilot 圖示，也能錄製音訊。"
+    "message": "正在讀取通話字幕。在通話上點擊 Ava Copilot 圖示，也能錄製音訊。"
   },
   "meeting_auto_notifyNote": {
     "message": "你可以在側邊面板加上這通通話的主題備註。不論是否填寫，筆記都會繼續。"
@@ -1297,7 +1297,7 @@
     "message": "目前沒有錄到任何內容"
   },
   "meeting_alert_nothingBody": {
-    "message": "你的 $1 通話字幕是關閉的，而且無法開啟，所以目前沒有記錄任何內容。在通話分頁上按下 Nex Copilot 圖示來錄下音訊，或在通話中開啟字幕（CC 按鈕，或按 C）。"
+    "message": "你的 $1 通話字幕是關閉的，而且無法開啟，所以目前沒有記錄任何內容。在通話分頁上按下 Ava Copilot 圖示來錄下音訊，或在通話中開啟字幕（CC 按鈕，或按 C）。"
   },
   "meeting_alert_recorderBody": {
     "message": "你的 $1 通話錄音器停止運作：$2"
@@ -1324,7 +1324,7 @@
     "message": "不要為這通通話做筆記"
   },
   "meeting_auto_captionsOnly": {
-    "message": "目前只來自通話字幕。在通話分頁上點擊 Nex Copilot 圖示即可錄製音訊。"
+    "message": "目前只來自通話字幕。在通話分頁上點擊 Ava Copilot 圖示即可錄製音訊。"
   },
   "meeting_auto_recordAudio": {
     "message": "錄製音訊"
@@ -1384,7 +1384,7 @@
     "message": "Tell people you are taking notes"
   },
   "meeting_consent_body": {
-    "message": "Nex Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records.如果你讓助理加入通話，她會以自己的身分加入，並在發言前先說明她是 AI 助理。"
+    "message": "Ava Copilot will record this tab and transcribe it. Let everyone in the meeting know before you start. The red REC badge on the tab shows while it records.如果你讓助理加入通話，她會以自己的身分加入，並在發言前先說明她是 AI 助理。"
   },
   "meeting_consent_mic": {
     "message": "Include my microphone, so my own voice is in the notes"
@@ -1873,7 +1873,7 @@
     "message": "What should I take off your plate?"
   },
   "home_orb": {
-    "message": "Nex Copilot"
+    "message": "Ava Copilot"
   },
   "home_suggestions": {
     "message": "Suggestions for this page"
@@ -2737,7 +2737,7 @@
     "message": "連接你的 Obsidian 保管庫"
   },
   "vault_connect_hint": {
-    "message": "你的記憶會寫入其中的「Nex Copilot」資料夾並建立 Obsidian 連結，你自己的筆記也會加入知識庫。資料不會離開這台電腦。"
+    "message": "你的記憶會寫入其中的「Ava Copilot」資料夾並建立 Obsidian 連結，你自己的筆記也會加入知識庫。資料不會離開這台電腦。"
   },
   "vault_connect": {
     "message": "選擇保管庫"
@@ -2761,7 +2761,7 @@
     "message": "將我的筆記讀入記憶"
   },
   "vault_readNotes_hint": {
-    "message": "Nex Copilot 資料夾以外的筆記。最上層資料夾或「workspace:」行決定其工作區。"
+    "message": "Ava Copilot 資料夾以外的筆記。最上層資料夾或「workspace:」行決定其工作區。"
   },
   "vault_disconnect": {
     "message": "中斷連接保管庫"
@@ -3783,7 +3783,7 @@
     "message": "否"
   },
   "flow_page_title": {
-    "message": "工作流程 · Nex Copilot"
+    "message": "工作流程 · Ava Copilot"
   },
   "shell_profile_open": {
     "message": "帳戶選單"
@@ -4574,7 +4574,7 @@
     "message": "即將推出"
   },
   "conn_mac_hint": {
-    "message": "本機 MCP 伺服器與命令列工具將透過你 Mac 上的 Nex Brain，在其沙箱中執行。"
+    "message": "本機 MCP 伺服器與命令列工具將透過你 Mac 上的 Ava Brain，在其沙箱中執行。"
   },
   "conn_add_titleNamed": {
     "message": "新增 $1"
@@ -5239,7 +5239,7 @@
     "message": "已安裝"
   },
   "brain_settings_title": {
-    "message": "Nex Brain（Mac）"
+    "message": "Ava Brain（Mac）"
   },
   "brain_state_unpaired": {
     "message": "尚未配對"
@@ -7060,7 +7060,7 @@
     "message": "會先畫出草稿讓你檢查；在你點擊建立之前不會執行任何東西。"
   },
   "flow_needsBrain": {
-    "message": "需要 Nex Brain：請在設定 › Nex Brain 中配對"
+    "message": "需要 Ava Brain：請在設定 › Ava Brain 中配對"
   },
   "conn_setup_needsUrl": {
     "message": "伺服器的網址是什麼？貼在這裡，我會加入它，需要登入時也會帶你登入。"
@@ -8259,7 +8259,7 @@
     "message": "連線"
   },
   "settings_page_connections_hint": {
-    "message": "連接器、你的 Obsidian 筆記庫、行事曆，以及 Mac 上的 Nex Brain。"
+    "message": "連接器、你的 Obsidian 筆記庫、行事曆，以及 Mac 上的 Ava Brain。"
   },
   "settings_page_meetings": {
     "message": "會議與晨報"
@@ -8361,7 +8361,7 @@
     "message": "在本機依語意搜尋"
   },
   "settings_install_brain": {
-    "message": "Mac 上的 Nex Brain"
+    "message": "Mac 上的 Ava Brain"
   },
   "settings_install_obsidian": {
     "message": "Obsidian 的資料夾存取"
@@ -8541,25 +8541,25 @@
     }
   },
   "requirement_brain_step_install": {
-    "message": "在你的 Mac 上安裝 Nex Brain（Nex Copilot 的 companion 資料夾）並啟動。"
+    "message": "在你的 Mac 上安裝 Ava Brain（Ava Copilot 的 companion 資料夾）並啟動。"
   },
   "requirement_brain_step_code": {
-    "message": "在「連線 › Nex Brain」輸入代碼與連接埠，然後按「配對」。"
+    "message": "在「連線 › Ava Brain」輸入代碼與連接埠，然後按「配對」。"
   },
   "requirement_brain_open": {
-    "message": "開啟 Nex Brain"
+    "message": "開啟 Ava Brain"
   },
   "settings_section_memoryIndex": {
     "message": "哪些內容會存入記憶"
   },
   "meeting_needsInvokeAudio": {
-    "message": "Chrome 只有在你於通話分頁上按下工具列的 Nex Copilot 圖示後，才會交出通話的音訊。通話分頁已移到最前面：在那裡按下圖示（或按 Alt+Shift+M），它的音訊就會加入這份筆記。"
+    "message": "Chrome 只有在你於通話分頁上按下工具列的 Ava Copilot 圖示後，才會交出通話的音訊。通話分頁已移到最前面：在那裡按下圖示（或按 Alt+Shift+M），它的音訊就會加入這份筆記。"
   },
   "meeting_alert_nothingNoCaptions": {
-    "message": "你的 $1 通話已開啟字幕，但 2 分鐘內沒有收到任何字幕。如果有人在說話，請在通話分頁上按下 Nex Copilot 圖示來錄下音訊。"
+    "message": "你的 $1 通話已開啟字幕，但 2 分鐘內沒有收到任何字幕。如果有人在說話，請在通話分頁上按下 Ava Copilot 圖示來錄下音訊。"
   },
   "meeting_alert_nothingNoAudio": {
-    "message": "你的 $1 通話沒有錄到任何音訊。在通話分頁上按下 Nex Copilot 圖示重新開始。"
+    "message": "你的 $1 通話沒有錄到任何音訊。在通話分頁上按下 Ava Copilot 圖示重新開始。"
   },
   "meeting_alert_nothingTranscription": {
     "message": "你的 $1 通話音訊已保留，但目前還無法轉成文字。請在「設定 › 語音」設定語音轉文字（本機模型不需要金鑰），或加入 Gemini 金鑰。"
@@ -8568,16 +8568,16 @@
     "message": "通話音訊已停止錄製"
   },
   "meeting_alert_audioLostBody": {
-    "message": "你的 $1 通話音訊停止了（分頁重新載入或切換了裝置）。筆記會改由字幕繼續。在通話分頁上按下 Nex Copilot 圖示即可再次錄製音訊。"
+    "message": "你的 $1 通話音訊停止了（分頁重新載入或切換了裝置）。筆記會改由字幕繼續。在通話分頁上按下 Ava Copilot 圖示即可再次錄製音訊。"
   },
   "meeting_alert_noteFailedTitle": {
     "message": "無法產生會議筆記"
   },
   "meeting_alert_noteFailedBody": {
-    "message": "你的 $1 通話摘要失敗：$2 所有內容都已保留。打開 Nex Copilot 並按下「重試」。"
+    "message": "你的 $1 通話摘要失敗：$2 所有內容都已保留。打開 Ava Copilot 並按下「重試」。"
   },
   "meeting_warning_captionsOff": {
-    "message": "通話字幕是關閉的，而且無法開啟。請在通話中開啟字幕（CC 按鈕，或按 C），或在通話分頁上按下 Nex Copilot 圖示來錄下音訊。"
+    "message": "通話字幕是關閉的，而且無法開啟。請在通話中開啟字幕（CC 按鈕，或按 C），或在通話分頁上按下 Ava Copilot 圖示來錄下音訊。"
   },
   "meeting_warning_audioLost": {
     "message": "通話音訊在通話中途停止（重新載入或切換裝置）；筆記改由字幕繼續。"
@@ -8601,7 +8601,7 @@
     "message": "等待第一句話"
   },
   "meeting_auto_waitingCaptionsBody": {
-    "message": "字幕已開啟。筆記會從第一句話開始。也可以在通話分頁上按下 Nex Copilot 圖示改為錄下音訊。"
+    "message": "字幕已開啟。筆記會從第一句話開始。也可以在通話分頁上按下 Ava Copilot 圖示改為錄下音訊。"
   },
   "meetvoice_title": {
     "message": "$NAME$ 在這場通話中",
@@ -8643,7 +8643,7 @@
     }
   },
   "meetvoice_signinHint": {
-    "message": "登入會在你的 Mac 上開啟 $NAME$ 自己的瀏覽器並前往 Google 登入頁。請在那裡登入她自己的帳號（例如 ava@yourcompany.com），切勿使用你的帳號，然後關閉該視窗。Nex Copilot 永遠看不到密碼。",
+    "message": "登入會在你的 Mac 上開啟 $NAME$ 自己的瀏覽器並前往 Google 登入頁。請在那裡登入她自己的帳號（例如 ava@yourcompany.com），切勿使用你的帳號，然後關閉該視窗。Ava Copilot 永遠看不到密碼。",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -8768,7 +8768,7 @@
     }
   },
   "meetvoice_noBrowser": {
-    "message": "Nex Brain 在你的 Mac 上找不到可執行她的 Chrome、Brave 或 Chromium。"
+    "message": "Ava Brain 在你的 Mac 上找不到可執行她的 Chrome、Brave 或 Chromium。"
   },
   "meetvoice_errors_notMeet": {
     "message": "她只能加入目前正在做筆記的 Google Meet 通話。"
@@ -8795,7 +8795,7 @@
     "message": "要說的內容（逐字）"
   },
   "meetvoice_needsBrain": {
-    "message": "$NAME$ 透過 Mac 上的輔助程式 Nex Brain 加入你的通話。設定一次後再回到這裡。",
+    "message": "$NAME$ 透過 Mac 上的輔助程式 Ava Brain 加入你的通話。設定一次後再回到這裡。",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -8804,7 +8804,7 @@
     }
   },
   "meetvoice_setUpBrain": {
-    "message": "設定 Nex Brain"
+    "message": "設定 Ava Brain"
   },
   "wava_error_noTab": {
     "message": "沒有可用的瀏覽器視窗。"
@@ -8925,10 +8925,10 @@
     "message": "用 WhatsApp 掃描的條碼"
   },
   "wava_settings_needsBrain": {
-    "message": "Ava 透過你 Mac 上的 Nex Brain 傳訊息給你。請先配對 Nex Brain。"
+    "message": "Ava 透過你 Mac 上的 Ava Brain 傳訊息給你。請先配對 Ava Brain。"
   },
   "wava_settings_openBrain": {
-    "message": "設定 Nex Brain"
+    "message": "設定 Ava Brain"
   },
   "wava_state_linked": {
     "message": "已連結為 $NUMBER$",
@@ -9027,10 +9027,10 @@
     "message": "在你的 Mac 上備份"
   },
   "backup_desc": {
-    "message": "Nex Brain 會在這台 Mac 上保存你的記憶與設定副本，重新安裝 Nex Copilot 後即可找回。變更後幾分鐘以及每天一次會自動備份。"
+    "message": "Ava Brain 會在這台 Mac 上保存你的記憶與設定副本，重新安裝 Ava Copilot 後即可找回。變更後幾分鐘以及每天一次會自動備份。"
   },
   "backup_notPaired": {
-    "message": "先配對 Nex Brain（設定 › 連線 › Nex Brain），才能備份到這台 Mac。"
+    "message": "先配對 Ava Brain（設定 › 連線 › Ava Brain），才能備份到這台 Mac。"
   },
   "backup_last": {
     "message": "上次備份：$WHEN$ · $SIZE$",
@@ -9056,7 +9056,7 @@
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Nex Brain is not running on your Mac."
+        "example": "Ava Brain is not running on your Mac."
       }
     }
   },
@@ -9096,7 +9096,7 @@
     "message": "還原"
   },
   "backup_restore_confirm": {
-    "message": "要以 $WHEN$ 的備份取代這個瀏覽器上的所有資料嗎？目前的對話、記憶與設定都會被取代，Nex Copilot 會重新啟動。",
+    "message": "要以 $WHEN$ 的備份取代這個瀏覽器上的所有資料嗎？目前的對話、記憶與設定都會被取代，Ava Copilot 會重新啟動。",
     "placeholders": {
       "when": {
         "content": "$1",
@@ -9114,7 +9114,7 @@
     "message": "正在還原…"
   },
   "backup_restored": {
-    "message": "已還原。Nex Copilot 正在重新啟動，請再次開啟面板。"
+    "message": "已還原。Ava Copilot 正在重新啟動，請再次開啟面板。"
   },
   "backup_export": {
     "message": "匯出備份檔"
@@ -9148,19 +9148,19 @@
     }
   },
   "backup_onboard_offer": {
-    "message": "從這台 Mac 上的 Nex Brain 還原"
+    "message": "從這台 Mac 上的 Ava Brain 還原"
   },
   "backup_onboard_offer_hint": {
     "message": "重新安裝了嗎？找回你的對話、記憶與設定。"
   },
   "backup_onboard_title": {
-    "message": "從 Nex Brain 還原"
+    "message": "從 Ava Brain 還原"
   },
   "backup_onboard_checking": {
-    "message": "正在這台 Mac 上尋找 Nex Brain…"
+    "message": "正在這台 Mac 上尋找 Ava Brain…"
   },
   "backup_onboard_unreachable": {
-    "message": "Nex Brain 在這台 Mac 上沒有回應。請先啟動它（執行 \"avi-brain start\"，或在 companion 資料夾執行 \"pnpm start\"），然後再試一次。"
+    "message": "Ava Brain 在這台 Mac 上沒有回應。請先啟動它（執行 \"avi-brain start\"，或在 companion 資料夾執行 \"pnpm start\"），然後再試一次。"
   },
   "backup_onboard_retry": {
     "message": "再試一次"
@@ -9181,16 +9181,16 @@
     "message": "這台 Mac 上的資料庫"
   },
   "vault_brain_hint": {
-    "message": "Nex Brain 在你的 Mac 上讀寫資料庫：不需要資料夾權限，重新啟動後不必再次允許，重新安裝後也會保留選擇。"
+    "message": "Ava Brain 在你的 Mac 上讀寫資料庫：不需要資料夾權限，重新啟動後不必再次允許，重新安裝後也會保留選擇。"
   },
   "vault_brain_found": {
     "message": "你的資料庫"
   },
   "vault_brain_looking": {
-    "message": "正在向 Nex Brain 取得你的資料庫…"
+    "message": "正在向 Ava Brain 取得你的資料庫…"
   },
   "vault_brain_none": {
-    "message": "Nex Brain 在 Obsidian 的清單中找不到資料庫。請在下方輸入資料庫的資料夾。"
+    "message": "Ava Brain 在 Obsidian 的清單中找不到資料庫。請在下方輸入資料庫的資料夾。"
   },
   "vault_brain_missing": {
     "message": "在這台 Mac 上已找不到"
@@ -9214,28 +9214,28 @@
     "message": "含有 .obsidian 資料夾的資料夾完整路徑，例如 ~/Documents/My Vault。"
   },
   "vault_brain_on": {
-    "message": "透過你 Mac 上的 Nex Brain，每 10 分鐘一次，面板關閉時也會同步。"
+    "message": "透過你 Mac 上的 Ava Brain，每 10 分鐘一次，面板關閉時也會同步。"
   },
   "vault_brain_lastError": {
     "message": "上次同步失敗：$ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Nex Brain is not running"
+        "example": "Ava Brain is not running"
       }
     }
   },
   "conn_setup_obsidianBrain": {
-    "message": "Nex Brain 可以存取你 Mac 上的資料庫。在「設定 › 連線 › Obsidian」中，按下資料庫旁的「使用」。"
+    "message": "Ava Brain 可以存取你 Mac 上的資料庫。在「設定 › 連線 › Obsidian」中，按下資料庫旁的「使用」。"
   },
   "settings_calendar_mac_title": {
     "message": "從 Mac 的行事曆讀取"
   },
   "settings_calendar_mac_hint": {
-    "message": "透過 Nex Brain：macOS 行事曆中的所有帳號，包括 Google Workspace，無需複製任何內容。"
+    "message": "透過 Ava Brain：macOS 行事曆中的所有帳號，包括 Google Workspace，無需複製任何內容。"
   },
   "settings_calendar_mac_unpaired": {
-    "message": "配對 Nex Brain（設定 › Nex Brain）即可讀取 Mac 的行事曆。在此之前，請使用下方的秘密 iCal 網址。"
+    "message": "配對 Ava Brain（設定 › Ava Brain）即可讀取 Mac 的行事曆。在此之前，請使用下方的秘密 iCal 網址。"
   },
   "settings_calendar_mac_checking": {
     "message": "正在讀取 Mac 的行事曆…"
@@ -9250,7 +9250,7 @@
     "message": "請在 Mac 上回應提示…"
   },
   "settings_calendar_mac_step_allow": {
-    "message": "按下「允許存取」，然後在 macOS 提示中選擇「允許」（提示會顯示「node」，也就是 Nex Brain 執行的程式）。"
+    "message": "按下「允許存取」，然後在 macOS 提示中選擇「允許」（提示會顯示「node」，也就是 Ava Brain 執行的程式）。"
   },
   "settings_calendar_mac_step_settings": {
     "message": "沒有提示或之前拒絕過？打開「系統設定 › 隱私權與安全性 › 行事曆」，為「node」開啟「完整取用權」。"
@@ -9301,26 +9301,26 @@
     "message": "若登入了多個 Google 帳號，請選擇你要的行事曆所屬的帳號（依登入順序）。"
   },
   "settings_calendar_secretDisabled": {
-    "message": "此 Google 帳號沒有秘密 iCal 網址：Workspace 管理員已將其關閉。請改用 Nex Brain 讀取 Mac 的行事曆（在「系統設定 › Internet 帳號」中加入帳號），或貼上其他行事曆的網址。"
+    "message": "此 Google 帳號沒有秘密 iCal 網址：Workspace 管理員已將其關閉。請改用 Ava Brain 讀取 Mac 的行事曆（在「系統設定 › Internet 帳號」中加入帳號），或貼上其他行事曆的網址。"
   },
   "vault_brain_chooseAgain": {
-    "message": "請重新選擇你的資料庫：Nex Brain 現在選擇了另一個資料庫，或找不到這個。同步已停止。"
+    "message": "請重新選擇你的資料庫：Ava Brain 現在選擇了另一個資料庫，或找不到這個。同步已停止。"
   },
   "vault_brain_chooseAgain_button": {
     "message": "重新選擇"
   },
   "brain_autoPair": {
-    "message": "與這台 Mac 上的 Nex Brain 配對"
+    "message": "與這台 Mac 上的 Ava Brain 配對"
   },
   "brain_autoPair_hint": {
-    "message": "Nex Brain 在這裡執行時不需要代碼。若它設定為需要代碼，請使用下方的代碼。"
+    "message": "Ava Brain 在這裡執行時不需要代碼。若它設定為需要代碼，請使用下方的代碼。"
   },
   "update_toolbar_title": {
     "message": "$NAME$ — 有可用更新",
     "placeholders": {
       "name": {
         "content": "$1",
-        "example": "Nex Copilot"
+        "example": "Ava Copilot"
       }
     }
   },
@@ -9329,7 +9329,7 @@
     "placeholders": {
       "name": {
         "content": "$1",
-        "example": "Nex Copilot"
+        "example": "Ava Copilot"
       },
       "version": {
         "content": "$2",
@@ -9345,7 +9345,7 @@
     "placeholders": {
       "label": {
         "content": "$1",
-        "example": "Nex Copilot 1.4.0"
+        "example": "Ava Copilot 1.4.0"
       }
     }
   },
@@ -9396,13 +9396,13 @@
     "message": "檢查更新"
   },
   "update_settings_checkEnabled_hint": {
-    "message": "每 12 小時查看 Nex Copilot 自己的網站是否有新版本。不會傳送任何與此瀏覽器有關的資訊。"
+    "message": "每 12 小時查看 Ava Copilot 自己的網站是否有新版本。不會傳送任何與此瀏覽器有關的資訊。"
   },
   "update_settings_whatsNew": {
     "message": "新功能"
   },
   "update_settings_install_title": {
-    "message": "更新 Nex Copilot"
+    "message": "更新 Ava Copilot"
   },
   "update_settings_install_step": {
     "message": "執行此指令，然後重新載入擴充功能："
@@ -9411,7 +9411,7 @@
     "message": "重新載入擴充功能"
   },
   "update_settings_brain_title": {
-    "message": "更新 Nex Brain"
+    "message": "更新 Ava Brain"
   },
   "update_settings_brain_current": {
     "message": "已安裝版本：$VERSION$",
@@ -9432,10 +9432,10 @@
     }
   },
   "update_settings_brain_upToDate": {
-    "message": "Nex Brain 已是最新版本。"
+    "message": "Ava Brain 已是最新版本。"
   },
   "update_settings_brain_unknown": {
-    "message": "尚未檢查：請先配對 Nex Brain，或按下「立即檢查」。"
+    "message": "尚未檢查：請先配對 Ava Brain，或按下「立即檢查」。"
   },
   "update_settings_error": {
     "message": "無法檢查：$ERROR$",
@@ -9502,7 +9502,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9511,7 +9511,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9525,7 +9525,7 @@
     "message": "裝置上的語音模型"
   },
   "setup_item_brain": {
-    "message": "已配對 Nex Brain"
+    "message": "已配對 Ava Brain"
   },
   "setup_item_ava": {
     "message": "Ava 的會議帳號"
@@ -9561,19 +9561,19 @@
     "message": "尚未下載語音轉文字與朗讀語音。"
   },
   "setup_problem_brain_unreachable": {
-    "message": "這台 Mac 上的 Nex Brain 沒有回應：請安裝或啟動。"
+    "message": "這台 Mac 上的 Ava Brain 沒有回應：請安裝或啟動。"
   },
   "setup_problem_brain_unpaired": {
-    "message": "Nex Brain 正在執行，但尚未與此瀏覽器配對。"
+    "message": "Ava Brain 正在執行，但尚未與此瀏覽器配對。"
   },
   "setup_problem_brain_offline": {
-    "message": "Nex Brain 已配對但目前沒有回應：請重新啟動。"
+    "message": "Ava Brain 已配對但目前沒有回應：請重新啟動。"
   },
   "setup_problem_needs_brain": {
-    "message": "需先配對並執行 Nex Brain。"
+    "message": "需先配對並執行 Ava Brain。"
   },
   "setup_problem_ava_no_browser": {
-    "message": "Nex Brain 找不到可執行她的 Chrome、Brave 或 Chromium。"
+    "message": "Ava Brain 找不到可執行她的 Chrome、Brave 或 Chromium。"
   },
   "setup_problem_ava_signed_out": {
     "message": "$NAME$ 的瀏覽器尚未登入 Google 帳號。",
@@ -9639,7 +9639,7 @@
     }
   },
   "setup_detail_calendar_mac": {
-    "message": "透過 Nex Brain 讀取 Mac 行事曆。"
+    "message": "透過 Ava Brain 讀取 Mac 行事曆。"
   },
   "setup_detail_calendar_ics": {
     "message": "讀取行事曆的 iCal 位址。"
@@ -9649,7 +9649,7 @@
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Nex Brain"
+        "example": "Ava Brain"
       }
     }
   },
@@ -9681,7 +9681,7 @@
     "message": "下載語音模型"
   },
   "setup_action_pair": {
-    "message": "與這台 Mac 上的 Nex Brain 配對"
+    "message": "與這台 Mac 上的 Ava Brain 配對"
   },
   "setup_action_avaSignin": {
     "message": "登入 $NAME$ 的瀏覽器",
@@ -9708,7 +9708,7 @@
     "message": "立即備份"
   },
   "setup_action_brain": {
-    "message": "設定 Nex Brain"
+    "message": "設定 Ava Brain"
   },
   "setup_hint_openOllama": {
     "message": "已安裝？請開啟 Ollama 應用程式，再重新檢查。"
@@ -9720,7 +9720,7 @@
     "message": "請在 LM Studio 的 Discover 分頁下載 nomic-embed-text，再重新檢查。"
   },
   "setup_hint_brainInstall": {
-    "message": "在終端機中從 Nex Copilot 資料夾安裝一次 Nex Brain，再重新檢查："
+    "message": "在終端機中從 Ava Copilot 資料夾安裝一次 Ava Brain，再重新檢查："
   },
   "setup_info_docker": {
     "message": "Docker：$MESSAGE$（僅沙箱執行需要）",
@@ -9762,10 +9762,10 @@
     "message": "Ava 的會議帳號"
   },
   "meetvoice_account_brain": {
-    "message": "Nex Brain"
+    "message": "Ava Brain"
   },
   "meetvoice_account_brainUnpaired": {
-    "message": "尚未配對：Ava 的瀏覽器在 Nex Brain 上執行。"
+    "message": "尚未配對：Ava 的瀏覽器在 Ava Brain 上執行。"
   },
   "meetvoice_account_brainOnline": {
     "message": "已配對並執行中。"
@@ -9783,7 +9783,7 @@
     }
   },
   "meetvoice_account_needsBrain": {
-    "message": "請先配對 Nex Brain，才能登入 $NAME$ 的瀏覽器。",
+    "message": "請先配對 Ava Brain，才能登入 $NAME$ 的瀏覽器。",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -9826,7 +9826,7 @@
     "message": "檢查登入"
   },
   "meetvoice_account_note": {
-    "message": "請你自己在 $NAME$ 的瀏覽器視窗中登入。請使用為她建立的帳號；Nex Copilot 不會看到或保存密碼。",
+    "message": "請你自己在 $NAME$ 的瀏覽器視窗中登入。請使用為她建立的帳號；Ava Copilot 不會看到或保存密碼。",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -9961,7 +9961,7 @@
     "message": "無法刪除，請再試一次。"
   },
   "ambient_error_mic": {
-    "message": "麥克風被封鎖了。請允許 Nex Copilot 使用麥克風後再試一次。"
+    "message": "麥克風被封鎖了。請允許 Ava Copilot 使用麥克風後再試一次。"
   },
   "ambient_error_stt": {
     "message": "聆聽需要在這台 Mac 上安裝語音辨識器。請到「設定 › 語音引擎」安裝。"
@@ -9980,5 +9980,20 @@
   },
   "ambient_indicator_offRecord": {
     "message": "不記錄：Ava 目前不會記下任何內容"
+  },
+  "feedback_title": {
+    "message": "回報問題"
+  },
+  "feedback_body": {
+    "message": "有東西壞了，或有點子？它會成為 GitHub 上的 issue，任何人都能接手修正。"
+  },
+  "feedback_bug": {
+    "message": "回報問題"
+  },
+  "feedback_idea": {
+    "message": "提出點子"
+  },
+  "feedback_note": {
+    "message": "會開啟 GitHub，並已填好你的版本與瀏覽器。在你於該處送出之前不會傳送任何內容；需要 GitHub 帳號。"
   }
 }

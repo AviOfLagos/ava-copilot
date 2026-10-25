@@ -97,7 +97,7 @@ export async function confinedNotePath(root: string, relative: string, purpose: 
     const info = await lstat(folder).catch(() => null);
     if (!info) break;
     if (info.isSymbolicLink()) {
-      if (purpose === 'write') fail('forbidden', 'Nex Brain does not write through a linked folder.');
+      if (purpose === 'write') fail('forbidden', 'Ava Brain does not write through a linked folder.');
       const real = await realpath(folder).catch(() => null);
       if (!real || !isInside(root, real)) fail('forbidden', 'That path leaves the vault.');
     } else if (!info.isDirectory()) {
@@ -107,7 +107,7 @@ export async function confinedNotePath(root: string, relative: string, purpose: 
 
   const info = await lstat(target).catch(() => null);
   if (info?.isSymbolicLink()) {
-    if (purpose === 'write') fail('forbidden', 'Nex Brain does not write through a linked file.');
+    if (purpose === 'write') fail('forbidden', 'Ava Brain does not write through a linked file.');
     const real = await realpath(target).catch(() => null);
     if (!real || !isInside(root, real)) fail('forbidden', 'That path leaves the vault.');
   }

@@ -16,7 +16,7 @@ export const GET: APIRoute = () => {
     extension: { url: `${SITE_URL}${links.installScript}`, command: INSTALL_COMMAND },
     brain: {
       version: brainVersion,
-      // Nex Brain lives in this repo, not a separate release: pulling it and re-running the installer is the
+      // Ava Brain lives in this repo, not a separate release: pulling it and re-running the installer is the
       // update (see companion/README.md's Install section, which this mirrors).
       command: 'cd companion && git pull && snare shield check . && pnpm install && sh scripts/install-launchagent.sh',
     },

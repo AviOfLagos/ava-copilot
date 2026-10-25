@@ -3,10 +3,10 @@ import type { VaultState, Workspace } from '@extension/storage';
 import { EXPORT_ROOT, readFrontmatter, vaultNotes } from './markdown';
 
 /**
- * The Obsidian vault the user connected: the copilot's memory is written into its `Nex Copilot`
+ * The Obsidian vault the user connected: the copilot's memory is written into its `Ava Copilot`
  * folder, and the user's own notes are read into the knowledge base. Runs in an extension page,
  * which holds the folder the user picked; Brave may ask again for access after a restart.
- * When the vault is reached through Nex Brain on the Mac instead (src/background/obsidian), the background syncs
+ * When the vault is reached through Ava Brain on the Mac instead (src/background/obsidian), the background syncs
  * it and the calls below hand over to it.
  */
 
@@ -51,7 +51,7 @@ async function set<K extends keyof Kept>(key: K, value: Kept[K] | undefined): Pr
 }
 
 export interface VaultStatus {
-  // 'brain': through Nex Brain on the Mac; 'browser': the folder this browser picked
+  // 'brain': through Ava Brain on the Mac; 'browser': the folder this browser picked
   source: 'brain' | 'browser' | null;
   name: string | null;
   // 'granted': syncing; 'prompt': a click is needed to allow access again
@@ -101,7 +101,7 @@ async function record(state: VaultState): Promise<void> {
   }
 }
 
-/** The vault Nex Brain reads and writes, when one is chosen. */
+/** The vault Ava Brain reads and writes, when one is chosen. */
 async function brainVault() {
   const setting = await obsidianVaultStore.getSetting().catch(() => null);
   return setting?.source === 'brain' && setting.vaultId ? setting : null;
@@ -117,7 +117,7 @@ async function ask(type: string, body: Record<string, unknown> = {}): Promise<Re
 export async function vaultStatus(): Promise<VaultStatus> {
   const brain = await brainVault();
   if (brain) {
-    // Through Nex Brain no access click is ever needed
+    // Through Ava Brain no access click is ever needed
     const status: VaultStatus = { source: 'brain', name: brain.name, access: 'granted', readNotes: brain.readNotes };
     await record({ support: 'ok', name: status.name, access: status.access });
     return status;
@@ -274,7 +274,7 @@ let running: Promise<{ written: number; read: number }> | null = null;
 export function syncVault(): Promise<{ written: number; read: number }> {
   running ??= (async () => {
     try {
-      // Nex Brain's vault is synced by the background, with the panel open or not
+      // Ava Brain's vault is synced by the background, with the panel open or not
       if (await brainVault()) {
         const reply = await ask('obsidian_sync');
         return { written: Number(reply.written) || 0, read: Number(reply.read) || 0 };

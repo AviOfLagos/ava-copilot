@@ -1,4 +1,4 @@
-// Bundles Nex Brain into one file, dist/nex-brain.mjs. Its own sources, the shared protocol and the
+// Bundles Ava Brain into one file, dist/nex-brain.mjs. Its own sources, the shared protocol and the
 // extension's workflow engine (engine, spec, templates, errors, retry) are compiled in; npm packages stay
 // external and load from companion/node_modules.
 import { chmodSync } from 'node:fs';

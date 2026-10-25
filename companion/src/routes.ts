@@ -134,7 +134,7 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       rate: 'pair',
       async handler({ body }) {
         if (deps.config.autoPair === false) {
-          fail('forbidden', 'Automatic pairing is off on this Mac. Run `pnpm pair` in Nex Brain for a code.');
+          fail('forbidden', 'Automatic pairing is off on this Mac. Run `pnpm pair` in Ava Brain for a code.');
         }
         const request = parse(autoPairRequestSchema, body);
         const { token, companionId } = await deps.pairing.autoPair(request.client);
@@ -454,7 +454,7 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body, params }) {
         const request = parse(studioSessionRequestSchema, body);
         const viewKey = deps.studio.redeem(params.id, request.token);
-        if (!viewKey) fail('forbidden', 'This link has expired. Open the artifact again from Nex Copilot.');
+        if (!viewKey) fail('forbidden', 'This link has expired. Open the artifact again from Ava Copilot.');
         return json({ ok: true, viewKey });
       },
     },

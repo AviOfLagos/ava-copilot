@@ -11,7 +11,7 @@ const vault = (id: string, name: string, usable = true): ObsidianVault => ({
 });
 
 describe('vaultCardMode', () => {
-  it('uses Nex Brain’s vault once chosen, offers Nex Brain’s vaults when paired, else the browser folder', () => {
+  it('uses Ava Brain’s vault once chosen, offers Ava Brain’s vaults when paired, else the browser folder', () => {
     expect(vaultCardMode({ paired: true, setting: { source: 'brain', vaultId: 'abc' } })).toBe('brain');
     // Chosen before and now unpaired: still shown, so the user sees why sync stopped and can let go
     expect(vaultCardMode({ paired: false, setting: { source: 'brain', vaultId: 'abc' } })).toBe('brain');
@@ -25,7 +25,7 @@ describe('showBrowserFolder', () => {
     expect(showBrowserFolder('browser', null, 'brave_off')).toBe(true);
     expect(showBrowserFolder('browser', null, 'ok')).toBe(true);
   });
-  it('shows a connected browser folder under Nex Brain’s choices only so it can be let go', () => {
+  it('shows a connected browser folder under Ava Brain’s choices only so it can be let go', () => {
     expect(showBrowserFolder('brain_pick', null, 'ok')).toBe(false);
     expect(showBrowserFolder('brain_pick', 'Old vault', 'ok')).toBe(true);
     expect(showBrowserFolder('brain', 'Old vault', 'ok')).toBe(false);

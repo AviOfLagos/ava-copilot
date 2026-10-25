@@ -1,4 +1,4 @@
-// A mock Nex Brain that speaks the real protocol (src/shared/lib/protocol/companion.ts, loaded by Node as
+// A mock Ava Brain that speaks the real protocol (src/shared/lib/protocol/companion.ts, loaded by Node as
 // TypeScript): pairing with a known code, health, sandbox runs that echo their command, and one artifact
 // served through the real Avi Studio page and artifact CSP. It enforces what the real companion enforces
 // (the extension's Origin, the bearer token) and records every request, so tests can check both.
@@ -147,7 +147,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
     if (!url.pathname.startsWith('/v1/')) return fail(404, 'not_found', 'There is nothing here.');
     // As the real companion: no GET in the API (the browser sends no Origin on an extension's GET)
     if (req.method === 'GET') return fail(404, 'not_found', 'There is nothing here.');
-    if (origin !== COMPANION_EXTENSION_ORIGIN) return fail(403, 'forbidden', 'Only Nex Copilot may use Nex Brain.');
+    if (origin !== COMPANION_EXTENSION_ORIGIN) return fail(403, 'forbidden', 'Only Ava Copilot may use Ava Brain.');
 
     if (req.method === 'POST' && url.pathname === '/v1/pair') {
       const parsed = pairRequestSchema.safeParse(JSON.parse(body || '{}'));
@@ -164,7 +164,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       });
     }
     if (!token || req.headers.authorization !== `Bearer ${token}`) {
-      return fail(401, 'auth', 'Nex Brain does not know this browser. Pair again in Nex Copilot settings.');
+      return fail(401, 'auth', 'Ava Brain does not know this browser. Pair again in Ava Copilot settings.');
     }
 
     if (req.method === 'POST' && url.pathname === '/v1/health') {
@@ -272,7 +272,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       backupSecrets = null;
       return send(200, { ok: true });
     }
-    // Obsidian through Nex Brain, as the real one answers (a vault in memory)
+    // Obsidian through Ava Brain, as the real one answers (a vault in memory)
     if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.vaults) {
       const listed = { ...MOCK_VAULT, found: 'obsidian', usable: true };
       return send(200, { ok: true, vaults: [listed], chosen: chosenVault ? listed : null });
@@ -291,7 +291,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       return send(200, { ok: true });
     }
     if (url.pathname.startsWith('/v1/obsidian/') && json().vaultId !== chosenVault) {
-      return fail(404, 'not_found', 'No Obsidian vault is chosen in Nex Brain.');
+      return fail(404, 'not_found', 'No Obsidian vault is chosen in Ava Brain.');
     }
     if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.notes) {
       const { cursor = null, since = 0 } = json();
@@ -316,17 +316,17 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       const marked = text => /^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(text);
       if (existing && parsed.data.mode === 'create') return fail(400, 'invalid', 'A note already exists at that path.');
       if (existing && !marked(existing.text)) {
-        return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+        return fail(403, 'forbidden', 'That note is not one Ava Copilot wrote, so it was left alone.');
       }
       vaultNotes.set(parsed.data.path, { text: parsed.data.text, mtime: Date.now() });
       return send(200, { ok: true, path: parsed.data.path, mtime: Date.now(), created: !existing });
     }
     if (req.method === 'POST' && url.pathname === OBSIDIAN_ROUTES.remove) {
       const parsed = obsidianRemoveRequestSchema.safeParse(json());
-      if (!parsed.success) return fail(400, 'invalid', 'Nex Brain only removes notes in the Nex Copilot folder.');
+      if (!parsed.success) return fail(400, 'invalid', 'Ava Brain only removes notes in the Nex Copilot folder.');
       const existing = vaultNotes.get(parsed.data.path);
       if (existing && !/^---\r?\n[\s\S]*?^source: avi-copilot$[\s\S]*?^---/m.test(existing.text)) {
-        return fail(403, 'forbidden', 'That note is not one Nex Copilot wrote, so it was left alone.');
+        return fail(403, 'forbidden', 'That note is not one Ava Copilot wrote, so it was left alone.');
       }
       return send(200, { ok: true, removed: vaultNotes.delete(parsed.data.path) });
     }
@@ -335,7 +335,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       ok: true,
       access: calendar.access,
       calendars: calendar.access === 'granted' ? calendar.calendars : [],
-      message: calendar.access === 'granted' ? null : 'Nex Brain needs your permission to read the Mac’s Calendar.',
+      message: calendar.access === 'granted' ? null : 'Ava Brain needs your permission to read the Mac’s Calendar.',
     });
     if (req.method === 'POST' && url.pathname === CALENDAR_ROUTES.status) return send(200, calendarStatus());
     if (req.method === 'POST' && url.pathname === CALENDAR_ROUTES.request) {
@@ -346,7 +346,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       const parsed = calendarEventsRequestSchema.safeParse(json());
       if (!parsed.success) return fail(400, 'invalid', 'The calendar request is not valid.');
       if (calendar.access !== 'granted')
-        return fail(403, 'forbidden', 'Nex Brain needs your permission to read the Mac’s Calendar.');
+        return fail(403, 'forbidden', 'Ava Brain needs your permission to read the Mac’s Calendar.');
       calendar.eventRequests.push(parsed.data);
       const ids = parsed.data.calendarIds;
       return send(200, {

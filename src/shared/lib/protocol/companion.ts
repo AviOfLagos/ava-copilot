@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * The one protocol between the extension and Nex Brain, the companion on the Mac. Both sides import this
+ * The one protocol between the extension and Ava Brain, the companion on the Mac. Both sides import this
  * file: the extension's background (bridge client), the companion's server, and the E2E mock companion,
  * so a message either side sends is checked against the same schema on the other.
  *
@@ -132,7 +132,7 @@ export const pairRequestSchema = z.object({
 });
 export type PairRequest = z.infer<typeof pairRequestSchema>;
 
-// Pairing with no code: only Nex Copilot's own extension origin can ask (the server checks the Origin), which is the
+// Pairing with no code: only Ava Copilot's own extension origin can ask (the server checks the Origin), which is the
 // same trust as a code a local program could print for itself by running `pnpm pair`
 export const autoPairRequestSchema = z.object({ client: z.string().trim().min(1).max(80) });
 
@@ -618,7 +618,7 @@ export const STUDIO_SCRIPT = `(async () => {
   history.replaceState(null, '', location.pathname);
   const status = document.getElementById('status');
   const id = document.body.dataset.artifact;
-  if (!token) { status.textContent = 'This link was already used. Open the artifact again from Nex Copilot.'; return; }
+  if (!token) { status.textContent = 'This link was already used. Open the artifact again from Ava Copilot.'; return; }
   try {
     const response = await fetch('/studio/' + encodeURIComponent(id) + '/session', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
@@ -632,7 +632,7 @@ export const STUDIO_SCRIPT = `(async () => {
     document.getElementById('stage').replaceChildren(frame);
     status.textContent = '';
   } catch (error) {
-    status.textContent = 'This link has expired. Open the artifact again from Nex Copilot.';
+    status.textContent = 'This link has expired. Open the artifact again from Ava Copilot.';
   }
 })();`;
 
@@ -675,7 +675,7 @@ export function studioCsp(scriptHash: string, styleHash: string): string {
 
 // ── Ava in a Google Meet call ─────────────────────────────────────────────────────────────────────
 //
-// Nex Brain runs a browser of its own, signed in by the user (by hand) to a dedicated account, that joins a
+// Ava Brain runs a browser of its own, signed in by the user (by hand) to a dedicated account, that joins a
 // call as a separate participant. Its microphone carries the companion's audio and nothing else: the
 // extension renders the approved words to speech and sends the clip; the companion plays it into that
 // browser's microphone. Nothing is ever injected into the user's own Meet tab.
@@ -758,7 +758,7 @@ export const meetStatusSchema = z.object({
   browserFound: z.boolean(),
   since: z.number(),
   // The Google account her browser is signed in to, as Meet's account button names it (null: not seen). Optional so
-  // an older Nex Brain still answers
+  // an older Ava Brain still answers
   account: z.string().max(200).nullable().optional(),
 });
 export type MeetStatus = z.infer<typeof meetStatusSchema>;
@@ -789,7 +789,7 @@ export const meetSayReplySchema = z.object({
 
 // ── Ava on WhatsApp ───────────────────────────────────────────────────────────────────────────────
 //
-// Nex Brain keeps a WhatsApp Web session of its own (an unofficial client the user chose, linked by
+// Ava Brain keeps a WhatsApp Web session of its own (an unofficial client the user chose, linked by
 // scanning a code under Linked devices). It talks to one person only, the owner: the linked account's own
 // "Message yourself" chat, and optionally one other number of the user's. Every other chat is dropped
 // before anything is kept, and a send to any other chat is refused. The owner's text messages wait in a
@@ -850,7 +850,7 @@ export const whatsappOwnerRequestSchema = z.object({
 });
 export type WhatsAppOwnerRequest = z.infer<typeof whatsappOwnerRequestSchema>;
 
-// Quiet hours, kept by Nex Brain too: only answers and approvals go out in them
+// Quiet hours, kept by Ava Brain too: only answers and approvals go out in them
 export const WHATSAPP_TIME = /^([01]?\d|2[0-3]):[0-5]\d$/;
 export const whatsappQuietRequestSchema = z.object({
   quietStart: z.string().regex(WHATSAPP_TIME),
@@ -886,7 +886,7 @@ export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: w
 
 // ── Backups: memory and settings that outlive an uninstall ────────────────────────────────────────
 // The extension sends a gzipped snapshot of its database and settings in chunks (it can be hundreds of MB);
-// Nex Brain keeps the files under its data dir, which uninstalling the extension does not touch. API keys and
+// Ava Brain keeps the files under its data dir, which uninstalling the extension does not touch. API keys and
 // sign-ins travel separately and are kept encrypted under a key in the macOS Keychain, never in a snapshot.
 
 export const BACKUP_ROUTES = {
@@ -984,9 +984,9 @@ export const backupSecretsGetReplySchema = z.object({
 });
 
 // ── Obsidian vault on the Mac ─────────────────────────────────────────────────────────────────────
-// Nex Brain reads and writes the user's Obsidian vault on disk, so the browser needs no folder picker (Brave
+// Ava Brain reads and writes the user's Obsidian vault on disk, so the browser needs no folder picker (Brave
 // ships without one). The vault is chosen once (choose); every other call names it by id and every path is
-// relative to it: Nex Brain resolves each one with realpath and refuses anything that leaves the vault.
+// relative to it: Ava Brain resolves each one with realpath and refuses anything that leaves the vault.
 
 export const OBSIDIAN_ROUTES = {
   // Vaults Obsidian knows (its obsidian.json) and the one chosen
@@ -1015,7 +1015,7 @@ export const OBSIDIAN_LIMITS = {
   searchScanBytes: 40_000_000,
 } as const;
 
-// The one folder of the vault Nex Brain writes in (any case), and the line every note it writes carries in its front
+// The one folder of the vault Ava Brain writes in (any case), and the line every note it writes carries in its front
 // matter. Both are fixed here, never chosen by the caller: only a note under the folder with the marker is replaced
 // or removed.
 export const OBSIDIAN_WRITE_ROOT = 'Nex Copilot';
@@ -1090,7 +1090,7 @@ export const obsidianNotesReplySchema = z.object({
   ok: z.literal(true),
   notes: z.array(noteMetaSchema).max(OBSIDIAN_LIMITS.listPage),
   next: z.string().max(500).nullable(),
-  // The vault has more notes than Nex Brain walks
+  // The vault has more notes than Ava Brain walks
   capped: z.boolean(),
 });
 
@@ -1123,7 +1123,7 @@ export const obsidianReadReplySchema = z.object({
 export const obsidianWriteRequestSchema = z.object({
   requestId: requestIdSchema,
   vaultId: vaultIdSchema,
-  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only writes in the Nex Copilot folder.'),
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Ava Brain only writes in the Nex Copilot folder.'),
   text: z.string().max(OBSIDIAN_LIMITS.noteBytes),
   // 'create' never replaces a file; 'overwrite' replaces only a note carrying OBSIDIAN_MARKER (or makes a new one)
   mode: z.enum(['create', 'overwrite']),
@@ -1140,7 +1140,7 @@ export const obsidianWriteReplySchema = z.object({
 export const obsidianRemoveRequestSchema = z.object({
   requestId: requestIdSchema,
   vaultId: vaultIdSchema,
-  path: notePathSchema.refine(isInObsidianWriteRoot, 'Nex Brain only removes notes in the Nex Copilot folder.'),
+  path: notePathSchema.refine(isInObsidianWriteRoot, 'Ava Brain only removes notes in the Nex Copilot folder.'),
 });
 export const obsidianRemoveReplySchema = z.object({ ok: z.literal(true), removed: z.boolean() });
 
@@ -1165,7 +1165,7 @@ export const obsidianSearchReplySchema = z.object({
 });
 
 // ── The Mac's Calendar ────────────────────────────────────────────────────────────────────────────
-// Nex Brain reads macOS Calendar (EventKit), which syncs every Google, Workspace, iCloud or Exchange account
+// Ava Brain reads macOS Calendar (EventKit), which syncs every Google, Workspace, iCloud or Exchange account
 // added under System Settings › Internet Accounts. Read-only. Event text is written by whoever sent the invite:
 // it is data, never instructions.
 

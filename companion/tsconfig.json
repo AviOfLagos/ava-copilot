@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  // Nex Brain is its own package: it type-checks its sources, its eve agent, and the parts of the extension it
+  // Ava Brain is its own package: it type-checks its sources, its eve agent, and the parts of the extension it
   // shares (the protocol, and the workflow engine with its spec, templates, errors and retry).
   "compilerOptions": {
     "target": "es2023",

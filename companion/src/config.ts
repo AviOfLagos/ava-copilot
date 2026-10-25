@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMPANION_DEFAULT_PORT, COMPANION_HOST } from '@protocol';
 
-/** Where Nex Brain listens and keeps its files. Everything it writes stays under dataDir, mode 0700. */
+/** Where Ava Brain listens and keeps its files. Everything it writes stays under dataDir, mode 0700. */
 export interface BrainConfig {
   host: typeof COMPANION_HOST;
   port: number;
@@ -15,7 +15,7 @@ export interface BrainConfig {
   version: string;
   // The Docker image every sandbox runs
   sandboxImage: string;
-  // Nex Copilot may pair without a code (on unless AVI_BRAIN_AUTO_PAIR=0)
+  // Ava Copilot may pair without a code (on unless AVI_BRAIN_AUTO_PAIR=0)
   autoPair?: boolean;
 }
 

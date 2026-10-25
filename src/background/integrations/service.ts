@@ -761,7 +761,7 @@ export class ConnectorService {
   private companion() {
     const bridge = companionToolBridge();
     if (!bridge) {
-      throw new AppError('unavailable', 'This connector runs on your Mac through Nex Brain, which is not set up yet.', {
+      throw new AppError('unavailable', 'This connector runs on your Mac through Ava Brain, which is not set up yet.', {
         retryable: false,
       });
     }

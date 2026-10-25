@@ -1,4 +1,4 @@
-// Memory and settings that survive an uninstall: one browser backs up to a mock Nex Brain from Settings › Memory ›
+// Memory and settings that survive an uninstall: one browser backs up to a mock Ava Brain from Settings › Memory ›
 // Backups; a second browser with a fresh profile (a reinstall: same extension ID, nothing stored) restores it from
 // the first screen of the setup, pairing with the code on the way, and comes back with the chat, the settings and
 // the model, with the setup done.
@@ -74,7 +74,7 @@ function idb(page, store, write) {
   );
 }
 
-test('backs up this browser to Nex Brain from Settings, keys apart from the snapshot', async () => {
+test('backs up this browser to Ava Brain from Settings, keys apart from the snapshot', async () => {
   const extension = await launchExtension(mock);
   try {
     const page = extension.options;
@@ -109,7 +109,7 @@ test('backs up this browser to Nex Brain from Settings, keys apart from the snap
       );
       button.click();
     }, SECTION);
-    await until(async () => companion.backups.size === 1, 'a snapshot reached Nex Brain').catch(async error => {
+    await until(async () => companion.backups.size === 1, 'a snapshot reached Ava Brain').catch(async error => {
       const shown = await settings.evaluate(selector => document.querySelector(selector)?.innerText ?? '', SECTION);
       const seen = companion.requests.map(request => `${request.method} ${request.path}`).join('; ');
       throw new Error(`${error.message}. Section: ${shown}. Requests: ${seen}`);
@@ -148,7 +148,7 @@ test('a reinstall restores it from the first screen of the setup', async () => {
     await panel.setViewport({ width: 400, height: 760 });
     await panel.goto(`${extension.origin}/sidepanel.html`);
     await panel.bringToFront();
-    // The port of the mock (Nex Brain's own port is the default); nothing else is set up
+    // The port of the mock (Ava Brain's own port is the default); nothing else is set up
     await command(panel, { type: 'brain_set_port', port: companion.port });
     const text = async () => (await panel.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
 

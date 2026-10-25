@@ -95,7 +95,7 @@ export function testConfig(dataDir: string): BrainConfig {
   };
 }
 
-/** A started Nex Brain on a free port, with stand-ins, and a fetch that speaks as the extension. */
+/** A started Ava Brain on a free port, with stand-ins, and a fetch that speaks as the extension. */
 export async function startTestBrain(deps: BrainDeps = {}, config: Partial<BrainConfig> = {}) {
   const dir = tempDir();
   const log = memoryLogger();

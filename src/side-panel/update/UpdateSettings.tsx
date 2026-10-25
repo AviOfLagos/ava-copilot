@@ -12,7 +12,7 @@ import { HINT, Row } from '../settings/sections/ui';
 
 /**
  * Settings › Help's "Updates": the setting (default on, explained plainly so "no third-party calls" stays
- * true — this is Nex Copilot's own site), the current vs. latest version, what changed, and the two things an
+ * true — this is Ava Copilot's own site), the current vs. latest version, what changed, and the two things an
  * update actually is: the install command again (updates in place) and a Reload button, plus the same for Nex
  * Brain. The background does the checking (src/background/update/register.ts); this only sends commands and
  * reads what it found.

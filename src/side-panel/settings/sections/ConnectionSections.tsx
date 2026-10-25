@@ -29,7 +29,7 @@ export function ObsidianSection() {
 }
 
 /**
- * The calendar: the Mac's Calendar through Nex Brain when it is paired, else a secret iCal address (pasted, or
+ * The calendar: the Mac's Calendar through Ava Brain when it is paired, else a secret iCal address (pasted, or
  * found in Google Calendar for the account chosen), and reminders before meetings.
  */
 export function CalendarSection() {

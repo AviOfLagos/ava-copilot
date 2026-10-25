@@ -10,7 +10,7 @@ import type { ProcessRunner } from '../sandbox/process';
  * without a shell by the process runner. macOS Calendar syncs every account under System Settings › Internet
  * Accounts (Google and Workspace included), so this reads calendars the browser cannot. Read-only.
  *
- * macOS asks once whether the process may read calendars. Nex Brain runs as `node` under its LaunchAgent, so
+ * macOS asks once whether the process may read calendars. Ava Brain runs as `node` under its LaunchAgent, so
  * that is the name macOS shows in the prompt and in System Settings › Privacy & Security › Calendars.
  */
 
@@ -94,20 +94,20 @@ const ACCESS_OF_STATUS: Record<number, CalendarAccess> = {
 };
 
 export const CALENDAR_STEPS =
-  'Nex Brain needs your permission to read the Mac’s Calendar. In Nex Copilot press “Allow access” and choose Allow ' +
-  'in the macOS prompt (it names “node”, the program Nex Brain runs as). If no prompt shows, open System Settings › ' +
+  'Ava Brain needs your permission to read the Mac’s Calendar. In Ava Copilot press “Allow access” and choose Allow ' +
+  'in the macOS prompt (it names “node”, the program Ava Brain runs as). If no prompt shows, open System Settings › ' +
   'Privacy & Security › Calendars and turn on “node” with Full Access, then press Check again.';
 
 const MESSAGES: Record<CalendarAccess, string | null> = {
   granted: null,
   not_determined: CALENDAR_STEPS,
   denied:
-    'macOS does not let Nex Brain read your calendars. Open System Settings › Privacy & Security › Calendars, turn on ' +
+    'macOS does not let Ava Brain read your calendars. Open System Settings › Privacy & Security › Calendars, turn on ' +
     '“node” with Full Access, then press Check again.',
   restricted:
-    'Calendar access is restricted on this Mac (by Screen Time or a device profile), so Nex Brain cannot read it.',
+    'Calendar access is restricted on this Mac (by Screen Time or a device profile), so Ava Brain cannot read it.',
   write_only:
-    'Nex Brain may only add events, not read them. Open System Settings › Privacy & Security › Calendars and change ' +
+    'Ava Brain may only add events, not read them. Open System Settings › Privacy & Security › Calendars and change ' +
     '“node” to Full Access, then press Check again.',
   unavailable: 'The Mac’s Calendar cannot be read here (this needs macOS with osascript).',
 };
@@ -128,7 +128,7 @@ export function parseCalendarOutput(stdout: string): CalendarRead {
   try {
     raw = JSON.parse(stdout.trim());
   } catch {
-    fail('unavailable', 'The Mac’s Calendar answered something Nex Brain could not read.');
+    fail('unavailable', 'The Mac’s Calendar answered something Ava Brain could not read.');
   }
   const access = ACCESS_OF_STATUS[Number(raw.status)] ?? 'unavailable';
   const calendars: MacCalendar[] = (Array.isArray(raw.calendars) ? raw.calendars : [])

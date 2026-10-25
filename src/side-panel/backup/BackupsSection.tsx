@@ -11,7 +11,7 @@ import { HINT, Row } from '../settings/sections/ui';
 import { BackupList, megabytes, when } from './BackupList';
 
 /**
- * Settings › Memory › Backups: memory and settings kept by Nex Brain on this Mac, so a reinstall brings them back.
+ * Settings › Memory › Backups: memory and settings kept by Ava Brain on this Mac, so a reinstall brings them back.
  * Backups run on their own (a few minutes after changes, and daily); this shows the last one, backs up by hand,
  * lists what the Mac keeps, and restores one after a confirm.
  */

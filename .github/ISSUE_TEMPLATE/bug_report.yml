@@ -1,72 +1,83 @@
-name: Bug Report
-description: Create a report to help us improve NanoBrowser
-title: "[Bug]: "
+name: Something is broken
+description: Ava did something wrong, or didn't do what she should.
+title: "Bug: "
 labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
-
+        Thanks for reporting. In the extension, **Settings › Help › Report a problem** fills in your version and browser for you.
+        Please don't paste keys, tokens or other people's personal details.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        I asked Ava to fill the sign-up form on example.com.
+        I expected her to stop and ask before submitting.
+        She filled the form but the confirm card never appeared.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Ask Ava to …
+        3. See …
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Works on pages (browser agent)
+        - The gate (confirm before sending)
+        - Voice or the wake word
+        - Ambient listening
+        - Meetings
+        - Memory or knowledge graph
+        - Workspaces
+        - Routines, agents or the Inbox
+        - Models or keys
+        - Integrations or connectors
+        - Ava Brain (Mac companion)
+        - Install or update
+        - Website
+        - Something else
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: Nanobrowser Version
-      description: What version of NanoBrowser are you running?
-      placeholder: e.g., 0.1.0
+      label: Version
+      description: Settings › Help, or the version on the extensions page.
+      placeholder: "0.2.1"
     validations:
       required: true
-
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and system
+      placeholder: "Brave 1.83 on macOS 15"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Which model was in use, if it matters (for example Ollama qwen3:4b, or Gemini 2.5 Flash).
   - type: textarea
-    id: description
+    id: extra
     attributes:
-      label: Bug Description
-      description: A clear and concise description of what the bug is
-      placeholder: Tell us what happened...
-    validations:
-      required: true
-      
-  - type: textarea
-    id: reproduction
+      label: Screenshots or errors
+      description: A screenshot, or the error text from the panel. Check it shows nothing private first.
+  - type: checkboxes
+    id: fix
     attributes:
-      label: Steps to Reproduce
-      description: Steps to reproduce the behavior
-      placeholder: |
-        1. My prompt is '...'
-        2. I click '...'
-        3. I see '...'
-    validations:
-      required: true
-      
-  - type: dropdown
-    id: llm_provider
-    attributes:
-      label: LLM Service Provider
-      description: Which LLM service provider are you using?
+      label: Fixing it
       options:
-        - OpenAI
-        - Anthropic
-        - Google Gemini
-        - Ollama
-        - OpenRouter
-        - Other (please specify in description)
-    validations:
-      required: true
-      
-  - type: textarea
-    id: models
-    attributes:
-      label: Models Used
-      description: Which models are you using for the 3 agents (Planner, Navigator, Validator)?
-      placeholder: |
-        Planner: gpt-4o
-        Navigator: claude-3.7-sonnet
-        Validator: gemini-2.0-flash
-    validations:
-      required: true
- 
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots
-      description: If applicable, add screenshots to help explain your problem
+        - label: I'd like to try fixing this myself (we'll help; see CONTRIBUTING.md).

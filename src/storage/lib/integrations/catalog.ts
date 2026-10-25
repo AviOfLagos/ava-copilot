@@ -21,7 +21,7 @@ export interface ConnectorCatalogEntry {
   url: string;
   // How the user signs in: a token they paste, or the service's sign-in page
   auth: 'token' | 'oauth';
-  // The service does not register Nex Copilot by itself: the user brings a client ID (and secret) of their own
+  // The service does not register Ava Copilot by itself: the user brings a client ID (and secret) of their own
   needsClient: boolean;
   // Scopes to ask for, when the service's docs name the ones its MCP server needs
   scope?: string;

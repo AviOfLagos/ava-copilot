@@ -14,7 +14,7 @@ export const statusLabel: Record<Status, string> = {
 };
 
 /** The source repository. Private while the project gets ready for outside contributors. */
-export const REPO = 'https://github.com/AviOfLagos/nex-copilot';
+export const REPO = 'https://github.com/AviOfLagos/ava-copilot';
 
 export const projectLinks = {
   features: '/features',
@@ -23,7 +23,8 @@ export const projectLinks = {
   donate: '/donate',
   repo: REPO,
   issues: `${REPO}/issues`,
-  newIssue: `${REPO}/issues/new`,
+  newIssue: `${REPO}/issues/new/choose`,
+  goodFirst: `${REPO}/issues?q=is%3Aopen+label%3A%22good+first+issue%22`,
   discussions: `${REPO}/discussions`,
   security: `${REPO}/security/advisories/new`,
   contributing: `${REPO}/blob/feat/restyle/CONTRIBUTING.md`,
@@ -517,7 +518,6 @@ export const contribute = {
   breadcrumb: 'Contribute',
   heading: 'Build it with us.',
   lede: 'Code is one way in. Testing on your machine, translating, writing skills for the sites you use and reporting bugs help just as much.',
-  repoNote: 'The repository opens to the public soon. Until then, message @AviOfLagos on GitHub for access.',
   ways: [
     {
       id: 'code',
@@ -545,8 +545,8 @@ export const contribute = {
     },
     {
       id: 'report',
-      title: 'Report a bug',
-      body: 'What you did, what you expected, what happened, and your browser and system.',
+      title: 'Report a problem',
+      body: 'The issue form asks for what a fixer needs. In the extension: Settings › Help › Report a problem.',
       icon: 'report',
     },
     {
@@ -559,7 +559,7 @@ export const contribute = {
   setupTitle: 'Run it locally',
   setupLede: 'Node.js 24 and pnpm 10. About five minutes.',
   setupSteps: [
-    { title: 'Get the code', command: `git clone ${REPO}.git && cd nex-copilot` },
+    { title: 'Get the code', command: `git clone ${REPO}.git && cd ava-copilot` },
     { title: 'Install', command: 'corepack enable && pnpm install' },
     { title: 'Build and watch', command: 'pnpm dev' },
     {
@@ -607,13 +607,36 @@ export const contribute = {
       text: 'Unit tests next to the code, and an end-to-end test for anything the user sees. Lint only the files you changed.',
     },
   ],
-  flowTitle: 'From idea to merged',
+  flowTitle: 'From a report to a fix',
   flow: [
-    'Open an issue first for anything bigger than a fix, so we agree on the shape before you spend the time.',
-    'One change per pull request, on its own branch, against feat/restyle.',
-    'Say what you tested and how. Screenshots for anything visual.',
-    'A maintainer reviews within a few days. Small, focused pull requests merge fastest.',
+    'Someone reports a problem through the issue form (in the extension: Settings › Help › Report a problem).',
+    'Pick it up: comment “I’ll take this” so nobody doubles up. Reporters are welcome to fix their own issue.',
+    'Fork, branch, fix. One change per pull request, against feat/restyle, with “Fixes #123” in the description.',
+    'CI checks types, tests, locales and both builds on every pull request. A maintainer reviews within a few days.',
   ],
+  toolsTitle: 'Tools that make it quick',
+  toolsLede:
+    'Use whatever you like. These work well with this codebase; the repository’s AGENTS.md tells coding agents the rules.',
+  tools: [
+    {
+      name: 'Claude Code',
+      text: 'A coding agent in your terminal. Give it the issue link; it reads AGENTS.md and the docs first.',
+    },
+    {
+      name: 'Cursor or VS Code',
+      text: 'An editor with an AI assistant. Open the repo and point it at the issue and the files it names.',
+    },
+    { name: 'Codex CLI', text: 'OpenAI’s terminal agent, if that is the one you use.' },
+    {
+      name: 'GitHub CLI',
+      text: '`gh issue list --label "good first issue"` to find one, `gh pr create` to send your fix.',
+    },
+    {
+      name: 'github.dev',
+      text: 'Press . on any GitHub page to edit in the browser: enough for copy, docs and translations.',
+    },
+  ],
+  toolsNote: 'Suggestions, not endorsements. Whatever you use, run pnpm type-check and pnpm test before you push.',
   securityTitle: 'Found a security problem?',
   securityBody:
     'Please don’t open a public issue. Report it privately through a GitHub security advisory, and we will answer within three days.',
@@ -670,7 +693,7 @@ export const donate = {
   otherTitle: 'Other ways to help',
   other: [
     { label: 'Contribute', href: projectLinks.contribute },
-    { label: 'Report a bug', href: projectLinks.newIssue },
+    { label: 'Report a problem', href: projectLinks.newIssue },
     { label: 'See the roadmap', href: projectLinks.roadmap },
   ],
 };
@@ -786,7 +809,12 @@ export const menus: Menu[] = [
         title: 'Take part',
         links: [
           { href: projectLinks.contribute, label: 'Contribute', note: 'Ways to help and local setup', icon: 'code' },
-          { href: projectLinks.newIssue, label: 'Report a bug', note: 'On GitHub', icon: 'bug' },
+          {
+            href: projectLinks.newIssue,
+            label: 'Report a problem',
+            note: 'A GitHub issue anyone can fix',
+            icon: 'bug',
+          },
           { href: '/contribute#security', label: 'Security', note: 'Report a problem privately', icon: 'shieldAlert' },
         ],
       },

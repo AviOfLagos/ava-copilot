@@ -17,7 +17,7 @@ import type { Logger } from '../log';
 
 /**
  * Snapshots of the extension's memory and settings, kept on the Mac so they outlive an uninstall of the
- * extension. Nex Brain never reads inside one: it stores the gzipped bytes it was sent (checked against the
+ * extension. Ava Brain never reads inside one: it stores the gzipped bytes it was sent (checked against the
  * size and SHA-256 announced first) and hands them back in chunks. Files are 0600 in a 0700 folder.
  *
  * An upload is written to `uploads/<id>.part` in order, chunk by chunk, and only becomes a snapshot on commit,
