@@ -111,8 +111,39 @@ class VoskStt implements SttEngine {
   }
 }
 
+export const STT_STALLED = 'Speech recognition stopped responding, so it was restarted. Say that again.';
+
+/** How long one utterance may take to write down: generous (a slow processor, a first load), never forever. */
+export function transcribeLimitMs(audio: Float32Array, sampleRate = 16_000): number {
+  return Math.max(20_000, Math.round((audio.length / sampleRate) * 1000 * 3));
+}
+
+/**
+ * A recogniser that cannot hang the conversation. A worker can stall (the graphics card stops answering, the worker
+ * dies without an error): its answer would never come, and everything after it would wait forever, even in the
+ * next conversation, which gets the same loaded engine from the pool. Past the limit the worker is thrown away; the
+ * next utterance loads a fresh one.
+ */
+export function withTimeLimit(engine: SttEngine, limitFor = transcribeLimitMs): SttEngine {
+  return {
+    load: () => engine.load(),
+    dispose: () => engine.dispose(),
+    transcribe(audio) {
+      const limit = limitFor(audio);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const stalled = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          engine.dispose();
+          reject(new Error(STT_STALLED));
+        }, limit);
+      });
+      return Promise.race([engine.transcribe(audio), stalled]).finally(() => clearTimeout(timer));
+    },
+  };
+}
+
 export function createSttEngine(config: SttConfig): SttEngine {
-  if (config.engine === 'vosk') return new VoskStt();
+  if (config.engine === 'vosk') return withTimeLimit(new VoskStt());
   const model = config.model ?? (config.engine === 'whisper' ? 'whisper-base' : 'moonshine-tiny');
-  return new TransformersStt(model, config.webgpu ?? false);
+  return withTimeLimit(new TransformersStt(model, config.webgpu ?? false));
 }

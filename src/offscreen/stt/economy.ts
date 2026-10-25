@@ -30,6 +30,27 @@ const UTTERANCE_HANGOVER_MS = 700;
 // Exchanges sent with each turn, newest last
 const HISTORY_TURNS = 8;
 const SORRY = 'Sorry, I could not answer that.';
+// The longest one turn may take (the model, and any tool it calls) before the conversation gives up on it and
+// listens again. The background stops its own model call a little sooner (voice/engines/economy.ts)
+export const TURN_LIMIT_MS = 120_000;
+export const TURN_TOO_LONG = 'That took too long, so I stopped. Ask me again.';
+// Ending the conversation while a transcription has been running this long means the recogniser is stuck: it is
+// thrown away so the next conversation starts with a fresh one
+const STUCK_TRANSCRIBE_MS = 8_000;
+
+/** Resolves with `fallback` if `work` takes longer than `ms`. */
+function within<T>(work: Promise<T>, ms: number, fallback: () => T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>(resolve => {
+    timer = setTimeout(() => resolve(fallback()), ms);
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
+/** About how long saying `text` takes, with room to spare: past it, the voice is taken as stuck. */
+export function speakLimitMs(text: string): number {
+  return 20_000 + text.length * 120;
+}
 
 export interface EconomyOptions {
   mode: 'economy';
@@ -70,6 +91,7 @@ export class EconomySession {
   // Messages typed in the conversation's chat, with their pictures
   private typedQueue: { text: string; images: TurnImage[]; note: string }[] = [];
   private transcribing = false;
+  private transcribeStartedAt = 0;
   private thinking = false;
   private speaking = false;
   private bargeSamples = 0;
@@ -142,6 +164,11 @@ export class EconomySession {
     this.closeMic = null;
     if (this.speaking) this.deps.stopSpeaking(this.lineTts ?? this.options.economy.tts);
     this.lines.stop();
+    // A transcription still running long after it should have finished: the recogniser is stuck, and the pool would
+    // hand the same stuck engine to the next conversation
+    if (this.stt && this.transcribing && performance.now() - this.transcribeStartedAt > STUCK_TRANSCRIBE_MS) {
+      this.stt.dispose();
+    }
     if (this.stt) this.deps.releaseStt();
     this.stt = null;
     this.events.onStatus('off');
@@ -227,6 +254,7 @@ export class EconomySession {
     const audio = this.utterances.shift();
     if (!audio) return;
     this.transcribing = true;
+    this.transcribeStartedAt = performance.now();
     try {
       const started = performance.now();
       const text = (await this.stt.transcribe(audio)).trim();
@@ -298,14 +326,19 @@ export class EconomySession {
     const interruptions = this.interruptions;
     let reply: EconomyTurnReply;
     try {
-      reply = await this.deps.ask({
-        type: 'voice_engine_turn',
-        ...input,
-        ...(input.images?.length ? {} : { images: undefined, note: undefined }),
-        history: this.history.slice(-HISTORY_TURNS),
-        instructions: this.options.instructions,
-        tools: this.options.tools,
-      });
+      // A turn that never comes back would keep the conversation from ever hearing anything again
+      reply = await within(
+        this.deps.ask({
+          type: 'voice_engine_turn',
+          ...input,
+          ...(input.images?.length ? {} : { images: undefined, note: undefined }),
+          history: this.history.slice(-HISTORY_TURNS),
+          instructions: this.options.instructions,
+          tools: this.options.tools,
+        }),
+        TURN_LIMIT_MS,
+        () => ({ said: TURN_TOO_LONG, error: TURN_TOO_LONG }),
+      );
     } catch (error) {
       reply = { said: '', error: error instanceof Error ? error.message : String(error) };
     }
@@ -334,7 +367,10 @@ export class EconomySession {
       this.speaking = true;
       this.status('speaking');
       try {
-        await this.deps.speak(said, this.options.economy.tts);
+        // A voice that never finishes would keep the conversation from listening again
+        await within(this.deps.speak(said, this.options.economy.tts), speakLimitMs(said), () => {
+          this.deps.stopSpeaking(this.options.economy.tts);
+        });
       } catch (error) {
         if (!this.stopped) this.status('listening', `The voice failed: ${String(error)}`);
       }

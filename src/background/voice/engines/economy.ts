@@ -14,6 +14,8 @@ import { voiceToolSet } from './tools';
 
 export const END_CONVERSATION = 'end_conversation';
 // Model calls in one turn: a tool or two, then the answer
+// How long the model may take for one voice turn, tools included
+const MODEL_LIMIT_MS = 110_000;
 const MAX_STEPS = 5;
 const MAX_SAID = 1500;
 
@@ -97,6 +99,8 @@ export async function runEconomyTurn(request: EconomyTurnRequest, deps: EconomyB
         messages: turnMessages(turn),
         ...(withTools ? { tools, stopWhen: [stepCountIs(MAX_STEPS), hasToolCall(END_CONVERSATION)] } : {}),
         maxRetries: 1,
+        // The conversation gives up on a turn at 120 s (offscreen/stt/economy.ts); the model call stops first
+        abortSignal: AbortSignal.timeout(MODEL_LIMIT_MS),
         ...chatModel.settings,
         providerOptions: chatModel.providerOptions,
       });
