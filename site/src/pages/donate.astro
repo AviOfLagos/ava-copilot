@@ -1,8 +1,9 @@
 ---
-import { ArrowRight, Clock, Info } from 'lucide-react';
+import { ArrowRight, Clock, Heart, Info } from 'lucide-react';
 import { donate, projectLinks } from '../content/project';
 import { PRODUCT } from '../content/site';
 import Base from '../layouts/Base.astro';
+import { mark } from '../lib/marks';
 import { pageGraph } from '../lib/seo';
 import '../styles/pages.css';
 
@@ -45,7 +46,21 @@ const open = donate.channels.some(channel => channel.url);
         {
           donate.channels.map(channel => (
             <li class="channel panel-card">
-              <h3 class="h3">{channel.name}</h3>
+              <span class="channel__head">
+                {(() => {
+                  const icon = mark(channel.mark);
+                  return icon ? (
+                    <svg class="channel__mark" viewBox="0 0 24 24" role="img" aria-label={icon.title}>
+                      <path d={icon.path} fill="currentColor" />
+                    </svg>
+                  ) : (
+                    <span class="channel__mark channel__mark--plain" aria-hidden="true">
+                      <Heart strokeWidth={1.8} />
+                    </span>
+                  );
+                })()}
+                <h3 class="h3">{channel.name}</h3>
+              </span>
               <p>{channel.body}</p>
               {channel.url ? (
                 <a class="btn btn--cta" href={channel.url} rel="noopener">

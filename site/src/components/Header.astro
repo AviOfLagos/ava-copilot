@@ -1,9 +1,14 @@
 ---
-// A floating glass pill, sticky at the top: the mark, the main links, the theme switch and Install. On phones the
-// links fold into a menu: a <details> disclosure, so it opens with JavaScript off too (site.ts closes it on Esc,
-// on a click outside and on a link).
-import { ArrowRight, Menu, X } from 'lucide-react';
-import { PRODUCT, links, nav } from '../content/site';
+// The header: a floating glass bar with the mark, a dark pill of menus (after beam.ai: a highlight slides to the
+// item under the pointer, and each menu opens one wide panel with a featured card on the left that carries a small
+// working widget), the theme switch and Install. Panels open on hover and on keyboard focus with CSS alone, so they
+// work without JavaScript; site.ts adds the sliding highlight, a short close delay and Esc. Phones get a grouped
+// disclosure menu instead.
+import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
+import { menus, projectLinks } from '../content/project';
+import { INSTALL_COMMAND, PRODUCT, links, nav } from '../content/site';
+import { iconFor } from '../lib/feature-icons';
+import '../styles/nav.css';
 import Mark from './Mark.astro';
 import ThemeToggle from './ThemeToggle.astro';
 
@@ -11,50 +16,165 @@ interface Props {
   path: string;
 }
 const { path } = Astro.props;
-const current = (href: string) => (href === path ? 'page' : undefined);
+const within = (href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`));
+const menuActive = (menu: (typeof menus)[number]) =>
+  within(menu.href) || menu.columns.some(column => column.links.some(link => within(link.href)));
+// One menu at most is marked current: the first whose own page or links contain this page
+const activeMenu = menus.find(menuActive)?.id;
+const shortHost = INSTALL_COMMAND.replace(/^curl -fsSL https?:\/\//, '').replace(/ \| bash$/, '');
 ---
 
 <header class="site-header">
-  <div class="site-header__bar">
+  <div class="site-header__bar" data-nav-root>
     <a class="brand" href="/" aria-label={nav.home}>
       <Mark />
       <span>{PRODUCT}</span>
     </a>
+
     <nav class="site-nav" aria-label={nav.label}>
-      <ul>
+      <ul class="site-nav__list" data-nav-list>
         {
-          nav.items.map(item => (
-            <li>
-              <a href={item.href} aria-current={current(item.href)}>
-                {item.label}
+          menus.map(menu => (
+            <li class="site-nav__item" data-nav-item>
+              <a
+                class="site-nav__trigger"
+                href={menu.href}
+                aria-current={activeMenu === menu.id ? 'true' : undefined}
+                data-nav-trigger>
+                {menu.label}
+                <ChevronDown className="site-nav__chev" aria-hidden="true" strokeWidth={2} />
               </a>
+              <div class="mega" data-nav-panel>
+                <div class="mega__inner">
+                  <a class="mega__featured" href={menu.featured.href}>
+                    <span class="mega__widget" aria-hidden="true">
+                      {menu.featured.widget === 'gate' && (
+                        <span class="mini-confirm">
+                          <span class="mini-confirm__row">
+                            <span class="mini-confirm__kind">Send</span>
+                            <span class="mini-confirm__text">Reply to Tolu: “Friday works.”</span>
+                          </span>
+                          <span class="mini-confirm__actions">
+                            <span class="mini-confirm__cancel">Cancel</span>
+                            <span class="mini-confirm__hold">
+                              <span class="mini-confirm__fill" />
+                              <span class="mini-confirm__label">Hold to send</span>
+                            </span>
+                          </span>
+                        </span>
+                      )}
+                      {menu.featured.widget === 'install' && (
+                        <span class="mini-term">
+                          <span class="mini-term__line">
+                            <span class="mini-term__prompt">$</span> curl -fsSL {shortHost} | bash
+                          </span>
+                          <span class="mini-term__line mini-term__line--ok">Downloaded and checked</span>
+                          <span class="mini-term__line mini-term__line--ok">Unpacked to Nex Copilot/extension</span>
+                          <span class="mini-term__line mini-term__line--next">Next: Load unpacked in your browser</span>
+                        </span>
+                      )}
+                      {menu.featured.widget === 'community' && (
+                        <span class="mini-pr">
+                          <span class="mini-pr__title">Verify the Windows installer</span>
+                          <span class="mini-pr__checks">
+                            <span>type-check</span>
+                            <span>unit tests</span>
+                            <span>end-to-end</span>
+                          </span>
+                          <span class="mini-pr__state">Ready for review</span>
+                        </span>
+                      )}
+                    </span>
+                    <span class="mega__featured-text">
+                      <span class="mega__featured-title">{menu.featured.title}</span>
+                      <span class="mega__featured-body">{menu.featured.body}</span>
+                      <span class="mega__featured-action">
+                        {menu.featured.action}
+                        <ArrowRight aria-hidden="true" strokeWidth={2} />
+                      </span>
+                    </span>
+                  </a>
+                  {menu.columns.map(column => (
+                    <div class="mega__column">
+                      <p class="mega__heading">{column.title}</p>
+                      <ul>
+                        {column.links.map(link => {
+                          const Icon = iconFor(link.icon);
+                          return (
+                            <li>
+                              <a
+                                class="mega__link"
+                                href={link.href}
+                                aria-current={link.href === path ? 'page' : undefined}
+                                rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+                                <span class="mega__icon" aria-hidden="true">
+                                  <Icon strokeWidth={1.75} />
+                                </span>
+                                <span class="mega__text">
+                                  <span class="mega__label">{link.label}</span>
+                                  {link.note && <span class="mega__note">{link.note}</span>}
+                                </span>
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </li>
           ))
         }
+        <li class="site-nav__item" data-nav-item>
+          <a
+            class="site-nav__trigger"
+            href={projectLinks.donate}
+            aria-current={within(projectLinks.donate) ? 'page' : undefined}>
+            Donate
+          </a>
+        </li>
       </ul>
+      <span class="site-nav__glide" aria-hidden="true" data-nav-glide></span>
     </nav>
+
     <ThemeToggle />
-    <a class="btn btn--cta btn--sm site-header__install" href={links.install} aria-current={current(links.install)}>
+    <a
+      class="btn btn--cta btn--sm site-header__install"
+      href={links.install}
+      aria-current={path === links.install ? 'page' : undefined}>
       <span class="btn__label">{nav.install}</span>
       <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
     </a>
+
     <details class="site-menu" data-site-menu>
       <summary class="site-menu__button" aria-label={nav.menu}>
         <Menu className="site-menu__open" aria-hidden="true" />
         <X className="site-menu__close" aria-hidden="true" />
       </summary>
       <nav class="site-menu__panel" aria-label={nav.menu}>
-        <ul>
-          {
-            [...nav.items, ...nav.more].map(item => (
-              <li>
-                <a href={item.href} aria-current={current(item.href)}>
-                  {item.label}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
+        {
+          menus.map(menu => (
+            <div class="site-menu__group">
+              <p class="site-menu__heading">{menu.label}</p>
+              <ul>
+                {menu.columns
+                  .flatMap(column => column.links)
+                  .map(link => {
+                    const Icon = iconFor(link.icon);
+                    return (
+                      <li>
+                        <a href={link.href} aria-current={link.href === path ? 'page' : undefined}>
+                          <Icon aria-hidden="true" strokeWidth={1.75} />
+                          {link.label}
+                        </a>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+          ))
+        }
         <a class="btn btn--cta site-menu__install" href={links.install}>
           <span class="btn__label">{nav.install}</span>
           <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>

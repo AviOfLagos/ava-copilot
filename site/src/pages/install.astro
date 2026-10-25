@@ -5,6 +5,8 @@ import { PRODUCT, install, links } from '../content/site';
 import Base from '../layouts/Base.astro';
 import { pageGraph } from '../lib/seo';
 import '../styles/pages.css';
+import '../styles/widgets.css';
+import UpdateDemo from '../components/widgets/UpdateDemo.astro';
 
 const path = links.install;
 const { tabs, script, load, update, remove, voices, brain, paths, notify } = install;
@@ -42,8 +44,31 @@ const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
             return (
               <li>
                 <a class="path panel-card" href={item.href} style="height: 100%">
-                  <span class="way__icon" aria-hidden="true">
-                    <Icon />
+                  <span class={`path__visual path__visual--${item.id}`} aria-hidden="true">
+                    {item.id === 'download' && (
+                      <>
+                        <span class="pv-file">
+                          <Icon strokeWidth={1.75} />
+                          <span>nex-copilot-latest.zip</span>
+                        </span>
+                        <span class="pv-arrow" />
+                        <span class="pv-folder">Nex Copilot</span>
+                      </>
+                    )}
+                    {item.id === 'terminal' && (
+                      <span class="pv-term">
+                        <span class="pv-term__prompt">$</span> curl … | bash<span class="pv-term__caret" />
+                      </span>
+                    )}
+                    {item.id === 'source' && (
+                      <span class="pv-git">
+                        <span class="pv-git__line" />
+                        <span class="pv-git__dot" />
+                        <span class="pv-git__dot" />
+                        <span class="pv-git__dot pv-git__dot--head" />
+                        <span class="pv-git__label">feat/restyle</span>
+                      </span>
+                    )}
                   </span>
                   <h3 class="h3">{item.title}</h3>
                   <p>{item.body}</p>
@@ -165,7 +190,9 @@ const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
         <h2 class="h2" id="notify-title">{notify.title}</h2>
         <p class="prose">{notify.body}</p>
       </div>
-      <ul class="ways ways--four">
+      <div class="notify-grid">
+      <UpdateDemo />
+      <ul class="notify-list">
         {
           notify.items.map((item, index) => {
             const Icon = notifyIcons[index];
@@ -181,6 +208,7 @@ const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
           })
         }
       </ul>
+      </div>
       <p style="margin-top: var(--s5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s5)">
         <a class="arrow-link" href={notify.feed.href}>
           {notify.feed.label} <ArrowRight aria-hidden="true" />

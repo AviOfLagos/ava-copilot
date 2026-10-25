@@ -1,0 +1,54 @@
+---
+// Workspaces: pick one and the accounts Ava acts as, and what she knows, change with it. Native radio buttons, so
+// it works by keyboard and without JavaScript (CSS shows the chosen workspace's panel).
+import { AtSign, FileText } from 'lucide-react';
+import { widgetCopy } from '../../content/project';
+
+const copy = widgetCopy.workspaces;
+---
+
+<div class="wcard ww" data-workspaces>
+  <fieldset class="ww__tabs">
+    <legend class="sr-only">{copy.label}</legend>
+    {
+      copy.items.map((item, index) => (
+        <label class="ww__tab">
+          <input type="radio" name="ww-workspace" value={item.id} checked={index === 0} />
+          <span class={`ww__swatch ww__swatch--${item.id}`} aria-hidden="true" />
+          {item.name}
+        </label>
+      ))
+    }
+  </fieldset>
+  <div class="ww__panels">
+    {
+      copy.items.map(item => (
+        <div class={`ww__panel ww__panel--${item.id}`} data-workspace={item.id}>
+          <div>
+            <p class="wlabel">{copy.accountsLabel}</p>
+            <ul class="ww__list">
+              {item.accounts.map(account => (
+                <li>
+                  <AtSign aria-hidden="true" strokeWidth={1.8} />
+                  {account}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p class="wlabel">{copy.knowledgeLabel}</p>
+            <ul class="ww__list">
+              {item.knowledge.map(note => (
+                <li>
+                  <FileText aria-hidden="true" strokeWidth={1.8} />
+                  {note}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+  <p class="ww__note">{copy.note}</p>
+</div>

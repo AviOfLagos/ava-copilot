@@ -202,10 +202,84 @@ function setupMenu() {
   });
   menu.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
   // A wide window has the links in the bar: a menu left open there is closed
-  matchMedia('(min-width: 760px)').addEventListener('change', event => event.matches && close());
+  matchMedia('(min-width: 1040px)').addEventListener('change', event => event.matches && close());
+}
+
+/**
+ * The header's menus: a highlight that slides to the item under the pointer, panels that open on hover and close a
+ * moment after the pointer leaves (so a diagonal move to a link doesn't drop it), and Esc to close. Without this the
+ * CSS opens them on hover and focus alone.
+ */
+function setupNav() {
+  const root = document.querySelector<HTMLElement>('[data-nav-root]');
+  const glide = root?.querySelector<HTMLElement>('[data-nav-glide]');
+  if (!root || !glide) return;
+  const items = Array.from(root.querySelectorAll<HTMLElement>('[data-nav-item]'));
+  let closeTimer = 0;
+  let open: HTMLElement | null = null;
+
+  const place = (item: HTMLElement | null) => {
+    const trigger = item?.querySelector<HTMLElement>('.site-nav__trigger');
+    if (!trigger) {
+      glide.removeAttribute('data-on');
+      return;
+    }
+    const bar = root.getBoundingClientRect();
+    const box = trigger.getBoundingClientRect();
+    // From nothing, it appears in place; between items, it slides
+    glide.toggleAttribute('data-instant', !glide.hasAttribute('data-on'));
+    glide.style.width = `${box.width}px`;
+    glide.style.transform = `translate(${box.left - bar.left}px, ${box.top - bar.top}px)`;
+    glide.setAttribute('data-on', '');
+  };
+  const setOpen = (item: HTMLElement | null) => {
+    window.clearTimeout(closeTimer);
+    if (open === item) return;
+    open?.removeAttribute('data-open');
+    open = item?.querySelector('[data-nav-panel]') ? item : null;
+    open?.setAttribute('data-open', '');
+  };
+  const closeSoon = () => {
+    window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(() => {
+      setOpen(null);
+      place(null);
+    }, 140);
+  };
+
+  items.forEach(item => {
+    item.addEventListener('pointerenter', event => {
+      if ((event as PointerEvent).pointerType === 'touch') return;
+      item.removeAttribute('data-dismissed');
+      place(item);
+      setOpen(item);
+    });
+    item.addEventListener('pointerleave', closeSoon);
+    item.addEventListener('focusin', () => {
+      place(item);
+      if (!item.hasAttribute('data-dismissed')) setOpen(item);
+    });
+    item.addEventListener('focusout', event => {
+      if (item.contains(event.relatedTarget as Node)) return;
+      item.removeAttribute('data-dismissed');
+      if (open === item) setOpen(null);
+      if (!root.contains(event.relatedTarget as Node)) place(null);
+    });
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const current = items.find(item => item.contains(document.activeElement)) ?? open;
+    if (!current) return;
+    current.setAttribute('data-dismissed', '');
+    setOpen(null);
+    current.querySelector<HTMLElement>('.site-nav__trigger')?.focus();
+  });
+  // A resize moves the items: the highlight follows the open one, or goes
+  window.addEventListener('resize', () => place(open));
 }
 
 setupTheme();
 setupCopy();
 setupTabs();
 setupMenu();
+setupNav();

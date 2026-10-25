@@ -155,3 +155,51 @@ the voice island, audio and 3D images load on demand; everything readable with J
 Ava's voice is Kokoro `af_heart` (warm, American English; the app's default local voice). The tour is about a minute
 and a half. Headlines are short enough that the FAQ keeps the long answers. The product name stays **Nex Copilot**
 in one constant; the narration never says it, so a rename doesn't need new audio.
+
+---
+
+# Direction v3: the inner pages carry widgets too (2026-10-25)
+
+The owner's review of the first project pages: "these tabs should be their own pages", "a nav like beam.ai",
+"fade out the bottom of the brand name", and "we don't have any widgets in this design… it seems like we stopped
+trying on the pages that are not the landing page." The home page's rule ("less text, the app's own widgets do the
+explaining") now applies to every page.
+
+## Studied
+
+- **beam.ai (nav).** A dark pill holds the top-level items; a soft highlight slides to the item under the pointer;
+  each item opens one wide panel under the bar, with a **featured card on the left that carries a small live
+  diagram** and columns of icon + label links on the right. Taken: the sliding highlight, the shared wide panel,
+  the featured card with a working widget. Not taken: their blue glow (our colours have jobs).
+- **The owner's Pinterest board "Web: UI design -nr"** (18 pins). The pattern that repeats: a card is a title, one
+  line, and **one small real-looking piece of UI** (pins 3, 6, 8, 13, 18); soft mint accents; integration marks
+  in an orbit (12); a two-column FAQ (14). Taken: one widget per card or page, the mint used for "live/done" only.
+
+## Decisions
+
+- **Every feature group is a page** (`/features/<group>`), and `/features` becomes a hub: a bento of the twelve
+  groups, each tile with a tiny preview and its live/planned counts. A group page is: crumbs, a short headline,
+  one sentence, the status counts, the install action, and **the group's working widget beside the headline**;
+  then the features as rows marked live/preview/planned; then previous/next.
+- **Widgets come from the home page where one exists** (the gate demo, the run trail, voice, the knowledge graph,
+  the routine and Inbox, the model picker, integrations, the privacy label), so a widget is never redrawn twice.
+  **Four new ones**, built the same way (glass card, the panel's own type and colours, plays once in view, works
+  without JavaScript as its finished state, honours reduced motion):
+  - *Ambient*: a live transcript card. Lines arrive; "Off the record" blurs and stops them; "Forget 10 min"
+    removes the latest lines; the toolbar dot mirrors the state.
+  - *Meetings*: captions with speaker names turning into a note with decisions and action items.
+  - *Workspaces*: three workspace tabs; picking one swaps the accounts and the knowledge shown, so it is visible
+    that nothing crosses.
+  - *Nex Brain*: a sandboxed run: the command, the limits as chips (no network, memory, time), and the result.
+- **Nav**: Product (the twelve groups, with the gate as the featured card), Get started (install, updates,
+  release feed, roadmap, privacy), Community (contribute, bug report, security, donate), and Donate as a plain
+  link. Panels open on hover and on keyboard focus (CSS `:hover`/`:focus-within`, so it works without JavaScript),
+  with a short close delay, Esc to close, and the sliding highlight added by script. Phones keep the disclosure
+  menu, grouped the same way.
+- **The footer wordmark fades out toward its baseline** (a mask, so it stays one text node and costs nothing).
+- **Roadmap** gets the ambient milestone track (A1 done → A6) as a stepper; recently shipped becomes a timeline.
+  **Contribute**'s commands are real copyable command cards. **Install**'s update section shows the panel's update
+  banner as it really looks.
+- **Restraint**: motion only where it shows a state change (a highlight moving to the pointer, a widget's own
+  sequence, a line arriving). No entrance animation on headings, no hover lift on every card: a tile brightens its
+  border and nudges its arrow, nothing more.

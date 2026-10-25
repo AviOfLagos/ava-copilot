@@ -485,6 +485,19 @@ export const roadmap = {
       ],
     },
   ],
+  track: {
+    title: 'Ambient listening, step by step',
+    lede: 'Ava learns to listen first, and to speak last.',
+    steps: [
+      { name: 'Listen mode', state: 'done' },
+      { name: 'Knows your voice', state: 'now' },
+      { name: 'Files talk by project', state: 'next' },
+      { name: 'A raised hand', state: 'next' },
+      { name: 'Speaks when it’s worth it', state: 'next' },
+      { name: 'Learns when to speak', state: 'next' },
+    ] as { name: string; state: 'done' | 'now' | 'next' }[],
+    stateLabel: { done: 'Shipped', now: 'Building now', next: 'Next' },
+  },
   doneTitle: 'Recently shipped',
   done: [
     { date: '2026-10-25', text: 'Ambient listening: Listen mode, off the record, forget, always visible.' },
@@ -616,6 +629,8 @@ export interface DonationChannel {
   body: string;
   // Null until the account exists: the card shows "Opening soon" and no link
   url: string | null;
+  // A simple-icons slug for the platform's mark, when it has one
+  mark: string | null;
 }
 
 export const donate = {
@@ -629,14 +644,21 @@ export const donate = {
     'Donations aren’t open yet. The ways below go live once the accounts are set up; nothing here takes money today.',
   soon: 'Opening soon',
   channels: [
-    { id: 'sponsors', name: 'GitHub Sponsors', body: 'Monthly or one-time, through your GitHub account.', url: null },
+    {
+      id: 'sponsors',
+      name: 'GitHub Sponsors',
+      body: 'Monthly or one-time, through your GitHub account.',
+      url: null,
+      mark: 'githubsponsors',
+    },
     {
       id: 'opencollective',
       name: 'Open Collective',
       body: 'Every expense in the open, for companies that need an invoice.',
       url: null,
+      mark: 'opencollective',
     },
-    { id: 'once', name: 'One-time gift', body: 'A single donation by card.', url: null },
+    { id: 'once', name: 'One-time gift', body: 'A single donation by card.', url: null, mark: null },
   ] satisfies DonationChannel[],
   usesTitle: 'Where it goes',
   uses: [
@@ -651,4 +673,239 @@ export const donate = {
     { label: 'Report a bug', href: projectLinks.newIssue },
     { label: 'See the roadmap', href: projectLinks.roadmap },
   ],
+};
+
+// ─── Feature pages and the nav ─────────────────────────────────────────────────────────────────────────────────────
+
+/** Each group's line in the nav and on the hub, and the widget its page shows. */
+export const groupMeta: Record<string, { short: string; widget: string }> = {
+  browser: { short: 'Plans, clicks and types on real pages', widget: 'trail' },
+  gate: { short: 'Nothing commits without your click', widget: 'gate' },
+  voice: { short: '“Hey Ava”, on your computer', widget: 'voice' },
+  ambient: { short: 'Listens, notes, speaks when it’s worth it', widget: 'ambient' },
+  meetings: { short: 'Notes for Google Meet from the first minute', widget: 'meeting' },
+  memory: { short: 'Answers with the source', widget: 'graph' },
+  workspaces: { short: 'One per project, never mixed', widget: 'workspaces' },
+  automation: { short: 'Routines, agents and an Inbox', widget: 'routine' },
+  models: { short: 'Your key, or fully local', widget: 'models' },
+  integrations: { short: 'GitHub, Slack, Drive and any MCP', widget: 'integrations' },
+  brain: { short: 'A Mac companion with a sandbox', widget: 'brain' },
+  trust: { short: 'No analytics, and update notices', widget: 'trust' },
+};
+
+export const featureHref = (id: string) => `/features/${id}`;
+
+export interface MenuLink {
+  href: string;
+  label: string;
+  note?: string;
+  icon: string;
+}
+
+export interface Menu {
+  id: string;
+  label: string;
+  href: string;
+  featured: { title: string; body: string; href: string; action: string; widget: 'gate' | 'install' | 'community' };
+  columns: { title: string; links: MenuLink[] }[];
+}
+
+const linkFor = (group: FeatureGroup): MenuLink => ({
+  href: featureHref(group.id),
+  label: group.title,
+  note: groupMeta[group.id]?.short,
+  icon: group.id,
+});
+
+export const menus: Menu[] = [
+  {
+    id: 'product',
+    label: 'Product',
+    href: projectLinks.features,
+    featured: {
+      title: 'The gate',
+      body: 'It does the work and stops at the point of no return. Try to skip the click.',
+      href: featureHref('gate'),
+      action: 'See it work',
+      widget: 'gate',
+    },
+    columns: [
+      { title: 'Does the work', links: features.groups.slice(0, 6).map(linkFor) },
+      { title: 'Runs your setup', links: features.groups.slice(6).map(linkFor) },
+    ],
+  },
+  {
+    id: 'start',
+    label: 'Get started',
+    href: '/install',
+    featured: {
+      title: 'Two minutes, no account',
+      body: 'One command downloads it; you turn it on in your browser once.',
+      href: '/install',
+      action: 'Install',
+      widget: 'install',
+    },
+    columns: [
+      {
+        title: 'Install',
+        links: [
+          { href: '/install', label: 'Install', note: 'Brave, Chrome and Edge', icon: 'download' },
+          {
+            href: '/install#notify',
+            label: 'Updates and notices',
+            note: 'How you hear about new versions',
+            icon: 'bell',
+          },
+          { href: '/install#brain', label: COMPANION, note: 'The optional Mac companion', icon: 'brain' },
+        ],
+      },
+      {
+        title: 'Learn more',
+        links: [
+          { href: projectLinks.features, label: 'All features', note: 'Live, preview and planned', icon: 'grid' },
+          { href: projectLinks.roadmap, label: 'Roadmap', note: 'What comes next', icon: 'map' },
+          { href: '/privacy', label: 'Privacy', note: 'What leaves your computer', icon: 'shield' },
+          { href: projectLinks.releasesFeed, label: 'Release feed', note: 'RSS for every version', icon: 'rss' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'community',
+    label: 'Community',
+    href: projectLinks.contribute,
+    featured: {
+      title: 'Free and open source',
+      body: 'Apache-2.0, built in the open. Code, testing, translations and skills all count.',
+      href: projectLinks.contribute,
+      action: 'Contribute',
+      widget: 'community',
+    },
+    columns: [
+      {
+        title: 'Take part',
+        links: [
+          { href: projectLinks.contribute, label: 'Contribute', note: 'Ways to help and local setup', icon: 'code' },
+          { href: projectLinks.newIssue, label: 'Report a bug', note: 'On GitHub', icon: 'bug' },
+          { href: '/contribute#security', label: 'Security', note: 'Report a problem privately', icon: 'shieldAlert' },
+        ],
+      },
+      {
+        title: 'Support',
+        links: [
+          { href: projectLinks.donate, label: 'Donate', note: 'Keep it free', icon: 'heart' },
+          {
+            href: 'https://github.com/nanobrowser/nanobrowser',
+            label: 'Nanobrowser',
+            note: 'The project it forks',
+            icon: 'gitFork',
+          },
+        ],
+      },
+    ],
+  },
+];
+
+// ─── The feature pages' own widgets ────────────────────────────────────────────────────────────────────────────────
+
+/** What to try in each group's widget, beside it on the page. */
+export const tryHints: Record<string, string[]> = {
+  browser: ['Watch the run reach the sign-in and hand it back.', 'Press Stop at any step.'],
+  gate: ['Try to send without holding the button.', 'Let go early: nothing is sent.'],
+  voice: ['Press Talk and watch it listen, think and answer.', 'All of it can run on your computer.'],
+  ambient: ['Switch on Off the record: the lines stop.', 'Press Forget 10 min: they are gone everywhere.'],
+  meetings: ['Watch the captions turn into a note.', 'Tick off an action item.'],
+  memory: ['Point at a node to see what it links to.', 'Every answer cites where it came from.'],
+  workspaces: ['Switch workspace: the accounts and knowledge change with it.', 'Nothing carries over.'],
+  automation: ['Press Run now and watch it stop at the post.', 'Answer the Inbox card.'],
+  models: ['Pick a model and see where the words go.', 'Local models never leave your computer.'],
+  integrations: ['Built-in connectors, and any MCP server by address.', 'A tool that writes asks first.'],
+  brain: ['Run the tests in the sandbox.', 'Nothing reaches your Mac until you approve it.'],
+  trust: ['This is the banner the panel shows when a new version is out.', 'One notification per version.'],
+};
+
+export const widgetCopy = {
+  ambient: {
+    title: 'Listening on this Mac',
+    offRecordTitle: 'Off the record',
+    offRecordNote: 'Nothing is written down until you switch it back.',
+    switchLabel: 'Off the record',
+    forget: 'Forget 10 min',
+    forgot: 'Forgotten here and in your memory.',
+    replay: 'Play again',
+    local: 'Transcribed by the recogniser on this Mac. Nothing leaves it.',
+    lines: [
+      { at: '14:02', text: 'So the Ellum launch moves to Friday?' },
+      { at: '14:02', text: 'Friday, yes. The page is ready, only the photos are left.' },
+      { at: '14:03', text: 'I’ll send Tolu the brief tonight.' },
+      { at: '14:04', text: 'And we still need a date for the Tech Ember venue.' },
+      { at: '14:05', text: 'Let’s look at the venue list after lunch.' },
+    ],
+  },
+  meeting: {
+    call: 'Weekly sync · Google Meet',
+    live: 'Taking notes',
+    captionsLabel: 'Captions',
+    noteLabel: 'Note',
+    replay: 'Play again',
+    captions: [
+      { who: 'Tolu', text: 'Can we ship the landing page this week?' },
+      { who: 'You', text: 'Yes, if the copy is final by Wednesday.' },
+      { who: 'Ada', text: 'I’ll have the copy done Tuesday.' },
+      { who: 'You', text: 'Great, then we launch Thursday morning.' },
+    ],
+    summary: 'The landing page launches Thursday morning, once the copy is final.',
+    decisionsLabel: 'Decided',
+    decisions: ['Launch Thursday morning'],
+    actionsLabel: 'Action items',
+    actions: [
+      { who: 'Ada', text: 'Final copy by Tuesday' },
+      { who: 'You', text: 'Schedule the launch post' },
+    ],
+  },
+  workspaces: {
+    label: 'Workspace',
+    accountsLabel: 'Accounts it acts as',
+    knowledgeLabel: 'What it knows here',
+    note: 'Switching never carries knowledge, accounts or drafts across.',
+    items: [
+      {
+        id: 'nexprove',
+        name: 'Nexprove',
+        accounts: ['Google · work', 'Slack · Nexprove', 'X · @nexprove'],
+        knowledge: ['Pricing decision · Oct 12', 'Client call notes · Oct 20', 'Q4 hiring plan'],
+      },
+      {
+        id: 'ember',
+        name: 'Tech Ember Fest',
+        accounts: ['Google · festival', 'Instagram · @techember', 'LinkedIn · Tech Ember'],
+        knowledge: ['Venue shortlist', 'Speaker emails · Oct 18', 'Sponsor deck v3'],
+      },
+      {
+        id: 'ellum',
+        name: 'Ellum',
+        accounts: ['Google · foundation', 'X · @ellum'],
+        knowledge: ['Launch page copy', 'Grant application notes', 'Board meeting · Oct 9'],
+      },
+    ],
+  },
+  brain: {
+    title: 'Sandbox · tests for the new routine',
+    command: 'pnpm test',
+    limits: ['No network', '1 CPU', '512 MB', '60 s limit', 'Own folder only'],
+    run: 'Run in sandbox',
+    running: 'Running…',
+    lines: ['Installing from the lockfile', 'Running 24 tests', '24 passed'],
+    result: 'Done in the sandbox. Nothing has touched your Mac.',
+    approve: 'Approve to apply',
+    approved: 'Applied after your click',
+  },
+  update: {
+    title: 'Update available',
+    version: 'Version 0.2.1',
+    notes: ['Ambient listening: Listen mode and off the record', 'Update notices for every new version'],
+    commandLabel: 'Run this, then reload:',
+    reload: 'Reload',
+    later: 'Later',
+  },
 };

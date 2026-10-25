@@ -1,0 +1,166 @@
+---
+// The features hub: every group as a tile that opens its own page. A tile's strip has one mark per feature in its
+// status, so the hub shows at a glance how much of each group ships today. The two signature groups (the gate and
+// ambient listening) carry a small piece of their widget.
+import { ArrowRight } from 'lucide-react';
+import { featureHref, features, groupMeta, projectLinks, statusLabel, widgetCopy } from '../../content/project';
+import type { Status } from '../../content/project';
+import { PRODUCT, links } from '../../content/site';
+import Base from '../../layouts/Base.astro';
+import { iconFor } from '../../lib/feature-icons';
+import { pageGraph } from '../../lib/seo';
+import '../../styles/pages.css';
+import '../../styles/features.css';
+
+const path = projectLinks.features;
+const all = features.groups.flatMap(group => group.items);
+const count = (status: Status, items = all) => items.filter(item => item.status === status).length;
+const wide = new Set(['gate', 'ambient', 'brain', 'trust']);
+const tally = (items: typeof all) =>
+  (['live', 'preview', 'planned'] as Status[])
+    .map(status => [status, count(status, items)] as const)
+    .filter(([, n]) => n > 0)
+    .map(([status, n]) => `${n} ${statusLabel[status].toLowerCase()}`)
+    .join(', ');
+---
+
+<Base
+  title={features.title}
+  description={features.description}
+  path={path}
+  og="home"
+  ogAlt={features.ogAlt}
+  graph={pageGraph(path, features.title, features.description, features.breadcrumb)}>
+  <div class="wrap">
+    <header class="page-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><span aria-current="page">{features.breadcrumb}</span></li>
+        </ol>
+      </nav>
+      <h1 class="display">{features.heading}</h1>
+      <p class="lede">{features.lede}</p>
+      <h2 class="sr-only">{features.legend}</h2>
+      <ul class="legend">
+        {
+          features.legendItems.map(item => (
+            <li>
+              <span class={`status status--${item.status}`}>
+                {statusLabel[item.status]} · {count(item.status)}
+              </span>
+              {item.text}
+            </li>
+          ))
+        }
+      </ul>
+    </header>
+
+    <section class="block" aria-labelledby="groups-title">
+      <h2 class="sr-only" id="groups-title">Feature groups</h2>
+      <ul class="hub">
+        {
+          features.groups.map(group => {
+            const Icon = iconFor(group.id);
+            return (
+              <li class={`hub__cell${wide.has(group.id) ? ' hub__cell--wide' : ''}`}>
+                <a class="hub__tile" href={featureHref(group.id)}>
+                  <span class="hub__top">
+                    <span class="hub__icon" aria-hidden="true">
+                      <Icon strokeWidth={1.75} />
+                    </span>
+                    <ArrowRight className="hub__arrow" aria-hidden="true" strokeWidth={2} />
+                  </span>
+                  {group.id === 'gate' && (
+                    <span class="hub__peek" aria-hidden="true">
+                      <span class="mini-confirm">
+                        <span class="mini-confirm__row">
+                          <span class="mini-confirm__kind">Post</span>
+                          <span class="mini-confirm__text">Schedule the launch post on LinkedIn</span>
+                        </span>
+                        <span class="mini-confirm__actions">
+                          <span class="mini-confirm__cancel">Cancel</span>
+                          <span class="mini-confirm__hold">
+                            <span class="mini-confirm__fill" />
+                            <span class="mini-confirm__label">Hold to post</span>
+                          </span>
+                        </span>
+                      </span>
+                    </span>
+                  )}
+                  {group.id === 'ambient' && (
+                    <span class="hub__peek" aria-hidden="true">
+                      <span class="mini-transcript">
+                        {widgetCopy.ambient.lines.slice(0, 3).map(line => (
+                          <span class="mini-transcript__line">
+                            <span class="mini-transcript__at">{line.at}</span>
+                            {line.text}
+                          </span>
+                        ))}
+                      </span>
+                    </span>
+                  )}
+                  {group.id === 'brain' && (
+                    <span class="hub__peek" aria-hidden="true">
+                      <span class="mini-term">
+                        <span class="mini-term__line">
+                          <span class="mini-term__prompt">$</span> pnpm test
+                        </span>
+                        <span class="mini-term__line mini-term__line--next">No network · 512 MB · 60 s</span>
+                        <span class="mini-term__line mini-term__line--ok">24 passed in the sandbox</span>
+                        <span class="mini-term__line mini-term__line--next">Waiting for your approval</span>
+                      </span>
+                    </span>
+                  )}
+                  {group.id === 'trust' && (
+                    <span class="hub__peek" aria-hidden="true">
+                      <span class="mini-update">
+                        <span class="mini-update__title">Update available</span>
+                        <span class="mini-update__note">Ambient listening, and update notices</span>
+                        <span class="mini-update__actions">
+                          <span>Later</span>
+                          <span class="mini-update__reload">Reload</span>
+                        </span>
+                      </span>
+                    </span>
+                  )}
+                  <span class="hub__text">
+                    <span class="hub__title">{group.title}</span>
+                    <span class="hub__short">{groupMeta[group.id]?.short}</span>
+                  </span>
+                  <span class="hub__strip">
+                    <span class="hub__marks" aria-hidden="true">
+                      {group.items.map(item => (
+                        <span class={`hub__mark hub__mark--${item.status}`} />
+                      ))}
+                    </span>
+                    <span class="hub__tally">{tally(group.items)}</span>
+                  </span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+
+    <section class="block" id="principles" aria-labelledby="principles-title">
+      <div class="block-head">
+        <h2 class="h2" id="principles-title">{features.principlesTitle}</h2>
+      </div>
+      <ol class="rules-list">
+        {features.principles.map(rule => <li>{rule}</li>)}
+      </ol>
+      <p class="page-actions">
+        <a class="btn btn--cta" href={links.install}>
+          <span class="btn__label">Install {PRODUCT}</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+        <a class="arrow-link" href={projectLinks.roadmap}>
+          See what comes next <ArrowRight aria-hidden="true" />
+        </a>
+      </p>
+    </section>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>

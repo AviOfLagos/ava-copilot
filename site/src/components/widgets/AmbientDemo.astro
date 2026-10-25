@@ -1,0 +1,53 @@
+---
+// Ambient listening as the panel shows it: a transcript that fills as people talk, the toolbar's dot, "Off the
+// record" (the lines stop and blur) and "Forget 10 min" (the latest lines go). Without JavaScript: every line,
+// still. feature-widgets.ts plays it once in view.
+import { Ear, EyeOff, Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { widgetCopy } from '../../content/project';
+
+const copy = widgetCopy.ambient;
+---
+
+<div class="wcard aw" data-ambient>
+  <div class="aw__head">
+    <span class="aw__status">
+      <span class="aw__dot" aria-hidden="true"></span>
+      <Ear aria-hidden="true" strokeWidth={1.8} />
+      <span data-ambient-title data-on-title={copy.title} data-off-title={copy.offRecordTitle}>{copy.title}</span>
+    </span>
+    <button class="wswitch needs-js" type="button" role="switch" aria-checked="false" data-ambient-switch>
+      <span class="wswitch__track" aria-hidden="true"><span class="wswitch__knob"></span></span>
+      {copy.switchLabel}
+    </button>
+  </div>
+  <div class="aw__body">
+    <ol class="aw__lines" aria-label="Transcript" data-ambient-lines>
+      {
+        copy.lines.map(line => (
+          <li class="aw__line" data-ambient-line>
+            <span class="aw__at">{line.at}</span>
+            <span>{line.text}</span>
+          </li>
+        ))
+      }
+    </ol>
+    <div class="aw__veil" data-ambient-veil>
+      <EyeOff aria-hidden="true" strokeWidth={1.8} />
+      <span><strong>{copy.offRecordTitle}.</strong> {copy.offRecordNote}</span>
+    </div>
+  </div>
+  <div class="aw__foot">
+    <span class="aw__local"><Lock aria-hidden="true" strokeWidth={1.8} />{copy.local}</span>
+    <span class="aw__actions needs-js">
+      <button class="wbtn" type="button" data-ambient-forget>
+        <Trash2 aria-hidden="true" strokeWidth={1.8} />
+        {copy.forget}
+      </button>
+      <button class="wbtn wbtn--ghost" type="button" data-ambient-replay hidden>
+        <RotateCcw aria-hidden="true" strokeWidth={1.8} />
+        {copy.replay}
+      </button>
+    </span>
+  </div>
+  <p class="wstatus" role="status" aria-live="polite" data-ambient-status data-forgot={copy.forgot}></p>
+</div>
