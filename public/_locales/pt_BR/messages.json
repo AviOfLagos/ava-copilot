@@ -9995,5 +9995,54 @@
   },
   "feedback_note": {
     "message": "Abre o GitHub com sua versão e navegador preenchidos. Nada é enviado até você enviar lá; é preciso uma conta no GitHub."
+  },
+  "whatsnew_title": {
+    "message": "Atualizado para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot 0.2.1"
+      }
+    }
+  },
+  "whatsnew_from": {
+    "message": "Você estava na $VERSION$. Veja o que mudou:",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "whatsnew_noNotes": {
+    "message": "As notas desta versão estão em Configurações › Ajuda › Atualizações."
+  },
+  "whatsnew_ok": {
+    "message": "Entendi"
+  },
+  "whatsnew_more": {
+    "message": "Notas da versão"
+  },
+  "whatsnew_close": {
+    "message": "Fechar novidades"
+  },
+  "whatsnew_notify_title": {
+    "message": "$NAME$ atualizado para $VERSION$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot"
+      },
+      "version": {
+        "content": "$2",
+        "example": "0.2.1"
+      }
+    }
+  },
+  "whatsnew_notify_body": {
+    "message": "Abra o painel para ver as novidades."
+  },
+  "speak_settings_preview": {
+    "message": "Ouvir"
   }
 }

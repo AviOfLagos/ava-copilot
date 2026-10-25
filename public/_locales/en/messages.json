@@ -9995,5 +9995,54 @@
   },
   "feedback_note": {
     "message": "Opens GitHub with your version and browser filled in. Nothing is sent until you submit it there; you need a GitHub account."
+  },
+  "whatsnew_title": {
+    "message": "Updated to $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot 0.2.1"
+      }
+    }
+  },
+  "whatsnew_from": {
+    "message": "You were on $VERSION$. Here’s what changed:",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "0.2.0"
+      }
+    }
+  },
+  "whatsnew_noNotes": {
+    "message": "The notes for this version are in Settings › Help › Updates."
+  },
+  "whatsnew_ok": {
+    "message": "Got it"
+  },
+  "whatsnew_more": {
+    "message": "Release notes"
+  },
+  "whatsnew_close": {
+    "message": "Close what’s new"
+  },
+  "whatsnew_notify_title": {
+    "message": "$NAME$ updated to $VERSION$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ava Copilot"
+      },
+      "version": {
+        "content": "$2",
+        "example": "0.2.1"
+      }
+    }
+  },
+  "whatsnew_notify_body": {
+    "message": "Open the panel to see what’s new."
+  },
+  "speak_settings_preview": {
+    "message": "Preview"
   }
 }

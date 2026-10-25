@@ -1,4 +1,5 @@
 import {
+  effectiveTtsEngine,
   personalityRateOf,
   personalityVoiceFor,
   threadStore,
@@ -14,6 +15,7 @@ import { missingVoiceFiles } from './missing';
 import { toSpeakableText } from './markdown';
 import type { SpeakOptions, TtsEngine } from './types';
 import { localTtsEngine, stopLocalSpeech } from '../voice/engines/localTts';
+import { installedVoiceModels } from '../voice/engines/models';
 
 function engineFor(id: string): TtsEngine {
   if (id === 'kitten' || id === 'kokoro') return localTtsEngine(id);
@@ -29,7 +31,8 @@ export async function stopSpeaking(): Promise<void> {
 /** Whether the chosen engine is speaking right now. */
 export async function speaking(): Promise<boolean> {
   const settings = await ttsSettingsStore.getSettings();
-  return engineFor(settings.engine).speaking();
+  const installed = await installedVoiceModels().catch(() => null);
+  return engineFor(effectiveTtsEngine(settings, installed)).speaking();
 }
 
 /**
@@ -44,7 +47,10 @@ export async function speak(
   options: SpeakOptions = {},
 ): Promise<void> {
   if (services().voice.running) return;
-  const settings = await ttsSettingsStore.getSettings();
+  const stored = await ttsSettingsStore.getSettings();
+  // Until the user picks, a voice on this computer speaks when one is installed (effectiveTtsEngine)
+  const installed = await installedVoiceModels().catch(() => null);
+  const settings = { ...stored, engine: effectiveTtsEngine(stored, installed) };
   const said = toSpeakableText(text);
   await stopSpeaking();
   if (!said) return;

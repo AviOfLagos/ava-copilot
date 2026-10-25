@@ -99,8 +99,30 @@ chrome.runtime.onStartup.addListener(() => {
     .schedule({ kind: UPDATE_CHECK_JOB, key: STARTUP_KEY, runAt: Date.now() + STARTUP_DELAY_MS })
     .catch(() => {});
 });
+/**
+ * Just updated to a new version: remember it so the panel shows "What's new", say so once on the desktop, and read
+ * the feed now so the card has this version's notes (the feed's notes are for its current version).
+ */
+export async function noteUpdated(previousVersion: string | undefined, now = Date.now()): Promise<boolean> {
+  const current = chrome.runtime.getManifest().version;
+  if (!previousVersion || !isNewerVersion(current, previousVersion)) return false;
+  await updateStatusStore.update({ justUpdated: { from: previousVersion, to: current, at: now } });
+  await chrome.notifications
+    .create(`updated:${current}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icon-128.png'),
+      title: t('whatsnew_notify_title', [t('app_metadata_name'), current]),
+      message: t('whatsnew_notify_body'),
+      priority: 1,
+    })
+    .catch(() => {});
+  await runCheck({ manual: true });
+  return true;
+}
+
 // onStartup never fires for a fresh install or an update/reload of the extension itself; this covers those
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(details => {
+  if (details.reason === 'update') void noteUpdated(details.previousVersion).catch(() => {});
   void jobs
     .schedule({ kind: UPDATE_CHECK_JOB, key: STARTUP_KEY, runAt: Date.now() + STARTUP_DELAY_MS })
     .catch(() => {});
@@ -144,5 +166,11 @@ command('update_set_enabled', z.object({ checkEnabled: z.boolean() }), async ({ 
 
 command('update_dismiss_banner', z.object({ version: z.string().max(20) }), async ({ version }) => {
   await updateStatusStore.update({ bannerDismissedVersion: version });
+  return state();
+});
+
+// The "What's new" card was read and closed
+command('update_whatsnew_seen', z.object({}), async () => {
+  await updateStatusStore.update({ justUpdated: null });
   return state();
 });

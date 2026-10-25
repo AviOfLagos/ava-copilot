@@ -30,6 +30,9 @@ export interface UpdateStatus {
   notifiedVersion: string | null;
   // Which `info.version` the user dismissed the panel banner for
   bannerDismissedVersion: string | null;
+  // The extension was just updated (chrome.runtime.onInstalled, reason "update"): from which version to which, so
+  // the panel can say what changed. Cleared when the user closes the "What's new" card
+  justUpdated: { from: string; to: string; at: number } | null;
 }
 
 export const DEFAULT_UPDATE_STATUS: UpdateStatus = {
@@ -41,6 +44,7 @@ export const DEFAULT_UPDATE_STATUS: UpdateStatus = {
   brainVersion: null,
   notifiedVersion: null,
   bannerDismissedVersion: null,
+  justUpdated: null,
 };
 
 const settingsStorage = createStorage<UpdateSettings>('update-settings', DEFAULT_UPDATE_SETTINGS, {
