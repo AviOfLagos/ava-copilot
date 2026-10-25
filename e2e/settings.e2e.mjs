@@ -111,7 +111,7 @@ test('every page opens from the nav and draws its sections; one control per page
   assert.deepEqual(seen.connections, ['connectors', 'obsidian', 'calendar', 'brain', 'whatsapp-remote']);
   assert.deepEqual(seen.meetings, ['meetings', 'meetings-ava', 'brief', 'inbox']);
   assert.deepEqual(seen.privacy, ['firewall', 'skills']);
-  assert.deepEqual(seen.help, ['help-updates', 'help-install', 'help-tasks']);
+  assert.deepEqual(seen.help, ['help-updates', 'help-feedback', 'help-install', 'help-tasks']);
   assert.deepEqual(seen.models, ['models']);
   assert.deepEqual(seen.personalities, ['personalities']);
 
