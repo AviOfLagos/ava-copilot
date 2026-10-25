@@ -1,6 +1,6 @@
 ---
-// The one-line install command with a copy button. Without JavaScript the command is plain, selectable text.
-// Lines break only at spaces, so the address you pipe into bash is always readable in one piece.
+// A command on one line with a copy button. In a narrow box the line is cut with an ellipsis; Copy always takes the
+// whole command, and hovering shows it. Without JavaScript the command is plain, selectable text.
 import { Check, Copy } from 'lucide-react';
 import { copy } from '../content/site';
 
@@ -11,13 +11,13 @@ interface Props {
   caption?: string;
 }
 const { id, command, label, caption = 'Terminal' } = Astro.props;
-// Lines break only between the parts: "curl -fsSL", the address (never split: it is what you are trusting), "| bash"
+// The parts: "curl -fsSL", the address (its host set apart: it is what you are trusting), "| bash"
 const words = command.split(' ');
 const at = words.findIndex(word => word.includes('://'));
 const head = at > 0 ? `${words.slice(0, at).join(' ')} ` : '';
 const url = at >= 0 ? words[at] : command;
 const rest = at >= 0 ? words.slice(at + 1).join(' ') : '';
-// Where the address may break when its box is too narrow for it: after the scheme and before the path, never inside a word
+// The address in its parts, so its host can be set apart
 const parts = /^([a-z]+:\/\/)([^/]+)(.*)$/.exec(url);
 ---
 
@@ -35,5 +35,5 @@ const parts = /^([a-z]+:\/\/)([^/]+)(.*)$/.exec(url);
       <span class="copy__done"><Check aria-hidden="true" strokeWidth={2} />{copy.done}</span>
     </button>
   </div>
-  <pre class="cmd__code"><code id={id}><span class="cmd__prompt" aria-hidden="true">$ </span>{head}<span class="cmd__url">{parts ? <>{parts[1]}<wbr /><span class="cmd__host">{parts[2]}</span><wbr />{parts[3]}</> : url}</span>{rest && <>{' '}<span class="cmd__url">{rest.split(' ').map((word, index) => <>{index > 0 && ' '}<span class="cmd__host">{word}</span></>)}</span></>}</code></pre>
+  <pre class="cmd__code" title={command}><code id={id}><span class="cmd__prompt" aria-hidden="true">$ </span>{head}<span class="cmd__url">{parts ? <>{parts[1]}<span class="cmd__host">{parts[2]}</span>{parts[3]}</> : url}</span>{rest && <>{' '}<span class="cmd__url">{rest.split(' ').map((word, index) => <>{index > 0 && ' '}<span class="cmd__host">{word}</span></>)}</span></>}</code></pre>
 </div>

@@ -1,60 +1,90 @@
 ---
-import { ArrowRight, Heart } from 'lucide-react';
-import { PRODUCT, footer, links } from '../content/site';
+// The footer: one glass card with everything a visitor reaches for at the end of a page (what it is, the install
+// command, how to help, the links), a status row with the version and when it shipped, and the name set large
+// below, fading toward its baseline.
+import { ArrowRight, Heart, Rss } from 'lucide-react';
+import { REPO, projectLinks } from '../content/project';
+import { RELEASE } from '../content/release-notes';
+import { INSTALL_COMMAND, PRODUCT, footer, links } from '../content/site';
+import { mark } from '../lib/marks';
+import InstallCommand from './InstallCommand.astro';
 import Mark from './Mark.astro';
+
+const github = mark('github');
+const released = new Date(`${RELEASE.released}T12:00:00Z`).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 ---
 
 <footer class="site-footer">
   <div class="wrap">
-    <section class="footer-band panel-card" aria-labelledby="footer-band-title">
-      <div>
-        <h2 class="h3" id="footer-band-title">{footer.band.title}</h2>
-        <p>{footer.band.body}</p>
+    <div class="footer-card">
+      <div class="footer-card__top">
+        <div class="footer-card__about">
+          <a class="brand" href="/" aria-label={`${PRODUCT}, home`}>
+            <Mark />
+            <span>{PRODUCT}</span>
+          </a>
+          <p class="footer-card__tagline">{footer.tagline}</p>
+          <InstallCommand id="footer-command" command={INSTALL_COMMAND} label={footer.installLabel} />
+          <div class="footer-card__actions">
+            <a class="btn btn--glass btn--sm" href={projectLinks.contribute}>
+              <span class="btn__label">{footer.contribute}</span>
+              <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+            </a>
+            <a class="btn btn--glass btn--sm" href={projectLinks.donate}>
+              <span class="btn__label">{footer.donate}</span>
+              <span class="btn__chip" aria-hidden="true"><Heart strokeWidth={2.2} /></span>
+            </a>
+            <span class="footer-card__icons">
+              {
+                github && (
+                  <a class="icon-link" href={REPO} rel="noopener" aria-label={footer.repoLabel} title={footer.repoLabel}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d={github.path} fill="currentColor" />
+                    </svg>
+                  </a>
+                )
+              }
+              <a class="icon-link" href={projectLinks.releasesFeed} aria-label={footer.feedLabel} title={footer.feedLabel}>
+                <Rss aria-hidden="true" strokeWidth={2} />
+              </a>
+            </span>
+          </div>
+        </div>
+        <div class="footer-card__columns">
+          {
+            footer.columns.map(column => (
+              <nav aria-label={column.title}>
+                <h2>{column.title}</h2>
+                <ul>
+                  {column.links.map(link => (
+                    <li>
+                      <a href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))
+          }
+        </div>
       </div>
-      <div class="footer-band__actions">
-        <a class="btn btn--glass btn--sm" href="/contribute">
-          <span class="btn__label">{footer.band.contribute}</span>
-          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
-        </a>
-        <a class="btn btn--glass btn--sm" href="/donate">
-          <span class="btn__label">{footer.band.donate}</span>
-          <span class="btn__chip" aria-hidden="true"><Heart strokeWidth={2.2} /></span>
-        </a>
-      </div>
-    </section>
-    <div class="site-footer__grid">
-      <div class="site-footer__about">
-        <a class="brand" href="/" aria-label={`${PRODUCT}, home`}>
-          <Mark />
-          <span>{PRODUCT}</span>
-        </a>
+      <div class="footer-card__base">
+        <p class="footer-card__status">
+          <span class="footer-card__dot" aria-hidden="true"></span>
+          {footer.version}, {footer.releasedLabel} <time datetime={RELEASE.released}>{released}</time>
+        </p>
+        <p>{footer.local}. {footer.voiceNote}</p>
         <p>
-          {footer.lineage}{' '}
           <a class="link" href={links.upstream} rel="noopener">{footer.upstreamLabel}</a>{' · '}
           <a class="link" href={links.license} rel="noopener">{footer.licenseLabel}</a>
         </p>
       </div>
-      {
-        footer.columns.map(column => (
-          <nav aria-label={column.title}>
-            <h2>{column.title}</h2>
-            <ul>
-              {column.links.map(link => (
-                <li>
-                  <a href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))
-      }
-    </div>
-    <div class="site-footer__base">
-      <p>{footer.privacyNote}</p>
-      <p>{footer.voiceNote}</p>
-      <p>{footer.version}</p>
     </div>
   </div>
   <p class="wordmark wordmark--foot" aria-hidden="true">{PRODUCT}</p>

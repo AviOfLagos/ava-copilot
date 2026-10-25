@@ -9,22 +9,29 @@ import Globe from '../../components/Globe.astro';
 import InstallCommand from '../../components/InstallCommand.astro';
 import Mark from '../../components/Mark.astro';
 import PrivacyLabel from '../../components/PrivacyLabel.astro';
+import { features, ogCards, statusLabel } from '../../content/project';
 import { INSTALL_COMMAND, PRODUCT, SITE_URL, og } from '../../content/site';
 import Base from '../../layouts/Base.astro';
 import '../../styles/home.css';
 import '../../styles/og.css';
 
+const cards: Record<string, { kicker: string; title: readonly [string, string] | string[]; group?: string }> = {
+  ...og,
+  ...ogCards,
+};
+
 export function getStaticPaths() {
-  return [{ params: { slug: 'home' } }, { params: { slug: 'install' } }, { params: { slug: 'privacy' } }];
+  return [...Object.keys(og), ...Object.keys(ogCards)].map(slug => ({ params: { slug } }));
 }
 
-const slug = Astro.params.slug as keyof typeof og;
-const card = og[slug];
+const slug = Astro.params.slug as string;
+const card = cards[slug];
+const group = card.group ? features.groups.find(item => item.id === card.group) : undefined;
 const host = SITE_URL.replace(/^https?:\/\//, '');
 ---
 
 <Base title={`${PRODUCT} card`} description="" path={`/og-card/${slug}`} og="home" ogAlt="" noindex bare>
-  <div class="ogc" data-slug={slug}>
+  <div class="ogc" data-slug={slug} data-group={group ? "" : undefined}>
     <Flutes set="hero" />
     <div class="ogc__copy">
       <p class="ogc__brand"><Mark /><span>{PRODUCT}</span></p>
@@ -44,6 +51,19 @@ const host = SITE_URL.replace(/^https?:\/\//, '');
         )
       }
       {slug === 'privacy' && <div class="ogc__label"><PrivacyLabel level={2} /></div>}
+      {
+        group && (
+          <ul class="ogc__features">
+            {group.items.slice(0, 5).map(item => (
+              <li>
+                <span class={`ogc__mark ogc__mark--${item.status}`} />
+                <span class="ogc__feature">{item.name}</span>
+                <span class="ogc__status">{statusLabel[item.status]}</span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
     </div>
   </div>
 </Base>

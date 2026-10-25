@@ -20,7 +20,7 @@ const copy = widgetCopy.update;
     {copy.notes.map(note => <li>{note}</li>)}
   </ul>
   <p class="wlabel">{copy.commandLabel}</p>
-  <code class="uw__cmd"><Download aria-hidden="true" strokeWidth={1.8} />{INSTALL_COMMAND}</code>
+  <code class="uw__cmd" title={INSTALL_COMMAND}><Download aria-hidden="true" strokeWidth={1.8} /><span class="uw__cmd-text">{INSTALL_COMMAND}</span></code>
   <div class="uw__actions" aria-hidden="true">
     <span class="wbtn wbtn--ghost">{copy.later}</span>
     <span class="wbtn wbtn--mint"><RotateCw strokeWidth={1.8} />{copy.reload}</span>

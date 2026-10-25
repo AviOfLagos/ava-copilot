@@ -55,7 +55,13 @@ export function homeGraph() {
 }
 
 /** The graph for an inner page: the site, the page and its breadcrumb trail. */
-export function pageGraph(path: string, name: string, description: string, crumb: string) {
+export function pageGraph(
+  path: string,
+  name: string,
+  description: string,
+  crumb: string,
+  parent?: { name: string; path: string },
+) {
   const url = absolute(path);
   return {
     '@context': 'https://schema.org',
@@ -76,7 +82,8 @@ export function pageGraph(path: string, name: string, description: string, crumb
         '@id': `${url}#breadcrumb`,
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: PRODUCT, item: `${SITE_URL}/` },
-          { '@type': 'ListItem', position: 2, name: crumb, item: url },
+          ...(parent ? [{ '@type': 'ListItem', position: 2, name: parent.name, item: absolute(parent.path) }] : []),
+          { '@type': 'ListItem', position: parent ? 3 : 2, name: crumb, item: url },
         ],
       },
     ],

@@ -129,3 +129,71 @@ body::after {
 .ogc .flutes--hero .flute--d {
   display: none;
 }
+
+/* A feature group's card: its features with their status, over the globe */
+.ogc__features {
+  position: absolute;
+  right: 56px;
+  bottom: 64px;
+  display: grid;
+  gap: 8px;
+  width: 400px;
+  margin: 0;
+  padding: 16px;
+  list-style: none;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, var(--glass-top), var(--glass-bottom)), color-mix(in srgb, var(--bg) 80%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--card-shadow);
+}
+
+.ogc__features li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--fill);
+  font-size: 18px;
+}
+
+.ogc__mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.ogc__mark--live {
+  background: var(--mint);
+}
+
+.ogc__mark--preview {
+  background: var(--ink-2);
+}
+
+.ogc__mark--planned {
+  box-shadow: inset 0 0 0 1.5px var(--ink-2);
+}
+
+.ogc__feature {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ogc__status {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+/* A group's second line is a full sentence: one size down, so it fits beside the feature list */
+.ogc[data-group] .ogc__title {
+  max-width: 560px;
+  font-size: 58px;
+}
