@@ -1,6 +1,8 @@
 ---
-// A floating glass pill, sticky at the top: the mark, three links, the theme switch and Install.
-import { ArrowRight } from 'lucide-react';
+// A floating glass pill, sticky at the top: the mark, the main links, the theme switch and Install. On phones the
+// links fold into a menu: a <details> disclosure, so it opens with JavaScript off too (site.ts closes it on Esc,
+// on a click outside and on a link).
+import { ArrowRight, Menu, X } from 'lucide-react';
 import { PRODUCT, links, nav } from '../content/site';
 import Mark from './Mark.astro';
 import ThemeToggle from './ThemeToggle.astro';
@@ -9,6 +11,7 @@ interface Props {
   path: string;
 }
 const { path } = Astro.props;
+const current = (href: string) => (href === path ? 'page' : undefined);
 ---
 
 <header class="site-header">
@@ -22,7 +25,7 @@ const { path } = Astro.props;
         {
           nav.items.map(item => (
             <li>
-              <a href={item.href} aria-current={item.href === path ? 'page' : undefined}>
+              <a href={item.href} aria-current={current(item.href)}>
                 {item.label}
               </a>
             </li>
@@ -31,9 +34,32 @@ const { path } = Astro.props;
       </ul>
     </nav>
     <ThemeToggle />
-    <a class="btn btn--cta btn--sm" href={links.install} aria-current={path === links.install ? 'page' : undefined}>
+    <a class="btn btn--cta btn--sm site-header__install" href={links.install} aria-current={current(links.install)}>
       <span class="btn__label">{nav.install}</span>
       <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
     </a>
+    <details class="site-menu" data-site-menu>
+      <summary class="site-menu__button" aria-label={nav.menu}>
+        <Menu className="site-menu__open" aria-hidden="true" />
+        <X className="site-menu__close" aria-hidden="true" />
+      </summary>
+      <nav class="site-menu__panel" aria-label={nav.menu}>
+        <ul>
+          {
+            [...nav.items, ...nav.more].map(item => (
+              <li>
+                <a href={item.href} aria-current={current(item.href)}>
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <a class="btn btn--cta site-menu__install" href={links.install}>
+          <span class="btn__label">{nav.install}</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+      </nav>
+    </details>
   </div>
 </header>

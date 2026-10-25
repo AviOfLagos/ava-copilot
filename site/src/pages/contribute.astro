@@ -1,0 +1,158 @@
+---
+import { ArrowRight, Bug, Code2, FlaskConical, Info, Languages, Megaphone, ScrollText, ShieldAlert } from 'lucide-react';
+import { contribute, projectLinks } from '../content/project';
+import { PRODUCT } from '../content/site';
+import Base from '../layouts/Base.astro';
+import { pageGraph } from '../lib/seo';
+import '../styles/pages.css';
+
+const path = projectLinks.contribute;
+const icons = {
+  code: Code2,
+  test: FlaskConical,
+  translate: Languages,
+  skills: ScrollText,
+  report: Bug,
+  share: Megaphone,
+};
+---
+
+<Base
+  title={contribute.title}
+  description={contribute.description}
+  path={path}
+  og="home"
+  ogAlt={contribute.ogAlt}
+  graph={pageGraph(path, contribute.title, contribute.description, contribute.breadcrumb)}>
+  <div class="wrap">
+    <header class="page-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><span aria-current="page">{contribute.breadcrumb}</span></li>
+        </ol>
+      </nav>
+      <h1 class="display">{contribute.heading}</h1>
+      <p class="lede">{contribute.lede}</p>
+      <p class="callout callout--note">
+        <Info aria-hidden="true" />
+        <span>{contribute.repoNote}</span>
+      </p>
+    </header>
+
+    <section class="block" aria-labelledby="ways-title">
+      <div class="block-head">
+        <h2 class="h2" id="ways-title">Ways to help</h2>
+      </div>
+      <ul class="ways">
+        {
+          contribute.ways.map(way => {
+            const Icon = icons[way.icon as keyof typeof icons];
+            return (
+              <li class="way panel-card" id={way.id}>
+                <span class="way__icon" aria-hidden="true">
+                  <Icon />
+                </span>
+                <h3 class="h3">{way.title}</h3>
+                <p>{way.body}</p>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+
+    <section class="block" id="setup" aria-labelledby="setup-title">
+      <div class="block-head">
+        <h2 class="h2" id="setup-title">{contribute.setupTitle}</h2>
+        <p class="prose">{contribute.setupLede}</p>
+      </div>
+      <ol class="steps">
+        {
+          contribute.setupSteps.map(step => (
+            <li>
+              <div>
+                <h3>{step.title}</h3>
+                {step.command ? <code class="code-line">{step.command}</code> : <p>{step.text}</p>}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <section class="block" id="stack" aria-labelledby="stack-title">
+      <div class="block-head">
+        <h2 class="h2" id="stack-title">{contribute.stackTitle}</h2>
+      </div>
+      <ul class="facts-list">
+        {
+          contribute.stack.map(item => (
+            <li>
+              <h3>{item.name}</h3>
+              <p>{item.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="block" id="rules" aria-labelledby="rules-title">
+      <div class="block-head">
+        <h2 class="h2" id="rules-title">{contribute.rulesTitle}</h2>
+      </div>
+      <ul class="facts-list">
+        {
+          contribute.rules.map(rule => (
+            <li>
+              <h3>{rule.title}</h3>
+              <p>{rule.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="block" id="flow" aria-labelledby="flow-title">
+      <div class="block-head">
+        <h2 class="h2" id="flow-title">{contribute.flowTitle}</h2>
+      </div>
+      <ol class="steps">
+        {
+          contribute.flow.map(step => (
+            <li>
+              <p style="line-height: 32px">{step}</p>
+            </li>
+          ))
+        }
+      </ol>
+      <p style="margin-top: var(--s6); display: flex; flex-wrap: wrap; gap: var(--s3)">
+        <a class="btn btn--cta" href={projectLinks.issues} rel="noopener">
+          <span class="btn__label">Find an issue</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+        <a class="btn btn--glass" href={projectLinks.roadmap}>
+          <span class="btn__label">See the roadmap</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+      </p>
+    </section>
+
+    <section class="block" id="security" aria-labelledby="security-title">
+      <div class="panel-card" style="padding: var(--s6); display: grid; gap: var(--s3); max-width: 760px">
+        <span class="way__icon" aria-hidden="true"><ShieldAlert /></span>
+        <h2 class="h2" id="security-title">{contribute.securityTitle}</h2>
+        <p class="prose">{contribute.securityBody}</p>
+        <p>
+          <a class="arrow-link" href={projectLinks.security} rel="noopener">
+            {contribute.securityLink} <ArrowRight aria-hidden="true" />
+          </a>
+        </p>
+      </div>
+      <p class="label" style="margin-top: var(--s6); max-width: 760px; text-transform: none; letter-spacing: 0">
+        {contribute.licenseNote}
+      </p>
+    </section>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>

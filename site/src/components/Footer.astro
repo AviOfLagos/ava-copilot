@@ -1,10 +1,27 @@
 ---
+import { ArrowRight, Heart } from 'lucide-react';
 import { PRODUCT, footer, links } from '../content/site';
 import Mark from './Mark.astro';
 ---
 
 <footer class="site-footer">
   <div class="wrap">
+    <section class="footer-band panel-card" aria-labelledby="footer-band-title">
+      <div>
+        <h2 class="h3" id="footer-band-title">{footer.band.title}</h2>
+        <p>{footer.band.body}</p>
+      </div>
+      <div class="footer-band__actions">
+        <a class="btn btn--glass btn--sm" href="/contribute">
+          <span class="btn__label">{footer.band.contribute}</span>
+          <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+        </a>
+        <a class="btn btn--glass btn--sm" href="/donate">
+          <span class="btn__label">{footer.band.donate}</span>
+          <span class="btn__chip" aria-hidden="true"><Heart strokeWidth={2.2} /></span>
+        </a>
+      </div>
+    </section>
     <div class="site-footer__grid">
       <div class="site-footer__about">
         <a class="brand" href="/" aria-label={`${PRODUCT}, home`}>
@@ -24,7 +41,9 @@ import Mark from './Mark.astro';
             <ul>
               {column.links.map(link => (
                 <li>
-                  <a href={link.href}>{link.label}</a>
+                  <a href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+                    {link.label}
+                  </a>
                 </li>
               ))}
             </ul>

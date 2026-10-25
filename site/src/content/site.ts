@@ -49,10 +49,18 @@ export const nav = {
   skip: 'Skip to content',
   home: `${PRODUCT}, home`,
   items: [
+    { href: '/features', label: 'Features' },
+    { href: '/roadmap', label: 'Roadmap' },
+    { href: '/contribute', label: 'Contribute' },
+    { href: '/donate', label: 'Donate' },
+  ],
+  // The phone menu adds these to the four above
+  more: [
     { href: '/#gate', label: 'How it works' },
-    { href: '/#integrations', label: 'Integrations' },
     { href: links.privacy, label: 'Privacy' },
   ],
+  menu: 'Menu',
+  close: 'Close menu',
   install: 'Install',
 };
 
@@ -79,12 +87,19 @@ export const footer = {
   privacyNote: 'This site sets no cookies and loads nothing from anyone else.',
   voiceNote: `${ASSISTANT}’s voice is Kokoro (Apache-2.0), rendered on our own computer.`,
   version: `Version ${VERSION}`,
+  band: {
+    title: 'Free and open source.',
+    body: 'Built in the open under Apache-2.0. Help shape it, or help keep it free.',
+    contribute: 'Contribute',
+    donate: 'Donate',
+  },
   columns: [
     {
       title: 'Product',
       links: [
+        { href: '/features', label: 'All features' },
         { href: '/#gate', label: 'The gate' },
-        { href: '/#voice', label: 'Voice' },
+        { href: '/features#ambient', label: 'Ambient listening' },
         { href: '/#integrations', label: 'Integrations' },
         { href: '/#faq', label: 'Questions' },
       ],
@@ -93,9 +108,28 @@ export const footer = {
       title: 'Get it',
       links: [
         { href: links.install, label: 'Install' },
+        { href: `${links.install}#notify`, label: 'Updates and notices' },
         { href: `${links.install}#update`, label: 'Update or remove' },
         { href: `${links.install}#brain`, label: COMPANION },
+        { href: '/releases.xml', label: 'Release feed (RSS)' },
+      ],
+    },
+    {
+      title: 'Community',
+      links: [
+        { href: '/contribute', label: 'Contribute' },
+        { href: '/roadmap', label: 'Roadmap' },
+        { href: 'https://github.com/AviOfLagos/nex-copilot/issues/new', label: 'Report a bug' },
+        { href: '/contribute#security', label: 'Security' },
+      ],
+    },
+    {
+      title: 'Project',
+      links: [
+        { href: '/donate', label: 'Donate' },
         { href: links.privacy, label: 'Privacy' },
+        { href: links.license, label: 'Licence' },
+        { href: links.upstream, label: 'Nanobrowser' },
       ],
     },
   ],
@@ -655,6 +689,55 @@ export const install = {
   breadcrumb: 'Install',
   heading: `Install ${PRODUCT}`,
   lede: 'One command downloads it. Then you turn it on in your browser, once. About two minutes, and no account.',
+  pathsTitle: 'Pick your way in',
+  paths: [
+    {
+      id: 'download',
+      title: 'No terminal',
+      body: 'Download a zip, unzip it, and turn it on in your browser. The easiest way for anyone.',
+      href: '/download/nex-copilot-latest.zip',
+      action: 'Download the latest build',
+      then: 'Then follow step 2 below.',
+    },
+    {
+      id: 'terminal',
+      title: 'One command',
+      body: 'Paste one line into a terminal. It downloads, checks and unpacks the build, and updating is the same line again.',
+      href: '#download',
+      action: 'Show the command',
+      then: 'macOS and Linux today; Windows in preview.',
+    },
+    {
+      id: 'source',
+      title: 'From the source',
+      body: 'Clone the repository and build it yourself, to change it or check every line.',
+      href: '/contribute#setup',
+      action: 'Build it yourself',
+      then: 'Node.js 24 and pnpm 10.',
+    },
+  ],
+  notify: {
+    id: 'notify',
+    title: 'You will know when there is an update',
+    body: 'Extensions loaded this way can’t update themselves, so the extension tells you instead. Nothing to sign up for.',
+    items: [
+      {
+        title: 'In the panel',
+        text: 'It checks this site twice a day. When a new version is out, a banner shows what changed, with the update command and a Reload button.',
+      },
+      {
+        title: 'A desktop notification',
+        text: 'One per new version, even with the panel closed. Never a second one for the same version.',
+      },
+      { title: 'On the toolbar', text: 'The icon’s tooltip says an update is waiting until you install it.' },
+      {
+        title: 'A release feed',
+        text: 'Prefer to hear elsewhere? Follow the RSS feed in a reader, Slack or your email.',
+      },
+    ],
+    feed: { href: '/releases.xml', label: 'Release feed (RSS)' },
+    store: 'A Chrome Web Store listing is planned; then updates will arrive by themselves.',
+  },
   tabsLabel: 'Your system',
   tabs: [
     {
@@ -947,6 +1030,8 @@ export const llms = {
     'Routines drawn as diagrams, helper agents with budgets, an Inbox for approvals.',
     'Connectors (MCP): GitHub, Linear, Notion, Slack, Gmail, Google Calendar and Google Drive built in; any other MCP server by its address. Tools that write ask first.',
     'Models: Ollama, LM Studio, OpenRouter, NVIDIA NIM, OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, Azure OpenAI, or any OpenAI-compatible endpoint.',
+    'Ambient listening: an optional Listen mode that writes down what is said near the computer, on the computer only, with “off the record” and “forget the last ten minutes”.',
+    'Pages: /features lists every feature as live, preview or planned; /roadmap is what comes next; /contribute is how to help; /donate (not open yet); /releases.xml is the release feed.',
     'A fork of Nanobrowser (Apache-2.0).',
   ],
 };

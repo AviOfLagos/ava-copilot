@@ -1,0 +1,106 @@
+---
+import { ArrowRight, Clock, Info } from 'lucide-react';
+import { donate, projectLinks } from '../content/project';
+import { PRODUCT } from '../content/site';
+import Base from '../layouts/Base.astro';
+import { pageGraph } from '../lib/seo';
+import '../styles/pages.css';
+
+const path = projectLinks.donate;
+const open = donate.channels.some(channel => channel.url);
+---
+
+<Base
+  title={donate.title}
+  description={donate.description}
+  path={path}
+  og="home"
+  ogAlt={donate.ogAlt}
+  graph={pageGraph(path, donate.title, donate.description, donate.breadcrumb)}>
+  <div class="wrap">
+    <header class="page-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><span aria-current="page">{donate.breadcrumb}</span></li>
+        </ol>
+      </nav>
+      <h1 class="display">{donate.heading}</h1>
+      <p class="lede">{donate.lede}</p>
+      {
+        !open && (
+          <p class="callout callout--note">
+            <Info aria-hidden="true" />
+            <span>{donate.notOpen}</span>
+          </p>
+        )
+      }
+    </header>
+
+    <section class="block" aria-labelledby="channels-title">
+      <div class="block-head">
+        <h2 class="h2" id="channels-title">Ways to give</h2>
+      </div>
+      <ul class="channels">
+        {
+          donate.channels.map(channel => (
+            <li class="channel panel-card">
+              <h3 class="h3">{channel.name}</h3>
+              <p>{channel.body}</p>
+              {channel.url ? (
+                <a class="btn btn--cta" href={channel.url} rel="noopener">
+                  <span class="btn__label">Give with {channel.name}</span>
+                  <span class="btn__chip" aria-hidden="true">
+                    <ArrowRight strokeWidth={2.2} />
+                  </span>
+                </a>
+              ) : (
+                <span class="coming">
+                  <Clock aria-hidden="true" width={16} height={16} />
+                  {donate.soon}
+                </span>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="block" aria-labelledby="uses-title">
+      <div class="block-head">
+        <h2 class="h2" id="uses-title">{donate.usesTitle}</h2>
+      </div>
+      <ul class="facts-list">
+        {
+          donate.uses.map(use => (
+            <li>
+              <h3>{use.name}</h3>
+              <p>{use.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="block" aria-labelledby="other-title">
+      <div class="block-head">
+        <h2 class="h2" id="other-title">{donate.otherTitle}</h2>
+      </div>
+      <ul class="inline-links">
+        {
+          donate.other.map(link => (
+            <li>
+              <a class="btn btn--glass" href={link.href}>
+                <span class="btn__label">{link.label}</span>
+                <span class="btn__chip" aria-hidden="true">
+                  <ArrowRight strokeWidth={2.2} />
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>
