@@ -7,8 +7,7 @@
 export const RELEASE = {
   released: '2026-10-25',
   notes: [
-    'After an update, the panel now shows what changed, with one desktop notification.',
-    'Answers read aloud use a voice on your computer (KittenTTS or Kokoro) instead of the browser’s, when one is installed.',
-    'Settings › Voice output: pick the voice for every engine (KittenTTS, Kokoro, Gemini or system), with a Preview button.',
+    'Voice no longer gets stuck: if speech recognition stalls, it restarts on its own and Ava listens again.',
+    'A turn that takes over two minutes ends with “That took too long”, instead of blocking the conversation.',
   ],
 };

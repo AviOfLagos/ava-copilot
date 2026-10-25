@@ -930,7 +930,7 @@ export const widgetCopy = {
   },
   update: {
     title: 'Update available',
-    version: 'Version 0.2.2',
+    version: 'Version 0.2.3',
     notes: ['Ambient listening: Listen mode and off the record', 'Update notices for every new version'],
     commandLabel: 'Run this, then reload:',
     reload: 'Reload',
