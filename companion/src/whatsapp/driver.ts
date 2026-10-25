@@ -1,6 +1,6 @@
 /**
  * What Ava's WhatsApp needs from a WhatsApp Web client, so the rules in ./service.ts never depend on one.
- * The real one is open-wa (./openwa.ts); tests use a stand-in. A driver reports every message the session
+ * The real one is Baileys (./baileys.ts); tests use a stand-in. A driver reports every message the session
  * sees; the service decides, before anything is kept, whether it is the owner's.
  */
 

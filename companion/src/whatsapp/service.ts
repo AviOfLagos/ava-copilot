@@ -41,7 +41,7 @@ export const OWN_MARK = '\u2063\u200b\u2063';
 
 export const AWAY_TEXT = "Your browser is closed, I'll answer when it opens.";
 export const TEXT_ONLY_TEXT = 'I can only read text for now.';
-// WhatsApp (through open-wa) will not open a chat with a number this account has never talked to
+// A client may refuse to open a chat with a number this account has never talked to
 export const FIRST_MESSAGE_TEXT =
   "WhatsApp won't let Ava write to your number first. Connect your phone in Settings › WhatsApp, then try again.";
 export const CONNECTED_TEXT = "Connected. I'll answer you here.";
@@ -389,6 +389,13 @@ export class WhatsAppService {
     } catch (error) {
       // A send that did not go out does not count toward the hour
       this.saved.sentAt = this.saved.sentAt.slice(0, -1);
+      // The client's own code and outcome only: never the text or the chat
+      const { code, outcome } = (error ?? {}) as { code?: unknown; outcome?: unknown };
+      this.deps.log.warn('WhatsApp send failed', {
+        code: typeof code === 'string' ? code.slice(0, 40) : null,
+        outcome: typeof outcome === 'string' ? outcome.slice(0, 20) : null,
+        chat: chatId.split('@')[1] ?? null,
+      });
       if (!this.isSelfChat(chatId) && NEW_CHAT_REFUSED.test(errorText(error))) {
         this.saved.needsFirstMessage = true;
         this.save();

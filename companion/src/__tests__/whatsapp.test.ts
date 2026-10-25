@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { memoryLogger } from '../log';
 import type { WaDriver, WaEvents, WaIncoming } from '../whatsapp/driver';
 import { numberOfJid } from '../whatsapp/driver';
-import { incomingOf, qrOf } from '../whatsapp/openwa';
+import { isPnUser, jidNormalizedUser } from 'baileys';
+import { incomingOfBaileys, toBaileysJid, toServiceJid } from '../whatsapp/baileys';
 import {
   AWAY_TEXT,
   CONNECT_CODE_MS,
@@ -370,39 +371,39 @@ describe('Ava on WhatsApp in Ava Brain', () => {
   });
 });
 
-describe('reading open-wa', () => {
-  it('turns its messages into what the service reads', () => {
-    expect(
-      incomingOf({
-        id: 'true_x@c.us_ABC',
-        chatId: { _serialized: SELF },
+const lib = { isPnUser, jidNormalizedUser };
+const fromBaileys = (key: Record<string, unknown>, message: Record<string, unknown> | null, messageTimestamp = 5) =>
+  incomingOfBaileys({ key, message, messageTimestamp }, lib);
+
+describe('reading Baileys', () => {
+  it('turns its messages into what the service reads, in the service’s chat id form', () => {
+    expect(fromBaileys({ id: 'ABC', remoteJid: `${ME}@s.whatsapp.net`, fromMe: true }, { conversation: 'hi' })).toEqual(
+      {
+        id: 'ABC',
+        chatId: SELF,
         fromMe: true,
-        isGroupMsg: false,
+        isGroup: false,
         type: 'chat',
         body: 'hi',
-        t: 5,
-        sender: { id: SELF },
-      }),
-    ).toEqual({
-      id: 'true_x@c.us_ABC',
-      chatId: SELF,
-      fromMe: true,
-      isGroup: false,
-      type: 'chat',
-      body: 'hi',
-      at: 5,
-      senderNumber: ME,
-      forwarded: false,
-    });
-    expect(incomingOf({ id: 'g', chatId: '1-2@g.us', type: 'chat', body: '' }).isGroup).toBe(true);
+        at: 5,
+        senderNumber: ME,
+        forwarded: false,
+      },
+    );
+    expect(fromBaileys({ id: 'g', remoteJid: '1-2@g.us' }, { conversation: '' }).isGroup).toBe(true);
+    expect(fromBaileys({ id: 'i', remoteJid: SELF }, { imageMessage: {} })).toMatchObject({ type: 'image', body: '' });
+    expect(toBaileysJid(SELF)).toBe(`${ME}@s.whatsapp.net`);
+    expect(toServiceJid(`${ME}@s.whatsapp.net`)).toBe(SELF);
+    expect(toBaileysJid('123@lid')).toBe('123@lid');
   });
 
-  it('accepts a pairing string or a picture of it, nothing else', () => {
-    expect(qrOf('2@abc,def')).toBe('2@abc,def');
-    expect(qrOf({ details: { qr: '2@abc' } })).toBe('2@abc');
-    expect(qrOf('data:image/png;base64,iVBORw0KGgo=')).toBe('data:image/png;base64,iVBORw0KGgo=');
-    expect(qrOf('data:text/html;base64,PHNjcmlwdD4=')).toBeNull();
-    expect(qrOf(42)).toBeNull();
+  it('reads his number from the phone id WhatsApp sends beside a @lid chat', () => {
+    const hidden = fromBaileys(
+      { id: 'L', remoteJid: '44444@lid', remoteJidAlt: `${OTHER_OWNER}@s.whatsapp.net`, fromMe: false },
+      { extendedTextMessage: { text: 'Hi', contextInfo: { forwardingScore: 3 } } },
+    );
+    expect(hidden).toMatchObject({ chatId: '44444@lid', senderNumber: OTHER_OWNER, body: 'Hi', forwarded: true });
+    expect(fromBaileys({ id: 'N', remoteJid: '44444@lid' }, { conversation: 'Hi' }).senderNumber).toBeNull();
   });
 
   it('reads a phone number out of a chat id', () => {
@@ -456,8 +457,12 @@ describe('Ava on WhatsApp: what is never taken as his words', () => {
     await settle();
     expect(service.pull()).toEqual([]);
     expect(driver.sent).toEqual([{ chatId: SELF, text: FORWARDED_TEXT }]);
-    expect(incomingOf({ id: 'x', chatId: SELF, isForwarded: true, type: 'chat', body: '' }).forwarded).toBe(true);
-    expect(incomingOf({ id: 'x', chatId: SELF, forwardingScore: 2, type: 'chat', body: '' }).forwarded).toBe(true);
+    expect(
+      fromBaileys(
+        { id: 'x', remoteJid: SELF },
+        { extendedTextMessage: { text: 'a', contextInfo: { isForwarded: true } } },
+      ).forwarded,
+    ).toBe(true);
   });
 
   it('every message she sends carries an invisible mark, and one carrying it is never taken back', async () => {

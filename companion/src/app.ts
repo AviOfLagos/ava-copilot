@@ -30,7 +30,7 @@ import { EveEngine } from './sessions/eve';
 import type { SessionEngine } from './sessions/eve';
 import { ProfileRegistry } from './sessions/registry';
 import { findBrowser } from './meet/browser';
-import { openWaDriver } from './whatsapp/openwa';
+import { baileysDriver } from './whatsapp/baileys';
 import type { WaDriverFactory } from './whatsapp/driver';
 import { WhatsAppService } from './whatsapp/service';
 import { createKeyStore } from './workflows/keys';
@@ -51,7 +51,7 @@ export interface BrainDeps {
   engine?: SessionEngine | null;
   // Ava's meeting browser: how it is found and started, and how fast the call page is read
   meet?: Partial<Pick<MeetBotDeps, 'launch' | 'findBrowser' | 'pollMs' | 'lobbyTimeoutMs' | 'admissionTimeoutMs'>>;
-  // Ava on WhatsApp: the WhatsApp Web client (open-wa unless a stand-in is given)
+  // Ava on WhatsApp: the WhatsApp client (Baileys unless a stand-in is given)
   whatsappDriver?: WaDriverFactory;
   // Where the backup key is kept (the macOS Keychain unless a stand-in is given)
   keychain?: KeychainAdapter;
@@ -100,7 +100,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   const whatsapp = new WhatsAppService({
     dataDir: config.dataDir,
     log: log.child({ part: 'whatsapp' }),
-    driver: deps.whatsappDriver ?? openWaDriver(log.child({ part: 'whatsapp' })),
+    driver: deps.whatsappDriver ?? baileysDriver(log.child({ part: 'whatsapp' })),
     findBrowser: () => findBrowser(),
     now,
   });
