@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { memoryLogger } from '../log';
 import type { WaDriver, WaEvents, WaIncoming } from '../whatsapp/driver';
 import { numberOfJid } from '../whatsapp/driver';
-import { isPnUser, jidNormalizedUser } from 'baileys';
+import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { incomingOfBaileys, toBaileysJid, toServiceJid } from '../whatsapp/baileys';
 import {
   AWAY_TEXT,
@@ -371,7 +371,12 @@ describe('Ava on WhatsApp in Ava Brain', () => {
   });
 });
 
-const lib = { isPnUser, jidNormalizedUser };
+const lib = {
+  isPnUser,
+  jidNormalizedUser,
+  normalizeMessageContent: normalizeMessageContent as never,
+  getContentType: getContentType as never,
+};
 const fromBaileys = (key: Record<string, unknown>, message: Record<string, unknown> | null, messageTimestamp = 5) =>
   incomingOfBaileys({ key, message, messageTimestamp }, lib);
 
@@ -395,6 +400,28 @@ describe('reading Baileys', () => {
     expect(toBaileysJid(SELF)).toBe(`${ME}@s.whatsapp.net`);
     expect(toServiceJid(`${ME}@s.whatsapp.net`)).toBe(SELF);
     expect(toBaileysJid('123@lid')).toBe('123@lid');
+  });
+
+  it('unwraps disappearing messages, and marks WhatsApp’s own bookkeeping as system', () => {
+    expect(
+      fromBaileys({ id: 'e', remoteJid: SELF }, { ephemeralMessage: { message: { conversation: 'hidden hi' } } }),
+    ).toMatchObject({ type: 'chat', body: 'hidden hi' });
+    for (const bookkeeping of [
+      { protocolMessage: { type: 14 } },
+      { senderKeyDistributionMessage: {}, messageContextInfo: {} },
+      { reactionMessage: { text: '👍' } },
+    ]) {
+      expect(fromBaileys({ id: 'p', remoteJid: SELF, fromMe: true }, bookkeeping).type).toBe('system');
+    }
+    expect(fromBaileys({ id: 'n', remoteJid: SELF }, null).type).toBe('system');
+  });
+
+  it('never answers WhatsApp’s bookkeeping in his own chat', async () => {
+    const { driver, service, settle } = await linked();
+    driver.deliver({ id: 'sync', type: 'system', body: '' });
+    await settle();
+    expect(driver.sent).toEqual([]);
+    expect(service.pull()).toEqual([]);
   });
 
   it('reads his number from the phone id WhatsApp sends beside a @lid chat', () => {

@@ -53,6 +53,9 @@ export interface BaileysModule {
   useMultiFileAuthState(folder: string): Promise<{ state: unknown; saveCreds: () => Promise<void> }>;
   jidNormalizedUser(jid: string | undefined): string;
   isPnUser(jid: string | undefined): boolean | undefined;
+  // Unwraps disappearing, view-once and edited messages; names the kind of content inside
+  normalizeMessageContent(content: Record<string, unknown> | null | undefined): Record<string, unknown> | undefined;
+  getContentType(content: Record<string, unknown> | undefined): string | undefined;
   Browsers: { macOS(browser: string): [string, string, string] };
 }
 
@@ -67,16 +70,30 @@ const silent = {
   error: () => {},
 };
 
-const MEDIA = ['image', 'video', 'audio', 'document', 'sticker', 'location', 'contact'];
+// What a person sends that is not text; anything else (key shares, settings, receipts, reactions, poll votes) is
+// WhatsApp talking to itself, and is ignored without an answer
+const MEDIA: Record<string, string> = {
+  imageMessage: 'image',
+  videoMessage: 'video',
+  ptvMessage: 'video',
+  audioMessage: 'audio',
+  documentMessage: 'document',
+  stickerMessage: 'sticker',
+  locationMessage: 'location',
+  liveLocationMessage: 'location',
+  contactMessage: 'contact',
+  contactsArrayMessage: 'contact',
+};
 
 /** A Baileys message as the service reads it. */
 export function incomingOfBaileys(
   raw: BaileysMessage,
-  lib: Pick<BaileysModule, 'jidNormalizedUser' | 'isPnUser'>,
+  lib: Pick<BaileysModule, 'jidNormalizedUser' | 'isPnUser' | 'normalizeMessageContent' | 'getContentType'>,
 ): WaIncoming {
   const key = raw.key ?? {};
   const chatId = key.remoteJid ? toServiceJid(lib.jidNormalizedUser(key.remoteJid)) : '';
-  const content = raw.message ?? {};
+  const content = lib.normalizeMessageContent(raw.message) ?? {};
+  const kind = lib.getContentType(content);
   const extended = content.extendedTextMessage as { text?: unknown; contextInfo?: Record<string, unknown> } | undefined;
   const text =
     typeof content.conversation === 'string'
@@ -84,9 +101,9 @@ export function incomingOfBaileys(
       : typeof extended?.text === 'string'
         ? extended.text
         : null;
-  const media = MEDIA.find(kind => content[`${kind}Message`]);
+  const media = kind ? MEDIA[kind] : undefined;
   const context = (extended?.contextInfo ??
-    (media ? (content[`${media}Message`] as { contextInfo?: Record<string, unknown> }).contextInfo : undefined)) as
+    (media ? (content[kind!] as { contextInfo?: Record<string, unknown> }).contextInfo : undefined)) as
     { isForwarded?: unknown; forwardingScore?: unknown } | undefined;
   // The sender's phone id, when WhatsApp sends one beside a @lid id
   const phoneJid = [key.remoteJidAlt, key.participantAlt, key.participant, key.remoteJid].find(jid =>
@@ -100,7 +117,7 @@ export function incomingOfBaileys(
     forwarded:
       context?.isForwarded === true || (typeof context?.forwardingScore === 'number' && context.forwardingScore > 0),
     isGroup: chatId.endsWith('@g.us'),
-    type: text !== null ? 'chat' : (media ?? 'unknown'),
+    type: kind === 'conversation' || kind === 'extendedTextMessage' ? 'chat' : (media ?? 'system'),
     body: text ?? '',
     at: typeof at === 'number' ? at : typeof at?.toNumber === 'function' ? at.toNumber() : Number(at ?? 0),
     senderNumber: phoneJid ? numberOfJid(lib.jidNormalizedUser(phoneJid)) : null,

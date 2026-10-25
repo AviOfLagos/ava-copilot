@@ -436,6 +436,8 @@ export class WhatsAppService {
 
   /** Keeps an owner's text message; drops everything else without keeping a trace of it. */
   async onMessage(message: WaIncoming): Promise<void> {
+    // WhatsApp's own bookkeeping (key shares, settings, receipts): never something he said, never answered
+    if (message.type === 'system') return;
     if (await this.connectFrom(message)) return;
     const chatId = this.ownerChatFor(message);
     if (!chatId) return;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isPnUser, jidNormalizedUser } from 'baileys';
+import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { memoryLogger } from '../log';
 import { baileysDriver } from '../whatsapp/baileys';
 import type { BaileysModule } from '../whatsapp/baileys';
@@ -41,6 +41,8 @@ function harness() {
     useMultiFileAuthState: async () => ({ state: { creds }, saveCreds: async () => {} }),
     jidNormalizedUser,
     isPnUser,
+    normalizeMessageContent: normalizeMessageContent as never,
+    getContentType: getContentType as never,
     Browsers: { macOS: name => ['Mac OS', name, '14'] },
   };
   const events = {
