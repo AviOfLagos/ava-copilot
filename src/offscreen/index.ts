@@ -10,6 +10,36 @@ import { measureMic, playTestTone } from './audio-check';
 import { localTts } from './tts-local/shared';
 import './tts-local/register';
 import type { LineTts } from './lines';
+import { AmbientListener } from './ambient/listener';
+import type { AmbientConfig } from './ambient/listener';
+
+const STT_ENGINES = new Set(['moonshine', 'whisper', 'vosk']);
+const STT_MODELS = new Set(['moonshine-tiny', 'moonshine-base', 'whisper-base']);
+
+/** A local recogniser choice, checked: never anything but an engine and model that run on this device. */
+function sttChoiceOf(value: unknown): AmbientConfig['stt'] | null {
+  const stt = value as { engine?: unknown; model?: unknown; webgpu?: unknown } | null | undefined;
+  if (typeof stt?.engine !== 'string' || !STT_ENGINES.has(stt.engine)) return null;
+  const model = typeof stt.model === 'string' && STT_MODELS.has(stt.model) ? stt.model : undefined;
+  return {
+    engine: stt.engine as AmbientConfig['stt']['engine'],
+    ...(model ? { model: model as AmbientConfig['stt']['model'] } : {}),
+    webgpu: stt.webgpu === true,
+  };
+}
+
+/** Ambient listening's settings from the background, checked. */
+function ambientConfigOf(value: unknown): AmbientConfig | null {
+  const config = value as { stt?: unknown; lowPowerStt?: unknown; offRecord?: unknown; nameWords?: unknown } | null;
+  const stt = sttChoiceOf(config?.stt);
+  if (!stt) return null;
+  return {
+    stt,
+    lowPowerStt: sttChoiceOf(config?.lowPowerStt) ?? stt,
+    offRecord: config?.offRecord === true,
+    nameWords: Array.isArray(config?.nameWords) ? config.nameWords.map(String).slice(0, 4) : ['ava'],
+  };
+}
 
 /** A voice for a line, checked: an engine and a voice name, a pace within reason. */
 function lineTtsOf(value: unknown): LineTts | null {
@@ -31,6 +61,8 @@ const wake = new WakeListener(() => {
   chime();
   notify({ type: 'wake_word' });
 });
+// Ambient listening: what is said around the Mac, written down here and sent to the background as text
+const ambient = new AmbientListener(event => notify(event));
 
 // The chosen microphone/speaker (Settings › Voice devices), kept here rather than read from
 // @extension/storage directly: importing a settings store from this entrypoint changes its chunk
@@ -54,12 +86,15 @@ function holdForDictation(on: boolean): void {
   dictationHeld = on;
   voice?.holdMic(on);
   wake.hold(on);
+  if (on) ambient.pause('dictation');
+  else ambient.resume('dictation');
 }
 
 function applyAudioDeviceSettings(micId: string | null, speakerId: string | null): void {
   currentMicId = micId;
   currentSpeakerId = speakerId;
   void wake.switchMic(micId);
+  void ambient.switchMic(micId).catch(() => {});
   if (voice && 'switchMic' in voice) void voice.switchMic(micId);
   if (voice && 'switchSpeaker' in voice) voice.switchSpeaker(speakerId);
   localTts().setOutputDevice(speakerId);
@@ -106,6 +141,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return { ok: false, error: String(error) };
         }
         recorder = next;
+        // The meeting's own notes take over; ambient listening waits until it ends
+        ambient.pause('recorder');
         return { ok: true, micUsed: next.micUsed };
       }
       case 'recorder_stop': {
@@ -115,6 +152,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return { ok: false, error: 'Not recording this meeting' };
         }
         await current.stop();
+        ambient.resume('recorder');
         return { ok: true };
       }
       case 'recorder_stop_live':
@@ -142,6 +180,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         );
         // Known at once, so a second start (or the minute check of the wake word) sees a conversation on
         voice = next;
+        // A conversation is not ambient talk: listening waits until it ends
+        ambient.pause('voice');
         if (dictationHeld) next.holdMic(true);
         try {
           await next.start();
@@ -149,6 +189,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           next.stop();
           if (voice === next) voice = null;
           wake.resume();
+          ambient.resume('voice');
           return {
             ok: false,
             error: String(error),
@@ -162,7 +203,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         voice?.stop();
         voice = null;
         wake.resume();
+        ambient.resume('voice');
         return { ok: true };
+      // Ambient listening started, or its settings changed (off the record, the recogniser, the name)
+      case 'ambient_start': {
+        const config = ambientConfigOf(message.config);
+        if (!config) return { ok: false, error: 'No speech recogniser on this device' };
+        if (voice) ambient.pause('voice');
+        if (recorder) ambient.pause('recorder');
+        if (dictationHeld) ambient.pause('dictation');
+        try {
+          await ambient.start(config, currentMicId);
+          return { ok: true };
+        } catch (error) {
+          return {
+            ok: false,
+            error: String(error),
+            micDenied: error instanceof DOMException && error.name === 'NotAllowedError',
+          };
+        }
+      }
+      case 'ambient_stop':
+        ambient.stop();
+        return { ok: true };
+      case 'ambient_running':
+        return { running: ambient.running, offRecord: ambient.offRecord };
       case 'wake_start':
         try {
           const words = Array.isArray(message.words) ? message.words.map(String) : undefined;

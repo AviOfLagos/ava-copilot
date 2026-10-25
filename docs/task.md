@@ -2402,6 +2402,31 @@ fallback, Ollama stopped gives a plain error) and `e2e/setup.e2e.mjs` (a full br
 the checklist, Skip, header count and badge). Cloud-only today: Gemini Live Talk without local voices, a web-search
 role (no local model has it), and vision on qwen3:4b (no screenshots sent).
 
+### Ambient A1: Listen mode (2026-10-25)
+
+Roadmap item 12, first milestone ([ambient-plan.md](ambient-plan.md)). Settings › Voice › Ambient: Off / Listen only
+/ Companion (Companion behaves like Listen until A4). In Listen, the offscreen document holds its own microphone
+stream (`src/offscreen/ambient/listener.ts`) and the scribe (`scribe.ts`) cuts it into utterances with the speech
+gate and writes them down with the local recogniser from Settings › Voice engines (the smallest Moonshine on battery
+under 30%). It pauses for a voice conversation, dictation and a recorded meeting. The background
+(`src/background/ambient/`) files utterances into sessions (`ambientSessions` / `ambientUtterances`, Dexie v6, gap
+10 min, kept 30 days) and obeys the spoken switches in `phrases.ts`, matched word for word, never by a model: "Ava,
+just listen", "Ava, feel free to chime in", "Ava, go quiet", "(Ava,) off the record" / "back on the record", "Ava,
+forget the last N minutes". Off the record the scribe still decodes, but only to hear "back on the record"; nothing
+else leaves the recogniser. Listening shows as a dot on the toolbar icon (`indicator.ts`; the badge stays the
+Inbox's) and an ear in the panel header.
+
+Ambient text never reaches a model unless "Let the cloud model use what Ava hears" is on (off by default). Only then
+are sessions indexed into the knowledge base as `sourceType: 'ambient'`, where the embedder, the graph and answers
+read them like any other item. Turning it off removes them. A voice tool `set_listening_mode` changes the mode
+(guarded like every registered tool).
+
+Tests: `background/ambient/__tests__` (switches, manager: storing, switches never kept, off the record, forget,
+retention, cloud permission), `storage/lib/ambient/__tests__` (sessions, forget, TTL),
+`offscreen/ambient/__tests__/scribe.test.ts`, `kb/__tests__/chunk-ambient.test.ts`, and `e2e/ambient.e2e.mjs` (the
+looping recording is written down by Moonshine with no POST to any model, the indicator, off the record, Settings).
+Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

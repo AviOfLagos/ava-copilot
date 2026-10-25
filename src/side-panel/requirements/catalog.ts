@@ -79,7 +79,7 @@ export function voiceModelRequirement(ids: VoiceModelId[], request: Request): Re
  * (`voice_models_needed`): ready when nothing required is missing.
  */
 export async function voiceFeatureRequirement(
-  feature: 'talk' | 'dictation' | 'wake',
+  feature: 'talk' | 'dictation' | 'wake' | 'ambient',
   request: Request,
 ): Promise<Requirement> {
   const needed = await request<{ required?: VoiceModelId[]; optional?: VoiceModelId[] }>({

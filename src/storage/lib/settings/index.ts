@@ -14,3 +14,4 @@ export * from './ttsSettings';
 export * from './voiceEngineSettings';
 export * from './assistant';
 export * from './audioDeviceSettings';
+export * from './ambientSettings';

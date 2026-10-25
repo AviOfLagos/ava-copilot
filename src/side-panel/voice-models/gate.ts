@@ -8,7 +8,7 @@ import type { PanelApi } from '../registry';
  * missing, or the download finished), false when the user said not now and it cannot run without them.
  */
 
-export type VoiceFeature = 'talk' | 'dictation' | 'wake';
+export type VoiceFeature = 'talk' | 'dictation' | 'wake' | 'ambient';
 // Where the card shows: at the top of the panel, or inside the first-run setup (a dialog over the panel)
 export type CardPlacement = 'panel' | 'onboarding';
 

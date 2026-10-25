@@ -3,6 +3,8 @@ import { kbItemId, kbSettingsStore, kbStore, meetingStore, threadStore } from '@
 import type {
   KbExport,
   KbSettingsConfig,
+  AmbientSession,
+  AmbientUtterance,
   KbStore,
   KnowledgeChunk,
   KnowledgeItem,
@@ -19,7 +21,7 @@ import { resolveModels } from '../threads/factory';
 import { readPageText } from '../reader/probes';
 import { ANSWER_INSTRUCTIONS, citationsIn, questionPrompt } from './answer';
 import type { KbAnswer } from './answer';
-import { chunkMeeting, chunkNote, chunkPage, chunkThread, hashText } from './chunker';
+import { chunkAmbient, chunkMeeting, chunkNote, chunkPage, chunkThread, hashText } from './chunker';
 import type { DraftChunk } from './chunker';
 import { createEmbedder } from './embedder';
 import type { Embedder } from './embedder';
@@ -236,6 +238,30 @@ export class KnowledgeBase {
         chunkMeeting(meeting, segments),
       );
     });
+  }
+
+  /**
+   * Adds or refreshes an ambient session (what Ava heard while only listening). Only called while the user lets
+   * the cloud model use what Ava hears (src/background/ambient): items here are embedded and read like any other.
+   */
+  indexAmbient(
+    session: Pick<AmbientSession, 'id' | 'startedAt' | 'endedAt' | 'workspaceId'>,
+    utterances: Pick<AmbientUtterance, 'startedAt' | 'speaker' | 'text'>[],
+  ): Promise<KnowledgeItem | null> {
+    return this.serial(() =>
+      this.write(
+        {
+          sourceType: 'ambient',
+          sourceId: session.id,
+          title: t('ambient_kb_title', [new Date(session.startedAt).toLocaleString()]),
+          url: '',
+          sourceDate: session.startedAt,
+          sourceUpdatedAt: session.endedAt,
+          workspaceId: session.workspaceId ?? null,
+        },
+        chunkAmbient(session.id, utterances),
+      ),
+    );
   }
 
   /** Saves the page a tab shows. An agent's save is private to it unless `scope` says 'team'. */

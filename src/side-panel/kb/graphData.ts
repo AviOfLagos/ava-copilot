@@ -191,6 +191,7 @@ export const TYPE_BASE_SIZE: Record<GraphNodeType, number> = {
   page: 3.5,
   note: 3.5,
   'ai-session': 3.5,
+  ambient: 3.5,
 };
 
 /** A node's drawn radius: its type's base size, plus a little for how connected it is, capped so hubs stay readable. */

@@ -5,6 +5,7 @@ export * from './usage';
 export * from './threads';
 export * from './meetings';
 export * from './kb';
+export * from './ambient';
 export * from './skills';
 export * from './profile';
 export * from './prompt/favorites';

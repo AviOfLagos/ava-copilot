@@ -9860,5 +9860,125 @@
   },
   "meetvoice_auto_always": {
     "message": "Always"
+  },
+  "ambient_kb_title": {
+    "message": "Heard around you, $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "10/25/2026, 14:05"
+      }
+    }
+  },
+  "ambient_kb_type": {
+    "message": "Heard"
+  },
+  "ambient_section": {
+    "message": "Ambient listening"
+  },
+  "ambient_mode": {
+    "message": "Listen around you"
+  },
+  "ambient_mode_hint": {
+    "message": "Writes down what is said near this Mac, on this Mac only, and never answers unless you use the wake word. Say “Ava, off the record” to pause it."
+  },
+  "ambient_mode_off": {
+    "message": "Off"
+  },
+  "ambient_mode_listen": {
+    "message": "Listen only"
+  },
+  "ambient_mode_companion": {
+    "message": "Companion"
+  },
+  "ambient_offRecord": {
+    "message": "Off the record"
+  },
+  "ambient_offRecord_hint": {
+    "message": "Nothing is written down until you switch this off or say “back on the record”."
+  },
+  "ambient_offRecord_since": {
+    "message": "Off the record since $TIME$. Nothing is being written down.",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "14:05"
+      }
+    }
+  },
+  "ambient_cloud": {
+    "message": "Let the cloud model use what Ava hears"
+  },
+  "ambient_cloud_hint": {
+    "message": "Off: what Ava hears never leaves this Mac. On: it joins your memory, so it can be searched, embedded and used to answer you."
+  },
+  "ambient_recent": {
+    "message": "Heard lately"
+  },
+  "ambient_recent_none": {
+    "message": "Nothing yet."
+  },
+  "ambient_recent_session": {
+    "message": "$DAY$, $FROM$–$TO$ · $COUNT$ lines",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Oct 25"
+      },
+      "from": {
+        "content": "$2",
+        "example": "14:05"
+      },
+      "to": {
+        "content": "$3",
+        "example": "14:30"
+      },
+      "count": {
+        "content": "$4",
+        "example": "12"
+      }
+    }
+  },
+  "ambient_forget": {
+    "message": "Forget the last $MINUTES$ min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forgot": {
+    "message": "The last $MINUTES$ minutes are gone, here and from your memory.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forget_failed": {
+    "message": "That could not be forgotten. Try again."
+  },
+  "ambient_error_mic": {
+    "message": "The microphone is blocked. Allow it for Nex Copilot, then try again."
+  },
+  "ambient_error_stt": {
+    "message": "Listening needs a speech recogniser on this Mac. Install one in Settings › Voice engines."
+  },
+  "ambient_error_start": {
+    "message": "Listening did not start: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "No microphone"
+      }
+    }
+  },
+  "ambient_indicator_listening": {
+    "message": "Ava is listening and taking notes on this Mac"
+  },
+  "ambient_indicator_offRecord": {
+    "message": "Off the record: Ava is not writing anything down"
   }
 }

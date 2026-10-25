@@ -1,5 +1,6 @@
 import { Dexie } from 'dexie';
 import type { AgentProfile, BusMessage } from '../agents/types';
+import type { AmbientSession, AmbientUtterance } from '../ambient/types';
 import type { ArtifactRecord } from '../artifacts/types';
 import type { InboxItem } from '../inbox/types';
 import type { ConnectorRecord, ToolFingerprint } from '../integrations/types';
@@ -205,7 +206,8 @@ export interface TranscriptSegment {
 }
 
 // 'ai-session': a conversation brought in from another AI tool's history (Claude Code, Codex, ChatGPT…)
-export type KnowledgeSourceType = 'thread' | 'meeting' | 'page' | 'note' | 'ai-session';
+// 'ambient': a session of what Ava heard while only listening (src/background/ambient)
+export type KnowledgeSourceType = 'thread' | 'meeting' | 'page' | 'note' | 'ai-session' | 'ambient';
 
 // Where a passage came from, precise enough to open it again
 export type KnowledgeAnchor =
@@ -214,7 +216,9 @@ export type KnowledgeAnchor =
   | { kind: 'meeting'; meetingId: string; t: number }
   | { kind: 'page'; url: string }
   // Something the user asked to remember, by voice or in a task
-  | { kind: 'note'; itemId: string };
+  | { kind: 'note'; itemId: string }
+  // When it was said (epoch ms) in an ambient session
+  | { kind: 'ambient'; sessionId: string; at: number };
 
 export interface KnowledgeItem {
   id: string;
@@ -260,7 +264,17 @@ export interface KnowledgeChunk {
 
 // What the knowledge graph holds: the sources themselves, and what they talk about
 export type GraphNodeType =
-  'thread' | 'meeting' | 'page' | 'note' | 'ai-session' | 'person' | 'organization' | 'project' | 'decision' | 'action';
+  | 'thread'
+  | 'meeting'
+  | 'page'
+  | 'note'
+  | 'ai-session'
+  | 'ambient'
+  | 'person'
+  | 'organization'
+  | 'project'
+  | 'decision'
+  | 'action';
 
 export interface GraphNode {
   // A source's node has its knowledge item's id; an entity's id comes from its type, workspace and name,
@@ -312,6 +326,8 @@ export class AviCopilotDb extends Dexie {
   modelCatalog!: Table<ModelCatalogEntry, string>;
   usageEvents!: Table<UsageEvent, string>;
   logs!: Table<LogEntry, string>;
+  ambientSessions!: Table<AmbientSession, string>;
+  ambientUtterances!: Table<AmbientUtterance, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -354,6 +370,11 @@ export class AviCopilotDb extends Dexie {
       modelCatalog: 'id, providerId, local',
       usageEvents: 'id, day, model, agentId, workflowId, workspaceId',
       logs: 'id, at, level, runId',
+    });
+    // Ambient listening (docs/ambient-plan.md): only added, nothing stored is rewritten
+    this.version(6).stores({
+      ambientSessions: 'id, startedAt',
+      ambientUtterances: 'id, sessionId, [sessionId+startedAt], endedAt',
     });
   }
 }

@@ -9860,5 +9860,125 @@
   },
   "meetvoice_auto_always": {
     "message": "Sempre"
+  },
+  "ambient_kb_title": {
+    "message": "Ouvido ao seu redor, $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "10/25/2026, 14:05"
+      }
+    }
+  },
+  "ambient_kb_type": {
+    "message": "Ouvido"
+  },
+  "ambient_section": {
+    "message": "Escuta ambiente"
+  },
+  "ambient_mode": {
+    "message": "Ouvir ao seu redor"
+  },
+  "ambient_mode_hint": {
+    "message": "Anota o que é dito perto deste Mac, só neste Mac, e nunca responde a menos que você use a palavra de ativação. Diga “Ava, off the record” para pausar."
+  },
+  "ambient_mode_off": {
+    "message": "Desligado"
+  },
+  "ambient_mode_listen": {
+    "message": "Só ouvir"
+  },
+  "ambient_mode_companion": {
+    "message": "Companheira"
+  },
+  "ambient_offRecord": {
+    "message": "Fora do registro"
+  },
+  "ambient_offRecord_hint": {
+    "message": "Nada é anotado até você desligar isto ou dizer “back on the record”."
+  },
+  "ambient_offRecord_since": {
+    "message": "Fora do registro desde $TIME$. Nada está sendo anotado.",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "14:05"
+      }
+    }
+  },
+  "ambient_cloud": {
+    "message": "Deixar o modelo na nuvem usar o que a Ava ouve"
+  },
+  "ambient_cloud_hint": {
+    "message": "Desligado: o que a Ava ouve nunca sai deste Mac. Ligado: entra na sua memória e pode ser pesquisado, indexado e usado para responder."
+  },
+  "ambient_recent": {
+    "message": "Ouvido recentemente"
+  },
+  "ambient_recent_none": {
+    "message": "Nada ainda."
+  },
+  "ambient_recent_session": {
+    "message": "$DAY$, $FROM$–$TO$ · $COUNT$ falas",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Oct 25"
+      },
+      "from": {
+        "content": "$2",
+        "example": "14:05"
+      },
+      "to": {
+        "content": "$3",
+        "example": "14:30"
+      },
+      "count": {
+        "content": "$4",
+        "example": "12"
+      }
+    }
+  },
+  "ambient_forget": {
+    "message": "Esquecer os últimos $MINUTES$ min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forgot": {
+    "message": "Os últimos $MINUTES$ minutos foram apagados, aqui e da sua memória.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "ambient_forget_failed": {
+    "message": "Não foi possível esquecer. Tente de novo."
+  },
+  "ambient_error_mic": {
+    "message": "O microfone está bloqueado. Permita-o para o Nex Copilot e tente de novo."
+  },
+  "ambient_error_stt": {
+    "message": "A escuta precisa de um reconhecedor de fala neste Mac. Instale um em Configurações › Motores de voz."
+  },
+  "ambient_error_start": {
+    "message": "A escuta não começou: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "No microphone"
+      }
+    }
+  },
+  "ambient_indicator_listening": {
+    "message": "A Ava está ouvindo e anotando neste Mac"
+  },
+  "ambient_indicator_offRecord": {
+    "message": "Fora do registro: a Ava não está anotando nada"
   }
 }

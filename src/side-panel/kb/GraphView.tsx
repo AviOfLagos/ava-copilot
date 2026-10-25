@@ -41,6 +41,7 @@ const TYPE_STYLE: Record<GraphNodeType, { color: string; label: Key }> = {
   page: { color: 'rgba(120, 128, 142, 0.85)', label: 'graph_type_page' },
   note: { color: 'rgba(120, 128, 142, 0.85)', label: 'graph_type_note' },
   'ai-session': { color: 'rgba(120, 128, 142, 0.85)', label: 'history_type_session' },
+  ambient: { color: 'rgba(120, 128, 142, 0.85)', label: 'ambient_kb_type' },
 };
 
 // How solid each neutral type reads against the foreground token; project/person use the accent hues instead
