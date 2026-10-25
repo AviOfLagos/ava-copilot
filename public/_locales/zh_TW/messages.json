@@ -8958,7 +8958,7 @@
     "message": "檢查中…"
   },
   "wava_settings_unlink": {
-    "message": "取消連結"
+    "message": "登出"
   },
   "wava_settings_linking": {
     "message": "啟動中…"
@@ -10046,18 +10046,66 @@
     "message": "試聽"
   },
   "wava_settings_firstMessage": {
-    "message": "還差一步：用你的手機（$OWNER$）傳任何訊息到 Ava 的號碼。在那之前，WhatsApp 不允許她先傳訊息給你。",
-    "placeholders": {
-      "owner": {
-        "content": "$1",
-        "example": "+234 801 234 5678"
-      }
-    }
+    "message": "WhatsApp 不允許 Ava 先傳訊息到你的號碼。請在下方連接你的手機。"
   },
   "brain_docker_start": {
     "message": "啟動 Docker"
   },
   "brain_docker_starting": {
     "message": "正在啟動 Docker…"
+  },
+  "wava_state_linkedPlain": {
+    "message": "已連結"
+  },
+  "wava_settings_logout_confirm": {
+    "message": "要讓 Ava 在這台 Mac 上登出 WhatsApp 嗎？她也會從你手機的「已連結的裝置」中移除。要再次連結，需掃描新的代碼。"
+  },
+  "wava_settings_phone_title": {
+    "message": "你的手機"
+  },
+  "wava_settings_phone_hint": {
+    "message": "連接你要傳訊息給 Ava 的手機，讓她能在那裡回覆你。"
+  },
+  "wava_settings_phone_connect": {
+    "message": "連接我的手機"
+  },
+  "wava_settings_phone_send": {
+    "message": "用你的手機，把這個代碼傳到 Ava 的號碼："
+  },
+  "wava_settings_phone_waiting": {
+    "message": "正在等待你的訊息……代碼 15 分鐘內有效。"
+  },
+  "wava_settings_phone_connected": {
+    "message": "已連接。Ava 會在那個對話中回覆你。"
+  },
+  "wava_settings_restart": {
+    "message": "重新啟動"
+  },
+  "wava_settings_restarting": {
+    "message": "正在重新啟動……"
+  },
+  "wava_settings_restarted": {
+    "message": "WhatsApp 已重新啟動。"
+  },
+  "wava_settings_restart_hint": {
+    "message": "沒有回應？在你的 Mac 上重新啟動 WhatsApp，不需要重新掃描。"
+  },
+  "wava_settings_lastIn": {
+    "message": "你的上一則訊息：$WHEN$。",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "wava_settings_lastOut": {
+    "message": "Ava 的上一則：$WHEN$。",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 min ago"
+      }
+    }
   }
 }

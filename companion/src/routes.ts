@@ -602,6 +602,26 @@ export function brainRoutes(deps: RouteDeps): Route[] {
     },
     {
       method: 'POST',
+      path: WHATSAPP_ROUTES.connect,
+      name: 'whatsapp.connect',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, status: deps.whatsapp.startConnect() });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.restart,
+      name: 'whatsapp.restart',
+      auth: 'api',
+      rate: 'run',
+      async handler() {
+        return json({ ok: true, status: await deps.whatsapp.restart() });
+      },
+    },
+    {
+      method: 'POST',
       path: WHATSAPP_ROUTES.unlink,
       name: 'whatsapp.unlink',
       auth: 'api',

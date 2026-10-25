@@ -161,6 +161,8 @@ command('wava_unlink', z.object({}), async () => {
   await whatsappRemoteStateStore.update({ replyTo: null, waitingTold: null });
   return result;
 });
+command('wava_connect', z.object({}), () => withStatus(companionClient.whatsappConnect()));
+command('wava_restart', z.object({}), () => withStatus(companionClient.whatsappRestart()));
 command('wava_owner', z.object({ number: z.string().regex(WHATSAPP_NUMBER).nullable() }), ({ number }) =>
   withStatus(companionClient.whatsappSetOwner(number)),
 );

@@ -7,6 +7,9 @@ import { numberOfJid } from '../whatsapp/driver';
 import { incomingOf, qrOf } from '../whatsapp/openwa';
 import {
   AWAY_TEXT,
+  CONNECT_CODE_MS,
+  CONNECT_MAX_MISSES,
+  CONNECTED_TEXT,
   FIRST_MESSAGE_TEXT,
   FORWARDED_TEXT,
   inQuietHours,
@@ -36,6 +39,10 @@ class FakeDriver implements WaDriver {
     this.raw.push(text);
     this.sent.push({ chatId, text: text.replaceAll(OWN_MARK, '') });
     return `sent-${++this.next}`;
+  }
+  loggedOut = false;
+  async logout() {
+    this.loggedOut = true;
   }
   async stop() {
     this.stopped = true;
@@ -226,6 +233,81 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     // The chat he wrote from is the one that exists: her next notice goes there
     await service.send({ text: 'got it', kind: 'brief' });
     expect(driver.sent.at(-1)).toEqual({ chatId: '55555@lid', text: 'got it' });
+  });
+
+  it('connects his phone by a code sent from a chat whose number WhatsApp hides', async () => {
+    const { driver, service, settle } = await linked();
+    service.setOwner(OTHER_OWNER);
+    // Before the code: a @lid chat showing no number is anyone's, and is dropped
+    driver.deliver({ id: 'h1', chatId: '44444@lid', fromMe: false, body: 'Hi', senderNumber: null });
+    await settle();
+    expect(service.pull()).toEqual([]);
+
+    const { connectCode } = service.startConnect();
+    expect(connectCode).toMatch(/^AVA-[A-HJ-NP-Z2-9]{8}$/);
+    expect(service.status()).toMatchObject({ phoneConnected: false, connectCode });
+    // Another chat sending something else does not connect
+    driver.deliver({ id: 'x', chatId: '33333@lid', fromMe: false, body: 'AVA-0000', senderNumber: null });
+    driver.deliver({
+      id: 'c',
+      chatId: '44444@lid',
+      fromMe: false,
+      body: `${connectCode!.toLowerCase()} `,
+      senderNumber: null,
+    });
+    await settle();
+    expect(service.status()).toMatchObject({ phoneConnected: true, connectCode: null, needsFirstMessage: false });
+    expect(driver.sent.at(-1)).toEqual({ chatId: '44444@lid', text: CONNECTED_TEXT });
+    // The code itself is not an instruction; his next message is
+    expect(service.pull()).toEqual([]);
+    driver.deliver({ id: 'h2', chatId: '44444@lid', fromMe: false, body: 'What is on today?', senderNumber: null });
+    await settle();
+    expect(service.pull().map(item => item.text)).toEqual(['What is on today?']);
+    expect(service.status().lastInAt).not.toBeNull();
+    await service.send({ text: 'Two meetings.', kind: 'reply', replyTo: 'h2' });
+    await service.send({ text: 'A notice', kind: 'brief' });
+    expect(driver.sent.slice(-2).map(item => item.chatId)).toEqual(['44444@lid', '44444@lid']);
+    expect(service.status().lastOutAt).not.toBeNull();
+  });
+
+  it('cannot be guessed: only the exact code, typed, and a few wrong tries end it', async () => {
+    const { driver, service, settle } = await linked();
+    service.setOwner(OTHER_OWNER);
+    const { connectCode } = service.startConnect();
+    const from = { chatId: '22222@lid', fromMe: false, senderNumber: null };
+    // A list of guesses that contains the code, a forwarded code, and the code from someone else's number
+    driver.deliver({ ...from, id: 'g1', body: `AVA-AAAAAAAA ${connectCode} AVA-BBBBBBBB` });
+    driver.deliver({ ...from, id: 'g2', body: connectCode!, forwarded: true });
+    driver.deliver({ ...from, id: 'g3', body: connectCode!, senderNumber: '2348099999999' });
+    await settle();
+    expect(service.status()).toMatchObject({ phoneConnected: false, connectCode });
+    for (let i = 3; i < CONNECT_MAX_MISSES; i++) driver.deliver({ ...from, id: `w${i}`, body: `AVA-WRONG${i}` });
+    await settle();
+    expect(service.status().connectCode).toBeNull();
+    driver.deliver({ ...from, id: 'late', body: connectCode! });
+    await settle();
+    expect(service.status().phoneConnected).toBe(false);
+  });
+
+  it('lets a connect code lapse after 15 minutes', async () => {
+    const { driver, service, settle, advance } = await linked();
+    const { connectCode } = service.startConnect();
+    advance(CONNECT_CODE_MS + 1);
+    expect(service.status().connectCode).toBeNull();
+    driver.deliver({ id: 'late', chatId: '44444@lid', fromMe: false, body: connectCode!, senderNumber: null });
+    await settle();
+    expect(service.status().phoneConnected).toBe(false);
+  });
+
+  it('restarts the session with no new scan, and logs out of the phone when unlinked', async () => {
+    const { driver, service } = await linked();
+    const restarted = await service.restart();
+    expect(driver.stopped).toBe(true);
+    expect(restarted.state).toBe('starting');
+    driver.link();
+    await service.unlink();
+    expect(driver.loggedOut).toBe(true);
+    expect(service.status().state).toBe('not_linked');
   });
 
   it('answers media once with “text only” and does not queue it', async () => {

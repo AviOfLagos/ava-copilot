@@ -8958,7 +8958,7 @@
     "message": "Checking…"
   },
   "wava_settings_unlink": {
-    "message": "Unlink"
+    "message": "Log out"
   },
   "wava_settings_linking": {
     "message": "Starting…"
@@ -10046,18 +10046,66 @@
     "message": "Preview"
   },
   "wava_settings_firstMessage": {
-    "message": "One step left: from your phone ($OWNER$), send any message to Ava's number. Until then WhatsApp won't let her write to you first.",
-    "placeholders": {
-      "owner": {
-        "content": "$1",
-        "example": "+234 801 234 5678"
-      }
-    }
+    "message": "WhatsApp won't let Ava write to your number first. Connect your phone below."
   },
   "brain_docker_start": {
     "message": "Start Docker"
   },
   "brain_docker_starting": {
     "message": "Starting Docker…"
+  },
+  "wava_state_linkedPlain": {
+    "message": "Linked"
+  },
+  "wava_settings_logout_confirm": {
+    "message": "Log Ava out of WhatsApp on this Mac? It also leaves your phone's Linked devices. To link again you scan a new code."
+  },
+  "wava_settings_phone_title": {
+    "message": "Your phone"
+  },
+  "wava_settings_phone_hint": {
+    "message": "Connect the phone you'll message Ava from, so she can answer you there."
+  },
+  "wava_settings_phone_connect": {
+    "message": "Connect my phone"
+  },
+  "wava_settings_phone_send": {
+    "message": "From your phone, send this code to Ava's number:"
+  },
+  "wava_settings_phone_waiting": {
+    "message": "Waiting for your message… The code works for 15 minutes."
+  },
+  "wava_settings_phone_connected": {
+    "message": "Connected. Ava answers you in that chat."
+  },
+  "wava_settings_restart": {
+    "message": "Restart"
+  },
+  "wava_settings_restarting": {
+    "message": "Restarting…"
+  },
+  "wava_settings_restarted": {
+    "message": "WhatsApp restarted."
+  },
+  "wava_settings_restart_hint": {
+    "message": "Not answering? Restart WhatsApp on your Mac. No new scan needed."
+  },
+  "wava_settings_lastIn": {
+    "message": "Last message from you $WHEN$.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "5 min ago"
+      }
+    }
+  },
+  "wava_settings_lastOut": {
+    "message": "Last from Ava $WHEN$.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 min ago"
+      }
+    }
   }
 }

@@ -669,6 +669,26 @@ export class CompanionClient {
     });
   }
 
+  whatsappConnect() {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.connect,
+      body: {},
+      schema: whatsappStatusReplySchema,
+      timeoutMs: 15_000,
+    });
+  }
+
+  whatsappRestart() {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.restart,
+      body: {},
+      schema: whatsappStatusReplySchema,
+      timeoutMs: 60_000,
+    });
+  }
+
   whatsappUnlink() {
     return this.call({
       method: 'POST',

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WHATSAPP_TEXT_MAX } from '@protocol';
@@ -43,7 +43,16 @@ export const AWAY_TEXT = "Your browser is closed, I'll answer when it opens.";
 export const TEXT_ONLY_TEXT = 'I can only read text for now.';
 // WhatsApp (through open-wa) will not open a chat with a number this account has never talked to
 export const FIRST_MESSAGE_TEXT =
-  "Ava can't start a chat with your number yet. From your phone, send any message to Ava's number once, then try again.";
+  "WhatsApp won't let Ava write to your number first. Connect your phone in Settings › WhatsApp, then try again.";
+export const CONNECTED_TEXT = "Connected. I'll answer you here.";
+// The code the owner sends from his phone to say "this chat is mine" stays good this long
+export const CONNECT_CODE_MS = 15 * 60_000;
+// Letters and digits that cannot be mistaken for each other (no 0/O, 1/I/L)
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_LENGTH = 8;
+// Code-like messages from other chats while a code waits: this many and the code is thrown away
+export const CONNECT_MAX_MISSES = 5;
+const CODE_LIKE = /^\s*AVA-/i;
 const NEW_CHAT_REFUSED = /licen[cs]e|unknown_number|new number/i;
 export const FORWARDED_TEXT =
   'I only act on messages you type yourself. If you want me to look at a forwarded one, tell me in your own words.';
@@ -76,6 +85,11 @@ interface Saved {
   quietEnd: string;
   // A send to the owner was refused until he writes to Ava's number first (FIRST_MESSAGE_TEXT)
   needsFirstMessage: boolean;
+  // The code he sends from his phone to make that chat his (WhatsApp may hide his number behind a @lid id)
+  connectCode: { code: string; until: number; misses?: number } | null;
+  // When his last message came in and Ava's last went out (times only)
+  lastInAt: number | null;
+  lastOutAt: number | null;
 }
 
 const EMPTY: Saved = {
@@ -93,6 +107,9 @@ const EMPTY: Saved = {
   quietStart: '22:00',
   quietEnd: '07:00',
   needsFirstMessage: false,
+  connectCode: null,
+  lastInAt: null,
+  lastOutAt: null,
 };
 
 export interface WhatsAppServiceDeps {
@@ -180,8 +197,44 @@ export class WhatsAppService {
       queued: this.saved.queue.length,
       sentLastHour: this.recentSends().length,
       sendLimitPerHour: this.limit,
-      needsFirstMessage: this.saved.needsFirstMessage && Boolean(this.saved.ownerNumber),
+      needsFirstMessage: this.saved.needsFirstMessage && !this.phoneConnected(),
+      connectCode: this.pendingCode(),
+      phoneConnected: this.phoneConnected(),
+      lastInAt: this.saved.lastInAt,
+      lastOutAt: this.saved.lastOutAt,
     };
+  }
+
+  /** A chat on his phone that Ava has heard from: she can always write back there. */
+  private phoneConnected(): boolean {
+    return this.saved.ownerAliases.length > 0;
+  }
+
+  private pendingCode(): string | null {
+    const pending = this.saved.connectCode;
+    return pending && pending.until > this.now() ? pending.code : null;
+  }
+
+  /**
+   * A one-time code for the owner to send from his phone to Ava's number. The chat it arrives in becomes his,
+   * whatever id WhatsApp shows for it (it hides numbers behind @lid ids), and Ava answers there.
+   */
+  startConnect(): WhatsAppStatus {
+    if (this.state !== 'linked') fail('unavailable', 'WhatsApp is not linked on your Mac.');
+    const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
+    this.saved.connectCode = { code: `AVA-${code}`, until: this.now() + CONNECT_CODE_MS, misses: 0 };
+    this.save();
+    return this.status();
+  }
+
+  /** Starts the session again from its saved files (no new scan), e.g. when it stopped answering. */
+  async restart(): Promise<WhatsAppStatus> {
+    if (!this.saved.linked) return this.link();
+    this.generation++;
+    const driver = this.driver;
+    this.driver = null;
+    await driver?.stop().catch(() => {});
+    return this.link();
   }
 
   /** Starts the session: restores a saved one, or shows a code to scan. Does nothing while one runs. */
@@ -237,6 +290,8 @@ export class WhatsAppService {
     this.generation++;
     const driver = this.driver;
     this.driver = null;
+    // Off the phone's Linked devices too, so nothing is left behind there
+    await driver?.logout?.().catch(() => {});
     await driver?.stop().catch(() => {});
     rmSync(this.sessionDir, { recursive: true, force: true });
     this.saved = { ...EMPTY };
@@ -254,6 +309,7 @@ export class WhatsAppService {
       this.saved.ownerNumber = next;
       this.saved.ownerAliases = [];
       this.saved.needsFirstMessage = false;
+      this.saved.connectCode = null;
       // What came from a chat that is no longer the owner's goes: it must not be answered or acted on
       this.saved.queue = this.saved.queue.filter(item => this.isOwnerChat(item.chatId));
       this.saved.chats = this.saved.chats.filter(item => this.isOwnerChat(item.chatId));
@@ -341,10 +397,9 @@ export class WhatsAppService {
       this.save();
       throw error;
     }
-    if (id) {
-      this.remember(`id:${id}`);
-      this.save();
-    }
+    this.saved.lastOutAt = this.now();
+    if (id) this.remember(`id:${id}`);
+    this.save();
   }
 
   async stop(): Promise<void> {
@@ -374,6 +429,7 @@ export class WhatsAppService {
 
   /** Keeps an owner's text message; drops everything else without keeping a trace of it. */
   async onMessage(message: WaIncoming): Promise<void> {
+    if (await this.connectFrom(message)) return;
     const chatId = this.ownerChatFor(message);
     if (!chatId) return;
     if (this.isEcho(message)) return;
@@ -394,7 +450,11 @@ export class WhatsAppService {
       return;
     }
     // He wrote to Ava's number, so the chat exists and her sends to him go through now
-    if (this.saved.needsFirstMessage && !this.isSelfChat(chatId)) this.saved.needsFirstMessage = false;
+    if (!this.isSelfChat(chatId)) {
+      this.saved.needsFirstMessage = false;
+      this.learnChat(chatId);
+    }
+    this.saved.lastInAt = this.now();
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
     if (!text) {
       this.save();
@@ -413,11 +473,12 @@ export class WhatsAppService {
   private ownerChatFor(message: WaIncoming): string | null {
     if (message.isGroup || /@(g\.us|broadcast|newsletter)$/.test(message.chatId)) return null;
     if (this.isSelfChat(message.chatId)) return message.fromMe ? message.chatId : null;
-    const owner = this.saved.ownerNumber;
     // In the owner's chat, only what the owner wrote; what Ava sent there is her own
-    if (!owner || message.fromMe) return null;
-    if (message.chatId === cUs(owner) || numberOfJid(message.chatId) === owner) return message.chatId;
+    if (message.fromMe) return null;
     if (this.saved.ownerAliases.includes(message.chatId)) return message.chatId;
+    const owner = this.saved.ownerNumber;
+    if (!owner) return null;
+    if (message.chatId === cUs(owner) || numberOfJid(message.chatId) === owner) return message.chatId;
     // A chat in @lid form is the owner's only when the message shows his number
     if (message.chatId.endsWith('@lid') && message.senderNumber === owner) {
       this.saved.ownerAliases = [...this.saved.ownerAliases, message.chatId].slice(-5);
@@ -431,9 +492,50 @@ export class WhatsAppService {
   }
 
   private isOwnerChat(chatId: string): boolean {
-    if (this.isSelfChat(chatId)) return true;
+    if (this.isSelfChat(chatId) || this.saved.ownerAliases.includes(chatId)) return true;
     const owner = this.saved.ownerNumber;
-    return Boolean(owner) && (chatId === cUs(owner!) || this.saved.ownerAliases.includes(chatId));
+    return Boolean(owner) && chatId === cUs(owner!);
+  }
+
+  /** Keeps a chat of his that Ava heard from, newest last. */
+  private learnChat(chatId: string): void {
+    this.saved.ownerAliases = [...this.saved.ownerAliases.filter(id => id !== chatId), chatId].slice(-5);
+  }
+
+  /**
+   * His connect code, sent from his phone: that chat becomes his, and Ava says so there. The message must be the
+   * code and nothing else (no list of guesses), typed rather than forwarded, from his number when WhatsApp shows
+   * one; a few wrong code-like messages and the code is gone, so it cannot be guessed.
+   */
+  private async connectFrom(message: WaIncoming): Promise<boolean> {
+    const code = this.pendingCode();
+    if (!code || message.fromMe || message.isGroup || message.type !== 'chat') return false;
+    if (/@(g\.us|broadcast|newsletter)$/.test(message.chatId) || this.isSelfChat(message.chatId)) return false;
+    if (!CODE_LIKE.test(message.body)) return false;
+    const owner = this.saved.ownerNumber;
+    const wrongSender = Boolean(owner && message.senderNumber && message.senderNumber !== owner);
+    if (message.body.trim().toUpperCase() !== code || message.forwarded || wrongSender) {
+      const pending = this.saved.connectCode!;
+      pending.misses = (pending.misses ?? 0) + 1;
+      if (pending.misses >= CONNECT_MAX_MISSES) {
+        this.saved.connectCode = null;
+        this.deps.log.warn('WhatsApp connect code thrown away after wrong tries');
+      }
+      this.save();
+      return true;
+    }
+    // A code in synced history is not him sending it now
+    const at = millisOf(message.at);
+    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+    this.saved.connectCode = null;
+    this.saved.needsFirstMessage = false;
+    this.saved.lastInAt = this.now();
+    this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
+    this.learnChat(message.chatId);
+    this.save();
+    this.deps.log.info('WhatsApp phone connected');
+    await this.sendTo(message.chatId, CONNECTED_TEXT).catch(() => {});
+    return true;
   }
 
   /** One of Ava's own sends coming back in the self chat: her mark, her id, or her words. */
@@ -456,8 +558,10 @@ export class WhatsAppService {
   // ── Bookkeeping ──
 
   private defaultChat(): string | null {
-    // The chat he wrote from (its @lid id) exists for sure; his number's own id may not yet
-    if (this.saved.ownerNumber) return this.saved.ownerAliases.at(-1) ?? cUs(this.saved.ownerNumber);
+    // A chat he wrote from exists for sure; his number's own id may not yet
+    const known = this.saved.ownerAliases.at(-1);
+    if (known) return known;
+    if (this.saved.ownerNumber) return cUs(this.saved.ownerNumber);
     return this.saved.number ? cUs(this.saved.number) : null;
   }
 

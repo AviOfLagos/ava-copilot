@@ -814,6 +814,9 @@ export const WHATSAPP_ROUTES = {
   ack: '/v1/whatsapp/ack',
   send: '/v1/whatsapp/send',
   quiet: '/v1/whatsapp/quiet',
+  // A one-time code for the owner to send from his phone; and starting the session again with no new scan
+  connect: '/v1/whatsapp/connect',
+  restart: '/v1/whatsapp/restart',
 } as const;
 
 export const WHATSAPP_STATES = [
@@ -852,6 +855,13 @@ export const whatsappStatusSchema = z.object({
   sendLimitPerHour: z.number().int().positive(),
   // Ava's sends to the owner's number were refused until he messages her number once (older Ava Brain: absent)
   needsFirstMessage: z.boolean().default(false),
+  // While set, the code to send from his phone to Ava's number; the chat it arrives in becomes his
+  connectCode: z.string().max(20).nullable().default(null),
+  // Ava has heard from a chat on his phone and can always write back there
+  phoneConnected: z.boolean().default(false),
+  // When his last message came in, and Ava's last went out (ms)
+  lastInAt: z.number().nullable().default(null),
+  lastOutAt: z.number().nullable().default(null),
 });
 export type WhatsAppStatus = z.infer<typeof whatsappStatusSchema>;
 

@@ -27,7 +27,7 @@ const inputClass =
 const DATA_URL_IMAGE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 
 type Reply = { status: WhatsAppStatus; settings: WhatsAppRemoteSettings };
-type Busy = 'link' | 'unlink' | 'owner' | 'test' | null;
+type Busy = 'link' | 'unlink' | 'owner' | 'test' | 'connect' | 'restart' | null;
 
 const KINDS: { kind: NoticeKind; label: Parameters<typeof t>[0] }[] = [
   { kind: 'approval', label: 'wava_settings_notify_approval' },
@@ -67,6 +67,17 @@ function LinkCode({ code }: { code: string }) {
 
 const formatNumber = (number: string | null) => (number ? `+${number}` : '');
 
+/** "just now", "5 min ago", "3 h ago", "2 d ago": when something last happened, in the browser's language. */
+function ago(at: number | null, now = Date.now()): string | null {
+  if (!at) return null;
+  const minutes = Math.round((now - at) / 60_000);
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' });
+  if (minutes < 1) return format.format(0, 'minute');
+  if (minutes < 60) return format.format(-minutes, 'minute');
+  if (minutes < 48 * 60) return format.format(-Math.round(minutes / 60), 'hour');
+  return format.format(-Math.round(minutes / 1440), 'day');
+}
+
 export default function WhatsAppSettings({ api }: { api: PanelApi }) {
   const [brain, setBrain] = useState<BrainSettings | null>(null);
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
@@ -99,8 +110,9 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
     }
   }, [api, apply]);
 
-  // Asks when the page opens, and every two seconds while a code is on its way or waiting to be scanned
-  const linking = status?.state === 'starting' || status?.state === 'scan';
+  // Asks when the page opens, and every two seconds while a code is on its way or waiting to be scanned, or while
+  // the connect code waits for his message
+  const linking = status?.state === 'starting' || status?.state === 'scan' || Boolean(status?.connectCode);
   useEffect(() => {
     if (!brain?.paired) return;
     void refresh();
@@ -150,7 +162,9 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
   const ownerValid = owner === '' || WHATSAPP_NUMBER.test(owner);
   const stateLine =
     state === 'linked'
-      ? t('wava_state_linked', [formatNumber(status!.number)])
+      ? status!.number
+        ? t('wava_state_linked', [formatNumber(status!.number)])
+        : t('wava_state_linkedPlain')
       : state === 'scan'
         ? t('wava_state_scan')
         : state === 'starting'
@@ -185,7 +199,9 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
             variant="ghost"
             size="sm"
             disabled={busy !== null}
-            onClick={() => void run('unlink', { type: 'wava_unlink' })}>
+            onClick={() => {
+              if (window.confirm(t('wava_settings_logout_confirm'))) void run('unlink', { type: 'wava_unlink' });
+            }}>
             {t('wava_settings_unlink')}
           </Button>
         ) : state === 'starting' || state === 'scan' ? null : (
@@ -221,9 +237,14 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
                 ? t('wava_settings_talksTo_owner', [formatNumber(status.ownerNumber)])
                 : t('wava_settings_talksTo_self')}
             </p>
-            {status?.needsFirstMessage && status.ownerNumber ? (
-              <p className="text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
-                {t('wava_settings_firstMessage', [formatNumber(status.ownerNumber)])}
+            {status?.lastInAt || status?.lastOutAt ? (
+              <p className="text-muted-foreground text-[11.5px]" data-wava-activity>
+                {[
+                  status.lastInAt ? t('wava_settings_lastIn', [ago(status.lastInAt)!]) : null,
+                  status.lastOutAt ? t('wava_settings_lastOut', [ago(status.lastOutAt)!]) : null,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               </p>
             ) : null}
             <Button
@@ -233,6 +254,40 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
               onClick={() => void run('test', { type: 'wava_test' }, t('wava_settings_testSent'))}>
               {t('wava_settings_test')}
             </Button>
+          </div>
+
+          <div className={row} data-wava-phone={status?.phoneConnected ? 'connected' : 'not-connected'}>
+            <div className="text-[12.5px] font-medium">{t('wava_settings_phone_title')}</div>
+            {status?.phoneConnected ? (
+              <p className="text-muted-foreground text-[11.5px]">{t('wava_settings_phone_connected')}</p>
+            ) : status?.connectCode ? (
+              <>
+                <p className="text-[11.5px]">{t('wava_settings_phone_send')}</p>
+                <p className="bg-card self-start rounded-lg border px-3 py-1.5 font-mono text-[15px] tracking-wider select-all">
+                  {status.connectCode}
+                </p>
+                <p className="text-muted-foreground text-[11.5px]" role="status" aria-live="polite">
+                  {t('wava_settings_phone_waiting')}
+                </p>
+              </>
+            ) : (
+              <>
+                <p
+                  className={cn(
+                    'text-[11.5px]',
+                    status?.needsFirstMessage ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                  )}>
+                  {status?.needsFirstMessage ? t('wava_settings_firstMessage') : t('wava_settings_phone_hint')}
+                </p>
+                <Button
+                  variant="glass"
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={() => void run('connect', { type: 'wava_connect' })}>
+                  {t('wava_settings_phone_connect')}
+                </Button>
+              </>
+            )}
           </div>
 
           <form
@@ -294,6 +349,19 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
         </div>
         <p className="text-muted-foreground text-[11px]">{t('wava_settings_quiet_hint')}</p>
       </div>
+
+      {state === 'linked' || state === 'disconnected' ? (
+        <div className="flex items-center justify-between gap-3 px-3 py-2.5" data-wava-manage>
+          <p className="text-muted-foreground text-[11.5px]">{t('wava_settings_restart_hint')}</p>
+          <Button
+            variant="glass"
+            size="sm"
+            disabled={busy !== null}
+            onClick={() => void run('restart', { type: 'wava_restart' }, t('wava_settings_restarted'))}>
+            {busy === 'restart' ? t('wava_settings_restarting') : t('wava_settings_restart')}
+          </Button>
+        </div>
+      ) : null}
 
       <p className="text-muted-foreground px-3 py-2 text-[11px]">
         {t('wava_settings_risk', [String(status?.sendLimitPerHour ?? 20)])}

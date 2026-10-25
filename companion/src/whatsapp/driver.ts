@@ -43,6 +43,8 @@ export interface WaDriver {
   start(events: WaEvents): Promise<void>;
   /** Sends text to a chat; the message's id when the client gives one. */
   sendText(chatId: string, text: string): Promise<string | null>;
+  /** Removes this Mac from the phone's Linked devices, when the client can. */
+  logout?(): Promise<void>;
   stop(): Promise<void>;
 }
 
