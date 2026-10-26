@@ -830,12 +830,24 @@ export class WhatsAppService {
   /**
    * His connect code, sent from his phone: that chat becomes his, and Ava says so there. The message must be the
    * code and nothing else (no list of guesses), typed rather than forwarded, from his number when WhatsApp shows
-   * one; a few wrong code-like messages and the code is gone, so it cannot be guessed.
+   * one; a few wrong code-like messages and the code is gone, so it cannot be guessed. Sent in his own "Message
+   * yourself" chat, the code is used up there (that chat is his already) and never becomes a task.
    */
   private async connectFrom(message: WaIncoming): Promise<boolean> {
     const code = this.pendingCode();
-    if (!code || message.fromMe || message.isGroup || message.type !== 'chat') return false;
-    if (/@(g\.us|broadcast|newsletter)$/.test(message.chatId) || this.isSelfChat(message.chatId)) return false;
+    if (!code || message.isGroup || message.type !== 'chat') return false;
+    if (this.isSelfChat(message.chatId)) {
+      if (!message.fromMe || message.body.trim().toUpperCase() !== code) return false;
+      const at = millisOf(message.at);
+      if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+      this.saved.connectCode = null;
+      this.saved.lastInAt = this.now();
+      this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
+      this.save();
+      await this.sendTo(message.chatId, 'This chat is already yours.').catch(() => {});
+      return true;
+    }
+    if (message.fromMe || /@(g\.us|broadcast|newsletter)$/.test(message.chatId)) return false;
     if (!CODE_LIKE.test(message.body)) return false;
     const owner = this.saved.ownerNumber;
     const wrongSender = Boolean(owner && message.senderNumber && message.senderNumber !== owner);

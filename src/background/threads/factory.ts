@@ -24,6 +24,9 @@ import type { UsageScope } from '../usage/meter';
 import type { TabBinding } from './binding';
 import { buildCoreSection } from '../identity/prompt';
 import { loadIdentityContext } from '../identity/context';
+import { buildAbilitiesSection, buildChannelSection } from '../agent/prompts/channel';
+import { currentCapabilities } from '../capabilities/sources';
+import { COMING } from '../capabilities/coming';
 
 export interface RunModels {
   navigator: ChatModel;
@@ -145,6 +148,15 @@ export async function createBrowserContext(
   return browserContext;
 }
 
+/** What Ava can do now, for the planner; without it the chat still runs. */
+function abilitiesSection(): string {
+  try {
+    return buildAbilitiesSection(currentCapabilities(), COMING);
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Builds the executor of one run of a thread. The thread id is the task id, so usage, events and
  * confirmation requests all carry it.
@@ -177,5 +189,7 @@ export async function createExecutor(options: {
     media: options.media,
     personality,
     identitySection: buildCoreSection(await loadIdentityContext(thread?.workspaceId)),
+    channelSection: buildChannelSection(thread?.origin),
+    abilitiesSection: abilitiesSection(),
   });
 }

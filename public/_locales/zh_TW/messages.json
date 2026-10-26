@@ -523,6 +523,9 @@
       }
     }
   },
+  "exec_emptyAnswer": {
+    "message": "抱歉，我的回答不見了。可以再說一次嗎？"
+  },
   "exec_replay_cancel": {
     "message": "重播已取消"
   },

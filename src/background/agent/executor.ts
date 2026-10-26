@@ -43,6 +43,10 @@ export interface ExecutorExtraArgs {
   personality?: Personality | null;
   // Ava's core, what she knows about the user and their goals (identity/prompt.ts#buildCoreSection)
   identitySection?: string;
+  // Where the chat is and where its answer goes (prompts/channel.ts#buildChannelSection), for both agents
+  channelSection?: string;
+  // What Ava can do and what is coming (prompts/channel.ts#buildAbilitiesSection), for the planner
+  abilitiesSection?: string;
 }
 
 export class Executor {
@@ -87,8 +91,15 @@ export class Executor {
       assistantName,
       personality,
       extraArgs?.identitySection,
+      extraArgs?.channelSection,
     );
-    this.plannerPrompt = new PlannerPrompt(stylePrompt, assistantName, personality, extraArgs?.identitySection);
+    this.plannerPrompt = new PlannerPrompt(
+      stylePrompt,
+      assistantName,
+      personality,
+      extraArgs?.identitySection,
+      `${extraArgs?.channelSection ?? ''}${extraArgs?.abilitiesSection ?? ''}`,
+    );
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
     const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());

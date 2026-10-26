@@ -18,6 +18,8 @@ export class PlannerPrompt extends BasePrompt {
     private readonly personality?: Personality | null,
     // Who the assistant is and what she knows about the user (identity/prompt.ts), after the rules
     private readonly identitySection?: string,
+    // Where the chat is and what Ava can do (./channel.ts), after who she is
+    private readonly channelSection = '',
   ) {
     super();
   }
@@ -29,6 +31,7 @@ export class PlannerPrompt extends BasePrompt {
         plannerGateSection +
         plannerKnowledgeSection +
         (this.identitySection ?? '') +
+        this.channelSection +
         buildStyleSection(this.stylePrompt, 'the "final_answer" field') +
         buildPersonalitySection(this.personality, 'the "final_answer" field'),
     );

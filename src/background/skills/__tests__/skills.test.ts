@@ -3,6 +3,7 @@ import { parseSkill } from '@extension/storage';
 import type { SkillRecord } from '@extension/storage';
 import { enT } from './en';
 import {
+  isSmallTalk,
   keywordMatches,
   matchSkills,
   MAX_INJECTED_CHARS,
@@ -29,6 +30,38 @@ function skill(id: string, fields: Partial<SkillRecord> = {}): SkillRecord {
     ...fields,
   };
 }
+
+describe('isSmallTalk', () => {
+  it('reads greetings, thanks and small talk', () => {
+    for (const text of [
+      'Hi',
+      'hi ava!',
+      'Hey there',
+      'Good morning Ava',
+      'thanks!',
+      'Thank you so much',
+      "how's it going 👋",
+      'how are you?',
+      "what's up",
+      'gm',
+    ])
+      expect(isSmallTalk(text), text).toBe(true);
+  });
+
+  it('leaves anything with a task in it', () => {
+    for (const text of [
+      '',
+      'hi, switch to my work account',
+      "I didn't get morning reminders or whatever... what's up?",
+      'thanks, now reply to Ada',
+      'ok',
+      'great',
+      '/account-switching',
+      'can you reply with voicenote?',
+    ])
+      expect(isSmallTalk(text), text).toBe(false);
+  });
+});
 
 describe('urlMatches', () => {
   it('matches host and path globs, with a leading *. covering the bare domain', () => {

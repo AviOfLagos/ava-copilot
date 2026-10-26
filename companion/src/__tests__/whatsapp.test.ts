@@ -289,6 +289,29 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     expect(service.status().lastOutAt).not.toBeNull();
   });
 
+  it('uses up a connect code sent in his own "Message yourself" chat, never as a task', async () => {
+    const { driver, service, settle } = await linked();
+    const { connectCode } = service.startConnect();
+    driver.deliver({ id: 'self-code', chatId: SELF, fromMe: true, body: ` ${connectCode!.toLowerCase()}` });
+    await settle();
+    expect(service.pull()).toEqual([]);
+    expect(service.status().connectCode).toBeNull();
+    expect(driver.sent.at(-1)).toEqual({ chatId: SELF, text: 'This chat is already yours.' });
+    // His next message there is a task as before
+    driver.deliver({ id: 'self-next', chatId: SELF, fromMe: true, body: 'What is on today?' });
+    await settle();
+    expect(service.pull().map(item => item.text)).toEqual(['What is on today?']);
+  });
+
+  it('leaves a code-like message in the self chat that is not the code as an ordinary message', async () => {
+    const { driver, service, settle } = await linked();
+    const { connectCode } = service.startConnect();
+    driver.deliver({ id: 'self-other', chatId: SELF, fromMe: true, body: 'AVA-NOTTHECODE' });
+    await settle();
+    expect(service.pull().map(item => item.text)).toEqual(['AVA-NOTTHECODE']);
+    expect(service.status().connectCode).toBe(connectCode);
+  });
+
   it('cannot be guessed: only the exact code, typed, and a few wrong tries end it', async () => {
     const { driver, service, settle } = await linked();
     service.setOwner(OTHER_OWNER);

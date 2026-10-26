@@ -17,6 +17,7 @@ import {
 } from './errors';
 import { filterExternalContent } from '../messages/utils';
 import { getApiCallErrorDetails } from '@src/background/llm/errors';
+import { t } from '@extension/i18n';
 const logger = createLogger('PlannerAgent');
 
 // Models replying in text may omit a field the prompt lets be empty, or send a list (e.g. next_steps) as an array.
@@ -53,6 +54,18 @@ export const plannerOutputSchema = z.object({
 
 export type PlannerOutput = z.infer<typeof plannerOutputSchema>;
 
+// What some models write in a field they leave empty: "None", "null", "N/A"
+const PLACEHOLDER_ANSWER = /^(?:none|null|nil|undefined|n\/?a|empty|no answer)?$/i;
+
+/** Whether a final answer has nothing in it for the user: empty, or a placeholder for "nothing". */
+export function isEmptyAnswer(text: string): boolean {
+  return PLACEHOLDER_ANSWER.test(text.trim().replace(/^["'`*_\s]+|["'`*_.!\s]+$/g, ''));
+}
+
+// Said to the model once when it finished with nothing to say
+const EMPTY_ANSWER_NUDGE =
+  'Your "final_answer" was empty or a placeholder such as "None". The user reads final_answer and nothing else. Write your reply to their latest message there now: a greeting gets a greeting, a question an answer, and when you cannot do something, say so and why.';
+
 export class PlannerAgent extends BaseAgent<typeof plannerOutputSchema, PlannerOutput> {
   constructor(options: BaseAgentOptions, extraOptions?: Partial<ExtraAgentOptions>) {
     super(plannerOutputSchema, options, { ...extraOptions, id: 'planner' });
@@ -85,14 +98,26 @@ export class PlannerAgent extends BaseAgent<typeof plannerOutputSchema, PlannerO
         plannerMessages[plannerMessages.length - 1] = userMessage(newMsg);
       }
 
-      const modelOutput = await this.invoke(plannerMessages);
+      let modelOutput = await this.invoke(plannerMessages);
       if (!modelOutput) {
         throw new Error('Failed to validate planner output');
+      }
+      // Finished with nothing to say ("None" from a small model): ask once more before giving up on it
+      if (modelOutput.done && isEmptyAnswer(modelOutput.final_answer)) {
+        logger.warning('Planner finished with an empty answer, asking again');
+        const retry = await this.invoke([...plannerMessages, userMessage(EMPTY_ANSWER_NUDGE)]).catch(error => {
+          if (isAbortedError(error)) throw error;
+          logger.warning('Asking again for an answer failed', error);
+          return null;
+        });
+        if (retry && !(retry.done && isEmptyAnswer(retry.final_answer))) modelOutput = retry;
       }
 
       // clean the model output
       const observation = filterExternalContent(modelOutput.observation);
-      const final_answer = filterExternalContent(modelOutput.final_answer);
+      // Never an empty or "None" answer: the user hears that it was lost and can say it again
+      const cleanedAnswer = filterExternalContent(modelOutput.final_answer);
+      const final_answer = modelOutput.done && isEmptyAnswer(cleanedAnswer) ? t('exec_emptyAnswer') : cleanedAnswer;
       const next_steps = filterExternalContent(modelOutput.next_steps);
       const challenges = filterExternalContent(modelOutput.challenges);
       const reasoning = filterExternalContent(modelOutput.reasoning);
