@@ -481,6 +481,35 @@ describe('voice notes, photos, documents and links from WhatsApp', () => {
     expect(turn.context).toMatch(/nano_untrusted_content[\s\S]*Five panels[\s\S]*nano_untrusted_content/);
   });
 
+  it('points a later question at the document he sent lately, in the knowledge base, not the tab or Drive', async () => {
+    const noon = new Date(2026, 9, 20, 12, 0).getTime();
+    const h = harness({
+      messages: [msg('d', '', { kind: 'document', media: file('application/pdf', 4000, 'Partners.pdf') })],
+      files: { d: { text: 'Twelve community partners.' } },
+    });
+    await h.bridge.poll();
+    expect(h.state().recentDocuments).toEqual([{ id: 'd', title: 'Partners.pdf', at: noon }]);
+    expect(h.turns).toEqual([]);
+
+    const later = harness({
+      messages: [msg('v', '', { kind: 'voice', media: file('audio/ogg', 10) })],
+      files: { v: { data: 'AAAA' } },
+      heard: { AAAA: 'Can you read that document?' },
+    });
+    later.setState({
+      recentDocuments: [
+        { id: 'stale', title: 'Old.pdf', at: noon - 2 * 60 * 60_000 },
+        { id: 'd', title: 'Partners.pdf', at: noon - 5 * 60_000 },
+      ],
+    });
+    await later.bridge.poll();
+    const [turn] = later.fullTurns;
+    expect(turn.text).toBe('wava_voice_label Can you read that document?');
+    expect(turn.context).toMatch(/search_knowledge by its name, not in the open tab or in Drive/);
+    expect(turn.context).toMatch(/nano_untrusted_content[\s\S]*"Partners\.pdf", sent 5 min ago/);
+    expect(turn.context).not.toContain('Old.pdf');
+  });
+
   it('says when a document cannot be read, and keeps going', async () => {
     const h = harness({
       messages: [msg('d', '', { kind: 'document', media: file('application/zip', 2048, 'stuff.zip') })],
