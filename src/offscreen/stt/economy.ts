@@ -7,7 +7,9 @@ import type { TurnImage, VoiceEvents, VoiceOptions, VoiceStatus, VoiceTool } fro
 import type { SttEngine } from './engines';
 import { recordHeard } from './listen';
 import { acquireStt, releaseStt } from './pool';
-import { isRequest, UtteranceCollector } from './utterances';
+import { isRequest, speechLevel, UtteranceCollector } from './utterances';
+import { Addressee, callWords, soundsUnfinished, UNFINISHED_WAIT_MS } from './addressed';
+import type { HeardFragment, SpeakerLabel } from './addressed';
 import { level } from '../vad';
 import { SpokenLines } from '../lines';
 import type { LineTts } from '../lines';
@@ -16,7 +18,8 @@ import type { LineTts } from '../lines';
  * The economy voice conversation: the same Talk button, tools and thread as the Gemini Live one, but no audio
  * leaves the device. The microphone is cut into utterances by the speech gate, a local recogniser writes them
  * down, the background answers with a text model and the voice tools, and a local voice speaks the answer.
- * Talking over the answer stops it at once; the gate closing is the end of the user's turn.
+ * Talking over the answer stops it at once. A turn ends after a pause long enough to be the end of a thought, not a
+ * breath (longer when the words stop mid-clause), and only words meant for the copilot are answered (addressed.ts).
  */
 
 const INPUT_RATE = 16_000;
@@ -25,8 +28,9 @@ const INPUT_RATE = 16_000;
 const BARGE_IN_MS = 400;
 // The answer's voice still reaches the microphone a moment after it stops playing
 const ECHO_TAIL_MS = 300;
-// The quiet that ends an utterance (UtteranceCollector's default)
-const UTTERANCE_HANGOVER_MS = 700;
+// The quiet that ends an utterance. People pause 0.5–1.5 s mid-sentence to think: at 700 ms one sentence became
+// a turn every 1–3 s, each answered, and each too short for the recogniser to get right (issue #24)
+export const UTTERANCE_HANGOVER_MS = 1200;
 // Exchanges sent with each turn, newest last
 const HISTORY_TURNS = 8;
 const SORRY = 'Sorry, I could not answer that.';
@@ -62,6 +66,8 @@ export interface EconomyOptions {
   // The chosen microphone/speaker (Settings › Voice devices), or null for the system default
   micDeviceId?: string | null;
   speakerDeviceId?: string | null;
+  // What the user calls the copilot (Settings › General): after a lull, only words with it are answered
+  assistantName?: string;
 }
 
 export interface EconomyDeps {
@@ -75,6 +81,8 @@ export interface EconomyDeps {
   warmVoice: (tts: EconomyEngines['tts']) => Promise<void>;
   // The background's answer to one turn
   ask: (request: EconomyTurnRequest) => Promise<EconomyTurnReply>;
+  // Whose voice an utterance is: the seam for voiceprints (Ambient A2). Without it every voice is 'unknown'
+  whoSpoke?: (audio: Float32Array) => Promise<SpeakerLabel>;
 }
 
 export class EconomySession {
@@ -82,11 +90,17 @@ export class EconomySession {
   private ready = false;
   private closeMic: (() => void) | null = null;
   private stt: SttEngine | null = null;
-  private readonly collector = new UtteranceCollector({ sampleRate: INPUT_RATE });
+  private readonly collector = new UtteranceCollector({ sampleRate: INPUT_RATE, hangoverMs: UTTERANCE_HANGOVER_MS });
   private readonly history: EconomyHistoryItem[] = [];
-  // Utterances waiting to be written down, then words waiting for an answer
-  private utterances: Float32Array[] = [];
-  private heardQueue: string[] = [];
+  // Utterances waiting to be written down (with when their speech started), then words waiting to be one turn
+  private utterances: { audio: Float32Array; startedAt: number }[] = [];
+  private heardQueue: HeardFragment[] = [];
+  // Whether words are meant for the copilot, and what calls it
+  private readonly names: string[];
+  private readonly addressee: Addressee;
+  private speechStartedAt = 0;
+  // Microphone samples since the speech gate last closed: how long the user has been quiet past the hangover
+  private quietSamples = 0;
   private notices: string[] = [];
   // Messages typed in the conversation's chat, with their pictures
   private typedQueue: { text: string; images: TurnImage[]; note: string }[] = [];
@@ -115,6 +129,8 @@ export class EconomySession {
     private readonly events: VoiceEvents,
     private readonly deps: EconomyDeps = browserDeps(),
   ) {
+    this.names = callWords(options.assistantName);
+    this.addressee = new Addressee(this.names, performance.now());
     this.lines = new SpokenLines({
       speak: (text, tts) => this.deps.speak(text, tts),
       stop: tts => this.deps.stopSpeaking(tts),
@@ -152,6 +168,9 @@ export class EconomySession {
     this.closeMic = await this.deps.openMic(samples => this.fromMic(samples), this.options.micDeviceId ?? null);
     if (this.stopped) this.closeMic();
     this.ready = true;
+    // Starting the conversation is talking to the copilot: the lull counts from now
+    this.addressee.exchanged(performance.now());
+    this.speechStartedAt = performance.now();
     this.collector.seed(this.options.preroll?.splice(0) ?? []);
     this.status('listening');
   }
@@ -186,6 +205,7 @@ export class EconomySession {
     if (!text.trim() && images.length === 0) return;
     // Typing over the answer stops it, as talking over it does
     if (this.speaking) this.interrupt();
+    this.addressee.exchanged(performance.now());
     this.typedQueue.push({ text: text.slice(0, 4000), images, note });
     this.pump();
   }
@@ -199,6 +219,9 @@ export class EconomySession {
       this.bargeSamples = 0;
       this.overPlayback = false;
       this.bargedIn = false;
+      // Words already heard are the whole turn: nothing more comes while the microphone is held
+      this.quietSamples = Number.POSITIVE_INFINITY;
+      this.pump();
     }
   }
 
@@ -214,7 +237,9 @@ export class EconomySession {
     if (speechStarted) {
       this.overPlayback = this.speaking;
       this.bargedIn = false;
+      this.speechStartedAt = performance.now();
     }
+    this.quietSamples = this.collector.speaking ? 0 : this.quietSamples + samples.length;
     if (this.speaking && this.collector.speaking) {
       this.overPlayback = true;
       // Only loud audio counts toward a barge-in, not the quiet the gate lets through after it
@@ -234,9 +259,11 @@ export class EconomySession {
       this.bargedIn = false;
       // Heard over the answer without stopping it: the answer's own echo, dropped so it is never answered
       if (echo) return;
-      this.utterances.push(utterance);
+      this.utterances.push({ audio: utterance, startedAt: this.speechStartedAt });
       void this.transcribeNext();
     }
+    // Words waiting for the rest of the sentence: this quiet may be long enough now
+    if (this.heardQueue.length) this.pump();
   }
 
   /** The user talked over the answer: it stops now, and what they say next is the next turn. */
@@ -251,18 +278,20 @@ export class EconomySession {
 
   private async transcribeNext(): Promise<void> {
     if (this.transcribing || !this.stt) return;
-    const audio = this.utterances.shift();
-    if (!audio) return;
+    const next = this.utterances.shift();
+    if (!next) return;
+    const { audio, startedAt } = next;
     this.transcribing = true;
     this.transcribeStartedAt = performance.now();
     try {
       const started = performance.now();
-      const text = (await this.stt.transcribe(audio)).trim();
+      const [said, speaker] = await Promise.all([this.stt.transcribe(audio), this.whoSpoke(audio)]);
+      const text = said.trim();
       // Noise the recogniser turned into "you" or "thank you" is not a question: answering it would make the
       // copilot talk on its own and keep the conversation from ever going idle
       if (!this.stopped && isRequest(text)) {
         recordHeard(text, Math.round(performance.now() - started));
-        this.heardQueue.push(text);
+        this.heardQueue.push({ text, level: speechLevel(audio, INPUT_RATE), startedAt, speaker });
       }
     } catch (error) {
       if (!this.stopped) this.status('listening', `Speech recognition failed: ${String(error)}`);
@@ -281,13 +310,16 @@ export class EconomySession {
       void this.turn({ heard: typed.text, typed: true, images: typed.images, note: typed.note });
       return;
     }
-    if (this.heardQueue.length) {
-      // Words that came while the copilot was busy are one turn together
-      const heard = this.heardQueue.splice(0).join(' ');
-      void this.turn({ heard });
-      return;
+    if (this.heardQueue.length && this.turnOver()) {
+      // Fragments of one sentence, and words that came while the copilot was busy, are one turn together
+      const fragments = this.heardQueue.splice(0);
+      // Not meant for the copilot (a radio, someone across the room, talk after a lull without its name): dropped
+      if (this.addressee.judge(fragments, performance.now()).ok) {
+        void this.turn({ heard: fragments.map(fragment => fragment.text).join(' ') });
+        return;
+      }
     }
-    const quiet = !this.transcribing && !this.collector.speaking && !this.utterances.length;
+    const quiet = !this.transcribing && !this.collector.speaking && !this.utterances.length && !this.heardQueue.length;
     if (this.lines.waiting && quiet) {
       void this.sayLine();
       return;
@@ -295,6 +327,23 @@ export class EconomySession {
     if (this.notices.length && quiet) {
       void this.turn({ notice: this.notices.splice(0).join('\n') });
     }
+  }
+
+  /**
+   * Whether the user has finished: not talking, nothing left to write down, and quiet for long enough. The gate's
+   * hangover is enough after a finished sentence; words that stop mid-clause wait a second longer for the rest.
+   */
+  private turnOver(): boolean {
+    if (this.collector.speaking || this.transcribing || this.utterances.length) return false;
+    const words = this.heardQueue.map(fragment => fragment.text).join(' ');
+    if (!soundsUnfinished(words, this.names)) return true;
+    return this.quietSamples >= (UNFINISHED_WAIT_MS / 1000) * INPUT_RATE;
+  }
+
+  /** Whose voice this is, when voiceprints can tell; a failure is no answer. */
+  private async whoSpoke(audio: Float32Array): Promise<SpeakerLabel> {
+    if (!this.deps.whoSpoke) return 'unknown';
+    return this.deps.whoSpoke(audio).catch(() => 'unknown' as const);
   }
 
   /** Says the next agent line in its own voice; talking over it stops it, as with an answer. */
@@ -311,6 +360,7 @@ export class EconomySession {
     this.speaking = false;
     this.bargeSamples = 0;
     if (this.stopped) return;
+    this.addressee.exchanged(performance.now());
     this.status('listening');
     this.pump();
   }
@@ -379,6 +429,8 @@ export class EconomySession {
       this.speaking = false;
       this.bargeSamples = 0;
       if (this.stopped) return;
+      // The copilot just spoke: what the user says back needs no name
+      this.addressee.exchanged(performance.now());
       this.status('listening');
     }
     this.pump();

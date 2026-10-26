@@ -51,6 +51,25 @@ export function voicedSamples(samples: Float32Array, frame: number): number {
   return voiced;
 }
 
+/**
+ * How loud the voiced sound of an utterance is: the root mean square of its voiced frames only, so the pauses and
+ * the quiet after it do not count. A voice near the microphone is louder than one across the room.
+ */
+export function speechLevel(audio: Float32Array, sampleRate = 16_000): number {
+  const frame = Math.round((FRAME_MS / 1000) * sampleRate);
+  let sum = 0;
+  let count = 0;
+  for (let start = 0; start < audio.length; start += frame) {
+    const part = audio.subarray(start, Math.min(audio.length, start + frame));
+    let frameSum = 0;
+    for (const sample of part) frameSum += sample * sample;
+    if (Math.sqrt(frameSum / part.length) <= VOICED_LEVEL) continue;
+    sum += frameSum;
+    count += part.length;
+  }
+  return count ? Math.sqrt(sum / count) : 0;
+}
+
 export class UtteranceCollector {
   private readonly gate: SpeechGate;
   private readonly minVoiced: number;
