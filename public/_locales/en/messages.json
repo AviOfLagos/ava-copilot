@@ -9014,6 +9014,24 @@
   "wava_settings_quiet_hint": {
     "message": "In quiet hours she only messages you about approvals."
   },
+  "wava_settings_voiceReplies": {
+    "message": "Answer voice notes with a voice note"
+  },
+  "wava_settings_voiceForText": {
+    "message": "Answer typed messages with a voice note too"
+  },
+  "wava_settings_voice_hint": {
+    "message": "She speaks in the voice chosen in Settings › Voice. Long answers come as text, and links follow as text."
+  },
+  "wava_command_failed": {
+    "message": "I couldn't do that: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "That message is too old for WhatsApp to delete for everyone."
+      }
+    }
+  },
   "wava_settings_risk": {
     "message": "This uses an unofficial WhatsApp Web client on your Mac. WhatsApp may restrict a number that uses one. Ava sends at most $LIMIT$ messages an hour.",
     "placeholders": {

@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Logger } from '../log';
 import { numberOfJid } from './driver';
-import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming, WaLink, WaMediaInfo } from './driver';
+import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming, WaLink, WaMediaInfo, WaQuote, WaRef } from './driver';
 
 /**
  * Ava's WhatsApp session through Baileys: WhatsApp's own multi-device protocol over a websocket, with no browser.
@@ -43,7 +43,13 @@ interface BaileysMessage {
 interface BaileysSocket {
   user?: { id: string; lid?: string } | null;
   ev: { on(event: string, listener: (payload: never) => void): void };
-  sendMessage(jid: string, content: { text: string }): Promise<{ key?: BaileysKey } | undefined>;
+  sendMessage(
+    jid: string,
+    content: Record<string, unknown>,
+    options?: { quoted?: BaileysMessage },
+  ): Promise<{ key?: BaileysKey } | undefined>;
+  // 'available' and 'unavailable' are the account; the others are one chat
+  sendPresenceUpdate(type: string, jid?: string): Promise<void>;
   // Asks the phone to upload a file again when WhatsApp's copy has expired
   updateMediaMessage(message: BaileysMessage): Promise<BaileysMessage>;
   logout(): Promise<void>;
@@ -106,6 +112,22 @@ function countOf(value: unknown): number | null {
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
+// A voice note as WhatsApp's own push-to-talk wants it
+export const VOICE_MIMETYPE = 'audio/ogg; codecs=opus';
+
+const keyOf = (ref: WaRef): BaileysKey => ({ remoteJid: toBaileysJid(ref.chatId), id: ref.id, fromMe: ref.fromMe });
+
+/** The quoted message for Baileys: enough of it for the bubble above the answer (its words, or a voice note). */
+export function quotedOf(quote: WaQuote): BaileysMessage {
+  return {
+    key: keyOf(quote),
+    message:
+      quote.voiceSeconds !== null
+        ? { audioMessage: { ptt: true, seconds: quote.voiceSeconds } }
+        : { conversation: quote.text },
+  };
+}
+
 const textOf = (value: unknown, max: number) =>
   typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
 
@@ -149,8 +171,10 @@ export function incomingOfBaileys(
           ? file.caption
           : null;
   const context = (extended?.contextInfo ?? file?.contextInfo) as
-    { isForwarded?: unknown; forwardingScore?: unknown } | undefined;
+    { isForwarded?: unknown; forwardingScore?: unknown; stanzaId?: unknown } | undefined;
   const link = kind === 'extendedTextMessage' ? linkOf(extended as Record<string, unknown>) : undefined;
+  // He swiped to reply to this message
+  const quotedId = textOf(context?.stanzaId, 200);
   // The sender's phone id, when WhatsApp sends one beside a @lid id
   const phoneJid = [key.remoteJidAlt, key.participantAlt, key.participant, key.remoteJid].find(jid =>
     lib.isPnUser(jid ?? undefined),
@@ -170,6 +194,7 @@ export function incomingOfBaileys(
     ...(file ? { media: mediaInfoOf(file) } : {}),
     ...(link ? { link } : {}),
     ...(file && download ? { download } : {}),
+    ...(quotedId ? { quotedId } : {}),
   };
 }
 
@@ -202,6 +227,13 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
     let retryMs = RECONNECT_MS;
     let opened = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // Shown online only while typing or recording to a chat, then offline again (markOnlineOnConnect is off, so
+    // his phone keeps its notifications)
+    let online = false;
+    const connected = () => {
+      if (!socket) throw new Error('WhatsApp is not connected.');
+      return socket;
+    };
     const authDir = join(options.sessionDir, 'baileys');
 
     const driver: WaDriver = {
@@ -239,6 +271,7 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
               events.ready({ number: numberOfJid(selfIds[0]) ?? '', selfIds });
             }
             if (update.connection === 'close') {
+              online = false;
               const code = update.lastDisconnect?.error?.output?.statusCode;
               socket = null;
               if (code === LOGGED_OUT) {
@@ -278,10 +311,47 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
         };
         connect();
       },
-      async sendText(chatId, text) {
-        if (!socket) throw new Error('WhatsApp is not connected.');
-        const sent = await socket.sendMessage(toBaileysJid(chatId), { text });
+      async sendText(chatId, text, options) {
+        const quoted = options?.quote ? { quoted: quotedOf(options.quote) } : undefined;
+        const sent = await connected().sendMessage(toBaileysJid(chatId), { text }, quoted);
         return sent?.key?.id ?? null;
+      },
+      async sendVoice(chatId, voice, options) {
+        const quoted = options?.quote ? { quoted: quotedOf(options.quote) } : undefined;
+        // The length and bars given, so Baileys never reaches for ffmpeg or a decoder to work them out
+        const sent = await connected().sendMessage(
+          toBaileysJid(chatId),
+          {
+            audio: voice.audio,
+            ptt: true,
+            mimetype: VOICE_MIMETYPE,
+            seconds: voice.seconds,
+            ...(voice.waveform ? { waveform: Uint8Array.from(voice.waveform) } : {}),
+          },
+          quoted,
+        );
+        return sent?.key?.id ?? null;
+      },
+      async react(message, emoji) {
+        await connected().sendMessage(toBaileysJid(message.chatId), { react: { text: emoji, key: keyOf(message) } });
+      },
+      async edit(message, text) {
+        await connected().sendMessage(toBaileysJid(message.chatId), { text, edit: keyOf(message) });
+      },
+      async remove(message) {
+        await connected().sendMessage(toBaileysJid(message.chatId), { delete: keyOf(message) });
+      },
+      async presence(chatId, state) {
+        const current = connected();
+        if (state === 'paused') {
+          await current.sendPresenceUpdate('paused', toBaileysJid(chatId));
+          if (online) await current.sendPresenceUpdate('unavailable');
+          online = false;
+          return;
+        }
+        if (!online) await current.sendPresenceUpdate('available');
+        online = true;
+        await current.sendPresenceUpdate(state, toBaileysJid(chatId));
       },
       async logout() {
         await socket?.logout();

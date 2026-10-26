@@ -7,6 +7,7 @@ import type { LocalVoiceEngine } from './protocol';
 import { localTts } from './shared';
 import { lastSpokenLine } from '../lines';
 import { encodeWav, toBase64 } from '../pcm';
+import { decodeWav, encodeVoiceNote } from '../voice-note/encode';
 
 /**
  * The local voice and speech commands of the offscreen document, on a target of their own so the shared router in
@@ -67,6 +68,17 @@ async function handle(message: Message): Promise<unknown> {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     }
+    // A WAV clip made into a WhatsApp voice note (Ogg/Opus, with its length and bars), for Ava Brain to send
+    case 'voice_note_encode':
+      try {
+        const binary = atob(String(message.wav ?? ''));
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        const { samples, sampleRate } = decodeWav(bytes);
+        const note = await encodeVoiceNote(samples, sampleRate);
+        return { ok: true, audio: toBase64(note.ogg), seconds: note.seconds, waveform: note.waveform };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
     case 'local_tts_warm':
       if (!isEngine(message.engine)) return { ok: false, error: 'Unknown voice engine' };
       try {

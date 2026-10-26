@@ -15,12 +15,17 @@ export interface WhatsAppRemoteSettings {
   // No messages first in this window ("HH:MM", may wrap past midnight); approvals still go
   quietStart: string;
   quietEnd: string;
+  // Answer a voice note with a voice note in her voice; and typed messages too
+  voiceReplies: boolean;
+  voiceForText: boolean;
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_SETTINGS: WhatsAppRemoteSettings = {
   notify: { approval: true, meeting: true, brief: true, routine: true },
   quietStart: '22:00',
   quietEnd: '07:00',
+  voiceReplies: true,
+  voiceForText: false,
 };
 
 export interface WhatsAppRemoteState {
@@ -38,6 +43,12 @@ export interface WhatsAppRemoteState {
   waitingTold: string | null;
   // Documents he sent lately, saved in the knowledge base: a later "that document" means one of these
   recentDocuments: { id: string; title: string; at: number }[];
+  // The running turn answers a voice note (so the answer may be one too), and quotes what it answers (he wrote
+  // more than once)
+  replyVoice: boolean;
+  quoteReply: boolean;
+  // The message that got her 👍 when the work took a while: it gets ✅ when the answer goes
+  acknowledged: string | null;
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
@@ -49,6 +60,9 @@ export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
   repliedSeq: {},
   waitingTold: null,
   recentDocuments: [],
+  replyVoice: false,
+  quoteReply: false,
+  acknowledged: null,
 };
 
 const settingsStorage = createStorage<WhatsAppRemoteSettings>(

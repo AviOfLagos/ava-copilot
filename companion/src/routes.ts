@@ -36,7 +36,12 @@ import {
   whatsappMediaRequestSchema,
   whatsappOwnerRequestSchema,
   whatsappQuietRequestSchema,
+  whatsappPresenceRequestSchema,
+  whatsappReactRequestSchema,
+  whatsappReviseRequestSchema,
   whatsappSendRequestSchema,
+  WHATSAPP_VOICE_MAX_BODY_BYTES,
+  whatsappVoiceRequestSchema,
 } from '@protocol';
 import type { HealthReply, MacApp } from '@protocol';
 import type { ArtifactStore, StudioKeys } from './artifacts/store';
@@ -698,6 +703,56 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body }) {
         const request = parse(whatsappSendRequestSchema, body);
         return json({ ok: true, status: await deps.whatsapp.send(request) });
+      },
+    },
+    {
+      // A voice note made in the extension (Ogg/Opus), counted like any send
+      method: 'POST',
+      path: WHATSAPP_ROUTES.voice,
+      name: 'whatsapp.voice',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: WHATSAPP_VOICE_MAX_BODY_BYTES,
+      async handler({ body }) {
+        const request = parse(whatsappVoiceRequestSchema, body);
+        return json({ ok: true, status: await deps.whatsapp.sendVoice(request) });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.presence,
+      name: 'whatsapp.presence',
+      auth: 'api',
+      rate: 'read',
+      maxBodyBytes: 2000,
+      async handler({ body }) {
+        return json({ ok: true, status: await deps.whatsapp.presence(parse(whatsappPresenceRequestSchema, body)) });
+      },
+    },
+    {
+      method: 'POST',
+      path: WHATSAPP_ROUTES.react,
+      name: 'whatsapp.react',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 2000,
+      async handler({ body }) {
+        return json({ ok: true, status: await deps.whatsapp.react(parse(whatsappReactRequestSchema, body)) });
+      },
+    },
+    {
+      // Her own last message edited or deleted, when he says so
+      method: 'POST',
+      path: WHATSAPP_ROUTES.revise,
+      name: 'whatsapp.revise',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: 40_000,
+      async handler({ body }) {
+        return json({ ok: true, status: await deps.whatsapp.revise(parse(whatsappReviseRequestSchema, body)) });
       },
     },
 

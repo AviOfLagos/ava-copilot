@@ -27,7 +27,32 @@ export interface WaIncoming {
   link?: WaLink;
   // Fetches the file, refusing one over maxBytes; only called for the owner's messages
   download?: (maxBytes: number) => Promise<Buffer>;
+  // The message this one quotes (he swiped to reply to it), by id
+  quotedId?: string | null;
 }
+
+/** A message in a chat, as WhatsApp addresses it for a reaction, an edit or a delete. */
+export interface WaRef {
+  chatId: string;
+  id: string;
+  fromMe: boolean;
+}
+
+/** A message shown quoted above an answer: its words, or that it was a voice note this long. */
+export interface WaQuote extends WaRef {
+  text: string;
+  voiceSeconds: number | null;
+}
+
+export interface WaVoice {
+  // Ogg/Opus
+  audio: Buffer;
+  seconds: number;
+  // Loudness 0-100 for each bar of the bubble
+  waveform?: number[];
+}
+
+export type WaPresence = 'composing' | 'recording' | 'paused';
 
 export interface WaMediaInfo {
   mediaType: string | null;
@@ -64,8 +89,18 @@ export interface WaEvents {
 export interface WaDriver {
   /** Starts the session and returns; what happens next arrives as events. */
   start(events: WaEvents): Promise<void>;
-  /** Sends text to a chat; the message's id when the client gives one. */
-  sendText(chatId: string, text: string): Promise<string | null>;
+  /** Sends text to a chat, quoting a message when asked; the message's id when the client gives one. */
+  sendText(chatId: string, text: string, options?: { quote?: WaQuote }): Promise<string | null>;
+  /** Sends a voice note (push to talk). */
+  sendVoice?(chatId: string, voice: WaVoice, options?: { quote?: WaQuote }): Promise<string | null>;
+  /** Reacts to a message; an empty emoji takes the reaction back. */
+  react?(message: WaRef, emoji: string): Promise<void>;
+  /** Changes the words of one of her own messages. */
+  edit?(message: WaRef, text: string): Promise<void>;
+  /** Deletes one of her own messages for everyone. */
+  remove?(message: WaRef): Promise<void>;
+  /** Shows "typing…" or "recording…" in a chat, or stops showing it. */
+  presence?(chatId: string, state: WaPresence): Promise<void>;
   /** Removes this Mac from the phone's Linked devices, when the client can. */
   logout?(): Promise<void>;
   stop(): Promise<void>;
