@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CALENDAR_LIMITS, CALENDAR_ROUTES, meetingLinkIn } from '@protocol';
-import { MacCalendarReader, OSASCRIPT, parseCalendarOutput } from '../calendar/macos';
+import { MacCalendarReader, OSASCRIPT, parseCalendarOutput, programName } from '../calendar/macos';
 import { memoryLogger } from '../log';
-import { dockerUp, fakeRunner, startTestBrain } from './helpers';
+import { dockerUp, fakeRunner, startTestBrain, tempDir } from './helpers';
 import type { FakeCall } from './helpers';
 
 // osascript is never run against the real Calendar here: every answer is scripted
@@ -149,6 +149,76 @@ describe('MacCalendarReader', () => {
   });
 });
 
+describe('MacCalendarReader when permission is lost', () => {
+  const NOT_ASKED = JSON.stringify({ status: 0, calendars: [], events: [], truncated: false });
+  const DENIED = JSON.stringify({ status: 2, calendars: [], events: [], truncated: false });
+
+  it('names the program macOS asks about: Ava Brain under its app, otherwise node', async () => {
+    expect(programName({ AVA_BRAIN_PROGRAM: 'Ava Brain' })).toBe('Ava Brain');
+    expect(programName({})).toBe('node');
+    expect(programName({ AVA_BRAIN_PROGRAM: '“”<>' })).toBe('node');
+    const run = fakeRunner(() => ({ stdout: NOT_ASKED }));
+    const underApp = new MacCalendarReader({
+      run,
+      log: memoryLogger(),
+      platform: 'darwin',
+      env: { AVA_BRAIN_PROGRAM: 'Ava Brain' },
+    });
+    const read = await underApp.status();
+    expect(read.message).toMatch(/it names “Ava Brain”/);
+    expect(read.message).not.toMatch(/node/);
+  });
+
+  it('says why when access granted before comes back not asked, and offers the prompt', async () => {
+    let answer = granted();
+    const { calendar } = reader(() => ({ stdout: answer }));
+    expect((await calendar.status()).lost).toBeUndefined();
+    answer = NOT_ASKED;
+    const read = await calendar.status();
+    expect(read).toMatchObject({ access: 'not_determined', lost: true });
+    expect(read.message).toMatch(/macOS took the permission back/);
+    expect(read.message).toMatch(/program Ava Brain runs as changes \(here “node”, so after every Node upgrade\)/);
+    expect(read.message).toMatch(/Allow on the Mac/);
+    await expect(calendar.events(0, HOUR, null)).rejects.toThrow(/macOS took the permission back/);
+  });
+
+  it('points to System Settings when the lost permission reads as denied', async () => {
+    let answer = granted();
+    const { calendar } = reader(() => ({ stdout: answer }));
+    await calendar.status();
+    answer = DENIED;
+    const read = await calendar.status();
+    expect(read).toMatchObject({ access: 'denied', lost: true });
+    expect(read.message).toMatch(/System Settings › Privacy & Security › Calendars, turn on “node”/);
+  });
+
+  it('remembers across restarts that access was granted, in the data folder', async () => {
+    const dir = tempDir();
+    try {
+      const make = (stdout: string) =>
+        new MacCalendarReader({
+          run: fakeRunner(() => ({ stdout })),
+          log: memoryLogger(),
+          platform: 'darwin',
+          dataDir: dir.path,
+        });
+      expect((await make(NOT_ASKED).status()).lost).toBeUndefined();
+      await make(granted()).status();
+      const afterRestart = await make(NOT_ASKED).status();
+      expect(afterRestart.lost).toBe(true);
+    } finally {
+      dir.remove();
+    }
+  });
+
+  it('never calls a permission lost that was never given', async () => {
+    const { calendar } = reader(() => ({ stdout: DENIED }));
+    const read = await calendar.status();
+    expect(read.lost).toBeUndefined();
+    expect(read.message).toMatch(/does not let Ava Brain read/);
+  });
+});
+
 describe('Calendar routes', () => {
   it('answer status and events to the paired extension only', async () => {
     const run = fakeRunner(call =>
@@ -166,6 +236,7 @@ describe('Calendar routes', () => {
       };
       expect(status.access).toBe('granted');
       expect(status.calendars).toHaveLength(2);
+      expect(status).toMatchObject({ lost: false });
       const events = await brain.api(CALENDAR_ROUTES.events, { body: JSON.stringify({ from: 0, to: HOUR * 24 }) });
       const body = (await events.json()) as { events: { joinUrl: string }[] };
       expect(body.events[0].joinUrl).toBe('https://meet.google.com/abc-defg-hij');

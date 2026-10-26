@@ -9250,10 +9250,10 @@
     "message": "Responda ao aviso no seu Mac…"
   },
   "settings_calendar_mac_step_allow": {
-    "message": "Toque em Permitir acesso e escolha Permitir no aviso do macOS (ele mostra “node”, o programa do Ava Brain)."
+    "message": "Toque em Permitir acesso e escolha Permitir no aviso do macOS (ele mostra “Ava Brain”, ou “node” numa instalação antiga)."
   },
   "settings_calendar_mac_step_settings": {
-    "message": "Sem aviso, ou recusou antes? Abra Ajustes do Sistema › Privacidade e Segurança › Calendários e ative “node” com Acesso Total."
+    "message": "Sem aviso, ou recusou antes? Abra Ajustes do Sistema › Privacidade e Segurança › Calendários e ative “Ava Brain” (ou “node”) com Acesso Total."
   },
   "settings_calendar_mac_step_check": {
     "message": "Toque em Verificar de novo."

@@ -9250,10 +9250,10 @@
     "message": "請在 Mac 上回應提示…"
   },
   "settings_calendar_mac_step_allow": {
-    "message": "按下「允許存取」，然後在 macOS 提示中選擇「允許」（提示會顯示「node」，也就是 Ava Brain 執行的程式）。"
+    "message": "按下「允許存取」，然後在 macOS 提示中選擇「允許」（提示會顯示「Ava Brain」，舊版安裝則顯示「node」）。"
   },
   "settings_calendar_mac_step_settings": {
-    "message": "沒有提示或之前拒絕過？打開「系統設定 › 隱私權與安全性 › 行事曆」，為「node」開啟「完整取用權」。"
+    "message": "沒有提示或之前拒絕過？打開「系統設定 › 隱私權與安全性 › 行事曆」，為「Ava Brain」（或「node」）開啟「完整取用權」。"
   },
   "settings_calendar_mac_step_check": {
     "message": "按下「再次檢查」。"

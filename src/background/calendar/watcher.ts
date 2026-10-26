@@ -160,7 +160,9 @@ export class CalendarWatcher {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icon-128.png'),
       title: 'Ava can’t read your Calendar',
-      message: 'Ava Brain needs Calendar permission again. Press Allow, then choose Allow on your Mac.',
+      message:
+        'macOS took back Ava Brain’s Calendar permission (it asks again when Ava Brain’s program changes, e.g. after ' +
+        'a Node update). Press Allow on the Mac, then choose Allow in the macOS prompt.',
       buttons: [{ title: 'Allow on the Mac' }],
       priority: 1,
     });

@@ -9250,10 +9250,10 @@
     "message": "Answer the prompt on your Mac…"
   },
   "settings_calendar_mac_step_allow": {
-    "message": "Press Allow access, then choose Allow in the macOS prompt (it names “node”, which Ava Brain runs as)."
+    "message": "Press Allow access, then choose Allow in the macOS prompt (it names “Ava Brain”, or “node” on an older install)."
   },
   "settings_calendar_mac_step_settings": {
-    "message": "No prompt, or refused before? Open System Settings › Privacy & Security › Calendars and turn on “node” with Full Access."
+    "message": "No prompt, or refused before? Open System Settings › Privacy & Security › Calendars and turn on “Ava Brain” (or “node”) with Full Access."
   },
   "settings_calendar_mac_step_check": {
     "message": "Press Check again."

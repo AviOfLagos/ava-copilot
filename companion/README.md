@@ -36,6 +36,16 @@ Docker; `sh scripts/uninstall-launchagent.sh` removes the login item (data stays
 running, health and every sandbox call say "Docker is not running. Start Docker Desktop, then try again.";
 `pnpm sandbox:build` builds the sandbox image once.
 
+**Permissions that survive Node upgrades.** macOS ties Calendar (and every other privacy permission) to the exact
+program responsible for Ava Brain. Run as plain `node`, each Homebrew upgrade is a new program, and Calendar stops
+working until it is allowed again. So the installer builds **Ava Brain.app** (`macos/launcher.c`, ad-hoc signed,
+Apple Silicon and Intel) into the data folder and the LaunchAgent runs `Ava Brain.app/Contents/MacOS/ava-brain node
+dist/nex-brain.mjs start`: the launcher stays node's parent, so macOS asks for "Ava Brain" once and keeps the answer
+while node changes underneath it. It is rebuilt only when `CFBundleVersion` in `macos/Info.plist` changes (bump it
+when either file changes; macOS then asks once more). It needs the Xcode Command Line Tools; without them the
+installer falls back to plain node. An existing install switches with `sh scripts/install-launchagent.sh
+--runtime-only` (restarts Ava Brain), then **Settings › Calendar › Allow access** once.
+
 | Command | What |
 |---|---|
 | `pnpm build` | bundle `dist/nex-brain.mjs` (its sources + the shared protocol + the extension's workflow engine) |
