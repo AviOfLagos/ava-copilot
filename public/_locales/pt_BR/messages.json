@@ -9014,6 +9014,24 @@
   "wava_settings_quiet_hint": {
     "message": "No horário de silêncio ela só avisa sobre aprovações."
   },
+  "wava_settings_voiceReplies": {
+    "message": "Responder áudios com um áudio"
+  },
+  "wava_settings_voiceForText": {
+    "message": "Responder mensagens digitadas com áudio também"
+  },
+  "wava_settings_voice_hint": {
+    "message": "Ela fala com a voz escolhida em Configurações › Voz. Respostas longas vão como texto, e links seguem como texto."
+  },
+  "wava_command_failed": {
+    "message": "Não consegui fazer isso: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Essa mensagem é antiga demais para o WhatsApp apagar para todos."
+      }
+    }
+  },
   "wava_settings_risk": {
     "message": "Isto usa um cliente não oficial do WhatsApp Web no seu Mac. O WhatsApp pode restringir um número que use um. A Ava envia no máximo $LIMIT$ mensagens por hora.",
     "placeholders": {

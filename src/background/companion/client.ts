@@ -69,7 +69,11 @@ import type {
   ObsidianWriteRequest,
   WhatsAppQuietRequest,
   WhatsAppMediaRequest,
+  WhatsAppPresenceRequest,
+  WhatsAppReactRequest,
+  WhatsAppReviseRequest,
   WhatsAppSendRequest,
+  WhatsAppVoiceRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
 
@@ -769,6 +773,51 @@ export class CompanionClient {
       body: request,
       schema: whatsappSendReplySchema,
       timeoutMs: 30_000,
+    });
+  }
+
+  /** A voice note to the owner (Ogg/Opus, base64), sent once with its request id; the upload takes a moment. */
+  whatsappVoice(request: WhatsAppVoiceRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.voice,
+      body: request,
+      schema: whatsappSendReplySchema,
+      timeoutMs: 90_000,
+    });
+  }
+
+  /** "typing…" or "recording…" in his chat, or neither any more: nothing is sent, so it may repeat. */
+  whatsappPresence(request: WhatsAppPresenceRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.presence,
+      body: request,
+      schema: whatsappSendReplySchema,
+      idempotent: true,
+      timeoutMs: 10_000,
+    });
+  }
+
+  /** A reaction on one of his messages or hers. */
+  whatsappReact(request: WhatsAppReactRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.react,
+      body: request,
+      schema: whatsappSendReplySchema,
+      timeoutMs: 15_000,
+    });
+  }
+
+  /** Her own last message edited or deleted, when he said so. */
+  whatsappRevise(request: WhatsAppReviseRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.revise,
+      body: request,
+      schema: whatsappSendReplySchema,
+      timeoutMs: 15_000,
     });
   }
 

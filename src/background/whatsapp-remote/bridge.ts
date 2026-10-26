@@ -5,10 +5,13 @@ import type {
   WhatsAppMediaRequest,
   WhatsAppMessage,
   WhatsAppNoticeKind,
+  WhatsAppPresence,
   WhatsAppStatus,
 } from '@src/shared/lib/protocol/companion';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import type { Notice } from '../notices';
+import { toSpeakableText } from '../tts/markdown';
+import { commandOf } from './commands';
 import { clip, describeRequest, plainOutside, requestKind, toWhatsAppText } from './format';
 import { mayNotify } from './notices';
 import type { WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
@@ -20,12 +23,27 @@ import type { WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
  * ends, says on WhatsApp when the chat waits for
  * his click in the browser (it never approves anything from there), and passes on the moments he asked to hear
  * about. Everything it touches comes in as deps, so it is tested without Chrome or Ava Brain.
+ *
+ * She answers like a person: "typing…" while the chat works, 👍 on his message when the work takes a while and ✅
+ * when the answer goes, the answer quoting his message when he wrote more than once, and a voice note in her voice
+ * ("recording…" while it is made) for a voice note, or for anything when he chose that. "Delete that", "change that
+ * to …" and "react 🔥 to that" are done here, never sent to a model.
  */
 
 export interface BridgeDeps {
   inbox: () => Promise<{ messages: WhatsAppMessage[]; status: WhatsAppStatus }>;
   ack: (ids: string[]) => Promise<void>;
-  send: (request: { text: string; kind: WhatsAppNoticeKind; replyTo?: string }) => Promise<void>;
+  send: (request: { text: string; kind: WhatsAppNoticeKind; replyTo?: string; quote?: boolean }) => Promise<void>;
+  sendVoice: (request: VoiceReply) => Promise<void>;
+  // "typing…" or "recording…" in the chat his message came from, or neither
+  presence: (state: WhatsAppPresence, replyTo?: string) => Promise<void>;
+  react: (request: { emoji: string; messageId?: string }) => Promise<void>;
+  // Her own last message (or the one of hers he quoted) edited or deleted
+  revise: (request: { action: 'edit' | 'delete'; text?: string; messageId?: string }) => Promise<void>;
+  // Speakable words as a voice note in the chat's voice
+  voiceNote: (spoken: string, thread: ThreadRecord) => Promise<{ audio: string; seconds: number; waveform: number[] }>;
+  // Runs something a little later (typing kept up, the 👍 for work that takes a while)
+  later: (run: () => void, ms: number) => void;
   getThread: (id: string) => Promise<ThreadRecord | undefined>;
   createThread: (fields: Partial<ThreadRecord>) => Promise<ThreadRecord>;
   messages: (threadId: string) => Promise<ThreadMessage[]>;
@@ -61,6 +79,24 @@ const DOCUMENT_CONTEXT_MAX = 30_000;
 // A document he sent this recently is what a later "that document" means
 const RECENT_DOCUMENT_MS = 60 * 60_000;
 const RECENT_DOCUMENTS_MAX = 5;
+// Work still running this long after his message gets a 👍, and ✅ when the answer goes
+export const ACK_AFTER_MS = 4000;
+export const ACK_EMOJI = '👍';
+export const DONE_EMOJI = '✅';
+// WhatsApp drops "typing…" after about 25 s: it is said again this often while the chat works
+export const TYPING_EVERY_MS = 10_000;
+// A spoken answer longer than this (about a minute and a half) goes as words
+export const VOICE_TEXT_MAX = 1200;
+const LINK = /\bhttps?:\/\//i;
+
+export interface VoiceReply {
+  audio: string;
+  seconds: number;
+  waveform: number[];
+  kind: WhatsAppNoticeKind;
+  replyTo?: string;
+  quote?: boolean;
+}
 
 /** What a turn starts with. */
 export interface Turn {
@@ -114,6 +150,8 @@ export class WhatsAppBridge {
   private polling: Promise<void> | null = null;
   // Notices already sent this run of the background (a key is sent once)
   private readonly sentKeys = new Set<string>();
+  // The turn "typing…" is kept up for; anything else stops it
+  private typingFor: string | null = null;
 
   constructor(private readonly deps: BridgeDeps) {}
 
@@ -132,7 +170,11 @@ export class WhatsAppBridge {
 
     const thread = await this.todaysThread();
     const last = messages[messages.length - 1];
-    if (thread.status === 'running') return;
+    if (thread.status === 'running') {
+      // He wrote again while she works: the answer quotes the message it is for
+      if (!(await this.deps.getState()).quoteReply) await this.deps.updateState({ quoteReply: true });
+      return;
+    }
     if (thread.status === 'waiting_confirm') {
       const state = await this.deps.getState();
       const pending = thread.pendingRequest?.id ?? 'pending';
@@ -144,7 +186,13 @@ export class WhatsAppBridge {
     }
 
     const ids = messages.map(message => message.id);
-    await this.deps.updateState({ replyTo: last.id, waitingTold: null });
+    await this.deps.updateState({
+      replyTo: last.id,
+      waitingTold: null,
+      quoteReply: messages.length > 1,
+      replyVoice: messages.some(message => message.kind === 'voice'),
+      acknowledged: null,
+    });
     const turn = await this.turnOf(messages, thread);
     if (!turn.text && !turn.attachments.length) {
       // Only things answered on their own (a document saved, a voice note with no words): no turn to run
@@ -165,6 +213,53 @@ export class WhatsAppBridge {
       return;
     }
     await this.deps.ack(ids);
+    this.keepTyping(thread.id, last.id);
+    this.deps.later(() => void this.acknowledge(thread.id, last.id), ACK_AFTER_MS);
+  }
+
+  /** "typing…" in his chat now, and again every few seconds while the chat still works on his message. */
+  private keepTyping(threadId: string, replyTo: string): void {
+    const token = `${threadId}:${replyTo}`;
+    this.typingFor = token;
+    const beat = async (first: boolean) => {
+      if (this.typingFor !== token) return;
+      if (!first && (await this.deps.getThread(threadId))?.status !== 'running') return;
+      if (this.typingFor !== token) return;
+      await this.deps.presence('composing', replyTo).catch(() => {});
+      this.deps.later(() => void beat(false), TYPING_EVERY_MS);
+    };
+    void beat(true);
+  }
+
+  /** Work that is still running a few seconds on gets a 👍 on his message, so he knows she is on it. */
+  private async acknowledge(threadId: string, messageId: string): Promise<void> {
+    if ((await this.deps.getThread(threadId))?.status !== 'running') return;
+    if ((await this.deps.getState()).replyTo !== messageId) return;
+    try {
+      await this.deps.react({ emoji: ACK_EMOJI, messageId });
+      await this.deps.updateState({ acknowledged: messageId });
+    } catch (error) {
+      this.deps.warn('A WhatsApp reaction was not sent', error);
+    }
+  }
+
+  /**
+   * His whole message as a command about her own messages ("delete that", "change that to …", "react 🔥 to that"):
+   * done on WhatsApp right away, and true. "That" is the message he quoted, else her last one.
+   */
+  private async command(message: WhatsAppMessage, words: string): Promise<boolean> {
+    const command = commandOf(words);
+    if (!command) return false;
+    const quoted = message.quotedId ? { messageId: message.quotedId } : {};
+    try {
+      if (command.kind === 'react') await this.deps.react({ emoji: command.emoji, ...quoted });
+      else if (command.kind === 'edit') await this.deps.revise({ action: 'edit', text: command.text, ...quoted });
+      else await this.deps.revise({ action: 'delete', ...quoted });
+    } catch (error) {
+      this.deps.warn(`A WhatsApp ${command.kind} did not go through`, error);
+      await this.say(t('wava_command_failed', [errorText(error)]), 'reply', message.id);
+    }
+    return true;
   }
 
   /**
@@ -180,9 +275,10 @@ export class WhatsAppBridge {
       const words = message.text.trim();
       if (message.kind === 'voice' && message.media) {
         const said = await this.voiceOf(message, message.media.mediaType);
-        if (said) parts.push(`${t('wava_voice_label')} ${said}`);
+        if (said && !(await this.command(message, said))) parts.push(`${t('wava_voice_label')} ${said}`);
         continue;
       }
+      if (message.kind === 'text' && (await this.command(message, words))) continue;
       if (message.kind === 'image' && message.media) {
         try {
           const reply = await this.deps.media({ id: message.id, as: 'bytes' });
@@ -348,23 +444,64 @@ export class WhatsAppBridge {
   }
 
   private async answer(thread: ThreadRecord): Promise<void> {
+    if (thread.status === 'running') return;
+    this.typingFor = null;
     const state = await this.deps.getState();
     const replyTo = state.replyTo ?? undefined;
-    if (thread.status === 'waiting_confirm') {
-      const request: ConfirmRequest | null = thread.pendingRequest;
-      await this.say(t('wava_reply_needsClick', [describeRequest(request)]), 'reply', replyTo);
-      return;
+    try {
+      if (thread.status === 'waiting_confirm') {
+        const request: ConfirmRequest | null = thread.pendingRequest;
+        await this.say(t('wava_reply_needsClick', [describeRequest(request)]), 'reply', replyTo);
+        return;
+      }
+      if (thread.status === 'error') {
+        await this.say(t('wava_reply_stopped', [plainOutside(thread.error?.message ?? '', 200)]), 'reply', replyTo);
+        return;
+      }
+      if (thread.status !== 'idle') return;
+      const answer = answerOf(await this.deps.messages(thread.id));
+      const done = state.repliedSeq[thread.id] ?? 0;
+      if (!answer || answer.seq <= done) return;
+      await this.deps.updateState({ repliedSeq: { ...state.repliedSeq, [thread.id]: answer.seq } });
+      const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
+      const quote = state.quoteReply;
+      const settings = await this.deps.settings();
+      const spoken = settings.voiceReplies && (state.replyVoice || settings.voiceForText);
+      let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
+      // Words when the voice note could not go, and after one that had a link in it (to tap)
+      if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
+      const acknowledged = (await this.deps.getState()).acknowledged;
+      if (sent && replyTo && acknowledged === replyTo) {
+        await this.deps.react({ emoji: DONE_EMOJI, messageId: replyTo }).catch(error => {
+          this.deps.warn('A WhatsApp reaction was not sent', error);
+        });
+      }
+    } finally {
+      await this.deps.presence('paused', replyTo).catch(() => {});
     }
-    if (thread.status === 'error') {
-      await this.say(t('wava_reply_stopped', [plainOutside(thread.error?.message ?? '', 200)]), 'reply', replyTo);
-      return;
+  }
+
+  /**
+   * The answer as a voice note in her voice, "recording…" while it is made. False (and words go instead) when it is
+   * too long to listen to, has nothing to say aloud, or could not be made or sent.
+   */
+  private async sayVoice(markdown: string, thread: ThreadRecord, replyTo?: string, quote?: boolean): Promise<boolean> {
+    const spoken = toSpeakableText(markdown).trim();
+    if (!spoken || spoken.length > VOICE_TEXT_MAX) return false;
+    await this.deps.presence('recording', replyTo).catch(() => {});
+    try {
+      const note = await this.deps.voiceNote(spoken, thread);
+      await this.deps.sendVoice({
+        ...note,
+        kind: 'reply',
+        ...(replyTo ? { replyTo } : {}),
+        ...(quote ? { quote } : {}),
+      });
+      return true;
+    } catch (error) {
+      this.deps.warn('A WhatsApp voice reply was not sent; sending words', error);
+      return false;
     }
-    if (thread.status !== 'idle') return;
-    const answer = answerOf(await this.deps.messages(thread.id));
-    const done = state.repliedSeq[thread.id] ?? 0;
-    if (!answer || answer.seq <= done) return;
-    await this.deps.updateState({ repliedSeq: { ...state.repliedSeq, [thread.id]: answer.seq } });
-    await this.say(toWhatsAppText(answer.content, undefined, t('wava_reply_more')), 'reply', replyTo);
   }
 
   /** Meeting notes are ready. */
@@ -402,14 +539,17 @@ export class WhatsAppBridge {
     await this.say(`*${title}*${body}`, notice.kind);
   }
 
-  private async say(text: string, kind: WhatsAppNoticeKind, replyTo?: string): Promise<void> {
+  /** Sends words to him; false when they did not go. */
+  private async say(text: string, kind: WhatsAppNoticeKind, replyTo?: string, quote?: boolean): Promise<boolean> {
     const body = text.trim();
-    if (!body) return;
+    if (!body) return false;
     try {
-      await this.deps.send({ text: body, kind, ...(replyTo ? { replyTo } : {}) });
+      await this.deps.send({ text: body, kind, ...(replyTo ? { replyTo } : {}), ...(quote ? { quote } : {}) });
+      return true;
     } catch (error) {
       // Not linked, the hourly limit, Ava Brain closed: the chat in the panel still has it
       this.deps.warn(`A WhatsApp ${kind} was not sent`, error);
+      return false;
     }
   }
 }

@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ConfirmRequest, MeetingRecord, MessageAttachment, ThreadMessage, ThreadRecord } from '@extension/storage';
 import type { WhatsAppMediaReply, WhatsAppMessage, WhatsAppStatus } from '@src/shared/lib/protocol/companion';
-import type { Turn } from '../bridge';
+import type { Turn, VoiceReply } from '../bridge';
 import type { WhatsAppRemoteState } from '../state';
 
 vi.mock('@extension/i18n', () => ({
   t: (key: string, subs?: string | string[]) => [key, ...(Array.isArray(subs) ? subs : subs ? [subs] : [])].join('|'),
 }));
 
-const { WhatsAppBridge, answerOf, fileLabel, sizeText } = await import('../bridge');
+const { WhatsAppBridge, answerOf, fileLabel, sizeText, ACK_AFTER_MS, TYPING_EVERY_MS, VOICE_TEXT_MAX } =
+  await import('../bridge');
 const { DEFAULT_WHATSAPP_REMOTE_SETTINGS, DEFAULT_WHATSAPP_REMOTE_STATE } = await import('../state');
 const { alwaysAsks, configRefusal, runRefusal, userAtComputer } = await import('../../gate/origins');
 const { isAttendedThread } = await import('../../agents/handoff');
@@ -68,12 +69,23 @@ function harness(
     files?: Files;
     // What the speech recogniser hears in each recording (by its base64)
     heard?: Record<string, string | Error>;
+    // Making a voice note fails with this
+    voiceFails?: Error;
+    // Ava Brain refuses a reaction or a revision with this
+    refuse?: Error;
   } = {},
 ) {
   let state: WhatsAppRemoteState = { ...DEFAULT_WHATSAPP_REMOTE_STATE, status: options.status ?? LINKED };
   let settings = { ...DEFAULT_WHATSAPP_REMOTE_SETTINGS };
   const inbox = [...(options.messages ?? [])];
-  const sent: { text: string; kind: string; replyTo?: string }[] = [];
+  const sent: { text: string; kind: string; replyTo?: string; quote?: boolean }[] = [];
+  const voices: VoiceReply[] = [];
+  const spoken: string[] = [];
+  const presences: { state: string; replyTo?: string }[] = [];
+  const reactions: { emoji: string; messageId?: string }[] = [];
+  const revisions: { action: string; text?: string; messageId?: string }[] = [];
+  // What the bridge asked to run later, run by the test
+  const timers: { run: () => void; ms: number }[] = [];
   const acked: string[] = [];
   const turns: { threadId: string; text: string }[] = [];
   const fullTurns: Turn[] = [];
@@ -92,6 +104,22 @@ function harness(
     inbox: async () => ({ messages: inbox.splice(0), status: state.status ?? LINKED }),
     ack: async ids => void acked.push(...ids),
     send: async message => void sent.push(message),
+    sendVoice: async voice => void voices.push(voice),
+    presence: async (state, replyTo) => void presences.push({ state, ...(replyTo ? { replyTo } : {}) }),
+    react: async reaction => {
+      if (options.refuse) throw options.refuse;
+      reactions.push(reaction);
+    },
+    revise: async revision => {
+      if (options.refuse) throw options.refuse;
+      revisions.push(revision);
+    },
+    voiceNote: async words => {
+      if (options.voiceFails) throw options.voiceFails;
+      spoken.push(words);
+      return { audio: 'T2dnUw==', seconds: 2, waveform: new Array(64).fill(50) };
+    },
+    later: (run, ms) => void timers.push({ run, ms }),
     getThread: async id => chats.get(id),
     createThread: async fields => {
       created.push(fields);
@@ -142,10 +170,30 @@ function harness(
     now: () => now,
     warn: () => {},
   });
+  const flush = () => new Promise(resolve => setTimeout(resolve, 0));
   return {
     bridge,
     sent,
+    voices,
+    spoken,
+    presences,
+    reactions,
+    revisions,
+    timers,
+    // Runs what is waiting to run later (once), and lets it finish
+    runLater: async (ms?: number) => {
+      const due = timers.splice(0).filter(timer => {
+        if (ms === undefined || timer.ms === ms) return true;
+        timers.push(timer);
+        return false;
+      });
+      for (const timer of due) timer.run();
+      await flush();
+      await flush();
+    },
+    flush,
     acked,
+    inbox,
     turns,
     fullTurns,
     saved,
@@ -171,6 +219,7 @@ const msg = (id: string, text: string, fields: Partial<WhatsAppMessage> = {}): W
   kind: 'text',
   media: null,
   link: null,
+  quotedId: null,
   ...fields,
 });
 const file = (mediaType: string, size: number, name: string | null = null) => ({
@@ -548,5 +597,182 @@ describe('voice notes, photos, documents and links from WhatsApp', () => {
     expect(sizeText(340 * 1024)).toBe('340 KB');
     expect(sizeText(1.25 * 1024 * 1024)).toBe('1.3 MB');
     expect(sizeText(24 * 1024 * 1024)).toBe('24 MB');
+  });
+});
+
+describe('answering like a person', () => {
+  const said = (seq: number, actor: ThreadMessage['actor'], content: string) =>
+    ({ id: `m${seq}`, threadId: 'wa-thread', seq, actor, content, ts: seq }) as ThreadMessage;
+  const voiceMsg = (id: string) => msg(id, '', { kind: 'voice', media: file('audio/ogg; codecs=opus', 900) });
+
+  /** A turn on these messages in the day's chat, and the chat's answer ready. */
+  async function turnOn(messages: WhatsAppMessage[], answer: string, options: Parameters<typeof harness>[0] = {}) {
+    const h = harness({ messages, thread: thread(), ...options });
+    h.setState({ threadId: 'wa-thread', threadDay: '2026-10-20' });
+    await h.bridge.poll();
+    h.messages.set('wa-thread', [said(1, 'user', 'his words'), said(2, 'planner', answer)]);
+    const finish = async () => {
+      h.chats.set('wa-thread', thread({ status: 'idle' }));
+      await h.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    };
+    const run = () => h.chats.set('wa-thread', thread({ status: 'running' }));
+    return { h, finish, run };
+  }
+
+  it('shows typing while the chat works, keeps it up, and stops when the answer goes', async () => {
+    const { h, finish, run } = await turnOn([msg('a', 'find the invoice')], 'Found it.');
+    expect(h.presences).toEqual([{ state: 'composing', replyTo: 'a' }]);
+    run();
+    await h.runLater(TYPING_EVERY_MS);
+    expect(h.presences).toEqual([
+      { state: 'composing', replyTo: 'a' },
+      { state: 'composing', replyTo: 'a' },
+    ]);
+    await finish();
+    await h.runLater(TYPING_EVERY_MS);
+    expect(h.presences.at(-1)).toEqual({ state: 'paused', replyTo: 'a' });
+    expect(h.presences.filter(item => item.state === 'composing')).toHaveLength(2);
+  });
+
+  it('gives 👍 to work that takes a while, and ✅ when its answer goes', async () => {
+    const { h, finish, run } = await turnOn([msg('a', 'book it')], 'Booked.');
+    run();
+    await h.runLater(ACK_AFTER_MS);
+    expect(h.reactions).toEqual([{ emoji: '👍', messageId: 'a' }]);
+    await finish();
+    expect(h.sent).toEqual([{ text: 'Booked.', kind: 'reply', replyTo: 'a' }]);
+    expect(h.reactions.at(-1)).toEqual({ emoji: '✅', messageId: 'a' });
+  });
+
+  it('just answers a quick one, with no reactions', async () => {
+    const { h, finish } = await turnOn([msg('a', 'hi')], 'Hi! 👋');
+    await finish();
+    await h.runLater(ACK_AFTER_MS);
+    expect(h.reactions).toEqual([]);
+    expect(h.sent).toEqual([{ text: 'Hi! 👋', kind: 'reply', replyTo: 'a' }]);
+  });
+
+  it('quotes the message it answers when he wrote more than once', async () => {
+    const { h, finish } = await turnOn([msg('a', 'flights to Lagos'), msg('b', 'for Friday')], 'Two options.');
+    await finish();
+    expect(h.sent).toEqual([{ text: 'Two options.', kind: 'reply', replyTo: 'b', quote: true }]);
+  });
+
+  it('quotes when he wrote again while she worked', async () => {
+    const { h, finish, run } = await turnOn([msg('a', 'flights to Lagos')], 'Two options.');
+    run();
+    h.inbox.push(msg('b', 'actually Abuja'));
+    await h.bridge.poll();
+    await finish();
+    expect(h.sent[0]).toEqual({ text: 'Two options.', kind: 'reply', replyTo: 'a', quote: true });
+  });
+
+  it('answers a voice note with a voice note, "recording…" while it is made', async () => {
+    const { h, finish } = await turnOn([voiceMsg('v')], '**Tomorrow** you have *two* meetings.', {
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'what is on tomorrow?' },
+    });
+    await finish();
+    expect(h.spoken).toEqual(['Tomorrow you have two meetings.']);
+    expect(h.voices).toEqual([
+      { audio: 'T2dnUw==', seconds: 2, waveform: expect.any(Array), kind: 'reply', replyTo: 'v' },
+    ]);
+    expect(h.sent).toEqual([]);
+    expect(h.presences.map(item => item.state)).toEqual(['composing', 'recording', 'paused']);
+  });
+
+  it('answers typed words in words unless he chose voice for those too', async () => {
+    const typed = await turnOn([msg('a', 'what is on tomorrow?')], 'Two meetings.');
+    await typed.finish();
+    expect(typed.h.voices).toEqual([]);
+    const chosen = await turnOn([msg('a', 'what is on tomorrow?')], 'Two meetings.');
+    chosen.h.setSettings({ voiceForText: true });
+    await chosen.finish();
+    expect(chosen.h.voices).toHaveLength(1);
+  });
+
+  it('answers in words when voice replies are off', async () => {
+    const { h, finish } = await turnOn([voiceMsg('v')], 'Two meetings.', {
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'what is on tomorrow?' },
+    });
+    h.setSettings({ voiceReplies: false });
+    await finish();
+    expect(h.voices).toEqual([]);
+    expect(h.sent).toEqual([{ text: 'Two meetings.', kind: 'reply', replyTo: 'v' }]);
+  });
+
+  it('sends words when the voice note cannot be made, or the answer is too long to listen to', async () => {
+    const failing = await turnOn([voiceMsg('v')], 'Two meetings.', {
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'what is on?' },
+      voiceFails: new Error('No voice downloaded.'),
+    });
+    await failing.finish();
+    expect(failing.h.sent).toEqual([{ text: 'Two meetings.', kind: 'reply', replyTo: 'v' }]);
+    const long = 'word '.repeat(VOICE_TEXT_MAX);
+    const lengthy = await turnOn([voiceMsg('v')], long, {
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'tell me everything' },
+    });
+    await lengthy.finish();
+    expect(lengthy.h.voices).toEqual([]);
+    expect(lengthy.h.sent).toHaveLength(1);
+  });
+
+  it('follows a voice note with the words when the answer has a link to tap', async () => {
+    const { h, finish } = await turnOn([voiceMsg('v')], 'Here: https://example.com/doc', {
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'send me the doc' },
+    });
+    await finish();
+    expect(h.voices).toHaveLength(1);
+    expect(h.sent).toEqual([{ text: 'Here: https://example.com/doc', kind: 'reply', replyTo: 'v' }]);
+  });
+});
+
+describe('his commands about her own messages', () => {
+  it('deletes, edits or reacts on WhatsApp, with no turn', async () => {
+    const h = harness({
+      messages: [
+        msg('a', 'delete that'),
+        msg('b', 'react 🔥 to that', { quotedId: 'sent-3' }),
+        msg('c', 'change that to: Meeting at 4'),
+      ],
+    });
+    await h.bridge.poll();
+    expect(h.revisions).toEqual([{ action: 'delete' }, { action: 'edit', text: 'Meeting at 4' }]);
+    expect(h.reactions).toEqual([{ emoji: '🔥', messageId: 'sent-3' }]);
+    expect(h.turns).toEqual([]);
+    expect(h.acked).toEqual(['a', 'b', 'c']);
+  });
+
+  it('takes a command said in a voice note, and passes the rest of the messages to the chat', async () => {
+    const h = harness({
+      messages: [
+        msg('v', '', { kind: 'voice', media: file('audio/ogg; codecs=opus', 900) }),
+        msg('w', 'and what is the weather?'),
+      ],
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'Delete that.' },
+    });
+    await h.bridge.poll();
+    expect(h.revisions).toEqual([{ action: 'delete' }]);
+    expect(h.turns.map(turn => turn.text)).toEqual(['and what is the weather?']);
+  });
+
+  it('says why when WhatsApp would not do it', async () => {
+    const h = harness({
+      messages: [msg('a', 'change that to hi')],
+      refuse: new Error('WhatsApp only lets a message be edited for 15 minutes after it was sent.'),
+    });
+    await h.bridge.poll();
+    expect(h.sent).toEqual([
+      {
+        text: 'wava_command_failed|WhatsApp only lets a message be edited for 15 minutes after it was sent.',
+        kind: 'reply',
+        replyTo: 'a',
+      },
+    ]);
   });
 });

@@ -9014,6 +9014,24 @@
   "wava_settings_quiet_hint": {
     "message": "在安靜時段，她只會通知你需要核准的事項。"
   },
+  "wava_settings_voiceReplies": {
+    "message": "用語音訊息回覆語音訊息"
+  },
+  "wava_settings_voiceForText": {
+    "message": "文字訊息也用語音回覆"
+  },
+  "wava_settings_voice_hint": {
+    "message": "她會用「設定 › 語音」中選擇的聲音說話。較長的回答會以文字傳送，連結也會以文字附上。"
+  },
+  "wava_command_failed": {
+    "message": "我無法完成：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "這則訊息太舊，WhatsApp 無法為所有人刪除。"
+      }
+    }
+  },
   "wava_settings_risk": {
     "message": "這會在你的 Mac 上使用非官方的 WhatsApp Web 用戶端，WhatsApp 可能會限制使用此類用戶端的號碼。Ava 每小時最多傳送 $LIMIT$ 則訊息。",
     "placeholders": {

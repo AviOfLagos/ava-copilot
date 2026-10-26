@@ -819,6 +819,11 @@ export const WHATSAPP_ROUTES = {
   restart: '/v1/whatsapp/restart',
   // A queued message's voice note, picture or document, for the extension to read
   media: '/v1/whatsapp/media',
+  // Ava as a person in the chat: "typing…" or "recording…", a reaction, a voice note, her last message changed
+  presence: '/v1/whatsapp/presence',
+  react: '/v1/whatsapp/react',
+  voice: '/v1/whatsapp/voice',
+  revise: '/v1/whatsapp/revise',
 } as const;
 
 export const WHATSAPP_STATES = [
@@ -926,6 +931,8 @@ export const whatsappMessageSchema = z.object({
   kind: z.enum(WHATSAPP_MESSAGE_KINDS).default('text'),
   media: whatsappMediaInfoSchema.nullable().default(null),
   link: whatsappLinkSchema.nullable().default(null),
+  // The message his quotes (swiped to reply to), by id
+  quotedId: z.string().max(200).nullable().default(null),
 });
 export type WhatsAppMessage = z.infer<typeof whatsappMessageSchema>;
 
@@ -943,8 +950,63 @@ export const whatsappSendRequestSchema = z.object({
   kind: z.enum(WHATSAPP_NOTICE_KINDS),
   // The owner's message this answers: the reply goes to the chat it came from
   replyTo: z.string().min(1).max(200).optional(),
+  // Show replyTo quoted above the answer (when several of his messages are in flight)
+  quote: z.boolean().optional(),
 });
 export type WhatsAppSendRequest = z.infer<typeof whatsappSendRequestSchema>;
+
+// What the chat shows while Ava works: typing, recording a voice note, or nothing any more
+export const WHATSAPP_PRESENCES = ['composing', 'recording', 'paused'] as const;
+export type WhatsAppPresence = (typeof WHATSAPP_PRESENCES)[number];
+export const whatsappPresenceRequestSchema = z.object({
+  state: z.enum(WHATSAPP_PRESENCES),
+  replyTo: z.string().min(1).max(200).optional(),
+});
+export type WhatsAppPresenceRequest = z.infer<typeof whatsappPresenceRequestSchema>;
+
+// A reaction: an emoji or two (no letters or digits; empty takes hers back) on one of his messages or one of hers,
+// by id; with no id, on her own last message
+export const WHATSAPP_REACTION = /^[^\p{L}\p{N}\s]{0,16}$/u;
+export const whatsappReactRequestSchema = z.object({
+  requestId: requestIdSchema,
+  emoji: z.string().regex(WHATSAPP_REACTION),
+  messageId: z.string().min(1).max(200).optional(),
+});
+export type WhatsAppReactRequest = z.infer<typeof whatsappReactRequestSchema>;
+
+// A voice note: Ogg/Opus made in the extension (there is no ffmpeg on the Mac), sent as WhatsApp's own push-to-talk
+export const WHATSAPP_VOICE_MAX_BYTES = 4 * 1024 * 1024;
+const WHATSAPP_VOICE_BASE64_MAX = Math.ceil((WHATSAPP_VOICE_MAX_BYTES * 4) / 3) + 4;
+export const WHATSAPP_VOICE_MAX_BODY_BYTES = WHATSAPP_VOICE_BASE64_MAX + 4000;
+// The bars WhatsApp draws in a voice note's bubble
+export const WHATSAPP_WAVEFORM_LENGTH = 64;
+export const whatsappVoiceRequestSchema = z.object({
+  requestId: requestIdSchema,
+  audio: z
+    .string()
+    .min(64)
+    .max(WHATSAPP_VOICE_BASE64_MAX)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'Base64 only.'),
+  seconds: z.number().int().positive().max(1200),
+  // Loudness 0-100 for each bar
+  waveform: z.array(z.number().int().min(0).max(100)).length(WHATSAPP_WAVEFORM_LENGTH).optional(),
+  kind: z.enum(WHATSAPP_NOTICE_KINDS),
+  replyTo: z.string().min(1).max(200).optional(),
+  quote: z.boolean().optional(),
+});
+export type WhatsAppVoiceRequest = z.infer<typeof whatsappVoiceRequestSchema>;
+
+// Her own last message (or the one of hers he quoted), changed when he says so ("delete that", "change that to…")
+export const whatsappReviseRequestSchema = z
+  .object({
+    requestId: requestIdSchema,
+    action: z.enum(['edit', 'delete']),
+    text: z.string().min(1).max(WHATSAPP_TEXT_MAX).optional(),
+    // One of hers he quoted; else her last
+    messageId: z.string().min(1).max(200).optional(),
+  })
+  .refine(request => request.action === 'delete' || Boolean(request.text?.trim()), 'An edit needs the new words.');
+export type WhatsAppReviseRequest = z.infer<typeof whatsappReviseRequestSchema>;
 
 export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
 

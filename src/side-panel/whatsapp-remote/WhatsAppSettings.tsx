@@ -350,6 +350,26 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
         <p className="text-muted-foreground text-[11px]">{t('wava_settings_quiet_hint')}</p>
       </div>
 
+      <div className={row} data-wava-voice>
+        <div className="flex items-center justify-between gap-3 text-[12.5px]">
+          <span>{t('wava_settings_voiceReplies')}</span>
+          <Switch
+            checked={settings.voiceReplies}
+            label={t('wava_settings_voiceReplies')}
+            onChange={checked => save({ voiceReplies: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 text-[12.5px]">
+          <span>{t('wava_settings_voiceForText')}</span>
+          <Switch
+            checked={settings.voiceForText}
+            label={t('wava_settings_voiceForText')}
+            onChange={checked => save({ voiceForText: checked })}
+          />
+        </div>
+        <p className="text-muted-foreground text-[11px]">{t('wava_settings_voice_hint')}</p>
+      </div>
+
       {state === 'linked' || state === 'disconnected' ? (
         <div className="flex items-center justify-between gap-3 px-3 py-2.5" data-wava-manage>
           <p className="text-muted-foreground text-[11.5px]">{t('wava_settings_restart_hint')}</p>

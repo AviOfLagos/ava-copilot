@@ -144,7 +144,15 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     driver.deliver({ id: 'status', chatId: 'status@broadcast', fromMe: false, body: 'a status' });
     await settle();
     expect(service.pull()).toEqual([
-      { id: 'own-1', text: 'what is on today?', at: expect.any(Number), kind: 'text', media: null, link: null },
+      {
+        id: 'own-1',
+        text: 'what is on today?',
+        at: expect.any(Number),
+        kind: 'text',
+        media: null,
+        link: null,
+        quotedId: null,
+      },
     ]);
     const kept = readFileSync(join(dir.path, 'whatsapp', 'state.json'), 'utf8');
     for (const word of ['secret from a friend', 'group talk', 'my reply to a friend', 'friend', '2348099999999']) {
@@ -630,6 +638,7 @@ describe('Ava on WhatsApp: voice notes, photos, documents and links', () => {
         kind: 'image',
         media: { mediaType: 'image/jpeg', size: 4, name: null, seconds: null, voiceNote: false },
         link: null,
+        quotedId: null,
       },
     ]);
     expect((await service.media({ id: 'p1', as: 'bytes' })).data).toBe(

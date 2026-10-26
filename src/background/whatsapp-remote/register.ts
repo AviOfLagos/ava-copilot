@@ -18,6 +18,7 @@ import { services } from '../registry/services';
 import { WhatsAppBridge } from './bridge';
 import { photoAttachment } from './media';
 import { HHMM, whatsappRemoteSettingsStore, whatsappRemoteStateStore } from './state';
+import { voiceNoteOf } from './voice-note';
 
 const logger = createLogger('WhatsAppRemote');
 
@@ -58,6 +59,20 @@ export const whatsappBridge = new WhatsAppBridge({
   send: async request => {
     await companionClient.whatsappSend({ requestId: crypto.randomUUID(), ...request });
   },
+  sendVoice: async request => {
+    await companionClient.whatsappVoice({ requestId: crypto.randomUUID(), ...request });
+  },
+  presence: async (state, replyTo) => {
+    await companionClient.whatsappPresence({ state, ...(replyTo ? { replyTo } : {}) });
+  },
+  react: async request => {
+    await companionClient.whatsappReact({ requestId: crypto.randomUUID(), ...request });
+  },
+  revise: async request => {
+    await companionClient.whatsappRevise({ requestId: crypto.randomUUID(), ...request });
+  },
+  voiceNote: (spoken, thread) => voiceNoteOf(spoken, thread),
+  later: (run, ms) => void setTimeout(run, ms),
   getThread: id => threadStore.get(id),
   createThread: fields => threadStore.create(fields),
   messages: id => threadStore.messages(id),
@@ -189,13 +204,17 @@ command(
       .optional(),
     quietStart: z.string().regex(HHMM).optional(),
     quietEnd: z.string().regex(HHMM).optional(),
+    voiceReplies: z.boolean().optional(),
+    voiceForText: z.boolean().optional(),
   }),
-  async ({ notify, quietStart, quietEnd }) => {
+  async ({ notify, quietStart, quietEnd, voiceReplies, voiceForText }) => {
     const current = await whatsappRemoteSettingsStore.getSettings();
     const settings = await whatsappRemoteSettingsStore.update({
       notify: { ...current.notify, ...notify },
       ...(quietStart ? { quietStart } : {}),
       ...(quietEnd ? { quietEnd } : {}),
+      ...(voiceReplies === undefined ? {} : { voiceReplies }),
+      ...(voiceForText === undefined ? {} : { voiceForText }),
     });
     if (quietStart || quietEnd) await pushQuietHours();
     return { settings };

@@ -2,7 +2,7 @@ import { createHash, randomInt } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { WHATSAPP_MEDIA_MAX_BYTES, WHATSAPP_TEXT_MAX } from '@protocol';
+import { WHATSAPP_MEDIA_MAX_BYTES, WHATSAPP_TEXT_MAX, WHATSAPP_VOICE_MAX_BYTES } from '@protocol';
 import type {
   WhatsAppLink,
   WhatsAppMediaKind,
@@ -10,8 +10,12 @@ import type {
   WhatsAppMediaRequest,
   WhatsAppMessage,
   WhatsAppNoticeKind,
+  WhatsAppPresenceRequest,
+  WhatsAppReactRequest,
+  WhatsAppReviseRequest,
   WhatsAppState,
   WhatsAppStatus,
+  WhatsAppVoiceRequest,
 } from '@protocol';
 import { privateDir } from '../config';
 import { fail } from '../errors';
@@ -20,7 +24,7 @@ import { runProcess } from '../sandbox/process';
 import type { ProcessRunner } from '../sandbox/process';
 import { documentText } from './documents';
 import { numberOfJid } from './driver';
-import type { WaAccount, WaDriver, WaDriverFactory, WaIncoming } from './driver';
+import type { WaAccount, WaDriver, WaDriverFactory, WaIncoming, WaQuote, WaRef } from './driver';
 
 /**
  * Ava on WhatsApp, in Ava Brain. One person only, the owner: the linked account's own "Message yourself"
@@ -32,6 +36,11 @@ import type { WaAccount, WaDriver, WaDriverFactory, WaIncoming } from './driver'
  * locations and contacts get a plain answer and are not kept. While the extension has not pulled for a while,
  * the owner hears once that the browser is closed. At most `limitPerHour` messages go out in any hour,
  * whatever asks. No file name, caption or file content is ever logged.
+ *
+ * Ava answers like a person: "typing…" or "recording…" while she works (not in the self chat, where WhatsApp shows
+ * neither), a voice note the extension made, a quote of the message she answers, reactions on his messages, and her
+ * own last message edited or deleted when he says so. All of it goes only to the owner's chats; voice notes, edits
+ * and deletes count toward the hour, reactions have an hourly limit of their own.
  */
 
 export const LIMIT_PER_HOUR = 20;
@@ -51,6 +60,14 @@ const ECHOES_MAX = 1000;
 const HOUR_MS = 60 * 60_000;
 // A message dated this long before the session became ready is history being synced, not something new
 const HISTORY_GRACE_MS = 60_000;
+export const REACTIONS_PER_HOUR = 60;
+// WhatsApp lets a message be edited this long after it was sent, and deleted for everyone about this long
+export const EDIT_WINDOW_MS = 15 * 60_000;
+export const DELETE_WINDOW_MS = 48 * HOUR_MS;
+// Her own sends kept by id (ids and times only), for "delete that" and reactions on them
+const OWN_MAX = 20;
+// His recent messages' words kept in memory only, never on disk, to quote them above an answer
+const QUOTABLE_MAX = 100;
 
 /** Invisible (two invisible separators around a zero-width space): ends every message Ava sends. */
 export const OWN_MARK = '\u2063\u200b\u2063';
@@ -93,6 +110,11 @@ const CODE_LIKE = /^\s*AVA-/i;
 const NEW_CHAT_REFUSED = /licen[cs]e|unknown_number|new number/i;
 export const FORWARDED_TEXT =
   'I only act on messages you type yourself. If you want me to look at a forwarded one, tell me in your own words.';
+export const NOTHING_TO_CHANGE_TEXT = 'There is no message of mine to change.';
+export const NOT_MINE_TEXT = 'I can only change my own messages.';
+export const EDIT_TOO_LATE_TEXT = 'WhatsApp only lets a message be edited for 15 minutes after it was sent.';
+export const DELETE_TOO_LATE_TEXT = 'That message is too old for WhatsApp to delete for everyone.';
+export const EDIT_VOICE_TEXT = 'A voice note can\'t be edited; say "delete that" and I\'ll send a new one.';
 // Kinds that may go in quiet hours: an answer he asked for, and something waiting for his click
 const ALWAYS_SENT: ReadonlySet<WhatsAppNoticeKind> = new Set(['reply', 'approval']);
 
@@ -129,6 +151,9 @@ interface Saved {
   // When his last message came in and Ava's last went out (times only)
   lastInAt: number | null;
   lastOutAt: number | null;
+  // Her own sends, newest last: ids, chats and times only
+  own: { id: string; chatId: string; at: number; kind: 'text' | 'voice' }[];
+  reactedAt: number[];
 }
 
 const EMPTY: Saved = {
@@ -149,6 +174,8 @@ const EMPTY: Saved = {
   connectCode: null,
   lastInAt: null,
   lastOutAt: null,
+  own: [],
+  reactedAt: [],
 };
 
 export interface WhatsAppServiceDeps {
@@ -208,6 +235,8 @@ export class WhatsAppService {
   private awayNoticeSent = false;
   // When the session last became ready: anything dated well before is synced history
   private readyAt: number | null = null;
+  // His recent messages, to quote above an answer: in memory only, gone on a restart (the answer is then unquoted)
+  private readonly quotable = new Map<string, { text: string; voiceSeconds: number | null }>();
 
   constructor(private readonly deps: WhatsAppServiceDeps) {
     this.now = deps.now ?? Date.now;
@@ -363,6 +392,8 @@ export class WhatsAppService {
       this.dropMedia(this.saved.queue.filter(item => !this.isOwnerChat(item.chatId)));
       this.saved.queue = this.saved.queue.filter(item => this.isOwnerChat(item.chatId));
       this.saved.chats = this.saved.chats.filter(item => this.isOwnerChat(item.chatId));
+      this.saved.own = this.saved.own.filter(item => this.isOwnerChat(item.chatId));
+      this.quotable.clear();
       this.save();
     }
     return this.status();
@@ -382,13 +413,14 @@ export class WhatsAppService {
     this.lastPullAt = this.now();
     this.awayNoticeSent = false;
     this.dropExpired();
-    return this.saved.queue.slice(0, PULL_MAX).map(({ id, text, at, kind, media, link }) => ({
+    return this.saved.queue.slice(0, PULL_MAX).map(({ id, text, at, kind, media, link, quotedId }) => ({
       id,
       text,
       at,
       kind: kind ?? 'text',
       media: media ?? null,
       link: link ?? null,
+      quotedId: quotedId ?? null,
     }));
   }
 
@@ -436,24 +468,119 @@ export class WhatsAppService {
   }
 
   /** Sends to the owner: to the chat `replyTo` came from, else the owner's own number, else the self chat. */
-  async send(request: { text: string; kind: WhatsAppNoticeKind; replyTo?: string }): Promise<WhatsAppStatus> {
-    if (
-      !ALWAYS_SENT.has(request.kind) &&
-      inQuietHours(new Date(this.now()), this.saved.quietStart, this.saved.quietEnd)
-    ) {
-      fail('forbidden', 'It is quiet hours: only answers and approvals go out now.');
-    }
-    const chatId = (request.replyTo && this.chatOf(request.replyTo)) || this.defaultChat();
-    if (!chatId) fail('unavailable', 'WhatsApp is not linked on your Mac.');
-    await this.sendTo(chatId, request.text);
+  async send(request: {
+    text: string;
+    kind: WhatsAppNoticeKind;
+    replyTo?: string;
+    quote?: boolean;
+  }): Promise<WhatsAppStatus> {
+    const chatId = this.answerChat(request);
+    await this.sendTo(chatId, request.text, { quote: this.quoteOf(request, chatId) });
+    return this.status();
+  }
+
+  /** A voice note the extension made (Ogg/Opus), to the same chat an answer in words would go to. */
+  async sendVoice(request: Omit<WhatsAppVoiceRequest, 'requestId'>): Promise<WhatsAppStatus> {
+    const chatId = this.answerChat(request);
+    const driver = this.ready(chatId);
+    if (!driver.sendVoice) fail('unavailable', 'This WhatsApp client cannot send voice notes.');
+    const audio = Buffer.from(request.audio, 'base64');
+    if (audio.length > WHATSAPP_VOICE_MAX_BYTES) fail('invalid', 'That voice note is too long to send.');
+    if (!isOggOpus(audio)) fail('invalid', 'A voice note must be Ogg/Opus.');
+    const quote = this.quoteOf(request, chatId);
+    await this.deliver(chatId, 'voice', () =>
+      driver.sendVoice!(chatId, { audio, seconds: request.seconds, waveform: request.waveform }, { quote }),
+    );
     return this.status();
   }
 
   /**
-   * The only way anything is sent. Refuses any chat that is not the owner's, whoever asks, and holds to the
+   * Shows "typing…" or "recording…" in the chat an answer goes to, or stops. Not in the self chat (WhatsApp shows it
+   * to no one there), and never to any chat but his.
+   */
+  async presence(request: WhatsAppPresenceRequest): Promise<WhatsAppStatus> {
+    const chatId = (request.replyTo && this.chatOf(request.replyTo)) || this.defaultChat();
+    if (!chatId || this.isSelfChat(chatId)) return this.status();
+    if (!this.isOwnerChat(chatId)) fail('forbidden', 'Ava only sends WhatsApp messages to you.');
+    const driver = this.driver;
+    if (!driver?.presence || this.state !== 'linked') return this.status();
+    await driver
+      .presence(chatId, request.state)
+      .catch(error => this.deps.log.warn('WhatsApp presence failed', { error: (error as Error).name }));
+    return this.status();
+  }
+
+  /**
+   * A reaction on one of his messages or one of hers (by id), or on her own last message. Only in his chats; at most
+   * REACTIONS_PER_HOUR in any hour.
+   */
+  async react(request: Omit<WhatsAppReactRequest, 'requestId'>): Promise<WhatsAppStatus> {
+    const target = this.refOf(request.messageId);
+    if (!target) fail('not_found', NOTHING_TO_CHANGE_TEXT);
+    if (!this.isOwnerChat(target.chatId)) fail('forbidden', 'Ava only sends WhatsApp messages to you.');
+    const driver = this.driver;
+    if (!driver?.react || this.state !== 'linked') fail('unavailable', 'WhatsApp is not linked on your Mac.');
+    const since = this.now() - HOUR_MS;
+    const recent = this.saved.reactedAt.filter(at => at > since);
+    if (recent.length >= REACTIONS_PER_HOUR) {
+      fail('rate_limit', `Ava has reacted ${REACTIONS_PER_HOUR} times in the last hour.`, {
+        retryAfterMs: recent[0] + HOUR_MS - this.now(),
+      });
+    }
+    await driver.react(target, request.emoji);
+    this.saved.reactedAt = [...recent, this.now()];
+    this.save();
+    return this.status();
+  }
+
+  /**
+   * Her own last message (or the one of hers he quoted) edited, words only and within 15 minutes, or deleted for
+   * everyone, when he says so.
+   */
+  async revise(request: Omit<WhatsAppReviseRequest, 'requestId'>): Promise<WhatsAppStatus> {
+    const last = request.messageId ? this.saved.own.find(item => item.id === request.messageId) : this.saved.own.at(-1);
+    if (!last) fail('not_found', request.messageId ? NOT_MINE_TEXT : NOTHING_TO_CHANGE_TEXT);
+    const driver = this.ready(last.chatId);
+    const ref: WaRef = { chatId: last.chatId, id: last.id, fromMe: true };
+    const age = this.now() - last.at;
+    if (request.action === 'delete') {
+      if (age > DELETE_WINDOW_MS) fail('invalid', DELETE_TOO_LATE_TEXT);
+      if (!driver.remove) fail('unavailable', 'This WhatsApp client cannot delete messages.');
+      await this.deliver(last.chatId, null, async () => {
+        await driver.remove!(ref);
+        return null;
+      });
+      this.saved.own = this.saved.own.filter(item => item.id !== last.id);
+      this.save();
+      return this.status();
+    }
+    if (last.kind !== 'text') fail('invalid', EDIT_VOICE_TEXT);
+    if (age > EDIT_WINDOW_MS) fail('invalid', EDIT_TOO_LATE_TEXT);
+    if (!driver.edit) fail('unavailable', 'This WhatsApp client cannot edit messages.');
+    const body = bodyOf(request.text ?? '');
+    if (!body) fail('invalid', 'There is nothing to send.');
+    this.remember(`text:${hashOf(body)}`);
+    await this.deliver(last.chatId, null, async () => {
+      await driver.edit!(ref, `${body}${OWN_MARK}`);
+      return null;
+    });
+    return this.status();
+  }
+
+  /**
+   * The only way words are sent. Refuses any chat that is not the owner's, whoever asks, and holds to the
    * hourly limit.
    */
-  async sendTo(chatId: string, text: string): Promise<void> {
+  async sendTo(chatId: string, text: string, options: { quote?: WaQuote } = {}): Promise<void> {
+    const driver = this.ready(chatId);
+    const body = bodyOf(text);
+    if (!body) fail('invalid', 'There is nothing to send.');
+    this.remember(`text:${hashOf(body)}`);
+    await this.deliver(chatId, 'text', () => driver.sendText(chatId, `${body}${OWN_MARK}`, options));
+  }
+
+  /** The driver, when a send to this chat may go now: his chat only, linked, and under the hourly limit. */
+  private ready(chatId: string): WaDriver {
     if (!this.isOwnerChat(chatId)) fail('forbidden', 'Ava only sends WhatsApp messages to you.');
     const driver = this.driver;
     if (!driver || this.state !== 'linked') fail('unavailable', 'WhatsApp is not linked on your Mac.');
@@ -462,17 +589,23 @@ export class WhatsAppService {
       const retryAfterMs = recent[0] + HOUR_MS - this.now();
       fail('rate_limit', `Ava has sent ${this.limit} WhatsApp messages in the last hour.`, { retryAfterMs });
     }
-    const body = text
-      .replaceAll(OWN_MARK, '')
-      .trim()
-      .slice(0, WHATSAPP_TEXT_MAX - OWN_MARK.length);
-    if (!body) fail('invalid', 'There is nothing to send.');
-    this.saved.sentAt = [...recent, this.now()];
-    this.remember(`text:${hashOf(body)}`);
+    return driver;
+  }
+
+  /**
+   * Sends one thing that counts toward the hour (checked by `ready` first) and keeps its id as her own, so it is
+   * never taken back as his and "delete that" finds it. `kind` null: an edit or delete, kept as nothing new.
+   */
+  private async deliver(
+    chatId: string,
+    kind: 'text' | 'voice' | null,
+    attempt: () => Promise<string | null>,
+  ): Promise<void> {
+    this.saved.sentAt = [...this.recentSends(), this.now()];
     this.save();
     let id: unknown;
     try {
-      id = await driver.sendText(chatId, `${body}${OWN_MARK}`);
+      id = await attempt();
     } catch (error) {
       // A send that did not go out does not count toward the hour
       this.saved.sentAt = this.saved.sentAt.slice(0, -1);
@@ -492,7 +625,10 @@ export class WhatsAppService {
       throw error;
     }
     this.saved.lastOutAt = this.now();
-    if (id) this.remember(`id:${id}`);
+    if (typeof id === 'string' && id) {
+      this.remember(`id:${id}`);
+      if (kind) this.saved.own = [...this.saved.own, { id, chatId, at: this.now(), kind }].slice(-OWN_MAX);
+    }
     this.save();
   }
 
@@ -549,6 +685,11 @@ export class WhatsAppService {
     this.save();
     const item = await this.itemOf(message, chatId);
     if (!item) return;
+    this.quotable.set(item.id, {
+      text: item.text,
+      voiceSeconds: item.kind === 'voice' ? Math.round(item.media?.seconds ?? 0) : null,
+    });
+    while (this.quotable.size > QUOTABLE_MAX) this.quotable.delete(this.quotable.keys().next().value!);
     this.dropExpired();
     const queue = [...this.saved.queue, item];
     this.dropMedia(queue.slice(0, -QUEUE_MAX));
@@ -567,10 +708,11 @@ export class WhatsAppService {
   private async itemOf(message: WaIncoming, chatId: string): Promise<Queued | null> {
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
     const base = { id: message.id, text, at: this.now(), chatId, media: null, link: null };
+    const quotedId = message.quotedId ?? null;
     if (message.type === 'chat') {
       if (!text) return null;
       const link = message.link ? cleanLink(message.link) : linkInText(text);
-      return { ...base, kind: link ? 'link' : 'text', link };
+      return { ...base, kind: link ? 'link' : 'text', link, quotedId };
     }
     const reply = async (words: string) => {
       await this.sendTo(chatId, words).catch(() => {});
@@ -600,11 +742,11 @@ export class WhatsAppService {
       voiceNote: info?.voiceNote ?? false,
     };
     if (kind === 'document') {
-      return { ...base, kind, media, savedAs: this.keepDocument(bytes, media.name, media.mediaType) };
+      return { ...base, kind, media, quotedId, savedAs: this.keepDocument(bytes, media.name, media.mediaType) };
     }
     privateDir(this.mediaDir);
     writeFileSync(this.mediaFile(message.id), bytes, { mode: 0o600 });
-    return { ...base, kind, media };
+    return { ...base, kind, media, quotedId };
   }
 
   /** Keeps a document he sent in whatsapp/files, under a safe name of its own, and returns where. */
@@ -740,6 +882,40 @@ export class WhatsAppService {
 
   // ── Bookkeeping ──
 
+  /** The chat an answer goes to; outside quiet hours, anything goes, in them only answers and approvals. */
+  private answerChat(request: { kind: WhatsAppNoticeKind; replyTo?: string }): string {
+    if (
+      !ALWAYS_SENT.has(request.kind) &&
+      inQuietHours(new Date(this.now()), this.saved.quietStart, this.saved.quietEnd)
+    ) {
+      fail('forbidden', 'It is quiet hours: only answers and approvals go out now.');
+    }
+    const chatId = (request.replyTo && this.chatOf(request.replyTo)) || this.defaultChat();
+    if (!chatId) fail('unavailable', 'WhatsApp is not linked on your Mac.');
+    return chatId;
+  }
+
+  /** His message to show quoted above an answer, when asked and its words are still in memory. */
+  private quoteOf(request: { replyTo?: string; quote?: boolean }, chatId: string): WaQuote | undefined {
+    if (!request.quote || !request.replyTo) return undefined;
+    const quoted = this.quotable.get(request.replyTo);
+    if (!quoted || this.chatOf(request.replyTo) !== chatId) return undefined;
+    // In the self chat his messages are the account's own
+    return { chatId, id: request.replyTo, fromMe: this.isSelfChat(chatId), ...quoted };
+  }
+
+  /** A message to react to: one of hers or his by id, or her own last one. */
+  private refOf(messageId: string | undefined): WaRef | null {
+    if (!messageId) {
+      const last = this.saved.own.at(-1);
+      return last ? { chatId: last.chatId, id: last.id, fromMe: true } : null;
+    }
+    const own = this.saved.own.find(item => item.id === messageId);
+    if (own) return { chatId: own.chatId, id: own.id, fromMe: true };
+    const chatId = this.chatOf(messageId);
+    return chatId ? { chatId, id: messageId, fromMe: this.isSelfChat(chatId) } : null;
+  }
+
   private defaultChat(): string | null {
     // A chat he wrote from exists for sure; his number's own id may not yet
     const known = this.saved.ownerAliases.at(-1);
@@ -816,6 +992,19 @@ const EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
 };
 const extensionOf = (mediaType: string) => EXTENSIONS[mediaType.split(';')[0].trim()] ?? '';
+
+/** Words to send: her mark taken out (it goes on the end), trimmed, short enough for WhatsApp. */
+function bodyOf(text: string): string {
+  return text
+    .replaceAll(OWN_MARK, '')
+    .trim()
+    .slice(0, WHATSAPP_TEXT_MAX - OWN_MARK.length);
+}
+
+/** An Ogg stream whose first page holds an Opus header: what WhatsApp plays as a voice note. */
+export function isOggOpus(bytes: Buffer): boolean {
+  return bytes.subarray(0, 4).toString('latin1') === 'OggS' && bytes.subarray(0, 80).includes('OpusHead');
+}
 
 /** An error's code and words, whatever shape the driver threw it in. */
 function errorText(error: unknown): string {
