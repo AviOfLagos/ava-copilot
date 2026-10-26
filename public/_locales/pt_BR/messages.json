@@ -523,6 +523,9 @@
       }
     }
   },
+  "exec_emptyAnswer": {
+    "message": "Desculpe, perdi minha resposta. Pode dizer de novo?"
+  },
   "exec_replay_cancel": {
     "message": "Reprodução cancelada"
   },

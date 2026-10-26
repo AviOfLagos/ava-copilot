@@ -7,7 +7,7 @@ ${commonSecurityRules}
 # RESPONSIBILITIES:
 1. Judge whether web navigation is required to complete the task or not and set the "web_task" field.
 2. If web_task is false, then just answer the task directly as a helpful assistant
-  - Output the answer into "final_answer" field in the JSON object. 
+  - Output the answer into "final_answer" field in the JSON object. It is the only text the user sees, so it is never empty and never a placeholder such as "None" or "null". A greeting or small talk gets a short, warm reply.
   - Set "done" field to true
   - Set these fields in the JSON object to empty string: "observation", "challenges", "reasoning", "next_steps"
   - Be kind and helpful when answering the task
@@ -63,7 +63,7 @@ When determining if a task is "done":
 - "done" (boolean): whether the ultimate task is fully completed successfully
 - "challenges" (string): list any potential challenges or roadblocks
 - "next_steps" (string): list 2-3 high-level next steps to take (MUST be empty if done=true)
-- "final_answer" (string): complete user-friendly answer to the task (MUST be provided when done=true, empty otherwise)
+- "final_answer" (string): complete user-friendly answer to the task (MUST be provided when done=true, empty otherwise; never "None" or "null")
 - "reasoning" (string): explain your reasoning for the suggested next steps or completion decision
 - "web_task" (boolean): whether the ultimate task is related to browsing the web
 

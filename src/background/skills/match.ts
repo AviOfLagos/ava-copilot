@@ -68,6 +68,28 @@ export function slashNames(text: string): string[] {
   return [...text.matchAll(/(?:^|\s)\/([a-z0-9][a-z0-9-]*)/gi)].map(match => match[1].toLowerCase());
 }
 
+// Words a greeting, thanks or other small talk is made of; a message of only these needs no skill. Not "ok" or
+// "great": mid-task they mean "go on"
+const SMALL_TALK_WORDS = new Set(
+  (
+    'hi hii hiii hey heya hiya hello helo yo sup gm gn good morning afternoon evening night day ' +
+    'thanks thank thx ty you u so much a lot again bye see later ' +
+    "how how's are r doing it it's going what's whats up there ava lol haha"
+  ).split(' '),
+);
+const SMALL_TALK_MAX_WORDS = 6;
+
+/** Whether a message is only a greeting, thanks or small talk ("Hi", "thanks Ava!", "how are you?"). */
+export function isSmallTalk(text: string): boolean {
+  const words = text
+    .toLowerCase()
+    .replace(/[\u2019`]/g, "'")
+    .replace(/[^\p{L}\p{N}' ]+/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  return words.length > 0 && words.length <= SMALL_TALK_MAX_WORDS && words.every(word => SMALL_TALK_WORDS.has(word));
+}
+
 /**
  * The skills that apply to a step: those the task calls by name, then those whose URL pattern
  * matches the page, then those whose keyword is in the task. At most MAX_SKILLS.

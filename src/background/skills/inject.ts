@@ -4,7 +4,7 @@ import type { AgentContext } from '../agent/types';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import { createLogger } from '../log';
-import { matchSkills, skillsSection } from './match';
+import { isSmallTalk, matchSkills, skillsSection } from './match';
 
 const logger = createLogger('Skills');
 
@@ -14,10 +14,12 @@ const announced = new Map<string, Set<string>>();
 /**
  * The skills section for one step of a task on the page at `url`: matched again every step, so a
  * task that moves to another site picks up that site's skill. Says in the thread when a skill is
- * first used. Never fails a step: without skills the agent still works.
+ * first used. Small talk gets none. Never fails a step: without skills the agent still works.
  */
 export async function skillSectionFor(context: AgentContext, url: string): Promise<string> {
   try {
+    // "Hi" with a Google tab in front is not a task about switching Google accounts
+    if (isSmallTalk(context.tasks.at(-1) ?? '')) return '';
     const task = context.tasks.join('\n');
     const matches = matchSkills(await skillStore.enabled(), { url, task });
     const seen = announced.get(context.taskId) ?? new Set<string>();
