@@ -32,6 +32,9 @@ jobs:
         run: pnpm type-check
       - name: Unit tests
         run: pnpm test
+      # Every failure found so far, replayed through the code (evals/README.md); Suture adds cases under evals/suture
+      - name: Evals
+        run: pnpm eval
       - name: Locales
         run: node scripts/check-locales.mjs
       - name: Build

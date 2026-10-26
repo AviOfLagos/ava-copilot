@@ -1,0 +1,9 @@
+{
+  "kind": "planner",
+  "name": "A WhatsApp voice note never gets \"None\"",
+  "source": { "found": "2026-10-26", "issue": "AviOfLagos/ava-copilot#25", "fixed_in": "AviOfLagos/ava-copilot#28" },
+  "input": "(voice note) Hey Ava, are you there? Can you hear me?",
+  "channel": "whatsapp",
+  "replay": { "planner": ["None"] },
+  "expect": { "answer_not_empty": true, "answer_not": ["None"] }
+}

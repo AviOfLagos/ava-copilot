@@ -85,9 +85,9 @@ describe.skipIf(!MODEL)(
       expect(text.length).toBeLessThan(1200);
     });
 
-    it('"can you reply with voicenote?" says not yet, it is coming', async () => {
+    it('"can you reply with voicenote?" says yes (voice replies shipped in #27)', async () => {
       const text = await answer('can you reply with voicenote?');
-      expect(text).toMatch(/not yet|coming|soon|being built/i);
+      expect(text).not.toMatch(/not yet|coming|soon|being built/i);
       expect(text).not.toMatch(SAYS_TEXT_ONLY);
     });
   },

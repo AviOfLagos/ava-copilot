@@ -1,0 +1,14 @@
+{
+  "kind": "voice",
+  "name": "After a lull, a radio is not answered and \"Ava, …\" is",
+  "source": { "found": "2026-10-26", "issue": "AviOfLagos/ava-copilot#24", "fixed_in": "AviOfLagos/ava-copilot#26" },
+  "heard": [
+    { "say": "hello" },
+    { "wait_ms": 26000 },
+    { "say": "It's eternal. It's a lot of an amazing building." },
+    { "say": "Surprising." },
+    { "say": "Oh, nice day." },
+    { "say": "Ava, what time is it?" }
+  ],
+  "expect": { "turns": ["hello", "Ava, what time is it?"] }
+}

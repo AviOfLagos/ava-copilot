@@ -191,5 +191,6 @@ export async function createExecutor(options: {
     identitySection: buildCoreSection(await loadIdentityContext(thread?.workspaceId)),
     channelSection: buildChannelSection(thread?.origin),
     abilitiesSection: abilitiesSection(),
+    channel: thread?.origin ?? 'user',
   });
 }

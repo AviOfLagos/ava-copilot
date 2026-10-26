@@ -33,6 +33,7 @@
   },
   "include": [
     "src",
+    "evals/**/*.ts",
     "entrypoints",
     "scripts",
     "vite-env.d.ts",

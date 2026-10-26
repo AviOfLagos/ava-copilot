@@ -23,7 +23,8 @@
     "clean:node_modules": "pnpx rimraf node_modules",
     "clean:install": "pnpm clean:node_modules && pnpm install --frozen-lockfile",
     "update-version": "bash update_version.sh",
-    "check:locales": "node scripts/check-locales.mjs"
+    "check:locales": "node scripts/check-locales.mjs",
+    "eval": "vitest run --config evals/vitest.config.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",

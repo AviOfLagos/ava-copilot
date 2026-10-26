@@ -9,9 +9,5 @@ export interface ComingCapability {
 }
 
 export const COMING: ComingCapability[] = [
-  {
-    what: 'Replying with a voice note on WhatsApp, showing "typing…", reacting to and quoting messages (today: replies are text; voice notes the user sends are written down and read)',
-    issue: 19,
-  },
   { what: 'Taking part in WhatsApp groups (answering when mentioned)', issue: 20 },
 ];

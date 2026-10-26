@@ -27,6 +27,7 @@ import type { GeneralSettingsConfig, Personality } from '@extension/storage';
 
 import { ensureBudget } from '../usage/budget';
 import { compactIfNeeded } from '../threads/compaction';
+import { finishTurn, startTurn } from '../telemetry/traces';
 
 const logger = createLogger('Executor');
 
@@ -47,6 +48,8 @@ export interface ExecutorExtraArgs {
   channelSection?: string;
   // What Ava can do and what is coming (prompts/channel.ts#buildAbilitiesSection), for the planner
   abilitiesSection?: string;
+  // Where the chat is (the thread's origin: whatsapp, user, voice…), for the turn's trace
+  channel?: string;
 }
 
 export class Executor {
@@ -59,6 +62,7 @@ export class Executor {
   // Summarizes older steps when a long task nears the model's input limit
   private readonly summarizer: ChatModel;
   private tasks: string[] = [];
+  private readonly channel: string | undefined;
   constructor(
     task: string,
     taskId: string,
@@ -80,6 +84,7 @@ export class Executor {
     );
 
     this.generalSettings = extraArgs?.generalSettings;
+    this.channel = extraArgs?.channel;
     this.tasks.push(task);
     context.tasks = this.tasks;
     const stylePrompt = this.generalSettings?.stylePrompt;
@@ -191,6 +196,9 @@ export class Executor {
     const context = this.context;
     context.nSteps = 0;
     const allowedMaxSteps = this.context.options.maxSteps;
+    // The turn's trace (telemetry/traces.ts): the user's message, every model call, and what they got back
+    startTurn(this.context.taskId, { task: this.tasks[this.tasks.length - 1], channel: this.channel });
+    let outcome: Parameters<typeof finishTurn>[1] = { answer: '', status: 'cancelled' };
 
     try {
       this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_START, this.context.taskId);
@@ -241,9 +249,11 @@ export class Executor {
       if (isCompleted) {
         // Emit final answer if available, otherwise use task ID
         const finalMessage = this.context.finalAnswer || this.context.taskId;
+        outcome = { answer: finalMessage, status: 'ok' };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_OK, finalMessage);
       } else if (step >= allowedMaxSteps) {
         logger.error('❌ Task failed: Max steps reached');
+        outcome = { answer: t('exec_errors_maxStepsReached'), status: 'error', error: 'max steps reached' };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_errors_maxStepsReached'));
       } else if (this.context.stopped) {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
@@ -255,9 +265,11 @@ export class Executor {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
       } else {
         const errorMessage = error instanceof Error ? error.message : String(error);
+        outcome = { answer: t('exec_task_fail', [errorMessage]), status: 'error', error: errorMessage };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_task_fail', [errorMessage]));
       }
     } finally {
+      finishTurn(this.context.taskId, outcome);
       if (import.meta.env.DEV) {
         logger.debug('Executor history', JSON.stringify(this.context.history, null, 2));
       }
