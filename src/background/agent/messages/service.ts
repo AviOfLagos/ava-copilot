@@ -68,9 +68,12 @@ function isTaskMessage(message: ModelMessage): boolean {
   return first?.includes(USER_REQUEST_TAG_START) ?? false;
 }
 
-/** The task's words, then the attached pictures as image parts after a note that they are content only. */
+/**
+ * The task's words, then the note (what the attachments are, and any other content that came with the task, all
+ * marked as content only), then the attached pictures as image parts.
+ */
 function withImages(text: string, media?: TaskImages | null): UserModelMessage {
-  if (!media?.images.length) return userMessage(text);
+  if (!media?.images.length && !media?.note) return userMessage(text);
   return userMessage([
     textPart(text),
     textPart(media.note),

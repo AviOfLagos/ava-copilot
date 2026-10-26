@@ -62,8 +62,10 @@ export const TEXT_ONLY_TEXT = 'I can only read words, voice notes, photos, docum
 export const NOT_YET_TEXT: Record<string, string> = {
   video: "I got your video, but I can't watch videos yet. Tell me in words what you need, or send a photo.",
   sticker: 'I got your sticker. I can only read words, voice notes, photos, documents and links for now.',
-  location: "I got your location, but I can't use locations yet. Type the address if you want me to do something with it.",
-  contact: "I got the contact, but I can't read contact cards yet. Type the name and number if you want me to use them.",
+  location:
+    "I got your location, but I can't use locations yet. Type the address if you want me to do something with it.",
+  contact:
+    "I got the contact, but I can't read contact cards yet. Type the name and number if you want me to use them.",
 };
 export const DOWNLOAD_FAILED_TEXT = "I couldn't download that from WhatsApp. Try sending it again.";
 const NOUNS: Record<WhatsAppMediaKind, string> = { voice: 'voice note', image: 'photo', document: 'file' };
@@ -380,16 +382,14 @@ export class WhatsAppService {
     this.lastPullAt = this.now();
     this.awayNoticeSent = false;
     this.dropExpired();
-    return this.saved.queue
-      .slice(0, PULL_MAX)
-      .map(({ id, text, at, kind, media, link }) => ({
-        id,
-        text,
-        at,
-        kind: kind ?? 'text',
-        media: media ?? null,
-        link: link ?? null,
-      }));
+    return this.saved.queue.slice(0, PULL_MAX).map(({ id, text, at, kind, media, link }) => ({
+      id,
+      text,
+      at,
+      kind: kind ?? 'text',
+      media: media ?? null,
+      link: link ?? null,
+    }));
   }
 
   /**
@@ -405,7 +405,15 @@ export class WhatsAppService {
       const read = await documentText(item.savedAs, name, mediaType, { run: this.deps.run ?? runProcess }).catch(
         () => ({ text: null, truncated: false }),
       );
-      return { ok: true, mediaType, size, data: null, text: read.text, truncated: read.truncated, savedAs: item.savedAs };
+      return {
+        ok: true,
+        mediaType,
+        size,
+        data: null,
+        text: read.text,
+        truncated: read.truncated,
+        savedAs: item.savedAs,
+      };
     }
     if (item.kind === 'document') fail('invalid', 'A document is read as text.');
     const bytes = await readFile(this.mediaFile(item.id)).catch(() => null);
@@ -604,7 +612,11 @@ export class WhatsAppService {
     privateDir(this.filesDir);
     const day = new Date(this.now()).toISOString().slice(0, 10);
     const fallback = `document${extensionOf(mediaType)}`;
-    const safe = (name ?? fallback).replace(/[/\\:\u0000-\u001f]/g, '_').replace(/^\.+/, '').slice(-120) || fallback;
+    const safe =
+      (name ?? fallback)
+        .replace(/[/\\:\u0000-\u001f]/g, '_')
+        .replace(/^\.+/, '')
+        .slice(-120) || fallback;
     let path = join(this.filesDir, `${day} ${safe}`);
     for (let n = 2; existsSync(path); n++) path = join(this.filesDir, `${day} (${n}) ${safe}`);
     writeFileSync(path, bytes, { mode: 0o600 });

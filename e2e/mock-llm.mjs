@@ -121,6 +121,8 @@ export async function startMockLlm(scenarios) {
     images: [],
     // Per navigator call: image parts in the messages before the page state (pictures the user attached)
     attachedImages: [],
+    // Per navigator call: image parts anywhere in the request (a follow-up's task and page state can share a message)
+    allImages: [],
     errors: [],
     failures: [],
   });
@@ -282,6 +284,11 @@ export async function startMockLlm(scenarios) {
           const state = textOf(last);
           run.navigatorCalls.push(state);
           run.images.push(Array.isArray(last.content) && last.content.some(part => part.type === 'image_url'));
+          run.allImages.push(
+            request.messages
+              .flatMap(message => (Array.isArray(message.content) ? message.content : []))
+              .filter(part => part.type === 'image_url').length,
+          );
           run.attachedImages.push(
             request.messages
               .slice(0, -1)

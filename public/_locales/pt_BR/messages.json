@@ -10107,5 +10107,80 @@
         "example": "2 min ago"
       }
     }
+  },
+  "wava_voice_label": {
+    "message": "(mensagem de voz)"
+  },
+  "wava_voice_failed": {
+    "message": "Não consegui transcrever sua mensagem de voz: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The local speech model is not installed."
+      }
+    }
+  },
+  "wava_voice_empty": {
+    "message": "Não consegui entender nenhuma palavra na sua mensagem de voz. Tente de novo ou digite."
+  },
+  "wava_image_failed": {
+    "message": "Não consegui abrir sua foto: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "The local speech model is not installed."
+      }
+    }
+  },
+  "wava_doc_label": {
+    "message": "(documento: $NAME$)",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "report.pdf"
+      }
+    }
+  },
+  "wava_doc_saved": {
+    "message": "Recebi $NAME$ ($SIZE$). Está salvo na sua base de conhecimento.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "report.pdf"
+      },
+      "size": {
+        "content": "$2",
+        "example": "1.2 MB"
+      }
+    }
+  },
+  "wava_doc_unreadable": {
+    "message": "Recebi $NAME$ ($SIZE$) e guardei no seu Mac, mas ainda não consigo ler esse tipo de arquivo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "report.pdf"
+      },
+      "size": {
+        "content": "$2",
+        "example": "1.2 MB"
+      }
+    }
+  },
+  "wava_doc_failed": {
+    "message": "Não consegui salvar $NAME$: $ERROR$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "report.pdf"
+      },
+      "error": {
+        "content": "$2",
+        "example": "Ava Brain is not running."
+      }
+    }
+  },
+  "wava_doc_untitled": {
+    "message": "seu documento"
   }
 }

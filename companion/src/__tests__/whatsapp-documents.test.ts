@@ -81,9 +81,9 @@ describe('reading a WhatsApp document on the Mac', () => {
       text: null,
       truncated: false,
     });
-    await expect(
-      documentText(path, 'x.pdf', null, { run: async () => ({ ...ok(''), code: 1 }) }),
-    ).rejects.toThrow(/could not be read/);
+    await expect(documentText(path, 'x.pdf', null, { run: async () => ({ ...ok(''), code: 1 }) })).rejects.toThrow(
+      /could not be read/,
+    );
     dir.remove();
   });
 

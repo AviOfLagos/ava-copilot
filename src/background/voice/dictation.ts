@@ -99,6 +99,28 @@ export async function transcribeSpeech(audio: string, mediaType = 'audio/webm', 
   }
 }
 
+/**
+ * Writes down a recording on this computer first (a WhatsApp voice note): with Gemini only when no local recogniser
+ * is installed and Gemini's speech-to-text is set up.
+ */
+export async function transcribeLocalFirst(audio: string, mediaType: string, deps = browserDeps): Promise<string> {
+  const base64 = audio.startsWith('data:') ? audio.split(',')[1] : audio;
+  writing++;
+  try {
+    try {
+      return await deps.local(base64);
+    } catch (error) {
+      if (isChannelError(error)) return await deps.local(base64);
+      if (error instanceof AppError && error.kind === 'not_found' && (await deps.geminiReady())) {
+        return await deps.gemini(base64, mediaType);
+      }
+      throw error;
+    }
+  } finally {
+    writing--;
+  }
+}
+
 // The panel connection dictating now; its closing gives the microphone back
 let holder: unknown = null;
 

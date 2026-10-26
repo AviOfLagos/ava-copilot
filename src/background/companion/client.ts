@@ -48,6 +48,7 @@ import {
   workflowSyncReplySchema,
   WHATSAPP_ROUTES,
   whatsappInboxReplySchema,
+  whatsappMediaReplySchema,
   whatsappSendReplySchema,
   whatsappStatusReplySchema,
 } from '@src/shared/lib/protocol/companion';
@@ -67,6 +68,7 @@ import type {
   MeetSayRequest,
   ObsidianWriteRequest,
   WhatsAppQuietRequest,
+  WhatsAppMediaRequest,
   WhatsAppSendRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
@@ -743,6 +745,19 @@ export class CompanionClient {
       schema: okReplySchema,
       idempotent: true,
       timeoutMs: 8000,
+    });
+  }
+
+  /** A queued message's voice note or photo (base64), or a document's text read on the Mac. */
+  whatsappMedia(request: WhatsAppMediaRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.media,
+      body: request,
+      schema: whatsappMediaReplySchema,
+      idempotent: true,
+      // A document is read on the Mac first
+      timeoutMs: 60_000,
     });
   }
 

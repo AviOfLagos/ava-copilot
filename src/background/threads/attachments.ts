@@ -167,6 +167,13 @@ export async function mediaOf(attachments: MessageAttachment[] | undefined): Pro
   return { images, note };
 }
 
+/** What the model is given with a task: the attachments' images and note, plus any other content that came with it. */
+export function withContext(media: TaskMedia | null, context: string | undefined): TaskMedia | null {
+  const extra = context?.trim();
+  if (!extra) return media;
+  return { images: media?.images ?? [], note: [media?.note, extra].filter(Boolean).join('\n\n') };
+}
+
 /** Whether a model can look at images: what its provider said about it, else a guess from its name. */
 export async function canSeeImages(config: ModelConfig): Promise<boolean> {
   const entry = await db.modelCatalog.get(`${config.provider}:${config.modelName}`).catch(() => undefined);

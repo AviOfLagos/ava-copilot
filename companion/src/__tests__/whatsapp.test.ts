@@ -632,14 +632,24 @@ describe('Ava on WhatsApp: voice notes, photos, documents and links', () => {
         link: null,
       },
     ]);
-    expect((await service.media({ id: 'p1', as: 'bytes' })).data).toBe(Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64'));
+    expect((await service.media({ id: 'p1', as: 'bytes' })).data).toBe(
+      Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64'),
+    );
   });
 
   it('keeps a document on the Mac under a safe name, reads its text there, and logs neither', async () => {
     const calls: { command: string; args: string[] }[] = [];
     const run: ProcessRunner = async (command, args) => {
       calls.push({ command, args });
-      return { code: 0, stdout: 'Page 2 says the inverter is 5 kVA.', stderr: '', timedOut: false, cancelled: false, truncated: false, durationMs: 1 };
+      return {
+        code: 0,
+        stdout: 'Page 2 says the inverter is 5 kVA.',
+        stderr: '',
+        timedOut: false,
+        cancelled: false,
+        truncated: false,
+        durationMs: 1,
+      };
     };
     const { driver, service, dir, log } = await linked({ run });
     driver.deliver({
@@ -702,7 +712,10 @@ describe('Ava on WhatsApp: voice notes, photos, documents and links', () => {
     await tick();
     expect(downloads).toBe(0);
     expect(service.pull()).toEqual([]);
-    expect(driver.sent.map(item => item.text)).toEqual([tooBigText('document', 40 * 1024 * 1024), DOWNLOAD_FAILED_TEXT]);
+    expect(driver.sent.map(item => item.text)).toEqual([
+      tooBigText('document', 40 * 1024 * 1024),
+      DOWNLOAD_FAILED_TEXT,
+    ]);
     expect(tooBigText('document', 40 * 1024 * 1024)).toBe('That file is 40 MB; I can take up to 25 MB.');
   });
 

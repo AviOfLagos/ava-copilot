@@ -39,8 +39,7 @@ export function readerFor(name: string | null, mediaType: string | null): string
     return 'xlsx';
   if (extension === '.pptx' || type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation')
     return 'pptx';
-  if (TEXTUTIL.has(extension) || type === 'application/msword' || type.includes('wordprocessingml'))
-    return 'textutil';
+  if (TEXTUTIL.has(extension) || type === 'application/msword' || type.includes('wordprocessingml')) return 'textutil';
   if (PLAIN.has(extension) || PLAIN_TYPES.test(type)) return 'plain';
   return null;
 }
@@ -120,7 +119,8 @@ export async function documentText(
         : [];
       const sheets = parts.filter(part => /^xl\/worksheets\/sheet\d+\.xml$/.test(part)).sort(byNumber);
       const out: string[] = [];
-      for (const [index, sheet] of sheets.entries()) out.push(`Sheet ${index + 1}\n${sheetText(await unzip(sheet), shared)}`);
+      for (const [index, sheet] of sheets.entries())
+        out.push(`Sheet ${index + 1}\n${sheetText(await unzip(sheet), shared)}`);
       text = out.join('\n\n');
     } else {
       const slides = parts.filter(part => /^ppt\/slides\/slide\d+\.xml$/.test(part)).sort(byNumber);
@@ -130,7 +130,10 @@ export async function documentText(
       text = out.join('\n\n');
     }
   }
-  const clean = text.replace(/\r\n?/g, '\n').replace(/\u0000/g, '').trim();
+  const clean = text
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u0000/g, '')
+    .trim();
   return {
     text: clean.slice(0, WHATSAPP_DOCUMENT_TEXT_MAX),
     truncated: clean.length > WHATSAPP_DOCUMENT_TEXT_MAX,
