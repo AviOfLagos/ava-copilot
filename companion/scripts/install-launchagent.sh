@@ -86,8 +86,24 @@ cat > "$PLIST" <<PLIST
 PLIST
 chmod 600 "$PLIST"
 
-launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "$PLIST"
+# bootout returns before the old job is gone, and a bootstrap then fails with "5: Input/output error" and
+# leaves Ava Brain stopped: wait for it to go (up to 10 s), and try the bootstrap a few times
+DOMAIN="gui/$(id -u)"
+launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+tries=0
+while launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 && [ "$tries" -lt 20 ]; do
+  sleep 0.5
+  tries=$((tries + 1))
+done
+tries=0
+until launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 5 ]; then
+    echo "Could not start Ava Brain. Try: launchctl bootstrap $DOMAIN \"$PLIST\""
+    exit 1
+  fi
+  sleep 1
+done
 echo "Installed: Ava Brain starts at login and on 127.0.0.1 only ($PLIST)."
 echo "Logs: $LOGS/brain.log"
 if [ -n "$PROGRAM" ]; then
