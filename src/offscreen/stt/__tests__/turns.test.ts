@@ -34,17 +34,21 @@ const OPTIONS: EconomyOptions = {
   assistantName: 'Ava',
 };
 
-let skew = 0;
+// The session's clock: it starts at 0 and moves only with the audio fed in (and when a test jumps it), so no
+// test depends on how fast the machine runs
+let clock = 0;
 afterEach(() => {
   vi.restoreAllMocks();
-  skew = 0;
+  clock = 0;
 });
 
 function setup(whoSpoke?: (audio: Float32Array) => Promise<SpeakerLabel>) {
-  // The clock the lull is measured on, movable by the test
-  const realNow = performance.now.bind(performance);
-  vi.spyOn(performance, 'now').mockImplementation(() => realNow() + skew);
-  let mic: (samples: Float32Array) => void = () => {};
+  vi.spyOn(performance, 'now').mockImplementation(() => clock);
+  let onChunk: (samples: Float32Array) => void = () => {};
+  const mic = (samples: Float32Array) => {
+    clock += (samples.length / 16_000) * 1000;
+    onChunk(samples);
+  };
   const words: string[] = [];
   const stt: SttEngine = {
     load: vi.fn(async () => ({ device: 'wasm' as const, ms: 1 })),
@@ -53,8 +57,8 @@ function setup(whoSpoke?: (audio: Float32Array) => Promise<SpeakerLabel>) {
   };
   let finishSpeaking: () => void = () => {};
   const deps = {
-    openMic: vi.fn(async (onChunk: (samples: Float32Array) => void) => {
-      mic = onChunk;
+    openMic: vi.fn(async (chunks: (samples: Float32Array) => void) => {
+      onChunk = chunks;
       return () => {};
     }),
     loadStt: vi.fn(async () => stt),
@@ -160,6 +164,16 @@ describe('end of turn', () => {
   });
 });
 
+describe('a fresh document', () => {
+  it('hears the first words at once, though its clock is still near 0 (no echo tail before the copilot spoke)', async () => {
+    const t = setup();
+    await t.session.start();
+    // A single quarter second of speech: over the copilot's voice it would not open the gate
+    await t.say('stop', { chunks: 1 });
+    await vi.waitFor(() => expect(asked(t)).toEqual(['stop']));
+  });
+});
+
 describe('words not meant for the copilot', () => {
   it('after a lull, ignores a radio and answers the user calling Ava by name (issue #24)', async () => {
     const t = setup();
@@ -169,8 +183,8 @@ describe('words not meant for the copilot', () => {
     t.finish();
     await new Promise(resolve => setTimeout(resolve, 0));
     // Past the echo tail of her voice
-    skew += 400;
-    skew += LULL_MS + 1_000;
+    clock += 400;
+    clock += LULL_MS + 1_000;
     await t.say("It's eternal. It's a lot of an amazing building.");
     await t.say('Surprising.');
     await t.say('Oh, nice day.');
@@ -188,7 +202,7 @@ describe('words not meant for the copilot', () => {
     t.finish();
     await new Promise(resolve => setTimeout(resolve, 0));
     // Past the echo tail of her voice
-    skew += 400;
+    clock += 400;
     await t.say('Oh, nice day.', { amplitude: FAR });
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(asked(t)).toEqual(['what is the weather']);
@@ -199,13 +213,13 @@ describe('words not meant for the copilot', () => {
   it('answers soon after the copilot spoke without the name, however long the user was quiet before', async () => {
     const t = setup();
     await t.session.start();
-    skew += LULL_MS + 1_000;
+    clock += LULL_MS + 1_000;
     t.session.say('"Inbox" is done.');
     await vi.waitFor(() => expect(t.deps.speak).toHaveBeenCalledTimes(1));
     t.finish();
     await new Promise(resolve => setTimeout(resolve, 0));
     // Past the echo tail of her voice
-    skew += 400;
+    clock += 400;
     await t.say('great, what did it find?');
     await vi.waitFor(() => expect(asked(t)).toContain('great, what did it find?'));
   });

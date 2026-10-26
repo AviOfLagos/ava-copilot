@@ -111,8 +111,10 @@ export class EconomySession {
   private bargeSamples = 0;
   // Bumped when the user talks over an answer: an answer still on its way is not spoken
   private interruptions = 0;
-  // When the answer's voice last stopped, for its echo tail
-  private spokeUntil = 0;
+  // When the answer's voice last stopped, for its echo tail. Never, at first: 0 would put the first 300 ms of a
+  // fresh document (performance.now() starts near 0) in an echo tail, and the user's first words would need to be
+  // as loud as talking over the copilot
+  private spokeUntil = Number.NEGATIVE_INFINITY;
   // The utterance being collected was heard over the answer, and whether it stopped the answer: one that did
   // not is the answer's own echo (or noise under it), never a turn
   private overPlayback = false;
