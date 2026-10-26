@@ -12,6 +12,8 @@ import type { SttEngine } from '../engines';
 const CHUNK = 4096;
 const speech = () => Float32Array.from({ length: CHUNK }, (_, i) => 0.2 * Math.sin(i / 3));
 const quiet = () => new Float32Array(CHUNK);
+// Chunks of quiet that end an utterance: past the 1.2 s hangover
+const PAUSE = 5;
 const never = <T>() => new Promise<T>(() => {});
 
 const OPTIONS: EconomyOptions = {
@@ -43,7 +45,7 @@ function setup(stt: SttEngine, ask: (request: EconomyTurnRequest) => Promise<Eco
   const session = new EconomySession(OPTIONS, events, deps);
   const say = () => {
     for (let i = 0; i < 4; i++) mic(speech());
-    for (let i = 0; i < 4; i++) mic(quiet());
+    for (let i = 0; i < PAUSE; i++) mic(quiet());
   };
   return { session, deps, events, say, finish: () => finishSpeaking() };
 }

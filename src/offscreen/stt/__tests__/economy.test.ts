@@ -8,6 +8,8 @@ import type { SttEngine } from '../engines';
 const CHUNK = 4096;
 const speech = () => Float32Array.from({ length: CHUNK }, (_, i) => 0.2 * Math.sin(i / 3));
 const quiet = () => new Float32Array(CHUNK);
+// Chunks of quiet that end an utterance: past the 1.2 s hangover
+const PAUSE = 5;
 
 const OPTIONS: EconomyOptions = {
   mode: 'economy',
@@ -55,7 +57,7 @@ function setup(
   const say = (words: string, chunks = 4) => {
     heard.push(words);
     for (let i = 0; i < chunks; i++) mic(speech());
-    for (let i = 0; i < 4; i++) mic(quiet());
+    for (let i = 0; i < PAUSE; i++) mic(quiet());
   };
   const statuses = () => events.onStatus.mock.calls.map(call => call[0]);
   return {
@@ -177,7 +179,7 @@ describe('EconomySession', () => {
     const t = setup(() => ({ said: 'Nothing today.' }));
     const session = new EconomySession({ ...OPTIONS, preroll: [speech(), speech(), speech()] }, t.events, t.deps);
     await session.start();
-    for (let i = 0; i < 4; i++) t.mic(quiet());
+    for (let i = 0; i < PAUSE; i++) t.mic(quiet());
     await vi.waitFor(() => expect(t.stt.transcribe).toHaveBeenCalledTimes(1));
     expect((t.stt.transcribe as ReturnType<typeof vi.fn>).mock.calls[0][0].length).toBeGreaterThanOrEqual(3 * CHUNK);
   });
@@ -220,7 +222,7 @@ describe('EconomySession', () => {
     // A louder burst opens it but stops before it is a barge-in: an echo peak, not the user
     t.mic(speech());
     t.mic(speech());
-    for (let i = 0; i < 4; i++) t.mic(quiet());
+    for (let i = 0; i < PAUSE; i++) t.mic(quiet());
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(t.stt.transcribe).toHaveBeenCalledTimes(transcribed);
     expect(t.deps.stopSpeaking).not.toHaveBeenCalled();
@@ -244,7 +246,7 @@ describe('EconomySession', () => {
     await t.session.start();
     t.session.holdMic(true);
     for (let i = 0; i < 6; i++) t.mic(speech());
-    for (let i = 0; i < 4; i++) t.mic(quiet());
+    for (let i = 0; i < PAUSE; i++) t.mic(quiet());
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(t.stt.transcribe).not.toHaveBeenCalled();
     // Typed turns still work while held

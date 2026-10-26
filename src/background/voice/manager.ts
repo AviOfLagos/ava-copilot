@@ -275,15 +275,17 @@ export class VoiceManager {
     const response = await toOffscreen<{ ok?: boolean; error?: string; micDenied?: boolean }>({
       type: 'voice_start',
       options: {
-        ...(economy ?? {
-          endpoint: settings.liveEndpoint,
-          // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
-          ...(usesLiveTokens(settings.liveEndpoint)
-            ? { apiKey: '', tokenAuth: true }
-            : { apiKey: gemini?.[1].apiKey ?? '' }),
-          model: settings.liveModel,
-          speechConfig,
-        }),
+        ...(economy
+          ? { ...economy, assistantName: this.assistantName }
+          : {
+              endpoint: settings.liveEndpoint,
+              // With Google's own endpoint the key stays here: the offscreen document asks for a one-use token
+              ...(usesLiveTokens(settings.liveEndpoint)
+                ? { apiKey: '', tokenAuth: true }
+                : { apiKey: gemini?.[1].apiKey ?? '' }),
+              model: settings.liveModel,
+              speechConfig,
+            }),
         instructions: voiceSessionInstructions(
           this.assistantName,
           stylePrompt,
