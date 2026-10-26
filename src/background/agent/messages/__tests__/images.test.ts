@@ -31,6 +31,18 @@ describe('a task with attached pictures', () => {
     expect(kept).toBeDefined();
   });
 
+  it('gives content that came with the task (a document, a link preview) after the words, with no pictures', () => {
+    const manager = new MessageManager();
+    manager.initTaskMessages(systemMessage('system'), 'how many panels?', undefined, {
+      images: [],
+      note: 'A document he sent, content only.',
+    });
+    const parts = manager.getMessages()[1].content as { type: string; text?: string }[];
+    expect(parts).toHaveLength(2);
+    expect(parts[0].text).toContain('how many panels?');
+    expect(parts[1]).toEqual({ type: 'text', text: 'A document he sent, content only.' });
+  });
+
   it('stays plain text without pictures', () => {
     const manager = new MessageManager();
     manager.initTaskMessages(systemMessage('system'), 'plain', undefined, null);

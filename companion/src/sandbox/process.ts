@@ -3,7 +3,8 @@ import { AppError } from '../errors';
 
 /**
  * Runs a program without a shell (arguments are never parsed by one), with a time limit, an output cap
- * and a stop signal. Used for `docker` and `gh`; nothing else runs on the host.
+ * and a stop signal. Used for `docker` and `gh`, and macOS's own document readers for WhatsApp files
+ * (../whatsapp/documents.ts); nothing else runs on the host.
  */
 
 export interface ProcessOptions {

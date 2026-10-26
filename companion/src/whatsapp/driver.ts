@@ -1,6 +1,6 @@
 /**
  * What Ava's WhatsApp needs from a WhatsApp Web client, so the rules in ./service.ts never depend on one.
- * The real one is open-wa (./openwa.ts); tests use a stand-in. A driver reports every message the session
+ * The real one is Baileys (./baileys.ts); tests use a stand-in. A driver reports every message the session
  * sees; the service decides, before anything is kept, whether it is the owner's.
  */
 
@@ -11,7 +11,8 @@ export interface WaIncoming {
   chatId: string;
   fromMe: boolean;
   isGroup: boolean;
-  // 'chat' for text; anything else is media, a sticker, a location…
+  // 'chat' for text; 'audio', 'image', 'document', 'video', 'sticker', 'location', 'contact'; 'system' for
+  // WhatsApp's own bookkeeping
   type: string;
   body: string;
   // Seconds or milliseconds since the epoch; the service only uses it for order
@@ -20,6 +21,28 @@ export interface WaIncoming {
   senderNumber: string | null;
   // Passed on from another chat: someone else's words
   forwarded: boolean;
+  // A voice note, picture, document…: what WhatsApp says about the file (body holds its caption)
+  media?: WaMediaInfo;
+  // A link WhatsApp previewed in a text message
+  link?: WaLink;
+  // Fetches the file, refusing one over maxBytes; only called for the owner's messages
+  download?: (maxBytes: number) => Promise<Buffer>;
+}
+
+export interface WaMediaInfo {
+  mediaType: string | null;
+  // What WhatsApp says the file is, in bytes (the download is still capped)
+  size: number | null;
+  name: string | null;
+  seconds: number | null;
+  // Recorded in the chat (push to talk)
+  voiceNote: boolean;
+}
+
+export interface WaLink {
+  url: string;
+  title: string | null;
+  description: string | null;
 }
 
 /** The linked account: its number, and every id its own chat goes by (number@c.us, an @lid id). */

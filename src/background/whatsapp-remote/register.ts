@@ -11,10 +11,12 @@ import { companionClient } from '../companion/client';
 import { brainSettingsStore } from '../companion/state';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
+import { transcribeLocalFirst } from '../voice/dictation';
 import { registerNoticeSink } from '../notices';
 import { registerCommand, registerRecovery } from '../registry';
 import { services } from '../registry/services';
 import { WhatsAppBridge } from './bridge';
+import { photoAttachment } from './media';
 import { HHMM, whatsappRemoteSettingsStore, whatsappRemoteStateStore } from './state';
 
 const logger = createLogger('WhatsAppRemote');
@@ -60,8 +62,20 @@ export const whatsappBridge = new WhatsAppBridge({
   createThread: fields => threadStore.create(fields),
   messages: id => threadStore.messages(id),
   ensureTab,
-  startTurn: async (threadId, text) => {
-    await services().threads.send({ threadId, text, origin: 'whatsapp' });
+  startTurn: async (threadId, turn) => {
+    await services().threads.send({
+      threadId,
+      text: turn.text,
+      origin: 'whatsapp',
+      attachments: turn.attachments,
+      context: turn.context,
+    });
+  },
+  media: request => companionClient.whatsappMedia(request),
+  transcribe: (base64, mediaType) => transcribeLocalFirst(base64, mediaType),
+  toAttachment: photo => photoAttachment(photo),
+  saveDocument: async doc => {
+    await services().kb.saveDocument(doc);
   },
   getState: () => whatsappRemoteStateStore.getState(),
   updateState: changes => whatsappRemoteStateStore.update(changes),

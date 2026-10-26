@@ -36,6 +36,8 @@ export interface WhatsAppRemoteState {
   repliedSeq: Record<string, number>;
   // The pending request he was already told about while a new message waited
   waitingTold: string | null;
+  // Documents he sent lately, saved in the knowledge base: a later "that document" means one of these
+  recentDocuments: { id: string; title: string; at: number }[];
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
@@ -46,6 +48,7 @@ export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
   replyTo: null,
   repliedSeq: {},
   waitingTold: null,
+  recentDocuments: [],
 };
 
 const settingsStorage = createStorage<WhatsAppRemoteSettings>(

@@ -20,8 +20,10 @@ const {
   isChannelError,
   releaseDictation,
   sttErrorMessage,
+  transcribeLocalFirst,
   transcribeSpeech,
 } = await import('../dictation');
+const { AppError } = await import('@extension/shared');
 const { registerOffscreenBusy } = await import('../../registry');
 // Registered when the module loads, before any test clears the mocks
 const busyChecks = vi.mocked(registerOffscreenBusy).mock.calls.map(call => [...call]);
@@ -105,6 +107,35 @@ describe('dictation: writing the words down', () => {
     expect(
       hasGeminiSpeechToText({ provider: 'o', modelName: 'm' }, { o: { type: 'openai', apiKey: 'k' } as never }),
     ).toBe(false);
+  });
+});
+
+describe('a WhatsApp voice note: written down on this computer first', () => {
+  const deps = () => ({
+    geminiReady: vi.fn(async () => true),
+    gemini: vi.fn(async () => 'from gemini'),
+    local: vi.fn(async () => 'from this computer'),
+  });
+
+  it('uses the local recogniser even when Gemini is set up', async () => {
+    const d = deps();
+    expect(await transcribeLocalFirst('data:audio/ogg;base64,T2dn', 'audio/ogg', d)).toBe('from this computer');
+    expect(d.local).toHaveBeenCalledWith('T2dn');
+    expect(d.gemini).not.toHaveBeenCalled();
+  });
+
+  it('falls back to Gemini only when no local recogniser is installed', async () => {
+    const d = deps();
+    d.local.mockRejectedValue(new AppError('not_found', 'voice_engine_dictation_missing'));
+    expect(await transcribeLocalFirst('T2dn', 'audio/ogg; codecs=opus', d)).toBe('from gemini');
+    expect(d.gemini).toHaveBeenCalledWith('T2dn', 'audio/ogg; codecs=opus');
+    d.geminiReady.mockResolvedValue(false);
+    await expect(transcribeLocalFirst('T2dn', 'audio/ogg', d)).rejects.toThrow('voice_engine_dictation_missing');
+    // A recogniser that failed on the recording is not a reason to send it elsewhere
+    const broken = deps();
+    broken.local.mockRejectedValue(new Error('could not decode'));
+    await expect(transcribeLocalFirst('T2dn', 'audio/ogg', broken)).rejects.toThrow('could not decode');
+    expect(broken.gemini).not.toHaveBeenCalled();
   });
 });
 

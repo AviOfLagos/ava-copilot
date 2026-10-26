@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
-import { AttachmentError, mediaOf, prepareAttachments } from '../attachments';
+import { AttachmentError, mediaOf, prepareAttachments, withContext } from '../attachments';
 
 const PNG = btoa('png-bytes');
 const JPG = btoa('jpeg-bytes');
@@ -82,5 +82,18 @@ describe('attachments sent with a message', () => {
     expect(media?.images).toEqual([{ mediaType: 'image/png', data: PNG }]);
     expect(media?.note).toContain('Image 1: "shot.png"');
     expect(await mediaOf([])).toBeNull();
+  });
+});
+
+describe('content that comes with a task', () => {
+  it('joins the attachments’ note and the content, or stands alone, or changes nothing', () => {
+    const images = [{ mediaType: 'image/png', data: 'AAAA' }];
+    expect(withContext({ images, note: 'A picture.' }, 'A document.')).toEqual({
+      images,
+      note: 'A picture.\n\nA document.',
+    });
+    expect(withContext(null, 'A link preview.')).toEqual({ images: [], note: 'A link preview.' });
+    expect(withContext(null, '  ')).toBeNull();
+    expect(withContext({ images, note: 'A picture.' }, undefined)).toEqual({ images, note: 'A picture.' });
   });
 });

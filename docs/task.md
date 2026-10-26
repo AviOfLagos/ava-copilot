@@ -2249,6 +2249,24 @@ queue/ack and reply routing, @lid rule, media, browser closed, hourly limit, unl
 approvals in quiet hours, toggles, meeting notes, origins), `side-panel/whatsapp-remote/__tests__/qr.test.ts`,
 `say.test.ts` (WhatsApp refused).
 
+**More than text (#18, 2026-10-26).** Baileys gives each message's file details, caption and link preview; the
+service downloads a file only for the owner's own, typed (not forwarded) messages, capped per kind
+(`WHATSAPP_MEDIA_MAX_BYTES`: voice 16 MB, photo 10 MB, document 25 MB, refused before download when WhatsApp's own
+size says so). A voice note's or photo's file waits in `<data>/whatsapp/media` (hashed name, 0600) until the ack; a
+document is kept in `<data>/whatsapp/files` (1 GB in all, oldest go) and read on the Mac by `whatsapp/documents.ts`
+(PDFKit through `osascript`, `textutil`, `unzip` for xlsx/pptx; path always an argument, time limit, output cap).
+`POST /v1/whatsapp/media` gives a queued message's bytes or a document's text to the paired extension only. Video,
+stickers, locations and contacts get a plain answer and nothing is kept. In the extension, `bridge.turnOf` makes one
+turn: a voice note written down on this computer (`transcribeLocalFirst`: Moonshine/Whisper, Gemini only when no
+local model is installed) as "(voice note) …"; a photo as a chat attachment (`whatsapp-remote/media.ts`), its caption
+the question; a document saved to the knowledge base in the chat's workspace with "Got Quote (PDF) (1.2 MB)…" sent
+back, its text going with a question as content only; a link as his words plus its preview as content, with the
+instruction to open it and `read_page_text`. Content rides in `ThreadManager.send({ context })`, which the model reads
+after the words (`withContext`) and the chat does not show. File names said back on WhatsApp go through
+`plainOutside` as "Quote (PDF)". Tests: companion `whatsapp.test.ts`, `whatsapp-baileys.test.ts`,
+`whatsapp-documents.test.ts`; extension `bridge.test.ts`, `media.test.ts`, `dictation.test.ts`; e2e
+`whatsapp-media.e2e.mjs` (the voice-note eval: a real recording through the local recogniser, skipped without one).
+
 ### Memory and settings survive an uninstall (2026-10-21)
 
 Uninstalling wipes IndexedDB, `chrome.storage` and OPFS; Nex Brain's data dir does not, and the pinned manifest key

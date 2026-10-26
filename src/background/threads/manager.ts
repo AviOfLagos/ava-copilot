@@ -22,7 +22,7 @@ import { groupTabs, TabBinding, tabsToBind } from './binding';
 import { createBrowserContext, createExecutor, resolveModels } from './factory';
 import { buildRunContext, splitForSummary, SUMMARY_INSTRUCTIONS, transcriptOf } from './memory';
 import { effectOf } from './transcript';
-import { canSeeImages, mediaOf } from './attachments';
+import { canSeeImages, mediaOf, withContext } from './attachments';
 import type { TaskMedia } from './attachments';
 
 const logger = createLogger('ThreadManager');
@@ -124,6 +124,9 @@ export class ThreadManager {
     attachments?: MessageAttachment[];
     // Fields set on a new thread, e.g. the voice conversation that started it
     fields?: Partial<Pick<ThreadRecord, 'voiceThreadId'>>;
+    // Content the model reads with the words but the chat does not show (a document's text, a link's preview),
+    // already marked as content and never instructions
+    context?: string;
   }): Promise<string> {
     const attachments = request.attachments ?? [];
     // Pictures alone are a question about them
@@ -147,7 +150,13 @@ export class ThreadManager {
 
     await this.store.addMessage(thread.id, 'user', text, { attachments });
     await this.placeInWorkspace(thread, text, request.workspaceId);
-    await this.start(thread.id, text, binding, false, await this.mediaFor(thread, attachments));
+    await this.start(
+      thread.id,
+      text,
+      binding,
+      false,
+      withContext(await this.mediaFor(thread, attachments), request.context),
+    );
     return thread.id;
   }
 

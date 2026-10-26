@@ -26,6 +26,10 @@ import {
   studioCsp,
   studioPageHtml,
   studioSessionRequestSchema,
+  WHATSAPP_ROUTES,
+  whatsappAckRequestSchema,
+  whatsappMediaRequestSchema,
+  whatsappSendRequestSchema,
 } from '../src/shared/lib/protocol/companion.ts';
 
 const ARTIFACT_ID = 'a1b2c3d4e5f60718';
@@ -76,6 +80,31 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
   const backups = new Map();
   const uploads = new Map();
   let backupSecrets = null;
+  // Ava on WhatsApp, already linked: tests put the owner's messages in the inbox (and their files beside them) and
+  // read what Ava sent back
+  const whatsapp = {
+    status: {
+      state: 'linked',
+      qr: null,
+      number: '2348011111111',
+      ownerNumber: null,
+      message: null,
+      queued: 0,
+      sentLastHour: 0,
+      sendLimitPerHour: 20,
+      needsFirstMessage: false,
+      connectCode: null,
+      phoneConnected: false,
+      lastInAt: null,
+      lastOutAt: null,
+    },
+    inbox: [],
+    // id → the media reply's fields
+    files: new Map(),
+    sent: [],
+    acked: [],
+    mediaRequests: [],
+  };
 
   // Another origin, standing in for the internet: an artifact must never reach it
   const remote = http.createServer((req, res) => {
@@ -355,6 +384,42 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
         events: calendar.events.filter(event => ids === null || ids.includes(event.calendarId)),
       });
     }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.status) {
+      return send(200, { ok: true, status: whatsapp.status });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.quiet) {
+      return send(200, { ok: true, status: whatsapp.status });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.inbox) {
+      return send(200, {
+        ok: true,
+        messages: whatsapp.inbox,
+        status: { ...whatsapp.status, queued: whatsapp.inbox.length },
+      });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.ack) {
+      const parsed = whatsappAckRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The request is not valid.');
+      whatsapp.acked.push(...parsed.data.ids);
+      whatsapp.inbox = whatsapp.inbox.filter(message => !parsed.data.ids.includes(message.id));
+      return send(200, { ok: true });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.send) {
+      const parsed = whatsappSendRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The request is not valid.');
+      whatsapp.sent.push(parsed.data);
+      return send(200, { ok: true, status: whatsapp.status });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.media) {
+      const parsed = whatsappMediaRequestSchema.safeParse(json());
+      if (!parsed.success) return fail(400, 'invalid', 'The request is not valid.');
+      whatsapp.mediaRequests.push(parsed.data);
+      const file = whatsapp.files.get(parsed.data.id);
+      if (!file || !whatsapp.inbox.some(message => message.id === parsed.data.id)) {
+        return fail(404, 'not_found', 'That message has no file waiting.');
+      }
+      return send(200, { ok: true, data: null, text: null, truncated: false, savedAs: null, ...file });
+    }
     if (req.method === 'POST' && url.pathname === '/v1/unpair') {
       token = null;
       return send(200, { ok: true });
@@ -375,6 +440,7 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
     backupSecrets: () => backupSecrets,
     vaultNotes,
     calendar,
+    whatsapp,
     chosenVault: () => chosenVault,
     async close() {
       server.closeAllConnections();

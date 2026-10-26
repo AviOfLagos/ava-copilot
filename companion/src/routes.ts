@@ -33,6 +33,7 @@ import {
   workflowRunRequestSchema,
   WHATSAPP_ROUTES,
   whatsappAckRequestSchema,
+  whatsappMediaRequestSchema,
   whatsappOwnerRequestSchema,
   whatsappQuietRequestSchema,
   whatsappSendRequestSchema,
@@ -672,6 +673,18 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body }) {
         deps.whatsapp.ack(parse(whatsappAckRequestSchema, body).ids);
         return json({ ok: true });
+      },
+    },
+    {
+      // A queued message's voice note or picture (base64), or a document's text: only the owner's, only while it
+      // waits, and never more than WHATSAPP_MEDIA_MAX_BYTES
+      method: 'POST',
+      path: WHATSAPP_ROUTES.media,
+      name: 'whatsapp.media',
+      auth: 'api',
+      rate: 'read',
+      async handler({ body }) {
+        return json(await deps.whatsapp.media(parse(whatsappMediaRequestSchema, body)));
       },
     },
     {
