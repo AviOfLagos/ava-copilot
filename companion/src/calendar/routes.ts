@@ -8,7 +8,7 @@ import type { MacCalendarReader } from './macos';
 export function calendarRoutes(deps: { calendar: MacCalendarReader }): Route[] {
   const { calendar } = deps;
   const status = (read: Awaited<ReturnType<MacCalendarReader['status']>>) =>
-    json({ ok: true, access: read.access, calendars: read.calendars, message: read.message });
+    json({ ok: true, access: read.access, calendars: read.calendars, message: read.message, lost: read.lost === true });
   return [
     {
       method: 'POST',

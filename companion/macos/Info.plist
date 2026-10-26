@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  "Ava Brain.app", built by scripts/build-launcher.sh. macOS shows CFBundleName in its permission prompts and in
+  System Settings › Privacy & Security. A process whose app lacks the matching *UsageDescription is refused
+  without a prompt, so every permission Ava Brain (or a program it starts, e.g. Chrome for Meet) may need is
+  described here. Bump CFBundleVersion whenever launcher.c or this file changes: the installer rebuilds the app
+  only then, and each rebuild makes macOS ask for each permission once more.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>com.avicopilot.brain</string>
+  <key>CFBundleName</key><string>Ava Brain</string>
+  <key>CFBundleDisplayName</key><string>Ava Brain</string>
+  <key>CFBundleExecutable</key><string>ava-brain</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- No Dock icon or menu: launchd runs it in the background -->
+  <key>LSUIElement</key><true/>
+  <key>NSCalendarsUsageDescription</key>
+  <string>Ava Brain reads your calendars so Ava Copilot can show your day and remind you before meetings. It never changes them.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>Ava Brain reads your calendars so Ava Copilot can show your day and remind you before meetings. It never changes them.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Ava Brain uses the microphone only when you ask Ava Copilot to listen, for example to take meeting notes.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Ava Brain uses the camera only when you ask Ava Copilot to join a call with video.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Ava Brain asks other apps on this Mac for information when you ask Ava Copilot to.</string>
+</dict>
+</plist>

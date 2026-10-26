@@ -128,7 +128,12 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     systemRoots: deps.obsidianSystemRoots,
     now,
   });
-  const calendar = new MacCalendarReader({ run, log: log.child({ part: 'calendar' }), platform: deps.platform });
+  const calendar = new MacCalendarReader({
+    run,
+    log: log.child({ part: 'calendar' }),
+    platform: deps.platform,
+    dataDir: config.dataDir,
+  });
   calendar.warmUp();
   const MAC_APP_NAMES: Record<MacApp, string> = { ollama: 'Ollama', lmstudio: 'LM Studio' };
   const openApp = async (app: MacApp) => {

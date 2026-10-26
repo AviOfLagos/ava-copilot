@@ -1241,6 +1241,8 @@ export const calendarStatusReplySchema = z.object({
   calendars: z.array(macCalendarSchema).max(CALENDAR_LIMITS.calendars),
   // A plain sentence when access is missing: what to do on the Mac
   message: z.string().max(1000).nullable(),
+  // Access was granted before and macOS took it back (it asks again after Ava Brain's program changes)
+  lost: z.boolean().optional(),
 });
 export type CalendarStatusReply = z.infer<typeof calendarStatusReplySchema>;
 

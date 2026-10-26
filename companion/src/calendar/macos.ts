@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { CALENDAR_LIMITS, meetingLinkIn } from '@protocol';
 import type { CalendarAccess, MacCalendar, MacEvent } from '@protocol';
 import { AppError, fail } from '../errors';
@@ -10,8 +12,11 @@ import type { ProcessRunner } from '../sandbox/process';
  * without a shell by the process runner. macOS Calendar syncs every account under System Settings › Internet
  * Accounts (Google and Workspace included), so this reads calendars the browser cannot. Read-only.
  *
- * macOS asks once whether the process may read calendars. Ava Brain runs as `node` under its LaunchAgent, so
- * that is the name macOS shows in the prompt and in System Settings › Privacy & Security › Calendars.
+ * macOS asks once whether the process may read calendars, and ties the answer to the program responsible for
+ * Ava Brain. Installed by scripts/install-launchagent.sh that is "Ava Brain" (Ava Brain.app runs node as its
+ * child and sets AVA_BRAIN_PROGRAM); on an older install it is `node` itself, and every Node upgrade makes macOS
+ * forget the answer. Either way, that name is what macOS shows in the prompt and in System Settings › Privacy &
+ * Security › Calendars, so the steps below use it.
  */
 
 export const OSASCRIPT = '/usr/bin/osascript';
@@ -95,24 +100,50 @@ const ACCESS_OF_STATUS: Record<number, CalendarAccess> = {
   4: 'write_only',
 };
 
-export const CALENDAR_STEPS =
-  'Ava Brain needs your permission to read the Mac’s Calendar. In Ava Copilot press “Allow access” and choose Allow ' +
-  'in the macOS prompt (it names “node”, the program Ava Brain runs as). If no prompt shows, open System Settings › ' +
-  'Privacy & Security › Calendars and turn on “node” with Full Access, then press Check again.';
+/** The name macOS gives Ava Brain in its prompts: "Ava Brain" under Ava Brain.app, otherwise "node". */
+export function programName(env: NodeJS.ProcessEnv = process.env): string {
+  const name = (env.AVA_BRAIN_PROGRAM ?? '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
+  return name.slice(0, 40) || 'node';
+}
 
-const MESSAGES: Record<CalendarAccess, string | null> = {
-  granted: null,
-  not_determined: CALENDAR_STEPS,
-  denied:
-    'macOS does not let Ava Brain read your calendars. Open System Settings › Privacy & Security › Calendars, turn on ' +
-    '“node” with Full Access, then press Check again.',
-  restricted:
-    'Calendar access is restricted on this Mac (by Screen Time or a device profile), so Ava Brain cannot read it.',
-  write_only:
-    'Ava Brain may only add events, not read them. Open System Settings › Privacy & Security › Calendars and change ' +
-    '“node” to Full Access, then press Check again.',
-  unavailable: 'The Mac’s Calendar cannot be read here (this needs macOS with osascript).',
-};
+/** What to do for each state, naming the program macOS asks about. Exported for tests. */
+export function calendarMessages(program: string): Record<CalendarAccess, string | null> {
+  return {
+    granted: null,
+    not_determined:
+      'Ava Brain needs your permission to read the Mac’s Calendar. In Ava Copilot press “Allow access” and choose ' +
+      `Allow in the macOS prompt (it names “${program}”, the program Ava Brain runs as). If no prompt shows, open ` +
+      `System Settings › Privacy & Security › Calendars and turn on “${program}” with Full Access, then press Check again.`,
+    denied:
+      'macOS does not let Ava Brain read your calendars. Open System Settings › Privacy & Security › Calendars, turn on ' +
+      `“${program}” with Full Access, then press Check again.`,
+    restricted:
+      'Calendar access is restricted on this Mac (by Screen Time or a device profile), so Ava Brain cannot read it.',
+    write_only:
+      'Ava Brain may only add events, not read them. Open System Settings › Privacy & Security › Calendars and change ' +
+      `“${program}” to Full Access, then press Check again.`,
+    unavailable: 'The Mac’s Calendar cannot be read here (this needs macOS with osascript).',
+  };
+}
+
+/**
+ * Said instead when Ava Brain could read the Calendar before and now cannot: almost always because the program
+ * it runs as changed (a Node upgrade on an older install, or a new Ava Brain.app), which makes macOS ask again.
+ */
+export function lostMessage(program: string, access: CalendarAccess): string {
+  const why =
+    'Ava Brain could read your Calendar before, but macOS took the permission back. macOS asks again whenever the ' +
+    `program Ava Brain runs as changes${program === 'node' ? ' (here “node”, so after every Node upgrade)' : ''}.`;
+  if (access === 'not_determined') {
+    return (
+      `${why} Press “Allow access” (or “Allow on the Mac”) and choose Allow in the macOS prompt (it names ` +
+      `“${program}”). If no prompt shows, turn on “${program}” in System Settings › Privacy & Security › Calendars.`
+    );
+  }
+  return `${why} Open System Settings › Privacy & Security › Calendars, turn on “${program}” with Full Access, then press Check again.`;
+}
+
+export const CALENDAR_STEPS = calendarMessages('node').not_determined as string;
 
 export interface CalendarRead {
   access: CalendarAccess;
@@ -120,12 +151,14 @@ export interface CalendarRead {
   events: MacEvent[];
   truncated: boolean;
   message: string | null;
+  // Access was granted before and is gone now (see lostMessage)
+  lost?: boolean;
 }
 
 const clip = (value: unknown, max: number) => (typeof value === 'string' ? value.slice(0, max) : '');
 
 /** osascript's JSON, checked and capped; anything else is an error. Exported for tests. */
-export function parseCalendarOutput(stdout: string): CalendarRead {
+export function parseCalendarOutput(stdout: string, program = 'node'): CalendarRead {
   let raw: { status?: unknown; calendars?: unknown; events?: unknown; truncated?: unknown };
   try {
     raw = JSON.parse(stdout.trim());
@@ -169,15 +202,64 @@ export function parseCalendarOutput(stdout: string): CalendarRead {
     });
   }
   events.sort((a, b) => a.start - b.start);
-  return { access, calendars, events, truncated: raw.truncated === true, message: MESSAGES[access] };
+  return { access, calendars, events, truncated: raw.truncated === true, message: calendarMessages(program)[access] };
+}
+
+/**
+ * Remembers, in the data folder, that Calendar access was granted once, so a later "not determined" or "denied"
+ * (even after a restart) reads as permission lost rather than never given.
+ */
+export class CalendarAccessMemory {
+  private granted: boolean | null = null;
+
+  constructor(private readonly path: string | null) {}
+
+  wasGranted(): boolean {
+    if (this.granted === null) {
+      try {
+        this.granted =
+          !!this.path && existsSync(this.path) && JSON.parse(readFileSync(this.path, 'utf8')).granted === true;
+      } catch {
+        this.granted = false;
+      }
+    }
+    return this.granted;
+  }
+
+  rememberGranted(at: number): void {
+    if (this.wasGranted()) return;
+    this.granted = true;
+    if (!this.path) return;
+    try {
+      writeFileSync(this.path, JSON.stringify({ granted: true, at }), { mode: 0o600 });
+    } catch {
+      // Only the wording of a later message depends on it
+    }
+  }
 }
 
 export class MacCalendarReader {
   private lastGood: { key: string; at: number; read: CalendarRead } | null = null;
 
+  private readonly program: string;
+  private readonly messages: Record<CalendarAccess, string | null>;
+  private readonly memory: CalendarAccessMemory;
+
   constructor(
-    private readonly deps: { run: ProcessRunner; log: Logger; platform?: NodeJS.Platform; now?: () => number },
-  ) {}
+    private readonly deps: {
+      run: ProcessRunner;
+      log: Logger;
+      platform?: NodeJS.Platform;
+      now?: () => number;
+      // Where "access was granted once" is kept across restarts; in memory only without it
+      dataDir?: string;
+      env?: NodeJS.ProcessEnv;
+    },
+  ) {
+    this.program = programName(deps.env);
+    this.messages = calendarMessages(this.program);
+    this.memory = new CalendarAccessMemory(deps.dataDir ? join(deps.dataDir, 'calendar-access.json') : null);
+  }
 
   private now(): number {
     return this.deps.now?.() ?? Date.now();
@@ -188,9 +270,23 @@ export class MacCalendarReader {
     void this.status().catch(() => {});
   }
 
+  /** Notes a granted read, and words a missing permission as lost when it was granted before. */
   private async script(args: string[], timeoutMs: number): Promise<CalendarRead> {
+    const read = await this.runScript(args, timeoutMs);
+    if (read.access === 'granted') {
+      this.memory.rememberGranted(this.now());
+      return read;
+    }
+    if ((read.access === 'not_determined' || read.access === 'denied') && this.memory.wasGranted()) {
+      this.deps.log.warn('Calendar permission was lost', { access: read.access, program: this.program });
+      return { ...read, lost: true, message: lostMessage(this.program, read.access) };
+    }
+    return read;
+  }
+
+  private async runScript(args: string[], timeoutMs: number): Promise<CalendarRead> {
     if ((this.deps.platform ?? process.platform) !== 'darwin') {
-      return { access: 'unavailable', calendars: [], events: [], truncated: false, message: MESSAGES.unavailable };
+      return { access: 'unavailable', calendars: [], events: [], truncated: false, message: this.messages.unavailable };
     }
     let result;
     try {
@@ -201,18 +297,18 @@ export class MacCalendarReader {
       });
     } catch (error) {
       this.deps.log.warn('osascript did not start', { error: (error as Error).message });
-      return { access: 'unavailable', calendars: [], events: [], truncated: false, message: MESSAGES.unavailable };
+      return { access: 'unavailable', calendars: [], events: [], truncated: false, message: this.messages.unavailable };
     }
     if (result.timedOut) fail('timeout', 'The Mac’s Calendar took too long to answer. Try again.');
     if (result.code !== 0) {
       // Never the script or the events in the log: only that it failed
       this.deps.log.warn('Reading the Mac’s Calendar failed', { code: result.code });
       if (/not authori[sz]ed|not allowed|denied|-1743|-10004/i.test(result.stderr)) {
-        return { access: 'denied', calendars: [], events: [], truncated: false, message: MESSAGES.denied };
+        return { access: 'denied', calendars: [], events: [], truncated: false, message: this.messages.denied };
       }
       fail('unavailable', 'The Mac’s Calendar could not be read. Open the Calendar app once, then try again.');
     }
-    return parseCalendarOutput(result.stdout);
+    return parseCalendarOutput(result.stdout, this.program);
   }
 
   status(): Promise<CalendarRead> {

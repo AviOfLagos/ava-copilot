@@ -38,13 +38,25 @@ async function reread(): Promise<string | null> {
 command('calendar_mac_status', z.object({}), async () => {
   if (!(await brainSettingsStore.getSettings()).paired) return { paired: false };
   const status = await companionClient.calendarStatus({ bypassBreaker: true });
-  return { paired: true, access: status.access, calendars: status.calendars, message: status.message };
+  return {
+    paired: true,
+    access: status.access,
+    calendars: status.calendars,
+    message: status.message,
+    lost: status.lost,
+  };
 });
 
 command('calendar_mac_request', z.object({}), async () => {
   const status = await companionClient.calendarRequestAccess();
   if (status.access === 'granted') await reread();
-  return { paired: true, access: status.access, calendars: status.calendars, message: status.message };
+  return {
+    paired: true,
+    access: status.access,
+    calendars: status.calendars,
+    message: status.message,
+    lost: status.lost,
+  };
 });
 
 command(

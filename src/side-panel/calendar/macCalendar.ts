@@ -20,6 +20,8 @@ export interface MacStatusReply {
   access?: CalendarAccess;
   calendars?: MacCalendar[];
   message?: string | null;
+  // Allowed before, and macOS took it back: the message says why
+  lost?: boolean;
 }
 
 export function macCardState(input: { reply: MacStatusReply | null; error: string | null }): MacCardState {
