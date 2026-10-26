@@ -42,7 +42,10 @@ describe('buildAbilitiesSection', () => {
     const section = buildAbilitiesSection(capabilities, COMING);
     expect(section).toContain('get_schedule');
     expect(section).toContain('brand_new_tool');
-    expect(section).toContain('In a chat like this one: click_element, search_knowledge.');
+    expect(section).toContain('In short: meetings and your day; routines; and in any chat, browsing');
+    // The browser agent's own steps are one phrase; what was registered for chats is named
+    expect(section).toContain('In a chat like this one, besides browsing: search_knowledge.');
+    expect(section).not.toContain('click_element');
     expect(section).toContain('Places in the side panel (open_place): Agents.');
     expect(section).toContain('Coming, not built yet:');
     expect(section).toContain('voice note');

@@ -5,9 +5,11 @@
  *
  *   AVA_EVAL_OLLAMA_MODEL=qwen3:4b pnpm vitest run answer-fit.eval
  *
+ * AVA_EVAL_TIMEOUT_MS raises the 5-minute limit per question (a 4B thinking model can take longer).
  * AVA_EVAL_BASELINE=1 runs the same questions without the channel and abilities sections, to compare.
  */
-import { describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ProviderTypeEnum } from '@extension/storage';
 import { enT } from '@src/background/skills/__tests__/en';
 import { createChatModel } from '@src/background/llm/providers';
@@ -23,6 +25,13 @@ import { isEmptyAnswer, PlannerAgent } from '../planner';
 vi.mock('@extension/i18n', () => ({ t: enT }));
 
 const MODEL = process.env.AVA_EVAL_OLLAMA_MODEL;
+
+// Every registration loads as at startup, so the abilities are the ones the extension sends; Chrome is a stub that
+// answers every call with nothing
+const chromeStub: unknown = new Proxy(function () {}, {
+  get: (_target, key) => (key === 'then' ? undefined : chromeStub),
+  apply: () => Promise.resolve(undefined),
+});
 const BASELINE = process.env.AVA_EVAL_BASELINE === '1';
 
 async function answer(task: string): Promise<string> {
@@ -53,24 +62,33 @@ async function answer(task: string): Promise<string> {
 
 const SAYS_TEXT_ONLY = /text(-based)? (browser )?interface|only (a )?text|just a text/i;
 
-describe.skipIf(!MODEL)(`eval: answers on WhatsApp (${MODEL})`, { timeout: 180_000 }, () => {
-  it('"Hi" gets a greeting, never "None"', async () => {
-    const text = await answer('Hi');
-    expect(isEmptyAnswer(text)).toBe(false);
-    expect(text).not.toBe(enT('exec_emptyAnswer'));
-  });
+describe.skipIf(!MODEL)(
+  `eval: answers on WhatsApp (${MODEL})`,
+  { timeout: Number(process.env.AVA_EVAL_TIMEOUT_MS) || 300_000 },
+  () => {
+    beforeAll(async () => {
+      vi.stubGlobal('chrome', chromeStub);
+      await import('@src/background/registers');
+    });
 
-  it('"what can you do?" names real abilities, briefly', async () => {
-    const text = await answer('what can you do?');
-    const named = ['calendar', 'meeting', 'whatsapp', 'memor', 'routine', 'workflow', 'agent', 'tab', 'voice', 'web'];
-    expect(named.filter(word => text.toLowerCase().includes(word)).length).toBeGreaterThanOrEqual(3);
-    expect(text).not.toMatch(SAYS_TEXT_ONLY);
-    expect(text.length).toBeLessThan(1200);
-  });
+    it('"Hi" gets a greeting, never "None"', async () => {
+      const text = await answer('Hi');
+      expect(isEmptyAnswer(text)).toBe(false);
+      expect(text).not.toBe(enT('exec_emptyAnswer'));
+    });
 
-  it('"can you reply with voicenote?" says not yet, it is coming', async () => {
-    const text = await answer('can you reply with voicenote?');
-    expect(text).toMatch(/not yet|coming|soon|being built/i);
-    expect(text).not.toMatch(SAYS_TEXT_ONLY);
-  });
-});
+    it('"what can you do?" names real abilities, briefly', async () => {
+      const text = await answer('what can you do?');
+      const named = ['calendar', 'meeting', 'whatsapp', 'memor', 'routine', 'workflow', 'agent', 'tab', 'voice', 'web'];
+      expect(named.filter(word => text.toLowerCase().includes(word)).length).toBeGreaterThanOrEqual(3);
+      expect(text).not.toMatch(SAYS_TEXT_ONLY);
+      expect(text.length).toBeLessThan(1200);
+    });
+
+    it('"can you reply with voicenote?" says not yet, it is coming', async () => {
+      const text = await answer('can you reply with voicenote?');
+      expect(text).toMatch(/not yet|coming|soon|being built/i);
+      expect(text).not.toMatch(SAYS_TEXT_ONLY);
+    });
+  },
+);
