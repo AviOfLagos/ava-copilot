@@ -11,6 +11,7 @@ import {
   type FinishReason,
   type FlexibleSchema,
   type ModelMessage,
+  type TelemetryOptions,
 } from 'ai';
 import { createLogger } from '@src/background/log';
 import { ResponseParseError } from '@src/background/agent/agents/errors';
@@ -52,7 +53,12 @@ export function splitInstructions(messages: ModelMessage[]): {
   };
 }
 
-function buildCallArgs(chatModel: ChatModel, messages: ModelMessage[], abortSignal?: AbortSignal) {
+function buildCallArgs(
+  chatModel: ChatModel,
+  messages: ModelMessage[],
+  abortSignal?: AbortSignal,
+  telemetry?: TelemetryOptions,
+) {
   const { instructions, messages: rest } = splitInstructions(messages);
   return {
     model: chatModel.model,
@@ -62,6 +68,8 @@ function buildCallArgs(chatModel: ChatModel, messages: ModelMessage[], abortSign
     providerOptions: chatModel.providerOptions,
     maxRetries: MAX_RETRIES,
     abortSignal,
+    // Recorded for the turn's trace when one is being kept (telemetry/traces.ts)
+    ...(telemetry ? { telemetry } : {}),
   };
 }
 
@@ -193,6 +201,8 @@ export interface GenerateStructuredArgs<T> {
   /** Name of the tool in `tool` mode; defaults to `name` */
   toolName?: string;
   abortSignal?: AbortSignal;
+  /** The turn's trace recorder (telemetry/traces.ts#telemetryFor) */
+  telemetry?: TelemetryOptions;
 }
 
 /**
@@ -204,7 +214,7 @@ export async function generateStructured<T>(args: GenerateStructuredArgs<T>): Pr
 }
 
 async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise<{ output: T; rawText?: string }> {
-  const { chatModel, schema, name, toolName = name, abortSignal } = args;
+  const { chatModel, schema, name, toolName = name, abortSignal, telemetry } = args;
   abortSignal?.throwIfAborted();
   // Earlier outputs are never replayed as tool calls, which providers validate (e.g. Claude's thinking blocks and
   // Gemini 3's thought signatures); the history is sent as text instead
@@ -216,7 +226,7 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
     case 'native': {
       try {
         const result = await generateText({
-          ...buildCallArgs(chatModel, messages, abortSignal),
+          ...buildCallArgs(chatModel, messages, abortSignal, telemetry),
           output: Output.object({ schema, name }),
         });
         try {
@@ -247,7 +257,7 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
     }
 
     case 'tool': {
-      const callArgs = buildCallArgs(chatModel, messages, abortSignal);
+      const callArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
       // Models that reject forced tool use only get automatic tool choice, so ask for the tool call explicitly
       const toolInstruction = `Return your response by calling the ${toolName} tool, with the JSON described above as its input.`;
       let result;
@@ -302,7 +312,7 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
     }
 
     case 'text': {
-      const callArgs = buildCallArgs(chatModel, messages, abortSignal);
+      const callArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
       let text: string;
       let finishReason: FinishReason | undefined;
       let rawFinishReason: string | undefined;

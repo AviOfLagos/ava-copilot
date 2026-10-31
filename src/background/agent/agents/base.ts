@@ -4,6 +4,7 @@ import type { BasePrompt } from '../prompts/base';
 import type { Action } from '../actions/builder';
 import type { ChatModel, FlexibleSchema, ModelMessage } from '@src/background/llm/types';
 import { generateStructured } from '@src/background/llm/generate';
+import { telemetryFor } from '@src/background/telemetry/traces';
 
 export interface BaseAgentOptions {
   chatLLM: ChatModel;
@@ -61,6 +62,7 @@ export abstract class BaseAgent<T extends z.ZodType, M = unknown> {
       name: this.modelOutputToolName,
       toolName: this.structuredToolName,
       abortSignal: this.context.controller.signal,
+      telemetry: telemetryFor(this.context.taskId, this.id),
     });
     return output;
   }

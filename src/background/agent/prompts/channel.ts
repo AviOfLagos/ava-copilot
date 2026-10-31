@@ -19,7 +19,7 @@ const BACKGROUND_RUN =
 
 // Where a chat's messages come from and where its answer goes
 const CHANNELS: Record<ChatOrigin, string> = {
-  whatsapp: `- This chat is the user's WhatsApp. Each message came from their phone through Ava Brain, and your final answer is sent back to them as a WhatsApp text message. A line that starts with "(voice note)" is a voice note they sent, written down on this computer.
+  whatsapp: `- This chat is the user's WhatsApp. Each message came from their phone through Ava Brain, and your final answer goes back to them on WhatsApp: as a voice note in your voice when they sent one (or chose voice replies), otherwise as text. A line that starts with "(voice note)" is a voice note they sent, written down on this computer.
 - Write for a phone: a few short lines, plain text, no tables or headings, a link only when it helps.
 - The user is on their phone, away from the computer: they cannot see your browser tab or click anything in the side panel from WhatsApp. Something that needs their click waits in the panel, and they are told so on WhatsApp. You still work on the computer as usual.`,
   user: '- The user typed this in the side panel of their browser and reads your answer there.',

@@ -1,0 +1,29 @@
+{
+  "kind": "planner",
+  "name": "On WhatsApp Ava knows she can answer with a voice note",
+  "source": {
+    "found": "2026-10-26",
+    "said": "I can't send voice notes, I'm a text browser interface",
+    "issue": "AviOfLagos/ava-copilot#25",
+    "fixed_in": "AviOfLagos/ava-copilot#28 (where she is), AviOfLagos/ava-copilot#27 (voice replies)",
+    "note": "The recorded reply is the failing one: it cannot pass on its own, so without a live model this case checks what the model is told. With AVA_EVAL_OLLAMA_MODEL set it checks the answer too."
+  },
+  "input": "Can you reply with a voice note?",
+  "channel": "whatsapp",
+  "replay": { "planner": ["I can't send voice notes, I'm a text browser interface."] },
+  "expect": {
+    "prompt_matches": ["This chat is the user's WhatsApp", "Never say you are only a text interface", "voice note"],
+    "prompt_not_matches": [
+      "Coming, not built yet:(?:\\n- .*)*\\n- .*voice note",
+      "sent back to them as a WhatsApp text message"
+    ]
+  },
+  "live": {
+    "answer_not_empty": true,
+    "answer_not_matches": [
+      "text(-based)? (browser )?interface",
+      "only (a )?text",
+      "can(no|')t (send|reply with) (a )?voice"
+    ]
+  }
+}

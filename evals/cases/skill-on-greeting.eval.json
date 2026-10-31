@@ -1,0 +1,8 @@
+{
+  "kind": "skills",
+  "name": "\"Hi\" with a Google tab in front uses no skill",
+  "source": { "found": "2026-10-26", "issue": "AviOfLagos/ava-copilot#25", "fixed_in": "AviOfLagos/ava-copilot#28" },
+  "input": "Hi",
+  "url": "https://mail.google.com/mail/u/0/#inbox",
+  "expect": { "skills": [] }
+}

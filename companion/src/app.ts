@@ -36,6 +36,8 @@ import { WhatsAppService } from './whatsapp/service';
 import { createKeyStore } from './workflows/keys';
 import type { KeyStore } from './workflows/keys';
 import { MacWorkflows } from './workflows/service';
+import { traceRoutes } from './traces/routes';
+import { TraceStore } from './traces/store';
 import type { MacWorkflowsDeps } from './workflows/service';
 
 /** Stand-ins for tests: process runner, MCP connector, clock, network, session engine. */
@@ -145,6 +147,13 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   server.add(...backupRoutes({ backups, secrets: backupSecrets }));
   server.add(...obsidianRoutes({ vaults }));
   server.add(...calendarRoutes({ calendar }));
+  const traces = new TraceStore({
+    dataDir: config.dataDir,
+    log: log.child({ part: 'traces' }),
+    now,
+    enabled: process.env.AVA_TRACES !== 'off',
+  });
+  server.add(...traceRoutes({ traces }));
   server.add(
     ...brainRoutes({
       config,

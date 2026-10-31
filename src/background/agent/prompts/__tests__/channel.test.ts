@@ -21,7 +21,7 @@ describe('buildChannelSection', () => {
   it('tells the model a WhatsApp chat answers on WhatsApp, on a phone, away from the panel', () => {
     const section = buildChannelSection('whatsapp');
     expect(section).toContain("This chat is the user's WhatsApp");
-    expect(section).toContain('sent back to them as a WhatsApp text message');
+    expect(section).toContain('as a voice note in your voice when they sent one');
     expect(section).toContain('(voice note)');
     expect(section).toContain('cannot see your browser tab or click anything in the side panel');
     expect(section).toContain('Ava Brain');
@@ -48,7 +48,7 @@ describe('buildAbilitiesSection', () => {
     expect(section).not.toContain('click_element');
     expect(section).toContain('Places in the side panel (open_place): Agents.');
     expect(section).toContain('Coming, not built yet:');
-    expect(section).toContain('voice note');
+    expect(section).toContain('WhatsApp groups');
     expect(section).toContain("not yet, it's coming");
   });
 

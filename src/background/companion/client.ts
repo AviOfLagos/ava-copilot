@@ -8,6 +8,7 @@ import {
   artifactOpenReplySchema,
   BACKUP_ROUTES,
   CALENDAR_ROUTES,
+  TRACES_ROUTES,
   DOCKER_ROUTES,
   DOCKER_START_TIMEOUT_MS,
   dockerStartReplySchema,
@@ -517,6 +518,20 @@ export class CompanionClient {
       schema: okReplySchema,
       body: { requestId, outboxIds },
       idempotent: true,
+    });
+  }
+
+  // ── Traces ──
+
+  /** Keeps a turn's trace on the Mac (telemetry/traces.ts); never trips the breaker other calls rely on. */
+  keepTrace(trace: unknown) {
+    return this.call({
+      method: 'POST',
+      path: TRACES_ROUTES.keep,
+      schema: okReplySchema,
+      body: { trace },
+      bypassBreaker: true,
+      timeoutMs: 10_000,
     });
   }
 

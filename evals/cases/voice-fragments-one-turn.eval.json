@@ -1,0 +1,18 @@
+{
+  "kind": "voice",
+  "name": "One spoken sentence cut into fragments is one turn, answered once",
+  "source": { "found": "2026-10-26", "issue": "AviOfLagos/ava-copilot#24", "fixed_in": "AviOfLagos/ava-copilot#26" },
+  "heard": [
+    { "say": "So he's always on the code of the symbol like" },
+    { "quiet": 2 },
+    { "say": "I will say I'm always looking, I'm" },
+    { "quiet": 1 },
+    { "say": "So that's" },
+    { "say": "That's probably the end" }
+  ],
+  "expect": {
+    "turns": [
+      "So he's always on the code of the symbol like I will say I'm always looking, I'm So that's That's probably the end"
+    ]
+  }
+}

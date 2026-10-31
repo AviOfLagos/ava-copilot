@@ -1332,6 +1332,19 @@ export const MAC_APPS = ['ollama', 'lmstudio'] as const;
 export type MacApp = (typeof MAC_APPS)[number];
 export const appOpenRequestSchema = z.object({ app: z.enum(MAC_APPS) });
 
+// ── Traces ────────────────────────────────────────────────────────────────────────────────────────
+
+// One trace per turn (src/background/telemetry/traces.ts), kept on the Mac for Suture to read (companion/src/traces)
+export const TRACES_ROUTES = { keep: '/v1/traces' } as const;
+// A turn's planner prompts and page excerpts, cut to 20k characters each
+export const TRACE_MAX_BODY_BYTES = 2_000_000;
+// How long Ava Brain keeps traces
+export const TRACE_KEEP_DAYS = 14;
+// An OTLP/JSON ExportTraceServiceRequest; Ava Brain stores it as sent and never reads inside
+export const traceKeepRequestSchema = z.object({
+  trace: z.object({ resourceSpans: z.array(z.unknown()).min(1).max(20) }).passthrough(),
+});
+
 export const CALENDAR_ROUTES = {
   status: '/v1/calendar/status',
   // Asks macOS for access (the one-time Calendars prompt)
