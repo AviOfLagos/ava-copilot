@@ -249,7 +249,8 @@ export class Executor {
       if (isCompleted) {
         // Emit final answer if available, otherwise use task ID
         const finalMessage = this.context.finalAnswer || this.context.taskId;
-        outcome = { answer: finalMessage, status: 'ok' };
+        // The trace keeps what she really answered: an empty answer must look empty to Suture
+        outcome = { answer: this.context.finalAnswer ?? '', status: 'ok' };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_OK, finalMessage);
       } else if (step >= allowedMaxSteps) {
         logger.error('❌ Task failed: Max steps reached');
