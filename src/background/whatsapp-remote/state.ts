@@ -28,6 +28,14 @@ export const DEFAULT_WHATSAPP_REMOTE_SETTINGS: WhatsAppRemoteSettings = {
   voiceForText: false,
 };
 
+/** An answer being sent, so one a stopped background left halfway can still go. */
+export interface InFlightAnswer {
+  threadId: string;
+  seq: number;
+  replyTo: string | null;
+  at: number;
+}
+
 export interface WhatsAppRemoteState {
   // The last status Ava Brain gave, without the code to scan
   status: WhatsAppStatus | null;
@@ -49,6 +57,7 @@ export interface WhatsAppRemoteState {
   quoteReply: boolean;
   // The message that got her 👍 when the work took a while: it gets ✅ when the answer goes
   acknowledged: string | null;
+  inFlight: InFlightAnswer | null;
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
@@ -63,6 +72,7 @@ export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
   replyVoice: false,
   quoteReply: false,
   acknowledged: null,
+  inFlight: null,
 };
 
 const settingsStorage = createStorage<WhatsAppRemoteSettings>(

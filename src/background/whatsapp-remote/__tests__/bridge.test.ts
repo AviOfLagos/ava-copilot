@@ -71,6 +71,12 @@ function harness(
     heard?: Record<string, string | Error>;
     // Making a voice note fails with this
     voiceFails?: Error;
+    // Making a voice note never ends, like a background that dies partway
+    voiceHangs?: boolean;
+    // Ava Brain refuses a text with this
+    sendFails?: Error;
+    // Making a voice note waits for this
+    voiceWaits?: Promise<void>;
     // Ava Brain refuses a reaction or a revision with this
     refuse?: Error;
   } = {},
@@ -103,7 +109,10 @@ function harness(
   const bridge = new WhatsAppBridge({
     inbox: async () => ({ messages: inbox.splice(0), status: state.status ?? LINKED }),
     ack: async ids => void acked.push(...ids),
-    send: async message => void sent.push(message),
+    send: async message => {
+      if (options.sendFails) throw options.sendFails;
+      sent.push(message);
+    },
     sendVoice: async voice => void voices.push(voice),
     presence: async (state, replyTo) => void presences.push({ state, ...(replyTo ? { replyTo } : {}) }),
     react: async reaction => {
@@ -115,6 +124,8 @@ function harness(
       revisions.push(revision);
     },
     voiceNote: async words => {
+      if (options.voiceHangs) return new Promise(() => {});
+      await options.voiceWaits;
       if (options.voiceFails) throw options.voiceFails;
       spoken.push(words);
       return { audio: 'T2dnUw==', seconds: 2, waveform: new Array(64).fill(50) };
@@ -329,6 +340,123 @@ describe('answers back on WhatsApp', () => {
         ?.content,
     ).toBe('Cancelled');
     expect(answerOf([said(1, 'user', 'a')])).toBeNull();
+  });
+});
+
+describe('an answer survives a restart of the background', () => {
+  const said = (seq: number, actor: ThreadMessage['actor'], content: string) =>
+    ({ id: `m${seq}`, threadId: 'wa-thread', seq, actor, content, ts: seq }) as ThreadMessage;
+  const turn = [said(1, 'user', '(voice note) can you hear me?'), said(2, 'planner', 'Yes, loud and clear.')];
+
+  /** A background that died making the voice note, and the new one that starts an hour later on the saved state. */
+  async function restarted(fresh: Parameters<typeof harness>[0] = {}) {
+    const dead = harness({ voiceHangs: true });
+    dead.setState({ threadId: 'wa-thread', replyTo: 'v1', replyVoice: true });
+    dead.messages.set('wa-thread', turn);
+    void dead.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    await dead.flush();
+    await dead.flush();
+    const next = harness({ thread: thread(), hour: 13, ...fresh });
+    next.setState(dead.state());
+    next.messages.set('wa-thread', turn);
+    return { dead, next };
+  }
+
+  it('sends what died making the voice note: once, in words, quoting his message', async () => {
+    const { dead, next } = await restarted();
+    expect(dead.presences.map(item => item.state)).toContain('recording');
+    expect(dead.sent).toEqual([]);
+
+    await next.bridge.resume();
+    expect(next.sent).toEqual([{ text: 'Yes, loud and clear.', kind: 'reply', replyTo: 'v1', quote: true }]);
+    expect(next.voices).toEqual([]);
+    expect(next.state().inFlight).toBeNull();
+    await next.bridge.resume();
+    expect(next.sent).toHaveLength(1);
+  });
+
+  it('adds ✅ to the message that got her 👍', async () => {
+    const { next } = await restarted();
+    next.setState({ acknowledged: 'v1' });
+    await next.bridge.resume();
+    expect(next.reactions).toEqual([{ emoji: '✅', messageId: 'v1' }]);
+  });
+
+  it('answers the message it was for, even when a newer one has moved on and is running', async () => {
+    const { next } = await restarted({ thread: thread({ status: 'running' }) });
+    next.setState({ replyTo: 'newer' });
+    next.messages.set('wa-thread', [...turn, said(3, 'user', 'and another thing')]);
+    await next.bridge.resume();
+    expect(next.sent).toEqual([{ text: 'Yes, loud and clear.', kind: 'reply', replyTo: 'v1', quote: true }]);
+  });
+
+  it('sends nothing but that answer: a later line in the chat stays out of WhatsApp', async () => {
+    const h = harness({ thread: thread(), hour: 13 });
+    h.setState({ threadId: 'wa-thread', replyTo: 'v1', repliedSeq: { 'wa-thread': 1 } });
+    h.messages.set('wa-thread', [said(1, 'user', 'hi'), said(2, 'system', 'Moved to workspace Ellum')]);
+    await h.bridge.resume();
+    expect(h.sent).toEqual([]);
+  });
+
+  it('leaves nothing on its way after a normal send, or a refused one', async () => {
+    const h = harness({ thread: thread() });
+    h.setState({ threadId: 'wa-thread', replyTo: 'v1' });
+    h.messages.set('wa-thread', turn);
+    await h.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    expect(h.sent).toHaveLength(1);
+    expect(h.state().inFlight).toBeNull();
+
+    const refused = harness({ thread: thread(), sendFails: new Error('limit reached') });
+    refused.setState({ threadId: 'wa-thread', replyTo: 'v1' });
+    refused.messages.set('wa-thread', turn);
+    await refused.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    expect(refused.state().inFlight).toBeNull();
+  });
+
+  it('keeps it for the next start while WhatsApp is not linked or the send fails', async () => {
+    const away = (await restarted()).next;
+    away.setState({ status: { ...LINKED, state: 'disconnected' } });
+    await away.bridge.resume();
+    expect(away.sent).toEqual([]);
+    expect(away.state().inFlight).not.toBeNull();
+
+    const refused = (await restarted({ sendFails: new Error('Ava Brain is not up') })).next;
+    await refused.bridge.resume();
+    expect(refused.state().inFlight).not.toBeNull();
+  });
+
+  it('never touches an answer this run is still sending', async () => {
+    const h = harness({ voiceHangs: true, thread: thread() });
+    h.setState({ threadId: 'wa-thread', replyTo: 'v1', replyVoice: true });
+    h.messages.set('wa-thread', turn);
+    void h.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    await h.flush();
+    await h.flush();
+    await h.bridge.resume();
+    expect(h.sent).toEqual([]);
+  });
+
+  it('lets go of an answer a day old, gone from the chat, or empty', async () => {
+    const { next } = await restarted();
+    next.setState({ inFlight: { ...next.state().inFlight!, at: next.state().inFlight!.at - 25 * 60 * 60_000 } });
+    await next.bridge.resume();
+    expect(next.sent).toEqual([]);
+    expect(next.state().inFlight).toBeNull();
+
+    const gone = (await restarted()).next;
+    gone.messages.set('wa-thread', []);
+    await gone.bridge.resume();
+    expect(gone.sent).toEqual([]);
+    expect(gone.state().inFlight).toBeNull();
+
+    const empty = (await restarted()).next;
+    empty.messages.set(
+      'wa-thread',
+      (empty.messages.get('wa-thread') ?? []).map(message => ({ ...message, content: '' })),
+    );
+    await empty.bridge.resume();
+    expect(empty.sent).toEqual([]);
+    expect(empty.state().inFlight).toBeNull();
   });
 });
 
