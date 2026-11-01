@@ -436,7 +436,7 @@ describe('an answer survives a restart of the background', () => {
     expect(h.sent).toEqual([]);
   });
 
-  it('lets go of an answer a day old, or one no longer in the chat', async () => {
+  it('lets go of an answer a day old, gone from the chat, or empty', async () => {
     const { next } = await restarted();
     next.setState({ inFlight: { ...next.state().inFlight!, at: next.state().inFlight!.at - 25 * 60 * 60_000 } });
     await next.bridge.resume();
@@ -448,6 +448,15 @@ describe('an answer survives a restart of the background', () => {
     await gone.bridge.resume();
     expect(gone.sent).toEqual([]);
     expect(gone.state().inFlight).toBeNull();
+
+    const empty = (await restarted()).next;
+    empty.messages.set(
+      'wa-thread',
+      (empty.messages.get('wa-thread') ?? []).map(message => ({ ...message, content: '' })),
+    );
+    await empty.bridge.resume();
+    expect(empty.sent).toEqual([]);
+    expect(empty.state().inFlight).toBeNull();
   });
 });
 

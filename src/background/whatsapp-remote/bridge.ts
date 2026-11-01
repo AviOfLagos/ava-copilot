@@ -460,11 +460,11 @@ export class WhatsAppBridge {
     const pending = state.inFlight;
     if (!pending || pending.at >= this.startedAt || state.status?.state !== 'linked') return;
     const answer = (await this.deps.messages(pending.threadId)).find(message => message.seq === pending.seq);
-    if (!answer || this.deps.now() - pending.at > RESUME_MAX_MS) {
+    const text = answer ? toWhatsAppText(answer.content, undefined, t('wava_reply_more')) : '';
+    if (!text || this.deps.now() - pending.at > RESUME_MAX_MS) {
       await this.settle(pending);
       return;
     }
-    const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
     const replyTo = pending.replyTo ?? undefined;
     if (!(await this.say(text, 'reply', replyTo, true))) return;
     await this.settle(pending);
