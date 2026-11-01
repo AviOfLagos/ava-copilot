@@ -57,6 +57,6 @@ export async function listenOnce(
   } finally {
     mic.getTracks().forEach(track => track.stop());
     void input.close().catch(() => {});
-    releaseStt();
+    releaseStt(engine);
   }
 }

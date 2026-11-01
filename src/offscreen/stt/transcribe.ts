@@ -59,6 +59,6 @@ export async function transcribeRecording(
     }
     return words.join(' ');
   } finally {
-    releaseStt();
+    releaseStt(engine);
   }
 }

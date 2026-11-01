@@ -15,16 +15,25 @@ describe('the speech engine pool', () => {
     unloadStt();
   });
 
-  it('lends the engine in use instead of pulling it away, and replaces it once it is free', async () => {
+  it('runs another recogniser beside the one in use, and ends it when released', async () => {
     const listening = fake();
-    const next = fake();
-    const create = vi.fn().mockReturnValueOnce(listening).mockReturnValueOnce(next);
+    const whisper = fake();
+    const create = vi.fn().mockReturnValueOnce(listening).mockReturnValueOnce(whisper);
     await acquireStt({ engine: 'moonshine', model: 'moonshine-tiny' }, create);
-    expect(await acquireStt({ engine: 'whisper', model: 'whisper-base' }, create)).toBe(listening);
+    const own = await acquireStt({ engine: 'whisper', model: 'whisper-base' }, create);
+    expect(own).toBe(whisper);
     expect(listening.dispose).not.toHaveBeenCalled();
-    releaseStt();
-    releaseStt();
+    releaseStt(own);
+    expect(whisper.dispose).toHaveBeenCalled();
+    expect(listening.dispose).not.toHaveBeenCalled();
+  });
+
+  it('replaces an engine nobody is using', async () => {
+    const old = fake();
+    const next = fake();
+    const create = vi.fn().mockReturnValueOnce(old).mockReturnValueOnce(next);
+    releaseStt(await acquireStt({ engine: 'moonshine', model: 'moonshine-tiny' }, create));
     expect(await acquireStt({ engine: 'whisper', model: 'whisper-base' }, create)).toBe(next);
-    expect(listening.dispose).toHaveBeenCalled();
+    expect(old.dispose).toHaveBeenCalled();
   });
 });
