@@ -13,14 +13,15 @@ let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let users = 0;
 let lastLoad: (SttLoadInfo & { engine: string }) | null = null;
 
-const keyOf = (config: SttConfig) => `${config.engine}:${config.model ?? ''}:${config.webgpu ? 'gpu' : 'cpu'}:${config.language ?? ''}`;
+const keyOf = (config: SttConfig) => `${config.engine}:${config.model ?? ''}:${config.webgpu ? 'gpu' : 'cpu'}`;
 
 /** The engine for this configuration, loaded; release it when done. */
 export async function acquireStt(config: SttConfig, create = createSttEngine): Promise<SttEngine> {
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
   const key = keyOf(config);
-  if (current?.key !== key) {
+  // An engine in use is never pulled away: whoever asks now borrows it (dictation during always-on listening)
+  if (current?.key !== key && !(current && users > 0)) {
     current?.engine.dispose();
     current = { key, engine: create(config) };
   }

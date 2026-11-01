@@ -71,15 +71,23 @@ export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
   idleEndMinutes: 3,
 };
 
+/** Whether the user chose to keep their speech on this computer: economy, or a local recogniser picked. */
+export function hearsOnDevice(settings: Pick<VoiceEngineSettings, 'mode' | 'stt' | 'sttChosen'>): boolean {
+  return settings.mode === 'economy' || (Boolean(settings.sttChosen) && settings.stt !== 'gemini');
+}
+
 /**
- * What a conversation runs on now: Gemini Live when a key is there, unless the user picked economy. Without a key,
- * economy, and starting it says plainly which files are missing.
+ * What a conversation runs on now: Gemini Live when a key is there, unless the user chose the device (Live picked
+ * outright still wins over a recogniser picked). Without a key, economy, and starting it says plainly which files
+ * are missing.
  */
 export function resolveVoiceMode(
-  settings: Pick<VoiceEngineSettings, 'mode'>,
+  settings: Pick<VoiceEngineSettings, 'mode'> & Partial<Pick<VoiceEngineSettings, 'stt' | 'sttChosen'>>,
   { hasGeminiKey }: { hasGeminiKey: boolean },
 ): 'live' | 'economy' {
-  return settings.mode !== 'economy' && hasGeminiKey ? 'live' : 'economy';
+  if (!hasGeminiKey || settings.mode === 'economy') return 'economy';
+  if (settings.mode === 'live') return 'live';
+  return hearsOnDevice({ stt: 'moonshine', sttChosen: false, ...settings }) ? 'economy' : 'live';
 }
 
 /**
@@ -223,12 +231,14 @@ export interface ThreadVoice {
   language?: string | null;
 }
 
-/** The engine settings for a chat: Gemini hearing or speaking means a Live conversation, a local recogniser economy. */
+/** The engine settings for a chat: Live hears and speaks with Gemini, so any local choice means economy. */
 export function threadVoiceEngines(settings: VoiceEngineSettings, voice?: ThreadVoice | null): VoiceEngineSettings {
-  if (voice?.hear === 'gemini' || (!voice?.hear && voice?.speak === 'gemini')) {
-    return { ...settings, mode: 'live', modeChosen: true };
+  if (voice?.hear === 'gemini') return { ...settings, mode: 'live', modeChosen: true, stt: 'gemini', sttChosen: true };
+  if (!voice?.hear) {
+    if (!voice?.speak) return settings;
+    // Gemini speaks only in Live, and any other voice only on the device
+    return { ...settings, mode: voice.speak === 'gemini' ? 'live' : 'economy', modeChosen: true };
   }
-  if (!voice?.hear) return settings;
   return { ...settings, mode: 'economy', modeChosen: true, stt: voice.hear, sttChosen: true };
 }
 

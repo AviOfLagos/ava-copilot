@@ -1,5 +1,6 @@
 import { t } from '@extension/i18n';
 import {
+  hearsOnDevice,
   llmProviderStore,
   localSttChoice,
   speechToTextModelStore,
@@ -32,11 +33,13 @@ export function hasGeminiSpeechToText(
 export interface DictationDeps {
   gemini: (base64: string, mediaType: string, voice?: ThreadVoice | null) => Promise<string>;
   local: (base64: string, voice?: ThreadVoice | null) => Promise<string>;
-  geminiReady: () => Promise<boolean>;
+  geminiReady: (voice?: ThreadVoice | null) => Promise<boolean>;
 }
 
 const browserDeps: DictationDeps = {
-  geminiReady: async () =>
+  // Never when Settings or the chat keep speech on this computer
+  geminiReady: async voice =>
+    !hearsOnDevice(threadVoiceEngines(await voiceEngineSettingsStore.getSettings(), voice)) &&
     hasGeminiSpeechToText(
       await speechToTextModelStore.getSpeechToTextModel(),
       await llmProviderStore.getAllProviders(),
@@ -91,7 +94,7 @@ export function sttErrorMessage(error: unknown): string {
 
 /**
  * Writes down a recording, in the chat's voice setup when it has one. By default with Gemini when there is a key
- * and on this computer otherwise, or when Gemini fails, so dictation works with no key and no network. A chat set to
+ * and speech was not kept on this computer, else here, and here when Gemini fails, so dictation works with no key and no network. A chat set to
  * a recogniser uses that one and no other. Writing down on this computer is pure work on the recording, so when
  * the offscreen document went away under it, it is asked once more.
  */
@@ -117,7 +120,7 @@ export async function transcribeSpeech(
     }
   };
   if (voice?.hear && voice.hear !== 'gemini') return local();
-  if (!(await deps.geminiReady())) return local();
+  if (!(await deps.geminiReady(voice))) return local();
   try {
     return await deps.gemini(base64, mediaType, voice);
   } catch (error) {

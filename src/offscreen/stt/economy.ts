@@ -287,7 +287,7 @@ export class EconomySession {
     this.transcribeStartedAt = performance.now();
     try {
       const started = performance.now();
-      const [said, speaker] = await Promise.all([this.stt.transcribe(audio), this.whoSpoke(audio)]);
+      const [said, speaker] = await Promise.all([this.stt.transcribe(audio, this.options.economy.stt.language), this.whoSpoke(audio)]);
       const text = said.trim();
       // Noise the recogniser turned into "you" or "thank you" is not a question: answering it would make the
       // copilot talk on its own and keep the conversation from ever going idle

@@ -20,6 +20,7 @@ const {
   economyStt,
   economyTts,
   localSttChoice,
+  hearsOnDevice,
   localVoice,
   migrateVoiceEngineSettings,
   resolveVoiceMode,
@@ -161,6 +162,19 @@ describe('engine choice for economy conversations', () => {
     expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: true })).toBe('live');
     expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: false })).toBe('economy');
     expect(resolveVoiceMode({ mode: 'economy' }, { hasGeminiKey: true })).toBe('economy');
+  });
+
+  it('keeps speech on this computer when the user chose that, also with a key', () => {
+    const key = { hasGeminiKey: true };
+    expect(resolveVoiceMode({ mode: 'auto', stt: 'whisper', sttChosen: true }, key)).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'auto', stt: 'moonshine', sttChosen: false }, key)).toBe('live');
+    expect(hearsOnDevice(settings({ mode: 'economy' }))).toBe(true);
+    expect(hearsOnDevice(settings({ stt: 'whisper', sttChosen: true }))).toBe(true);
+    expect(hearsOnDevice(settings())).toBe(false);
+    // A chat's own choice goes over Settings, both ways
+    expect(hearsOnDevice(threadVoiceEngines(settings({ mode: 'economy' }), { hear: 'gemini' }))).toBe(false);
+    expect(hearsOnDevice(threadVoiceEngines(settings(), { hear: 'vosk' }))).toBe(true);
+    expect(threadVoiceEngines(settings(), { speak: 'kokoro' }).mode).toBe('economy');
   });
 
   it('hears the user with Whisper when installed, unless another recogniser was picked', () => {

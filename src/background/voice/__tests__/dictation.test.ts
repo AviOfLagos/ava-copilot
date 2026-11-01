@@ -12,6 +12,7 @@ vi.mock('@extension/storage', () => ({
   voiceEngineSettingsStore: { getSettings: vi.fn(async () => ({})) },
   voiceIdentityStore: { getSettings: vi.fn(async () => ({ language: 'en-US' })) },
   threadVoiceEngines: vi.fn((settings: unknown) => settings),
+  hearsOnDevice: vi.fn(() => false),
   localSttChoice: vi.fn(() => null),
 }));
 
