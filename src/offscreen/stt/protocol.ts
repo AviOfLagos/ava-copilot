@@ -4,7 +4,7 @@ export type AsrModelId = 'moonshine-tiny' | 'moonshine-base' | 'whisper-base';
 
 export type ToAsrWorker =
   | { type: 'load'; model: AsrModelId; base: string; webgpu: boolean }
-  | { type: 'transcribe'; id: number; audio: Float32Array };
+  | { type: 'transcribe'; id: number; audio: Float32Array; language?: string };
 
 export type FromAsrWorker =
   | { type: 'loaded'; device: 'webgpu' | 'wasm'; ms: number }

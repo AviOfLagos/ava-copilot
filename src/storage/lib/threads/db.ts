@@ -10,6 +10,7 @@ import type { LogEntry } from '../observability/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
+import type { ThreadVoice } from '../settings/voiceEngineSettings';
 import type { ConfirmRequest } from '../settings/gateSettings';
 
 export type ThreadStatus = 'idle' | 'running' | 'waiting_confirm' | 'error';
@@ -59,6 +60,8 @@ export interface ThreadRecord {
   origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief' | 'whatsapp';
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
+  // How this chat hears and speaks, over Settings
+  voice?: ThreadVoice | null;
 }
 
 export interface ThreadMessage {

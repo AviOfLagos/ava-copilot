@@ -4,7 +4,8 @@ import { VoskDictation } from './vosk';
 /** A recogniser on the device: load once, then one utterance in, its words out. */
 export interface SttEngine {
   load(): Promise<SttLoadInfo>;
-  transcribe(audio: Float32Array): Promise<string>;
+  // `language`: Whisper's; the others only know English
+  transcribe(audio: Float32Array, language?: string): Promise<string>;
   dispose(): void;
 }
 
@@ -21,6 +22,8 @@ export interface SttConfig {
   model?: AsrModelId;
   // Moonshine's float weights for the GPU are installed
   webgpu?: boolean;
+  // Whisper's language
+  language?: string;
 }
 
 /** Moonshine or Whisper, through transformers.js in a worker. */
@@ -67,12 +70,12 @@ export class TransformersStt implements SttEngine {
     return this.loading;
   }
 
-  async transcribe(audio: Float32Array): Promise<string> {
+  async transcribe(audio: Float32Array, language?: string): Promise<string> {
     await this.load();
     const id = this.nextId++;
     const text = new Promise<string>((resolve, reject) => this.waiting.set(id, { resolve, reject }));
     const copy = new Float32Array(audio);
-    this.worker!.postMessage({ type: 'transcribe', id, audio: copy } satisfies ToAsrWorker, [copy.buffer]);
+    this.worker!.postMessage({ type: 'transcribe', id, audio: copy, language } satisfies ToAsrWorker, [copy.buffer]);
     return text;
   }
 
@@ -128,7 +131,7 @@ export function withTimeLimit(engine: SttEngine, limitFor = transcribeLimitMs): 
   return {
     load: () => engine.load(),
     dispose: () => engine.dispose(),
-    transcribe(audio) {
+    transcribe(audio, language) {
       const limit = limitFor(audio);
       let timer: ReturnType<typeof setTimeout> | undefined;
       const stalled = new Promise<never>((_, reject) => {
@@ -137,7 +140,7 @@ export function withTimeLimit(engine: SttEngine, limitFor = transcribeLimitMs): 
           reject(new Error(STT_STALLED));
         }, limit);
       });
-      return Promise.race([engine.transcribe(audio), stalled]).finally(() => clearTimeout(timer));
+      return Promise.race([engine.transcribe(audio, language), stalled]).finally(() => clearTimeout(timer));
     },
   };
 }

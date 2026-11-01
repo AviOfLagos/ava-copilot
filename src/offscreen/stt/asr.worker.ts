@@ -35,11 +35,11 @@ async function load(
   return { asr, device: 'wasm' };
 }
 
-async function transcribe(id: number, audio: Float32Array): Promise<void> {
+async function transcribe(id: number, audio: Float32Array, language = 'en'): Promise<void> {
   if (!recogniser) throw new Error('No speech model is loaded');
   const { asr, model } = await recogniser;
   const started = performance.now();
-  const options = model === 'whisper-base' ? { language: 'en', task: 'transcribe' } : {};
+  const options = model === 'whisper-base' ? { language, task: 'transcribe' } : {};
   const output = await asr(audio, options as never);
   const text = (Array.isArray(output) ? output.map(item => item.text).join(' ') : output.text).trim();
   post({ type: 'text', id, text, ms: performance.now() - started });
@@ -63,7 +63,7 @@ scope.onmessage = (event: MessageEvent<ToAsrWorker>) => {
     return;
   }
   queue = queue.then(() =>
-    transcribe(message.id, message.audio).catch(error =>
+    transcribe(message.id, message.audio, message.language).catch(error =>
       post({ type: 'error', id: message.id, message: String(error instanceof Error ? error.message : error) }),
     ),
   );

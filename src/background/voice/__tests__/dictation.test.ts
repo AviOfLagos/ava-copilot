@@ -10,6 +10,9 @@ vi.mock('@extension/storage', () => ({
   llmProviderStore: { getAllProviders: vi.fn(async () => ({})) },
   speechToTextModelStore: { getSpeechToTextModel: vi.fn(async () => null) },
   voiceEngineSettingsStore: { getSettings: vi.fn(async () => ({})) },
+  voiceIdentityStore: { getSettings: vi.fn(async () => ({ language: 'en-US' })) },
+  threadVoiceEngines: vi.fn((settings: unknown) => settings),
+  hearsOnDevice: vi.fn(() => false),
   localSttChoice: vi.fn(() => null),
 }));
 
@@ -20,7 +23,6 @@ const {
   isChannelError,
   releaseDictation,
   sttErrorMessage,
-  transcribeLocalFirst,
   transcribeSpeech,
 } = await import('../dictation');
 const { AppError } = await import('@extension/shared');
@@ -43,7 +45,7 @@ describe('dictation: writing the words down', () => {
   it('writes the words down on this computer when no Gemini speech-to-text is set up', async () => {
     const d = deps();
     expect(await transcribeSpeech('data:audio/webm;base64,AAAA', 'audio/webm', d)).toBe('from this computer');
-    expect(d.local).toHaveBeenCalledWith('AAAA');
+    expect(d.local).toHaveBeenCalledWith('AAAA', null);
     expect(d.gemini).not.toHaveBeenCalled();
   });
 
@@ -51,7 +53,31 @@ describe('dictation: writing the words down', () => {
     const d = deps();
     d.geminiReady.mockResolvedValue(true);
     expect(await transcribeSpeech('BBBB', 'audio/wav', d)).toBe('from gemini');
-    expect(d.gemini).toHaveBeenCalledWith('BBBB', 'audio/wav');
+    expect(d.gemini).toHaveBeenCalledWith('BBBB', 'audio/wav', null);
+    expect(d.local).not.toHaveBeenCalled();
+  });
+
+  it('falls back to this computer when Gemini fails, and says Gemini failed when that fails too', async () => {
+    const d = deps();
+    d.geminiReady.mockResolvedValue(true);
+    d.gemini.mockRejectedValue(new Error('no network'));
+    expect(await transcribeSpeech('BBBB', 'audio/wav', d)).toBe('from this computer');
+    d.local.mockRejectedValue(new Error('no model'));
+    await expect(transcribeSpeech('BBBB', 'audio/wav', d)).rejects.toThrow('no network');
+  });
+
+  it('keeps to the recogniser a chat chose', async () => {
+    const d = deps();
+    d.geminiReady.mockResolvedValue(true);
+    const whisper = { hear: 'whisper', language: 'yo-NG' } as const;
+    expect(await transcribeSpeech('BBBB', 'audio/wav', d, whisper)).toBe('from this computer');
+    expect(d.local).toHaveBeenCalledWith('BBBB', whisper);
+    expect(d.gemini).not.toHaveBeenCalled();
+
+    const gemini = { hear: 'gemini' } as const;
+    d.gemini.mockRejectedValue(new Error('no network'));
+    d.local.mockClear();
+    await expect(transcribeSpeech('BBBB', 'audio/wav', d, gemini)).rejects.toThrow('no network');
     expect(d.local).not.toHaveBeenCalled();
   });
 
@@ -100,42 +126,15 @@ describe('dictation: writing the words down', () => {
   it('counts Gemini speech-to-text as set up only with a model on a Gemini provider that has a key', () => {
     const gemini = { type: 'gemini', apiKey: 'k' } as never;
     expect(hasGeminiSpeechToText({ provider: 'g', modelName: 'm' }, { g: gemini })).toBe(true);
-    expect(hasGeminiSpeechToText(null, { g: gemini })).toBe(false);
+    // A key is enough: a quick model of that provider writes it down
+    expect(hasGeminiSpeechToText(null, { g: gemini })).toBe(true);
+    expect(hasGeminiSpeechToText(null, {})).toBe(false);
     expect(
       hasGeminiSpeechToText({ provider: 'g', modelName: 'm' }, { g: { type: 'gemini', apiKey: '' } as never }),
     ).toBe(false);
     expect(
       hasGeminiSpeechToText({ provider: 'o', modelName: 'm' }, { o: { type: 'openai', apiKey: 'k' } as never }),
     ).toBe(false);
-  });
-});
-
-describe('a WhatsApp voice note: written down on this computer first', () => {
-  const deps = () => ({
-    geminiReady: vi.fn(async () => true),
-    gemini: vi.fn(async () => 'from gemini'),
-    local: vi.fn(async () => 'from this computer'),
-  });
-
-  it('uses the local recogniser even when Gemini is set up', async () => {
-    const d = deps();
-    expect(await transcribeLocalFirst('data:audio/ogg;base64,T2dn', 'audio/ogg', d)).toBe('from this computer');
-    expect(d.local).toHaveBeenCalledWith('T2dn');
-    expect(d.gemini).not.toHaveBeenCalled();
-  });
-
-  it('falls back to Gemini only when no local recogniser is installed', async () => {
-    const d = deps();
-    d.local.mockRejectedValue(new AppError('not_found', 'voice_engine_dictation_missing'));
-    expect(await transcribeLocalFirst('T2dn', 'audio/ogg; codecs=opus', d)).toBe('from gemini');
-    expect(d.gemini).toHaveBeenCalledWith('T2dn', 'audio/ogg; codecs=opus');
-    d.geminiReady.mockResolvedValue(false);
-    await expect(transcribeLocalFirst('T2dn', 'audio/ogg', d)).rejects.toThrow('voice_engine_dictation_missing');
-    // A recogniser that failed on the recording is not a reason to send it elsewhere
-    const broken = deps();
-    broken.local.mockRejectedValue(new Error('could not decode'));
-    await expect(transcribeLocalFirst('T2dn', 'audio/ogg', broken)).rejects.toThrow('could not decode');
-    expect(broken.gemini).not.toHaveBeenCalled();
   });
 });
 

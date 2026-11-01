@@ -11,6 +11,7 @@ export const STT_IDLE_UNLOAD_MS = 5 * 60 * 1000;
 let current: { key: string; engine: SttEngine } | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let users = 0;
+const beside = new Set<SttEngine>();
 let lastLoad: (SttLoadInfo & { engine: string }) | null = null;
 
 const keyOf = (config: SttConfig) => `${config.engine}:${config.model ?? ''}:${config.webgpu ? 'gpu' : 'cpu'}`;
@@ -20,6 +21,19 @@ export async function acquireStt(config: SttConfig, create = createSttEngine): P
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
   const key = keyOf(config);
+  // An engine in use is never pulled away: another recogniser runs beside it (dictation with Whisper during
+  // always-on listening) and ends when released
+  if (current && current.key !== key && users > 0) {
+    const own = create(config);
+    try {
+      lastLoad = { ...(await own.load()), engine: key };
+    } catch (error) {
+      own.dispose();
+      throw error;
+    }
+    beside.add(own);
+    return own;
+  }
   if (current?.key !== key) {
     current?.engine.dispose();
     current = { key, engine: create(config) };
@@ -38,7 +52,11 @@ export async function acquireStt(config: SttConfig, create = createSttEngine): P
   return engine;
 }
 
-export function releaseStt(): void {
+export function releaseStt(engine?: SttEngine): void {
+  if (engine && beside.delete(engine)) {
+    engine.dispose();
+    return;
+  }
   users = Math.max(0, users - 1);
   if (users > 0 || !current) return;
   if (idleTimer) clearTimeout(idleTimer);

@@ -54,11 +54,11 @@ export async function transcribeRecording(
   try {
     const words: string[] = [];
     for (const part of parts) {
-      const text = (await engine.transcribe(part)).trim();
+      const text = (await engine.transcribe(part, config.language)).trim();
       if (isRequest(text)) words.push(text);
     }
     return words.join(' ');
   } finally {
-    releaseStt();
+    releaseStt(engine);
   }
 }

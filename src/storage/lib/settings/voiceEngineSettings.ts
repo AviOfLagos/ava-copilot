@@ -12,8 +12,8 @@ import type { TtsSettingsConfig } from './ttsSettings';
  */
 
 // Live: Gemini hears, thinks and speaks. Economy: audio never leaves the device; only text goes to a model.
-// Auto (the default): economy whenever the on-device speech files are there, so talking needs no key; Gemini Live
-// only when they are not and a Gemini key is. Live is used first only when the user picked it (see resolveVoiceMode)
+// Auto (the default): Gemini Live when there is a Gemini key, because it hears accents far better than the small
+// models on the device; economy without one, so talking needs no key (see resolveVoiceMode)
 export type VoiceMode = 'auto' | 'live' | 'economy';
 
 // Who turns speech into text. Gemini only in a Live conversation; the others run on the device
@@ -34,6 +34,8 @@ export interface VoiceEngineSettings {
   // The user picked the mode in Settings › Voice engines (an older stored "live" may just be the old default)
   modeChosen: boolean;
   stt: SttEngineId;
+  // The user picked who hears (Whisper otherwise takes over from the default Moonshine when installed)
+  sttChosen: boolean;
   moonshineSize: MoonshineSize;
   // Recognise speech on the graphics card (WebGPU) when its weights are installed; else on the processor
   sttGpu: boolean;
@@ -60,6 +62,7 @@ export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
   mode: 'auto',
   modeChosen: false,
   stt: 'moonshine',
+  sttChosen: false,
   moonshineSize: 'tiny',
   sttGpu: true,
   kittenVoice: 'Bella',
@@ -68,18 +71,23 @@ export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
   idleEndMinutes: 3,
 };
 
+/** Whether the user chose to keep their speech on this computer: economy, or a local recogniser picked. */
+export function hearsOnDevice(settings: Pick<VoiceEngineSettings, 'mode' | 'stt' | 'sttChosen'>): boolean {
+  return settings.mode === 'economy' || (Boolean(settings.sttChosen) && settings.stt !== 'gemini');
+}
+
 /**
- * What a conversation runs on now. Economy needs no key; Live needs a Gemini key and is used first only when the
- * user picked it. Auto prefers the device and falls back to Live only when the speech files are missing and a key is
- * there. Without either, economy is answered, and starting it says plainly which files are missing.
+ * What a conversation runs on now: Gemini Live when a key is there, unless the user chose the device (Live picked
+ * outright still wins over a recogniser picked). Without a key, economy, and starting it says plainly which files
+ * are missing.
  */
 export function resolveVoiceMode(
-  settings: Pick<VoiceEngineSettings, 'mode'>,
-  { hasGeminiKey, localReady }: { hasGeminiKey: boolean; localReady: boolean },
+  settings: Pick<VoiceEngineSettings, 'mode'> & Partial<Pick<VoiceEngineSettings, 'stt' | 'sttChosen'>>,
+  { hasGeminiKey }: { hasGeminiKey: boolean },
 ): 'live' | 'economy' {
-  if (settings.mode === 'economy') return 'economy';
-  if (settings.mode === 'live') return hasGeminiKey ? 'live' : 'economy';
-  return !localReady && hasGeminiKey ? 'live' : 'economy';
+  if (!hasGeminiKey || settings.mode === 'economy') return 'economy';
+  if (settings.mode === 'live') return 'live';
+  return hearsOnDevice({ stt: 'moonshine', sttChosen: false, ...settings }) ? 'economy' : 'live';
 }
 
 /**
@@ -137,19 +145,42 @@ export interface SttChoice {
   model?: 'moonshine-tiny' | 'moonshine-base' | 'whisper-base';
   // Run on the graphics card: allowed in settings and its weights installed
   webgpu: boolean;
+  // Whisper's two-letter language; the other recognisers only know English
+  language?: string;
 }
 
-/** The local recogniser to use, with its model folder and device; null when none is installed. */
-export function localSttChoice(settings: VoiceEngineSettings, installed: InstalledVoiceModels): SttChoice | null {
-  const engine = economyStt(settings, installed);
+/** A language tag as Whisper names it: en-NG is en, cmn-CN is zh. */
+export function whisperLanguage(tag: string): string {
+  const code = tag.split('-')[0].toLowerCase();
+  return code === 'cmn' ? 'zh' : code;
+}
+
+/**
+ * The local recogniser to use, with its model folder and device; null when none is installed. `hearing` is for
+ * words the user speaks to Ava (dictation, a conversation), where accuracy counts: Whisper replaces a Moonshine
+ * nobody picked, and any recogniser for a language other than English. Always-on listening leaves it out.
+ */
+export function localSttChoice(
+  settings: VoiceEngineSettings,
+  installed: InstalledVoiceModels,
+  hearing?: { language: string },
+): SttChoice | null {
+  let engine = economyStt(settings, installed);
   if (!engine) return null;
+  const language = hearing && whisperLanguage(hearing.language);
+  if (language && installed['whisper-base'] && (!settings.sttChosen || language !== 'en')) engine = 'whisper';
   if (engine === 'vosk') return { engine, webgpu: false };
   let model = sttModelId(engine, settings.moonshineSize) as NonNullable<SttChoice['model']>;
   // The chosen Moonshine size is not installed but the other one is
   if (engine === 'moonshine' && !installed[model]) {
     model = installed['moonshine-tiny'] ? 'moonshine-tiny' : 'moonshine-base';
   }
-  return { engine, model, webgpu: settings.sttGpu && Boolean(installed[model]?.webgpu) };
+  return {
+    engine,
+    model,
+    webgpu: settings.sttGpu && Boolean(installed[model]?.webgpu),
+    ...(engine === 'whisper' && language ? { language } : {}),
+  };
 }
 
 /**
@@ -190,6 +221,30 @@ export function localVoice(engine: LocalTtsEngineId, settings: VoiceEngineSettin
     return (KOKORO_VOICES as readonly string[]).includes(settings.kokoroVoice) ? settings.kokoroVoice : 'af_heart';
   }
   return (KITTEN_VOICES as readonly string[]).includes(settings.kittenVoice) ? settings.kittenVoice : 'Bella';
+}
+
+/** How one chat hears and speaks, over Settings; a field left out or null keeps Settings. */
+export interface ThreadVoice {
+  hear?: SttEngineId | null;
+  speak?: VoiceTtsEngineId | null;
+  // BCP-47, like Settings › Voice and language
+  language?: string | null;
+}
+
+/** The engine settings for a chat: Live hears and speaks with Gemini, so any local choice means economy. */
+export function threadVoiceEngines(settings: VoiceEngineSettings, voice?: ThreadVoice | null): VoiceEngineSettings {
+  if (voice?.hear === 'gemini') return { ...settings, mode: 'live', modeChosen: true, stt: 'gemini', sttChosen: true };
+  if (!voice?.hear) {
+    if (!voice?.speak) return settings;
+    // Gemini speaks only in Live, and any other voice only on the device
+    return { ...settings, mode: voice.speak === 'gemini' ? 'live' : 'economy', modeChosen: true };
+  }
+  return { ...settings, mode: 'economy', modeChosen: true, stt: voice.hear, sttChosen: true };
+}
+
+/** The voice output settings for a chat. */
+export function threadTts<T extends { engine: string; engineChosen?: boolean }>(tts: T, voice?: ThreadVoice | null): T {
+  return voice?.speak ? { ...tts, engine: voice.speak, engineChosen: true } : tts;
 }
 
 export type VoiceEngineSettingsStorage = BaseStorage<VoiceEngineSettings> & {

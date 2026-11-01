@@ -160,7 +160,7 @@ export class AmbientListener {
       const engine = await acquireStt(choice);
       // Paused or stopped while it loaded: give it straight back
       if (this.scribe.paused || !this.config) {
-        releaseStt();
+        releaseStt(engine);
         return;
       }
       this.engine = engine;
@@ -171,8 +171,9 @@ export class AmbientListener {
 
   private letGoOfEngine(): void {
     if (!this.engine) return;
+    const engine = this.engine;
     this.engine = null;
     this.engineKey = '';
-    releaseStt();
+    releaseStt(engine);
   }
 }

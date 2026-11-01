@@ -10203,5 +10203,26 @@
   },
   "wava_doc_untitled": {
     "message": "your document"
+  },
+  "thread_voice_label": {
+    "message": "Voice"
+  },
+  "thread_voice_hear": {
+    "message": "Hears"
+  },
+  "thread_voice_speak": {
+    "message": "Speaks"
+  },
+  "thread_voice_language": {
+    "message": "Language"
+  },
+  "thread_voice_default": {
+    "message": "Default"
+  },
+  "thread_voice_note": {
+    "message": "For this chat. A voice conversation picks this up the next time it starts. In a conversation Gemini hears and speaks together, so another voice means hearing on this computer. Whisper and Gemini hear other languages; the rest hear English."
+  },
+  "voice_engine_name_gemini": {
+    "message": "Gemini"
   }
 }

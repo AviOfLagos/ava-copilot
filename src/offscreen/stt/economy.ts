@@ -74,7 +74,7 @@ export interface EconomyDeps {
   // Starts the microphone at 16 kHz, on the chosen device (null for the system default); returns how to stop it
   openMic: (onChunk: (samples: Float32Array) => void, deviceId: string | null) => Promise<() => void>;
   loadStt: (config: EconomyEngines['stt']) => Promise<SttEngine>;
-  releaseStt: () => void;
+  releaseStt: (engine?: SttEngine) => void;
   // Speaks and resolves once heard, or stopped
   speak: (text: string, tts: EconomyEngines['tts']) => Promise<void>;
   stopSpeaking: (tts: EconomyEngines['tts']) => void;
@@ -163,7 +163,7 @@ export class EconomySession {
     const stt = await this.deps.loadStt(this.options.economy.stt);
     // Ended while the recogniser loaded: it goes back at once
     if (this.stopped) {
-      this.deps.releaseStt();
+      this.deps.releaseStt(stt);
       return;
     }
     this.stt = stt;
@@ -190,7 +190,7 @@ export class EconomySession {
     if (this.stt && this.transcribing && performance.now() - this.transcribeStartedAt > STUCK_TRANSCRIBE_MS) {
       this.stt.dispose();
     }
-    if (this.stt) this.deps.releaseStt();
+    if (this.stt) this.deps.releaseStt(this.stt);
     this.stt = null;
     this.events.onStatus('off');
   }
@@ -287,7 +287,7 @@ export class EconomySession {
     this.transcribeStartedAt = performance.now();
     try {
       const started = performance.now();
-      const [said, speaker] = await Promise.all([this.stt.transcribe(audio), this.whoSpoke(audio)]);
+      const [said, speaker] = await Promise.all([this.stt.transcribe(audio, this.options.economy.stt.language), this.whoSpoke(audio)]);
       const text = said.trim();
       // Noise the recogniser turned into "you" or "thank you" is not a question: answering it would make the
       // copilot talk on its own and keep the conversation from ever going idle

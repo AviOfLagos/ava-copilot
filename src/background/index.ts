@@ -290,9 +290,10 @@ async function teach(threadId: string): Promise<string> {
   return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
 }
 
-/** Gemini speech-to-text when it is set up, else the recogniser on this computer (see voice/dictation.ts). */
-async function transcribe(audio: string, mediaType?: string): Promise<string> {
-  return transcribeSpeech(audio, mediaType);
+/** Gemini when there is a key, else the recogniser on this computer, or as the chat says (see voice/dictation.ts). */
+async function transcribe(audio: string, threadId?: string): Promise<string> {
+  const thread = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
+  return transcribeSpeech(audio, undefined, undefined, thread?.voice ?? null);
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -453,7 +454,7 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
           }
           try {
-            return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio) });
+            return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio, message.threadId) });
           } catch (error) {
             logger.error('Speech-to-text failed:', error);
             // A plain sentence; the panel keeps the recording and offers to try again

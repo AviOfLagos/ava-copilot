@@ -18,13 +18,14 @@ const STT_MODELS = new Set(['moonshine-tiny', 'moonshine-base', 'whisper-base'])
 
 /** A local recogniser choice, checked: never anything but an engine and model that run on this device. */
 function sttChoiceOf(value: unknown): AmbientConfig['stt'] | null {
-  const stt = value as { engine?: unknown; model?: unknown; webgpu?: unknown } | null | undefined;
+  const stt = value as { engine?: unknown; model?: unknown; webgpu?: unknown; language?: unknown } | null | undefined;
   if (typeof stt?.engine !== 'string' || !STT_ENGINES.has(stt.engine)) return null;
   const model = typeof stt.model === 'string' && STT_MODELS.has(stt.model) ? stt.model : undefined;
   return {
     engine: stt.engine as AmbientConfig['stt']['engine'],
     ...(model ? { model: model as AmbientConfig['stt']['model'] } : {}),
     webgpu: stt.webgpu === true,
+    ...(typeof stt.language === 'string' ? { language: stt.language } : {}),
   };
 }
 

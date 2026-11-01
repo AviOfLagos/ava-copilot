@@ -228,10 +228,12 @@ const SidePanel = () => {
       .catch(error => console.error('Failed to load favorite prompts:', error));
   }, []);
 
+  const threadIdRef = useRef(threadId);
+  threadIdRef.current = threadId;
   const speech = useSpeechInput(
     useCallback(audio => {
       setSttError(null);
-      postRef.current({ type: 'speech_to_text', audio });
+      postRef.current({ type: 'speech_to_text', audio, threadId: threadIdRef.current });
     }, []),
     useCallback((message: string, retryable?: boolean) => (retryable ? setSttError(message) : setBanner(message)), []),
     // While dictating, a voice conversation and "Hey Ava" do not hear the microphone, so the words are answered once
@@ -1040,6 +1042,7 @@ const SidePanel = () => {
             onWorkspace={workspaceId => post({ type: 'thread_workspace', threadId: thread.id, workspaceId })}
             onRetry={async () => post({ type: 'thread_retry', threadId: thread.id, windowId: await currentWindowId() })}
             isDarkMode={isDarkMode}
+            api={panelApi}
           />
           {thread.tags.includes('voice') && (
             <VoiceThreadBar

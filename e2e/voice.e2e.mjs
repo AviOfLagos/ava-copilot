@@ -43,7 +43,7 @@ before(async () => {
         },
       },
     },
-    // These run on Gemini Live (the mock's): picked, since a conversation is on the device by default
+    // These run on Gemini Live (the mock's): picked, as a Gemini key would by default
     'voice-engine-settings': { mode: 'live', modeChosen: true },
     'meeting-settings': {
       liveModel: 'gemini-3.8-live',
@@ -130,6 +130,9 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'update_memory',
       'where_are_we',
       'change_setting',
+      'say_in_meeting',
+      'stop_speaking_in_call',
+      'remove_ava_from_call',
       // Ava as the hub: what she can do, the panel's places, checks, and panel features with no voice tool before
       'what_can_you_do',
       'open_place',
@@ -144,6 +147,7 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'list_workspaces',
       'list_personalities',
       'install_skill',
+      'set_listening_mode',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);

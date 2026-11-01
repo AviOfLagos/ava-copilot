@@ -5,15 +5,19 @@ import {
   resolveVoiceMode,
   localVoice,
   sttModelId,
+  threadTts,
+  threadVoiceEngines,
   personalityRateOf,
   personalityVoiceFor,
   ttsSettingsStore,
   voiceEngineSettingsStore,
+  voiceIdentityStore,
   voiceTtsEngine,
 } from '@extension/storage';
 import type {
   InstalledVoiceModels,
   Personality,
+  ThreadVoice,
   TtsSettingsConfig,
   VoiceEngineSettings,
   VoiceModelId,
@@ -69,7 +73,7 @@ export function modelsNeeded(
   if (feature === 'dictation') return geminiSpeechToText ? none : { required: stt, optional: [] };
   // Ambient listening never uses Gemini: it always needs a recogniser on the device
   if (feature === 'ambient') return { required: stt, optional: [] };
-  if (resolveVoiceMode(settings, { hasGeminiKey, localReady: sttReady }) === 'live') return none;
+  if (resolveVoiceMode(settings, { hasGeminiKey }) === 'live') return none;
   const engine = voiceTtsEngine(tts.engine);
   const chosen = tts.engineChosen ?? true;
   let voice: VoiceModelId | null = null;
@@ -88,8 +92,9 @@ export function chooseEconomyEngines(
   // The stored engine is checked here: TtsEngineId may not list the local engines yet
   tts: Pick<TtsSettingsConfig, 'voice' | 'rate'> & { engine: string; engineChosen?: boolean },
   installed: InstalledVoiceModels,
+  hearing?: { language: string },
 ): { engines: EconomyEngines } | { error: string } {
-  const stt = localSttChoice(settings, installed);
+  const stt = localSttChoice(settings, installed, hearing);
   if (!stt) {
     return { error: t('voice_engine_local_missing') };
   }
@@ -109,8 +114,8 @@ export function chooseEconomyEngines(
 
 /**
  * The offscreen options that make a voice conversation an economy one, or null for Gemini Live (see
- * resolveVoiceMode: on the device by default, Live only when picked and a key is there, or when the speech files
- * are missing and a key is there). Spread over the Live options in VoiceManager.start; `instructions` and `tools`
+ * resolveVoiceMode: Live with a Gemini key unless economy was picked, or the chat's own voice setup says otherwise).
+ * Spread over the Live options in VoiceManager.start; `instructions` and `tools`
  * stay the manager's own.
  *
  * @throws AppError when the conversation must run on the device but its speech files are missing
@@ -119,12 +124,14 @@ export async function economyVoiceOptions(
   // The conversation's personality: its voice and pace, when set, replace the voice settings
   personality?: Pick<Personality, 'voices' | 'rate'> | null,
   hasGeminiKey = false,
+  // The chat's own voice setup, over Settings
+  voice?: ThreadVoice | null,
 ): Promise<{ mode: 'economy'; economy: EconomyEngines } | null> {
-  const stored = await voiceEngineSettingsStore.getSettings();
+  const stored = threadVoiceEngines(await voiceEngineSettingsStore.getSettings(), voice);
   const installed = await installedVoiceModels();
-  const mode = resolveVoiceMode(stored, { hasGeminiKey, localReady: localSttChoice(stored, installed) !== null });
-  if (mode === 'live') return null;
-  const tts = await ttsSettingsStore.getSettings();
+  if (resolveVoiceMode(stored, { hasGeminiKey }) === 'live') return null;
+  const tts = threadTts(await ttsSettingsStore.getSettings(), voice);
+  const language = voice?.language ?? (await voiceIdentityStore.getSettings()).language;
   const kitten = personalityVoiceFor('kitten', personality);
   const kokoro = personalityVoiceFor('kokoro', personality);
   const settings = {
@@ -140,6 +147,7 @@ export async function economyVoiceOptions(
       rate: personalityRateOf(personality) ?? tts.rate,
     },
     installed,
+    { language },
   );
   if ('error' in choice) throw new AppError('not_found', choice.error);
   return { mode: 'economy', economy: choice.engines };

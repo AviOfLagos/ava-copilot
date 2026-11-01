@@ -10,6 +10,7 @@ import { t } from '@extension/i18n';
 import type { ChatModel } from '../llm/types';
 import { generatePlainText } from '../llm/generate';
 import { createSpeechToTextModel } from '../llm/providers';
+import { geminiSpeechConfig } from './geminiSpeech';
 import { textPart, userMessage } from '../llm/messages';
 
 const logger = createLogger('SpeechToText');
@@ -23,18 +24,11 @@ export class SpeechToTextService {
 
   static async create(providers: Record<string, ProviderConfig>): Promise<SpeechToTextService> {
     try {
-      const config = await speechToTextModelStore.getSpeechToTextModel();
-
-      if (!config?.provider || !config?.modelName) {
-        throw new Error(t('chat_stt_model_notFound'));
-      }
+      const config = geminiSpeechConfig(await speechToTextModelStore.getSpeechToTextModel(), providers);
+      if (!config) throw new Error(t('chat_stt_model_notFound'));
 
       const provider = providers[config.provider];
-      logger.info('Found provider for speech-to-text:', provider ? 'yes' : 'no', provider?.type);
-
-      if (!provider || provider.type !== 'gemini') {
-        throw new Error(t('chat_stt_model_notFound'));
-      }
+      logger.info('Found provider for speech-to-text:', provider.type);
 
       const llm = createSpeechToTextModel(config.provider, provider.apiKey, config.modelName, provider.baseUrl);
       logger.info(`Speech-to-text service created with model: ${config.modelName}`);
@@ -45,12 +39,12 @@ export class SpeechToTextService {
     }
   }
 
-  async transcribeAudio(base64Audio: string, mediaType = 'audio/webm'): Promise<string> {
+  async transcribeAudio(base64Audio: string, mediaType = 'audio/webm', spoken?: string | null): Promise<string> {
     try {
       logger.info('Starting audio transcription...');
-      // The user's own language and accent (Settings › Voice and language), so an accent is never heard as another
+      // The chat's language, else the user's own language and accent (Settings › Voice and language), so an accent is never heard as another
       // language
-      const { language } = await voiceIdentityStore.getSettings();
+      const language = spoken ?? (await voiceIdentityStore.getSettings()).language;
 
       // Create transcription message with audio data
       const transcriptionMessage = userMessage([
@@ -64,7 +58,7 @@ export class SpeechToTextService {
       const transcriptionResponse = await generatePlainText({ chatModel: this.llm, messages: [transcriptionMessage] });
 
       const transcribedText = transcriptionResponse.trim();
-      logger.info('Audio transcription completed:', transcribedText);
+      logger.info('Audio transcription completed');
 
       return transcribedText;
     } catch (error) {
