@@ -1,4 +1,5 @@
 import { Dexie } from 'dexie';
+import type { ThreadVoice } from '../settings/voiceEngineSettings';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ConfirmRequest } from '../settings/gateSettings';
 import { db as defaultDb } from './db';
@@ -115,6 +116,7 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
     setPinned: (id: string, pinned: boolean) => store.update(id, { pinned }),
     setArchived: (id: string, archived: boolean) => store.update(id, { archived }),
     setModel: (id: string, model: ModelConfig | null) => store.update(id, { model }),
+    setVoice: (id: string, voice: ThreadVoice | null) => store.update(id, { voice }),
     setPendingRequest: (id: string, request: ConfirmRequest | null) =>
       store.update(id, { pendingRequest: request, status: request ? 'waiting_confirm' : 'running' }),
 
@@ -185,6 +187,7 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
           // A branch stays in the same workspace, for the same agent, started the same way
           workspaceId: source.workspaceId ?? null,
           agentId: source.agentId ?? null,
+          voice: source.voice ?? null,
           origin: source.origin,
         });
         await db.threads.add(fork);

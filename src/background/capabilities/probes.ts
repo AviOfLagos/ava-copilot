@@ -5,7 +5,6 @@ import {
   getProviderTypeByProviderId,
   isLocalProvider,
   llmProviderStore,
-  localSttChoice,
   resolveVoiceMode,
   meetingSettingsStore,
   modelHealthStore,
@@ -22,7 +21,6 @@ import { discoveryHost } from '../models/discovery';
 import { openHosts } from '../models/breakers';
 import { liveTokenFromSettings, usesLiveTokens } from '../models/liveToken';
 import { classifyError } from './model-check';
-import { installedVoiceModels } from '../voice/engines/models';
 import type { ModelOption, ModelProbe, ModelUse } from './model-check';
 
 /**
@@ -66,8 +64,7 @@ async function pingLive(voiceRunning: boolean): Promise<ModelProbe> {
   ]);
   const base = { use: 'voice' as const, providerId: 'gemini', model: settings.liveModel };
   const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
-  const localReady = localSttChoice(engines, await installedVoiceModels()) !== null;
-  if (resolveVoiceMode(engines, { hasGeminiKey: Boolean(gemini), localReady }) === 'economy') {
+  if (resolveVoiceMode(engines, { hasGeminiKey: Boolean(gemini) }) === 'economy') {
     return {
       ...base,
       model: 'economy voice',

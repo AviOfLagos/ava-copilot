@@ -6,6 +6,8 @@ import { Cpu, ExternalLink, Globe, RotateCcw } from 'lucide-react';
 import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
+import type { PanelApi } from '../registry';
+import ThreadVoicePicker from './ThreadVoicePicker';
 
 interface ThreadBarProps {
   thread: ThreadRecord;
@@ -18,6 +20,7 @@ interface ThreadBarProps {
   onOpenMeeting?: () => void;
   onWorkspace: (workspaceId: string | null) => void;
   isDarkMode?: boolean;
+  api?: PanelApi;
 }
 
 /**
@@ -32,6 +35,7 @@ export default function ThreadBar({
   onPopOut,
   onWorkspace,
   isDarkMode = false,
+  api,
 }: ThreadBarProps) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [models, setModels] = useState<{ value: string; label: string }[]>([]);
@@ -115,7 +119,7 @@ export default function ThreadBar({
           </Button>
         )}
       </div>
-      <div className="flex items-center gap-3 text-[11px]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
         <WorkspacePicker
           value={thread.workspaceId ?? null}
           onChange={onWorkspace}
@@ -123,6 +127,7 @@ export default function ThreadBar({
           disabled={!idle}
           className="max-w-[48%] shrink-0"
         />
+        <ThreadVoicePicker thread={thread} api={api} />
         {onOpenMeeting && (
           <button type="button" onClick={onOpenMeeting} className="text-primary hover:underline">
             {t('meeting_openNotes')}

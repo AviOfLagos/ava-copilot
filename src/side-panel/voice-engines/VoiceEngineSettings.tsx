@@ -236,7 +236,7 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
             const ids = stt === 'gemini' ? [] : [sttModelId(stt, settings.moonshineSize)];
             // Either Moonshine size counts until a size is chosen
             const moonshineHere = stt === 'moonshine' && (has('moonshine-tiny') || has('moonshine-base'));
-            choose('stt', moonshineHere ? [] : ids, () => update({ stt }));
+            choose('stt', moonshineHere ? [] : ids, () => update({ stt, sttChosen: true }));
           }}>
           <option value="gemini">{t('voice_engine_stt_gemini')}</option>
           <option value="moonshine">

@@ -12,6 +12,7 @@ export interface EconomyEngines {
     engine: 'moonshine' | 'whisper' | 'vosk';
     model?: 'moonshine-tiny' | 'moonshine-base' | 'whisper-base';
     webgpu?: boolean;
+    language?: string;
   };
   tts: { engine: 'kitten' | 'kokoro' | 'system'; voice: string; rate: number };
 }

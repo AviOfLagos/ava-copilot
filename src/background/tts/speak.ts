@@ -3,6 +3,7 @@ import {
   personalityRateOf,
   personalityVoiceFor,
   threadStore,
+  threadTts,
   ttsSettingsStore,
   ttsSpeakingStore,
 } from '@extension/storage';
@@ -22,6 +23,9 @@ function engineFor(id: string): TtsEngine {
   return id === 'gemini' ? geminiEngine : chromeEngine;
 }
 
+// The engine of the line being said: a chat can speak with another engine than Settings
+let speakingEngine: string | null = null;
+
 /** Stops whichever engine might be speaking. Safe to call when neither is. */
 export async function stopSpeaking(): Promise<void> {
   await Promise.allSettled([chromeEngine.stop(), geminiEngine.stop(), stopLocalSpeech()]);
@@ -30,6 +34,7 @@ export async function stopSpeaking(): Promise<void> {
 
 /** Whether the chosen engine is speaking right now. */
 export async function speaking(): Promise<boolean> {
+  if (speakingEngine) return engineFor(speakingEngine).speaking();
   const settings = await ttsSettingsStore.getSettings();
   const installed = await installedVoiceModels().catch(() => null);
   return engineFor(effectiveTtsEngine(settings, installed)).speaking();
@@ -48,15 +53,21 @@ export async function speak(
 ): Promise<void> {
   if (services().voice.running) return;
   const stored = await ttsSettingsStore.getSettings();
+  const thread = await threadStore.get(context.threadId).catch(() => undefined);
+  const chosen = threadTts(stored, thread?.voice);
   // Until the user picks, a voice on this computer speaks when one is installed (effectiveTtsEngine)
   const installed = await installedVoiceModels().catch(() => null);
-  const settings = { ...stored, engine: effectiveTtsEngine(stored, installed) };
+  // A voice name from Settings belongs to the engine of Settings
+  const settings = {
+    ...chosen,
+    engine: effectiveTtsEngine(chosen, installed),
+    voice: chosen.engine === stored.engine ? stored.voice : '',
+  };
   const said = toSpeakableText(text);
   await stopSpeaking();
   if (!said) return;
 
   // The chat's personality (an agent's chat: the agent's) may ask for its own voice and pace
-  const thread = await threadStore.get(context.threadId).catch(() => undefined);
   const personality = await personalityForThread(thread).catch(() => null);
   const speaker = context.speaker ?? (await agentSpeaker(thread?.agentId).catch(() => null));
   const spoken = context.speaker ? spokenLine(context.speaker, said) : said;
@@ -68,6 +79,7 @@ export async function speak(
     rate: speaker?.rate ?? personalityRateOf(personality) ?? settings.rate,
     ...options,
   });
+  speakingEngine = settings.engine;
   try {
     try {
       await engineFor(settings.engine).speak(spoken, voiceOptions(settings.engine));
@@ -78,6 +90,7 @@ export async function speak(
       await chromeEngine.speak(spoken, voiceOptions('system'));
     }
   } finally {
+    speakingEngine = null;
     await ttsSpeakingStore.set({ threadId: null, messageId: null });
   }
 }

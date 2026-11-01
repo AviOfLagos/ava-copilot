@@ -109,6 +109,14 @@ export function listeningHint(tag: string): string {
   return `The user speaks ${name}, whatever their accent; never take their accent for another language.${region}`;
 }
 
+/** The voice identity for a chat: its language, when it has its own. */
+export function threadVoiceIdentity<T extends VoiceIdentitySettings>(
+  settings: T,
+  voice?: { language?: string | null } | null,
+): T {
+  return voice?.language ? { ...settings, language: voice.language } : settings;
+}
+
 /** A stored language tag, or en-US when it is not a BCP-47 tag. */
 export function voiceLanguageOf(tag: string | undefined | null): string {
   const value = String(tag ?? '').trim();

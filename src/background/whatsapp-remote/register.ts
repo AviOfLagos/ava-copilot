@@ -11,7 +11,7 @@ import { companionClient } from '../companion/client';
 import { brainSettingsStore } from '../companion/state';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
-import { transcribeLocalFirst } from '../voice/dictation';
+import { transcribeSpeech } from '../voice/dictation';
 import { registerNoticeSink } from '../notices';
 import { registerCommand, registerRecovery } from '../registry';
 import { services } from '../registry/services';
@@ -87,7 +87,7 @@ export const whatsappBridge = new WhatsAppBridge({
     });
   },
   media: request => companionClient.whatsappMedia(request),
-  transcribe: (base64, mediaType) => transcribeLocalFirst(base64, mediaType),
+  transcribe: (base64, mediaType) => transcribeSpeech(base64, mediaType),
   toAttachment: photo => photoAttachment(photo),
   saveDocument: async doc => {
     await services().kb.saveDocument(doc);

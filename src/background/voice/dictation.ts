@@ -1,7 +1,15 @@
 import { t } from '@extension/i18n';
-import { llmProviderStore, localSttChoice, speechToTextModelStore, voiceEngineSettingsStore } from '@extension/storage';
-import type { ProviderConfig } from '@extension/storage';
+import {
+  llmProviderStore,
+  localSttChoice,
+  speechToTextModelStore,
+  threadVoiceEngines,
+  voiceEngineSettingsStore,
+  voiceIdentityStore,
+} from '@extension/storage';
+import type { ProviderConfig, ThreadVoice } from '@extension/storage';
 import { AppError } from '@extension/shared';
+import { geminiSpeechConfig } from '../services/geminiSpeech';
 import { SpeechToTextService } from '../services/speechToText';
 import { installedVoiceModels } from './engines/models';
 import { toVoiceOffscreen } from './engines/offscreen';
@@ -13,19 +21,17 @@ import { registerOffscreenBusy } from '../registry';
  * way while the user dictates (they would otherwise hear the same words and answer them too).
  */
 
-/** Whether a Gemini speech-to-text model is set up: a model chosen, on a Gemini provider with a key. */
+/** Whether Gemini can write speech down: a Gemini provider with a key. */
 export function hasGeminiSpeechToText(
   config: { provider?: string; modelName?: string } | null | undefined,
   providers: Record<string, ProviderConfig>,
 ): boolean {
-  if (!config?.provider || !config.modelName) return false;
-  const provider = providers[config.provider];
-  return provider?.type === 'gemini' && Boolean(provider.apiKey);
+  return geminiSpeechConfig(config, providers) !== null;
 }
 
 export interface DictationDeps {
-  gemini: (base64: string, mediaType: string) => Promise<string>;
-  local: (base64: string) => Promise<string>;
+  gemini: (base64: string, mediaType: string, voice?: ThreadVoice | null) => Promise<string>;
+  local: (base64: string, voice?: ThreadVoice | null) => Promise<string>;
   geminiReady: () => Promise<boolean>;
 }
 
@@ -35,10 +41,16 @@ const browserDeps: DictationDeps = {
       await speechToTextModelStore.getSpeechToTextModel(),
       await llmProviderStore.getAllProviders(),
     ),
-  gemini: async (base64, mediaType) =>
-    (await SpeechToTextService.create(await llmProviderStore.getAllProviders())).transcribeAudio(base64, mediaType),
-  local: async base64 => {
-    const stt = localSttChoice(await voiceEngineSettingsStore.getSettings(), await installedVoiceModels());
+  gemini: async (base64, mediaType, voice) =>
+    (await SpeechToTextService.create(await llmProviderStore.getAllProviders())).transcribeAudio(
+      base64,
+      mediaType,
+      voice?.language,
+    ),
+  local: async (base64, voice) => {
+    const language = voice?.language ?? (await voiceIdentityStore.getSettings()).language;
+    const settings = threadVoiceEngines(await voiceEngineSettingsStore.getSettings(), voice);
+    const stt = localSttChoice(settings, await installedVoiceModels(), { language });
     if (!stt) throw new AppError('not_found', t('voice_engine_dictation_missing'));
     const reply = await toVoiceOffscreen<{ ok?: boolean; text?: string; error?: string }>({
       type: 'stt_transcribe',
@@ -78,46 +90,41 @@ export function sttErrorMessage(error: unknown): string {
 }
 
 /**
- * Writes down a recording: with Gemini when its speech-to-text is set up, else on this computer with the local
- * recogniser, so dictation works with no key at all. Writing down is pure work on the recording, so when the
- * offscreen document went away under it, it is asked once more.
+ * Writes down a recording, in the chat's voice setup when it has one. By default with Gemini when there is a key
+ * and on this computer otherwise, or when Gemini fails, so dictation works with no key and no network. A chat set to
+ * a recogniser uses that one and no other. Writing down on this computer is pure work on the recording, so when
+ * the offscreen document went away under it, it is asked once more.
  */
-export async function transcribeSpeech(audio: string, mediaType = 'audio/webm', deps = browserDeps): Promise<string> {
+export async function transcribeSpeech(
+  audio: string,
+  mediaType = 'audio/webm',
+  deps = browserDeps,
+  voice: ThreadVoice | null = null,
+): Promise<string> {
   // Remove the data URL prefix if present
   const base64 = audio.startsWith('data:') ? audio.split(',')[1] : audio;
-  if (await deps.geminiReady()) return deps.gemini(base64, mediaType);
-  writing++;
-  try {
+  const local = async () => {
+    writing++;
     try {
-      return await deps.local(base64);
-    } catch (error) {
-      if (!isChannelError(error)) throw error;
-      return await deps.local(base64);
-    }
-  } finally {
-    writing--;
-  }
-}
-
-/**
- * Writes down a recording on this computer first (a WhatsApp voice note): with Gemini only when no local recogniser
- * is installed and Gemini's speech-to-text is set up.
- */
-export async function transcribeLocalFirst(audio: string, mediaType: string, deps = browserDeps): Promise<string> {
-  const base64 = audio.startsWith('data:') ? audio.split(',')[1] : audio;
-  writing++;
-  try {
-    try {
-      return await deps.local(base64);
-    } catch (error) {
-      if (isChannelError(error)) return await deps.local(base64);
-      if (error instanceof AppError && error.kind === 'not_found' && (await deps.geminiReady())) {
-        return await deps.gemini(base64, mediaType);
+      try {
+        return await deps.local(base64, voice);
+      } catch (error) {
+        if (!isChannelError(error)) throw error;
+        return await deps.local(base64, voice);
       }
-      throw error;
+    } finally {
+      writing--;
     }
-  } finally {
-    writing--;
+  };
+  if (voice?.hear && voice.hear !== 'gemini') return local();
+  if (!(await deps.geminiReady())) return local();
+  try {
+    return await deps.gemini(base64, mediaType, voice);
+  } catch (error) {
+    if (voice?.hear === 'gemini') throw error;
+    return local().catch(() => {
+      throw error;
+    });
   }
 }
 

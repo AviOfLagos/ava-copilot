@@ -13,7 +13,7 @@ let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let users = 0;
 let lastLoad: (SttLoadInfo & { engine: string }) | null = null;
 
-const keyOf = (config: SttConfig) => `${config.engine}:${config.model ?? ''}:${config.webgpu ? 'gpu' : 'cpu'}`;
+const keyOf = (config: SttConfig) => `${config.engine}:${config.model ?? ''}:${config.webgpu ? 'gpu' : 'cpu'}:${config.language ?? ''}`;
 
 /** The engine for this configuration, loaded; release it when done. */
 export async function acquireStt(config: SttConfig, create = createSttEngine): Promise<SttEngine> {

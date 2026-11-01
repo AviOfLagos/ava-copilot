@@ -12,6 +12,7 @@ import {
   usageStore,
   voiceIdentityStore,
   liveSpeechConfig,
+  threadVoiceIdentity,
   personalityVoiceFor,
 } from '@extension/storage';
 import type { MessageAttachment, Personality, ThreadRecord } from '@extension/storage';
@@ -189,15 +190,16 @@ export class VoiceManager {
       session.identity,
       capabilitySection(),
     );
+    const thread = await threadStore.get(this.threadId).catch(() => undefined);
     if (session.mode === 'economy') {
-      const economy = await economyVoiceOptions(personality, session.hasGemini).catch(() => null);
+      const economy = await economyVoiceOptions(personality, session.hasGemini, thread?.voice).catch(() => null);
       if (economy) session.economyTts = economy.economy.tts;
       await toOffscreen({ type: 'voice_reconfigure', instructions, economyTts: economy?.economy.tts }).catch(() => {});
       return false;
     }
     const speechConfig = liveSpeechConfig(
       session.liveModel,
-      await voiceIdentityStore.getSettings(),
+      threadVoiceIdentity(await voiceIdentityStore.getSettings(), thread?.voice),
       personalityVoiceFor('live', personality),
     );
     const voice = speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName;
@@ -254,9 +256,9 @@ export class VoiceManager {
     this.personalityWorkspaceId = previous?.workspaceId ?? null;
     const providers = await llmProviderStore.getAllProviders();
     const gemini = Object.entries(providers).find(([id, p]) => (p.type ?? id) === 'gemini' && p.apiKey);
-    // On the device unless Live was picked (Settings › Voice engines): speech is recognised and spoken here, and
-    // the chat model answers, so no Gemini key is needed
-    const economy = await economyVoiceOptions(personality, Boolean(gemini));
+    // Gemini Live with a key, unless economy was picked (Settings › Voice engines) or the chat says otherwise: on the
+    // device, speech is recognised and spoken here and the chat model answers, so no Gemini key is needed
+    const economy = await economyVoiceOptions(personality, Boolean(gemini), previous?.voice);
     if (!gemini && !economy) throw new Error(t('voice_needsGemini'));
     if (await this.overCap()) throw new Error(t('usage_capReached_short'));
 
@@ -264,7 +266,7 @@ export class VoiceManager {
     const { stylePrompt, assistantName } = await generalSettingsStore.getSettings();
     this.assistantName = assistantNameOf(assistantName);
     // The same voice and language every time; the identity and what she knows go after the rules
-    const voiceIdentity = await voiceIdentityStore.getSettings();
+    const voiceIdentity = threadVoiceIdentity(await voiceIdentityStore.getSettings(), previous?.voice);
     const identity = voiceCoreSection(await loadIdentityContext(previous?.workspaceId), voiceIdentity.language);
     const thread = previous ?? (await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] }));
     const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';

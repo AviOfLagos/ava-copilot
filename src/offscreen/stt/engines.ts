@@ -21,6 +21,8 @@ export interface SttConfig {
   model?: AsrModelId;
   // Moonshine's float weights for the GPU are installed
   webgpu?: boolean;
+  // Whisper's language
+  language?: string;
 }
 
 /** Moonshine or Whisper, through transformers.js in a worker. */
@@ -36,6 +38,7 @@ export class TransformersStt implements SttEngine {
     private readonly createWorker: () => Worker = () =>
       new Worker(new URL('./asr.worker.ts', import.meta.url), { type: 'module' }),
     private readonly modelBase = chrome.runtime.getURL('voice/'),
+    private readonly language?: string,
   ) {}
 
   load(): Promise<SttLoadInfo> {
@@ -72,7 +75,9 @@ export class TransformersStt implements SttEngine {
     const id = this.nextId++;
     const text = new Promise<string>((resolve, reject) => this.waiting.set(id, { resolve, reject }));
     const copy = new Float32Array(audio);
-    this.worker!.postMessage({ type: 'transcribe', id, audio: copy } satisfies ToAsrWorker, [copy.buffer]);
+    this.worker!.postMessage({ type: 'transcribe', id, audio: copy, language: this.language } satisfies ToAsrWorker, [
+      copy.buffer,
+    ]);
     return text;
   }
 
@@ -145,5 +150,6 @@ export function withTimeLimit(engine: SttEngine, limitFor = transcribeLimitMs): 
 export function createSttEngine(config: SttConfig): SttEngine {
   if (config.engine === 'vosk') return withTimeLimit(new VoskStt());
   const model = config.model ?? (config.engine === 'whisper' ? 'whisper-base' : 'moonshine-tiny');
-  return withTimeLimit(new TransformersStt(model, config.webgpu ?? false));
+  const language = config.language;
+  return withTimeLimit(new TransformersStt(model, config.webgpu ?? false, undefined, undefined, language));
 }

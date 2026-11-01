@@ -24,6 +24,8 @@ const {
   migrateVoiceEngineSettings,
   resolveVoiceMode,
   sttModelId,
+  threadTts,
+  threadVoiceEngines,
   voiceEngineSettingsStore,
   voiceTtsEngine,
 } = await import('../voiceEngineSettings');
@@ -153,16 +155,44 @@ describe('engine choice for economy conversations', () => {
     expect(economyTts('system', {}, false)).toBe('system');
   });
 
-  it('talks on the device by default, and through Gemini Live only when picked and a key is there', () => {
-    const ready = { hasGeminiKey: true, localReady: true };
-    expect(resolveVoiceMode({ mode: 'auto' }, ready)).toBe('economy');
-    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: false, localReady: true })).toBe('economy');
-    // Auto falls back to Live only when the speech files are missing and a key is there
-    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: true, localReady: false })).toBe('live');
-    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: false, localReady: false })).toBe('economy');
-    expect(resolveVoiceMode({ mode: 'live' }, ready)).toBe('live');
-    expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: false, localReady: true })).toBe('economy');
-    expect(resolveVoiceMode({ mode: 'economy' }, ready)).toBe('economy');
+  it('talks through Gemini Live with a key, on the device without one or when economy is picked', () => {
+    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: true })).toBe('live');
+    expect(resolveVoiceMode({ mode: 'auto' }, { hasGeminiKey: false })).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: true })).toBe('live');
+    expect(resolveVoiceMode({ mode: 'live' }, { hasGeminiKey: false })).toBe('economy');
+    expect(resolveVoiceMode({ mode: 'economy' }, { hasGeminiKey: true })).toBe('economy');
+  });
+
+  it('hears the user with Whisper when installed, unless another recogniser was picked', () => {
+    const installed = { 'moonshine-tiny': {}, 'whisper-base': {} } as never;
+    const hearing = { language: 'en-NG' };
+    expect(localSttChoice(settings(), installed, hearing)).toMatchObject({ engine: 'whisper', language: 'en' });
+    expect(localSttChoice(settings({ sttChosen: true }), installed, hearing)?.engine).toBe('moonshine');
+    // Always-on listening stays on the light recogniser
+    expect(localSttChoice(settings(), installed)?.engine).toBe('moonshine');
+    // Only Whisper knows other languages, whatever was picked
+    expect(localSttChoice(settings({ sttChosen: true }), installed, { language: 'cmn-CN' })).toMatchObject({
+      engine: 'whisper',
+      language: 'zh',
+    });
+    expect(localSttChoice(settings(), { 'moonshine-tiny': {} } as never, hearing)?.engine).toBe('moonshine');
+  });
+
+  it('lets a chat override who hears and speaks', () => {
+    expect(threadVoiceEngines(settings(), null)).toEqual(settings());
+    expect(threadVoiceEngines(settings(), { hear: 'gemini' }).mode).toBe('live');
+    expect(threadVoiceEngines(settings(), { speak: 'gemini' }).mode).toBe('live');
+    expect(threadVoiceEngines(settings(), { hear: 'whisper' })).toMatchObject({
+      mode: 'economy',
+      stt: 'whisper',
+      sttChosen: true,
+    });
+    expect(threadVoiceEngines(settings(), { hear: 'whisper', speak: 'gemini' }).mode).toBe('economy');
+    expect(threadTts({ engine: 'system', engineChosen: false }, { speak: 'kokoro' })).toEqual({
+      engine: 'kokoro',
+      engineChosen: true,
+    });
+    expect(threadTts({ engine: 'system' }, { language: 'fr-FR' })).toEqual({ engine: 'system' });
   });
 
   it("keeps a voice only when it is one of the engine's", () => {
