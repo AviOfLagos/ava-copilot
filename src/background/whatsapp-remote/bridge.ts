@@ -150,6 +150,8 @@ export class WhatsAppBridge {
   private polling: Promise<void> | null = null;
   // Notices already sent this run of the background (a key is sent once)
   private readonly sentKeys = new Set<string>();
+  // The answers on their way now, so one never goes twice
+  private readonly delivering = new Set<string>();
   // The turn "typing…" is kept up for; anything else stops it
   private typingFor: string | null = null;
 
@@ -443,7 +445,19 @@ export class WhatsAppBridge {
     }
   }
 
-  private async answer(thread: ThreadRecord): Promise<void> {
+  /**
+   * After the background restarts: an answer that finished but never got as far as being marked sent (it died
+   * making or sending the voice note) goes now. In words, in case the voice note is what stopped it, and quoting his
+   * message, since it comes late. Run before the next pull, which moves `replyTo` on.
+   */
+  async resume(): Promise<void> {
+    const state = await this.deps.getState();
+    if (state.status?.state !== 'linked' || !state.threadId) return;
+    const thread = await this.deps.getThread(state.threadId);
+    if (thread?.origin === 'whatsapp' && thread.status === 'idle') await this.answer(thread, true);
+  }
+
+  private async answer(thread: ThreadRecord, resumed = false): Promise<void> {
     if (thread.status === 'running') return;
     this.typingFor = null;
     const state = await this.deps.getState();
@@ -460,24 +474,53 @@ export class WhatsAppBridge {
       }
       if (thread.status !== 'idle') return;
       const answer = answerOf(await this.deps.messages(thread.id));
-      const done = state.repliedSeq[thread.id] ?? 0;
-      if (!answer || answer.seq <= done) return;
-      await this.deps.updateState({ repliedSeq: { ...state.repliedSeq, [thread.id]: answer.seq } });
-      const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
-      const quote = state.quoteReply;
-      const settings = await this.deps.settings();
-      const spoken = settings.voiceReplies && (state.replyVoice || settings.voiceForText);
-      let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
-      // Words when the voice note could not go, and after one that had a link in it (to tap)
-      if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
-      const acknowledged = (await this.deps.getState()).acknowledged;
-      if (sent && replyTo && acknowledged === replyTo) {
-        await this.deps.react({ emoji: DONE_EMOJI, messageId: replyTo }).catch(error => {
-          this.deps.warn('A WhatsApp reaction was not sent', error);
+      if (!answer) return;
+      await this.deliver(thread, answer, replyTo, resumed);
+    } finally {
+      await this.deps.presence('paused', replyTo).catch(() => {});
+    }
+  }
+
+  /**
+   * Sends one answer, once. It counts as sent only when the attempt is over, whether or not it got through (a refused
+   * send stays in the panel), so a background that dies halfway leaves it for `resume`.
+   */
+  private async deliver(
+    thread: ThreadRecord,
+    answer: ThreadMessage,
+    replyTo: string | undefined,
+    resumed: boolean,
+  ): Promise<void> {
+    const key = `${thread.id}:${answer.seq}`;
+    if (this.delivering.has(key)) return;
+    this.delivering.add(key);
+    try {
+      // Read after claiming it: a second call for this answer now sees the first one's mark
+      const state = await this.deps.getState();
+      if (answer.seq <= (state.repliedSeq[thread.id] ?? 0)) return;
+      try {
+        const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
+        const quote = state.quoteReply || resumed;
+        const settings = await this.deps.settings();
+        const spoken = !resumed && settings.voiceReplies && (state.replyVoice || settings.voiceForText);
+        let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
+        // Words when the voice note could not go, and after one that had a link in it (to tap)
+        if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
+        const acknowledged = (await this.deps.getState()).acknowledged;
+        if (sent && replyTo && acknowledged === replyTo) {
+          await this.deps.react({ emoji: DONE_EMOJI, messageId: replyTo }).catch(error => {
+            this.deps.warn('A WhatsApp reaction was not sent', error);
+          });
+        }
+      } finally {
+        // Fresh: another answer may have been marked while this one was on its way
+        const { repliedSeq } = await this.deps.getState();
+        await this.deps.updateState({
+          repliedSeq: { ...repliedSeq, [thread.id]: Math.max(repliedSeq[thread.id] ?? 0, answer.seq) },
         });
       }
     } finally {
-      await this.deps.presence('paused', replyTo).catch(() => {});
+      this.delivering.delete(key);
     }
   }
 

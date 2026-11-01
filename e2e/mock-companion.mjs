@@ -102,6 +102,9 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
     // id → the media reply's fields
     files: new Map(),
     sent: [],
+    presences: [],
+    // Leaves "recording…" unanswered, so a test can stop the background in the middle of a voice note
+    holdRecording: false,
     acked: [],
     mediaRequests: [],
   };
@@ -409,6 +412,13 @@ export async function startMockCompanion({ code = 'ABCD-2345', docker = {}, cale
       if (!parsed.success) return fail(400, 'invalid', 'The request is not valid.');
       whatsapp.sent.push(parsed.data);
       return send(200, { ok: true, status: whatsapp.status });
+    }
+    if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.presence) {
+      const { state } = json();
+      whatsapp.presences.push(state);
+      // No reply: the background waits here, as it does while a voice note is made
+      if (state === 'recording' && whatsapp.holdRecording) return;
+      return send(200, { ok: true });
     }
     if (req.method === 'POST' && url.pathname === WHATSAPP_ROUTES.media) {
       const parsed = whatsappMediaRequestSchema.safeParse(json());
