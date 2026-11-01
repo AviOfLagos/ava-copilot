@@ -14,7 +14,7 @@ import { toSpeakableText } from '../tts/markdown';
 import { commandOf } from './commands';
 import { clip, describeRequest, plainOutside, requestKind, toWhatsAppText } from './format';
 import { mayNotify } from './notices';
-import type { WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
+import type { InFlightAnswer, WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
 
 /**
  * Ava on WhatsApp, in the background: pulls the owner's messages from Ava Brain into the day's WhatsApp chat
@@ -88,6 +88,8 @@ export const TYPING_EVERY_MS = 10_000;
 // A spoken answer longer than this (about a minute and a half) goes as words
 export const VOICE_TEXT_MAX = 1200;
 const LINK = /\bhttps?:\/\//i;
+// An answer left halfway this long ago is no use to him
+const RESUME_MAX_MS = 24 * 60 * 60_000;
 
 export interface VoiceReply {
   audio: string;
@@ -150,12 +152,14 @@ export class WhatsAppBridge {
   private polling: Promise<void> | null = null;
   // Notices already sent this run of the background (a key is sent once)
   private readonly sentKeys = new Set<string>();
-  // The answers on their way now, so one never goes twice
-  private readonly delivering = new Set<string>();
+  // An answer on its way from before this time was left by a background that stopped
+  private readonly startedAt: number;
   // The turn "typing…" is kept up for; anything else stops it
   private typingFor: string | null = null;
 
-  constructor(private readonly deps: BridgeDeps) {}
+  constructor(private readonly deps: BridgeDeps) {
+    this.startedAt = deps.now();
+  }
 
   /** Pulls and delivers; one pull at a time. */
   poll(): Promise<void> {
@@ -446,18 +450,45 @@ export class WhatsAppBridge {
   }
 
   /**
-   * After the background restarts: an answer that finished but never got as far as being marked sent (it died
-   * making or sending the voice note) goes now. In words, in case the voice note is what stopped it, and quoting his
-   * message, since it comes late. Run before the next pull, which moves `replyTo` on.
+   * After the background restarts: an answer it stopped in the middle of sending goes now. In words, in case the
+   * voice note is what stopped it, and quoting what it answers, since it comes late. Only that answer: anything else
+   * in the chat was never going to WhatsApp. Kept for the next start if it cannot go. A background stopped between
+   * sending and saving that it had sends the answer twice, which is better than never.
    */
   async resume(): Promise<void> {
     const state = await this.deps.getState();
-    if (state.status?.state !== 'linked' || !state.threadId) return;
-    const thread = await this.deps.getThread(state.threadId);
-    if (thread?.origin === 'whatsapp' && thread.status === 'idle') await this.answer(thread, true);
+    const pending = state.inFlight;
+    if (!pending || pending.at >= this.startedAt || state.status?.state !== 'linked') return;
+    const answer = (await this.deps.messages(pending.threadId)).find(message => message.seq === pending.seq);
+    if (!answer || this.deps.now() - pending.at > RESUME_MAX_MS) {
+      await this.settle(pending);
+      return;
+    }
+    const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
+    const replyTo = pending.replyTo ?? undefined;
+    if (!(await this.say(text, 'reply', replyTo, true))) return;
+    await this.settle(pending);
+    await this.markDone(replyTo);
   }
 
-  private async answer(thread: ThreadRecord, resumed = false): Promise<void> {
+  /** The answer is no longer on its way. A newer one may be by now: that one stays. */
+  private async settle(pending: InFlightAnswer): Promise<void> {
+    const { inFlight } = await this.deps.getState();
+    if (inFlight?.threadId === pending.threadId && inFlight.seq === pending.seq) {
+      await this.deps.updateState({ inFlight: null });
+    }
+  }
+
+  /** ✅ on the message that got her 👍 when the work took a while. */
+  private async markDone(replyTo: string | undefined): Promise<void> {
+    const { acknowledged } = await this.deps.getState();
+    if (!replyTo || acknowledged !== replyTo) return;
+    await this.deps.react({ emoji: DONE_EMOJI, messageId: replyTo }).catch(error => {
+      this.deps.warn('A WhatsApp reaction was not sent', error);
+    });
+  }
+
+  private async answer(thread: ThreadRecord): Promise<void> {
     if (thread.status === 'running') return;
     this.typingFor = null;
     const state = await this.deps.getState();
@@ -474,53 +505,22 @@ export class WhatsAppBridge {
       }
       if (thread.status !== 'idle') return;
       const answer = answerOf(await this.deps.messages(thread.id));
-      if (!answer) return;
-      await this.deliver(thread, answer, replyTo, resumed);
+      const done = state.repliedSeq[thread.id] ?? 0;
+      if (!answer || answer.seq <= done) return;
+      const pending = { threadId: thread.id, seq: answer.seq, replyTo: replyTo ?? null, at: this.deps.now() };
+      await this.deps.updateState({ repliedSeq: { ...state.repliedSeq, [thread.id]: answer.seq }, inFlight: pending });
+      const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
+      const quote = state.quoteReply;
+      const settings = await this.deps.settings();
+      const spoken = settings.voiceReplies && (state.replyVoice || settings.voiceForText);
+      let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
+      // Words when the voice note could not go, and after one that had a link in it (to tap)
+      if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
+      // Tried, even if it did not get through: that stays in the panel, and is not sent hours later
+      await this.settle(pending);
+      if (sent) await this.markDone(replyTo);
     } finally {
       await this.deps.presence('paused', replyTo).catch(() => {});
-    }
-  }
-
-  /**
-   * Sends one answer, once. It counts as sent only when the attempt is over, whether or not it got through (a refused
-   * send stays in the panel), so a background that dies halfway leaves it for `resume`.
-   */
-  private async deliver(
-    thread: ThreadRecord,
-    answer: ThreadMessage,
-    replyTo: string | undefined,
-    resumed: boolean,
-  ): Promise<void> {
-    const key = `${thread.id}:${answer.seq}`;
-    if (this.delivering.has(key)) return;
-    this.delivering.add(key);
-    try {
-      // Read after claiming it: a second call for this answer now sees the first one's mark
-      const state = await this.deps.getState();
-      if (answer.seq <= (state.repliedSeq[thread.id] ?? 0)) return;
-      try {
-        const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
-        const quote = state.quoteReply || resumed;
-        const settings = await this.deps.settings();
-        const spoken = !resumed && settings.voiceReplies && (state.replyVoice || settings.voiceForText);
-        let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
-        // Words when the voice note could not go, and after one that had a link in it (to tap)
-        if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
-        const acknowledged = (await this.deps.getState()).acknowledged;
-        if (sent && replyTo && acknowledged === replyTo) {
-          await this.deps.react({ emoji: DONE_EMOJI, messageId: replyTo }).catch(error => {
-            this.deps.warn('A WhatsApp reaction was not sent', error);
-          });
-        }
-      } finally {
-        // Fresh: another answer may have been marked while this one was on its way
-        const { repliedSeq } = await this.deps.getState();
-        await this.deps.updateState({
-          repliedSeq: { ...repliedSeq, [thread.id]: Math.max(repliedSeq[thread.id] ?? 0, answer.seq) },
-        });
-      }
-    } finally {
-      this.delivering.delete(key);
     }
   }
 

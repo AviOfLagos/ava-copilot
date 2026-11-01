@@ -122,13 +122,11 @@ registerJobHandler(POLL_JOB, async () => {
 
 registerRecovery('whatsapp-remote', async () => {
   await jobs.schedule({ kind: POLL_JOB, key: POLL_KEY, cron: POLL_CRON, catchUpMs: 60_000 });
-  if (!(await brainSettingsStore.getSettings()).paired) return;
-  void pushQuietHours().catch(() => {});
-  // Before the pull, which moves on to his next message
-  void whatsappBridge
-    .resume()
-    .catch(error => logger.warning('A WhatsApp answer could not be resumed', error))
-    .finally(() => void tick(true));
+  if ((await brainSettingsStore.getSettings()).paired) {
+    void pushQuietHours().catch(() => {});
+    void whatsappBridge.resume().catch(error => logger.warning('A WhatsApp answer could not be resumed', error));
+  }
+  void tick(true);
 });
 
 // Chats and meetings change inside Dexie transactions: the follow-up runs after the write
