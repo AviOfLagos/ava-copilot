@@ -120,7 +120,7 @@ describe('filterByScope', () => {
   ];
 
   it('applies agent and time range together, not just one', () => {
-    const result = filterByScope(nodes, index, { agentId: 'agent-a', timeRange: '30d' });
+    const result = filterByScope(nodes, index, { agentId: 'agent-a', timeRange: '30d' }, NOW);
     expect(result.map(n => n.id)).toEqual(['recent-a']);
   });
 

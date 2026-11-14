@@ -75,8 +75,13 @@ export interface ScopeFilters {
  * connected" ranking are computed from this set, not the type-filtered one, so toggling a type
  * chip never changes how connected something is.
  */
-export function filterByScope(nodes: readonly GraphNode[], index: ItemAgentIndex, filters: ScopeFilters): GraphNode[] {
-  return nodes.filter(node => matchesAgent(node, index, filters.agentId) && matchesTimeRange(node, filters.timeRange));
+export function filterByScope(
+  nodes: readonly GraphNode[],
+  index: ItemAgentIndex,
+  filters: ScopeFilters,
+  now = Date.now(),
+): GraphNode[] {
+  return nodes.filter(node => matchesAgent(node, index, filters.agentId) && matchesTimeRange(node, filters.timeRange, now));
 }
 
 /** The scoped nodes actually eligible to draw: type chips apply here; the focused node is always kept. */
