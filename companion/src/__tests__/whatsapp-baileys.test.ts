@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { memoryLogger } from '../log';
@@ -138,11 +140,17 @@ describe('Baileys driver', () => {
   it('says so when the phone removed this Mac, and gives up on a code nobody scanned', async () => {
     const first = harness();
     await first.driver.start(first.events);
+    // The login WhatsApp just refused for good
+    const authDir = join(first.dir.path, 'baileys');
+    mkdirSync(authDir, { recursive: true });
+    writeFileSync(join(authDir, 'creds.json'), '{}');
     first.sockets[0].emit('connection.update', {
       connection: 'close',
       lastDisconnect: { error: { output: { statusCode: 401 } } },
     });
-    expect(first.events.disconnected).toHaveBeenCalled();
+    expect(first.events.disconnected).toHaveBeenCalledWith(expect.stringMatching(/Relink/));
+    // Gone, so Relink shows a new code instead of being refused again
+    expect(existsSync(authDir)).toBe(false);
     await tick();
     expect(first.sockets).toHaveLength(1);
     first.dir.remove();

@@ -275,7 +275,10 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
               const code = update.lastDisconnect?.error?.output?.statusCode;
               socket = null;
               if (code === LOGGED_OUT) {
-                events.disconnected('This Mac was removed from Linked devices on your phone.');
+                // WhatsApp will never take this login again: without its files, Relink shows a fresh code to scan
+                // instead of being refused with the old one every time
+                rmSync(authDir, { recursive: true, force: true });
+                events.disconnected('WhatsApp signed Ava out on your phone. Press Relink and scan the new code.');
                 return;
               }
               // The codes ran out with nobody scanning: stop rather than show new ones forever
