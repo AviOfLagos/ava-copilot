@@ -2,7 +2,7 @@
   "name": "avi-copilot",
   "version": "0.2.3",
   "description": "AI web automation tool",
-  "license": "Apache-2.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/nanobrowser/nanobrowser.git"

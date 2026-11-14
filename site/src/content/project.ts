@@ -641,7 +641,7 @@ export const contribute = {
   securityBody:
     'Please don’t open a public issue. Report it privately through a GitHub security advisory, and we will answer within three days.',
   securityLink: 'Report privately',
-  licenseNote: `${PRODUCT} is Apache-2.0, a fork of Nanobrowser. By contributing you agree your work is shared under the same licence.`,
+  licenseNote: `${PRODUCT} is free for personal use under PolyForm Noncommercial 1.0.0; the parts from Nanobrowser stay Apache-2.0. Sign off each commit (git commit -s) to certify the Developer Certificate of Origin and let the owner license your work under the same or other terms.`,
 };
 
 // ─── Donate ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -658,7 +658,7 @@ export interface DonationChannel {
 
 export const donate = {
   title: `Support ${PRODUCT} — keep it free, local and open`,
-  description: `${PRODUCT} is free and open source with no ads and no analytics. Donations pay for testing models, signing the Mac companion and a store listing.`,
+  description: `${PRODUCT} is free for personal use, with public code, no ads and no analytics. Donations pay for testing models, signing the Mac companion and a store listing.`,
   ogAlt: `Support ${PRODUCT}.`,
   breadcrumb: 'Donate',
   heading: 'Keep it free.',
@@ -798,8 +798,8 @@ export const menus: Menu[] = [
     label: 'Community',
     href: projectLinks.contribute,
     featured: {
-      title: 'Free and open source',
-      body: 'Apache-2.0, built in the open. Code, testing, translations and skills all count.',
+      title: 'Free for personal use, built in the open',
+      body: 'The code is public and contributions are welcome. Code, testing, translations and skills all count.',
       href: projectLinks.contribute,
       action: 'Contribute',
       widget: 'community',

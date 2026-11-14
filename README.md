@@ -7,7 +7,7 @@ runs routines and helper agents with the model you choose, local or cloud.
 **Its one rule: nothing is sent, posted, bought, deleted or committed without your click.**
 
 - Website, install and every feature: **https://ava.nexprove.com**
-- Brave, Chrome and Edge on macOS, Linux and Windows. Free, Apache-2.0, no analytics, no server of ours.
+- Brave, Chrome and Edge on macOS, Linux and Windows. Free for personal use, no analytics, no server of ours.
 
 ## Install
 
@@ -54,5 +54,7 @@ pnpm dev   # then Load unpacked the dist/ folder
 
 ## Licence and lineage
 
-Apache License 2.0. Ava Copilot is a fork of [Nanobrowser](https://github.com/nanobrowser/nanobrowser) (Apache-2.0);
-see [NOTICE](NOTICE).
+Free for personal and other noncommercial use under the [PolyForm Noncommercial License 1.0.0](LICENSE). The code
+is public and contributions are welcome, but commercial use needs permission. Ava Copilot is a fork of
+[Nanobrowser](https://github.com/nanobrowser/nanobrowser); the parts from Nanobrowser stay under Apache-2.0
+([LICENSE-APACHE](LICENSE-APACHE)). See [NOTICE](NOTICE).

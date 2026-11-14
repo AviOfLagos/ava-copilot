@@ -1,7 +1,8 @@
 # Contributing to Ava Copilot
 
 Thanks for helping. Ava Copilot is an AI copilot in the browser's side panel, a fork of
-[Nanobrowser](https://github.com/nanobrowser/nanobrowser) (Apache-2.0). The website's
+[Nanobrowser](https://github.com/nanobrowser/nanobrowser). It's free for personal use under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). The website's
 [Contribute page](https://ava.nexprove.com/contribute) has the same guide with more context.
 
 ## Ways to help
@@ -55,10 +56,26 @@ Read `AGENTS.md`/`CLAUDE.md` first; these are the ones that matter most.
 - One change per pull request, on its own branch, against `feat/restyle`.
 - Say what you tested and how; screenshots for anything visual.
 
+## Sign off your commits (Developer Certificate of Origin)
+
+Every commit needs a `Signed-off-by` line, which says you wrote the change or have the right to submit it, as set
+out in the [Developer Certificate of Origin](DCO). `git commit -s` adds it for you:
+
+```
+Signed-off-by: Your Name <you@example.com>
+```
+
+By signing off you also agree that your contribution is licensed to the project owner under the
+[PolyForm Noncommercial License 1.0.0](LICENSE), and that the owner may also license it under other terms,
+including commercial ones. That keeps the whole project under one owner's control. A check on every pull request
+fails if a commit isn't signed off.
+
 ## Security
 
 Don't open a public issue for a vulnerability. Report it privately; see [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-By contributing you agree that your work is shared under the Apache License 2.0, like the rest of the project.
+Ava Copilot is free for personal and noncommercial use under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+The parts that come from Nanobrowser stay under Apache-2.0 ([LICENSE-APACHE](LICENSE-APACHE)). Signing off your
+commits covers your contributions (see above).
