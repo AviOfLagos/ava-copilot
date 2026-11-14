@@ -10085,13 +10085,13 @@
     "message": "你的手機"
   },
   "wava_settings_phone_hint": {
-    "message": "連接你要傳訊息給 Ava 的手機，讓她能在那裡回覆你。"
+    "message": "用你要使用的手機傳一個短代碼給 Ava，讓她知道要在哪裡回覆你。不需要掃描。"
   },
   "wava_settings_phone_connect": {
-    "message": "連接我的手機"
+    "message": "取得要傳給 Ava 的代碼"
   },
   "wava_settings_phone_send": {
-    "message": "用你的手機，把這個代碼傳到 Ava 的號碼："
+    "message": "在手機的 WhatsApp 裡，把這個代碼當作訊息傳到 Ava 的號碼："
   },
   "wava_settings_phone_waiting": {
     "message": "正在等待你的訊息……代碼 15 分鐘內有效。"
