@@ -22,10 +22,20 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
+          set -euo pipefail
+          # Fail closed: an empty or unresolved range must not pass
+          commits=$(git rev-list --no-merges "$(git merge-base "$BASE" "$HEAD")..$HEAD")
+          if [ -z "$commits" ]; then
+            echo "::error::Found no commits to check between the base and this pull request."
+            exit 1
+          fi
           missing=0
-          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
-            if ! git log -1 --format=%B "$c" | grep -qE '^Signed-off-by: .+ <.+>$'; then
-              echo "::error::Commit ${c:0:7} has no Signed-off-by line. Amend it with git commit --amend -s (or git rebase --signoff) and push again."
+          for c in $commits; do
+            # The sign-off must name the commit's own author
+            author=$(git log -1 --format='%an <%ae>' "$c")
+            message=$(git log -1 --format=%B "$c")
+            if ! grep -qxF "Signed-off-by: $author" <<<"$message"; then
+              echo "::error::Commit ${c:0:7} needs the line 'Signed-off-by: $author'. Amend it with git commit --amend -s (or git rebase --signoff) and push again."
               missing=1
             fi
           done
