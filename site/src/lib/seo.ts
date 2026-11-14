@@ -28,7 +28,7 @@ const app = {
   operatingSystem: product.systems.join(', '),
   browserRequirements: `Requires ${product.browsers.join(', ')} (Chromium, Manifest V3)`,
   softwareVersion: VERSION,
-  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  license: 'https://polyformproject.org/licenses/noncommercial/1.0.0',
   isBasedOn: 'https://github.com/nanobrowser/nanobrowser',
   installUrl: `${SITE_URL}/install`,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },

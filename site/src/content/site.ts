@@ -31,7 +31,7 @@ export const links = {
   installScript: INSTALL_SCRIPT_PATH,
   releases: '/download/ava-copilot-latest.zip',
   upstream: 'https://github.com/nanobrowser/nanobrowser',
-  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  license: 'https://polyformproject.org/licenses/noncommercial/1.0.0',
 };
 
 export const product = {
@@ -40,7 +40,7 @@ export const product = {
   description: `${PRODUCT} is an AI copilot in your browser’s side panel. It works on real pages, takes meeting notes, talks, remembers what you saw and runs routines, with the model you choose. Nothing is sent, posted, bought or deleted without your click.`,
   browsers: ['Brave', 'Chrome', 'Edge'],
   systems: ['macOS', 'Linux', 'Windows'],
-  license: 'Apache-2.0',
+  license: 'PolyForm-Noncommercial-1.0.0',
   upstream: 'Nanobrowser',
 };
 
@@ -82,10 +82,11 @@ export const copy = {
 
 export const footer = {
   upstreamLabel: 'Nanobrowser on GitHub',
-  licenseLabel: 'Apache License 2.0',
+  licenseLabel: 'PolyForm Noncommercial 1.0.0',
   voiceNote: `${ASSISTANT}’s voice is Kokoro (Apache-2.0), rendered on our own computer.`,
   version: `Version ${VERSION}`,
-  tagline: 'The AI browser copilot that waits for your click. Free, open source, and yours to run locally.',
+  tagline:
+    'The AI browser copilot that waits for your click. Free for personal use, code on GitHub, and yours to run locally.',
   installLabel: 'Install from the footer',
   contribute: 'Contribute',
   donate: 'Donate',

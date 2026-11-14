@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "The marketing and install website for Ava Copilot: static pages, the live gate demo and link previews.",
-  "license": "Apache-2.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",

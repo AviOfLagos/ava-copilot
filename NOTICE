@@ -1,9 +1,15 @@
 Ava Copilot
 Copyright 2026 Avi (AviOfLagos)
 
+Ava Copilot is free for personal and other noncommercial use under the
+PolyForm Noncommercial License 1.0.0; see LICENSE. For commercial use, ask
+the copyright holder.
+
 This product is a modified version of Nanobrowser
 (https://github.com/nanobrowser/nanobrowser), forked at tag v0.2.0.
-Nanobrowser is licensed under the Apache License, Version 2.0; see LICENSE.
+The parts that come from Nanobrowser remain under the Apache License,
+Version 2.0; see LICENSE-APACHE. Those rights can't be narrowed, so anyone
+may use that code under Apache-2.0.
 
 Files in this repository have been changed from the Nanobrowser originals.
 The git history from the v0.2.0 tag onward records every change.

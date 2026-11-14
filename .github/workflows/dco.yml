@@ -1,0 +1,42 @@
+# Every commit in a pull request must carry a Signed-off-by line (the Developer Certificate of Origin, see DCO and
+# CONTRIBUTING.md). Read-only: it uses no secrets and posts nothing.
+name: DCO
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sign-off:
+    name: Commits signed off
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check every commit for Signed-off-by
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Fail closed: an empty or unresolved range must not pass
+          commits=$(git rev-list --no-merges "$(git merge-base "$BASE" "$HEAD")..$HEAD")
+          if [ -z "$commits" ]; then
+            echo "::error::Found no commits to check between the base and this pull request."
+            exit 1
+          fi
+          missing=0
+          for c in $commits; do
+            # The sign-off must name the commit's own author
+            author=$(git log -1 --format='%an <%ae>' "$c")
+            message=$(git log -1 --format=%B "$c")
+            if ! grep -qxF "Signed-off-by: $author" <<<"$message"; then
+              echo "::error::Commit ${c:0:7} needs the line 'Signed-off-by: $author'. Amend it with git commit --amend -s (or git rebase --signoff) and push again."
+              missing=1
+            fi
+          done
+          exit $missing
