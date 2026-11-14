@@ -10085,13 +10085,13 @@
     "message": "Your phone"
   },
   "wava_settings_phone_hint": {
-    "message": "Connect the phone you'll message Ava from, so she can answer you there."
+    "message": "Text Ava a short code from the phone you'll use, so she knows where to answer you. No scan needed."
   },
   "wava_settings_phone_connect": {
-    "message": "Connect my phone"
+    "message": "Get a code to text Ava"
   },
   "wava_settings_phone_send": {
-    "message": "From your phone, send this code to Ava's number:"
+    "message": "In WhatsApp on your phone, send this code as a message to Ava's number:"
   },
   "wava_settings_phone_waiting": {
     "message": "Waiting for your message… The code works for 15 minutes."
