@@ -295,9 +295,12 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
             }
           }) as never);
           current.ev.on('messages.upsert', ((upsert: { messages: BaileysMessage[]; type: string }) => {
-            // 'notify' is what just arrived; 'append' is history being synced
-            if (!mine() || upsert.type !== 'notify') return;
+            // 'notify' is what just arrived. 'append' is history, her own sends coming back, and also what others
+            // sent while the line was down (delivered on reconnect): only the last counts, and the service still
+            // drops anything dated before the session was ready
+            if (!mine() || (upsert.type !== 'notify' && upsert.type !== 'append')) return;
             for (const message of upsert.messages) {
+              if (upsert.type === 'append' && message.key.fromMe !== false) continue;
               const download = async (maxBytes: number) =>
                 readCapped(
                   await lib.downloadMediaMessage(

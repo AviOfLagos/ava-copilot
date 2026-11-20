@@ -60,6 +60,9 @@ const ECHOES_MAX = 1000;
 const HOUR_MS = 60 * 60_000;
 // A message dated this long before the session became ready is history being synced, not something new
 const HISTORY_GRACE_MS = 60_000;
+// What he sent while the line was down (the Mac asleep, a dropped connection) still gets an answer when it comes
+// back, unless it is older than this: a stale instruction is not carried out hours later
+export const OFFLINE_MAX_MS = 12 * HOUR_MS;
 export const REACTIONS_PER_HOUR = 60;
 // WhatsApp lets a message be edited this long after it was sent, and deleted for everyone about this long
 export const EDIT_WINDOW_MS = 15 * 60_000;
@@ -233,7 +236,8 @@ export class WhatsAppService {
   private generation = 0;
   private lastPullAt: number;
   private awayNoticeSent = false;
-  // When the session last became ready: anything dated well before is synced history
+  // When this session first became ready: anything dated well before is synced history. Reconnects keep it, so
+  // what arrived while the line was down is still new
   private readyAt: number | null = null;
   // His recent messages, to quote above an answer: in memory only, gone on a restart (the answer is then unquoted)
   private readonly quotable = new Map<string, { text: string; voiceSeconds: number | null }>();
@@ -319,6 +323,7 @@ export class WhatsAppService {
     // A session that dropped starts over from its saved files
     await this.driver?.stop().catch(() => {});
     const generation = ++this.generation;
+    this.readyAt = null;
     const executablePath = this.deps.findBrowser();
     privateDir(this.sessionDir);
     const driver = this.deps.driver({ sessionDir: this.sessionDir, executablePath });
@@ -652,7 +657,7 @@ export class WhatsAppService {
     this.saved.selfIds = [...new Set([...(number ? [cUs(number)] : []), ...account.selfIds])];
     if (this.saved.ownerNumber === number) this.saved.ownerNumber = null;
     this.save();
-    this.readyAt = this.now();
+    this.readyAt ??= this.now();
     this.qr = null;
     this.setState('linked', null);
   }
@@ -667,7 +672,7 @@ export class WhatsAppService {
     if (this.isEcho(message)) return;
     // History synced at link or after a restart is not something he just said
     const at = millisOf(message.at);
-    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return;
+    if (!this.isNew(at)) return;
     if (this.saved.seen.includes(message.id)) return;
     this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
     // Someone else's words, voice or files he passed on are never taken as his instructions
@@ -839,7 +844,7 @@ export class WhatsAppService {
     if (this.isSelfChat(message.chatId)) {
       if (!message.fromMe || message.body.trim().toUpperCase() !== code) return false;
       const at = millisOf(message.at);
-      if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+      if (!this.isNew(at)) return false;
       this.saved.connectCode = null;
       this.saved.lastInAt = this.now();
       this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
@@ -863,7 +868,7 @@ export class WhatsAppService {
     }
     // A code in synced history is not him sending it now
     const at = millisOf(message.at);
-    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+    if (!this.isNew(at)) return false;
     this.saved.connectCode = null;
     this.saved.needsFirstMessage = false;
     this.saved.lastInAt = this.now();
@@ -873,6 +878,13 @@ export class WhatsAppService {
     this.deps.log.info('WhatsApp phone connected');
     await this.sendTo(message.chatId, CONNECTED_TEXT).catch(() => {});
     return true;
+  }
+
+  /** Said since this session was ready (or while its line was down), and not so long ago it is stale. */
+  private isNew(at: number): boolean {
+    return (
+      this.readyAt !== null && at > 0 && at >= this.readyAt - HISTORY_GRACE_MS && at >= this.now() - OFFLINE_MAX_MS
+    );
   }
 
   /** One of Ava's own sends coming back in the self chat: her mark, her id, or her words. */
