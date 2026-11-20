@@ -7,6 +7,7 @@ import {
   AgentLimitsSection,
   ConfirmSection,
   DailyCapSection,
+  PermissionsSection,
   HighlightsSection,
   NamesSection,
   ThemeSection,
@@ -55,6 +56,14 @@ registerSettingsSection({
   order: 30,
   keywords: ['confirm', 'ask', 'send', 'delete', 'gate', 'approve'],
   Component: ConfirmSection,
+});
+registerSettingsSection({
+  id: 'permissions',
+  label: 'settings_permissions',
+  page: 'general',
+  order: 31,
+  keywords: ['permission', 'allow', 'always', 'every time', 'confirm', 'rule'],
+  Component: PermissionsSection,
 });
 registerSettingsSection({
   id: 'cap',

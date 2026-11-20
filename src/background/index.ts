@@ -347,7 +347,13 @@ chrome.runtime.onConnect.addListener(port => {
             const replies = Array.isArray(message.replies)
               ? message.replies.slice(0, 20).map((reply: unknown) => String(reply ?? '').slice(0, 2000))
               : undefined;
-            await threads.answer(threadId, String(message.requestId), message.approved === true, replies);
+            await threads.answer(
+              threadId,
+              String(message.requestId),
+              message.approved === true,
+              replies,
+              message.always === true,
+            );
           }
           return;
 

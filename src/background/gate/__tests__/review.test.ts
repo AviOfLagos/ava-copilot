@@ -355,3 +355,74 @@ describe('do once on a page', () => {
     expect(again.markForm).not.toHaveBeenCalled();
   });
 });
+
+describe('allow every time on a page', () => {
+  // Answers each card the way the user would: Allow once, or Allow every time
+  function answering(threadId: string, always: boolean) {
+    const made = fakeContext(threadId);
+    const gate = (made.context as unknown as { confirmGate: InstanceType<typeof ConfirmGate> }).confirmGate;
+    (made.context as unknown as { emitEvent: unknown }).emitEvent = vi.fn(
+      async (_actor: unknown, kind: string, details: string) => {
+        if (kind !== ExecutionState.ACT_CONFIRM) return;
+        const request = JSON.parse(details) as ConfirmRequest;
+        made.requests.push(request);
+        setTimeout(() => gate.answer(request.id, true, undefined, always));
+      },
+    );
+    return made;
+  }
+
+  beforeEach(async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    for (const rule of await permissionRulesStore.list()) await permissionRulesStore.remove(rule.id);
+  });
+
+  it('offers Allow every time, and after it the next message on the same site goes without a card', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    const threadId = await runningThread();
+    const first = answering(threadId, true);
+    expect((await act(first.context, page, state, pressEnter)).proceed).toBe(true);
+    expect(first.requests[0].always).toMatchObject({ kind: 'send', scope: 'mail.example/compose' });
+    expect(await permissionRulesStore.list()).toHaveLength(1);
+
+    // Tomorrow, another task, another message: no card
+    state.fields = [{ label: 'Message', value: 'Running late, start without me.' }];
+    const later = answering(await runningThread(), false);
+    expect((await act(later.context, page, state, pressEnter)).proceed).toBe(true);
+    expect(later.requests).toHaveLength(0);
+    expect((await permissionRulesStore.list())[0].uses).toBe(1);
+  });
+
+  it('Allow once saves nothing, and a rule for one site does not cover another', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    const once = answering(await runningThread(), false);
+    await act(once.context, page, state, pressEnter);
+    expect(await permissionRulesStore.list()).toHaveLength(0);
+
+    await permissionRulesStore.allow({ kind: 'send', scope: 'other.example/compose', label: 'x' });
+    const next = answering(await runningThread(), false);
+    await act(next.context, page, state, pressEnter);
+    expect(next.requests).toHaveLength(1);
+  });
+
+  it('still asks when a retried run would send where an earlier run already sent, even with a rule', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    await permissionRulesStore.allow({ kind: 'send', scope: 'mail.example/compose', label: 'x' });
+    const threadId = await runningThread();
+    const first = answering(threadId, false);
+    const sent = await act(first.context, page, state, pressEnter);
+    expect(first.requests).toHaveLength(0);
+    await verifyCommit(first.context, page, sent.proceed ? sent.commit : null);
+
+    // The run is retried and the model rewords the same message: the card comes back, with no Allow every time
+    await tick();
+    await restart(threadId);
+    state.fields = [{ label: 'Message', value: 'See you at ten o’clock.' }];
+    const retry = answering(threadId, true);
+    await act(retry.context, page, state, pressEnter);
+    expect(retry.requests).toHaveLength(1);
+    expect(retry.requests[0].repeat?.status).toBe('earlier');
+    expect(retry.requests[0].always).toBeUndefined();
+    expect(await permissionRulesStore.list()).toHaveLength(1);
+  });
+});

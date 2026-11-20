@@ -12,6 +12,8 @@ export class ConfirmGate {
   private readonly waiting = new Map<string, (answer: GateAnswer) => void>();
   // What the user typed in answer to a request's questions, kept until the asker takes it
   private readonly replies = new Map<string, string[]>();
+  // Requests the user approved with "Allow every time", kept until the asker saves the rule
+  private readonly always = new Set<string>();
 
   /**
    * Shows a request to the user and waits for the answer.
@@ -49,8 +51,9 @@ export class ConfirmGate {
    *
    * @returns false when no such request is waiting, e.g. it was already answered
    */
-  answer(requestId: string, approved: boolean, replies?: string[]): boolean {
+  answer(requestId: string, approved: boolean, replies?: string[], always = false): boolean {
     if (approved && replies && this.waiting.has(requestId)) this.replies.set(requestId, replies);
+    if (approved && always && this.waiting.has(requestId)) this.always.add(requestId);
     return this.settle(requestId, approved ? 'approved' : 'declined');
   }
 
@@ -59,6 +62,11 @@ export class ConfirmGate {
     const replies = this.replies.get(requestId) ?? [];
     this.replies.delete(requestId);
     return replies;
+  }
+
+  /** Whether the user approved a request with "Allow every time", once. */
+  takeAlways(requestId: string): boolean {
+    return this.always.delete(requestId);
   }
 
   /**

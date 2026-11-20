@@ -10358,5 +10358,44 @@
   },
   "brief_item_failed": {
     "message": "$1 stopped"
+  },
+  "gate_allowedByRule": {
+    "message": "Allowed every time: $1"
+  },
+  "gate_approvedAlways": {
+    "message": "Allowed every time: $1. Remove it in Settings › Permissions."
+  },
+  "gate_rule_label": {
+    "message": "$1 on $2"
+  },
+  "gate_rule_toolLabel": {
+    "message": "Run $1"
+  },
+  "gate_card_allowOnce": {
+    "message": "Allow once"
+  },
+  "gate_card_allowAlways": {
+    "message": "Allow every time"
+  },
+  "gate_card_allowAlwaysAgain": {
+    "message": "Click again to allow every time"
+  },
+  "gate_card_allowAlwaysHint": {
+    "message": "Every time: Ava will not ask again for “$1”. Remove it in Settings › Permissions."
+  },
+  "settings_permissions": {
+    "message": "Allowed every time"
+  },
+  "settings_permissions_empty": {
+    "message": "Nothing yet. Pick “Allow every time” on a confirm card and it shows here."
+  },
+  "settings_permissions_used": {
+    "message": "Used $1 times · since $2"
+  },
+  "settings_permissions_remove": {
+    "message": "Remove"
+  },
+  "settings_permissions_hint": {
+    "message": "These steps run without a card, from any chat, agent or routine. Paying, deleting and giving access always ask."
   }
 }

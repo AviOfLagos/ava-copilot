@@ -10358,5 +10358,44 @@
   },
   "brief_item_failed": {
     "message": "$1 parou"
+  },
+  "gate_allowedByRule": {
+    "message": "Permitido sempre: $1"
+  },
+  "gate_approvedAlways": {
+    "message": "Permitido sempre: $1. Remova em Configurações › Permissões."
+  },
+  "gate_rule_label": {
+    "message": "$1 em $2"
+  },
+  "gate_rule_toolLabel": {
+    "message": "Executar $1"
+  },
+  "gate_card_allowOnce": {
+    "message": "Permitir uma vez"
+  },
+  "gate_card_allowAlways": {
+    "message": "Permitir sempre"
+  },
+  "gate_card_allowAlwaysAgain": {
+    "message": "Clique de novo para permitir sempre"
+  },
+  "gate_card_allowAlwaysHint": {
+    "message": "Sempre: a Ava não vai perguntar de novo para “$1”. Remova em Configurações › Permissões."
+  },
+  "settings_permissions": {
+    "message": "Permitido sempre"
+  },
+  "settings_permissions_empty": {
+    "message": "Nada ainda. Escolha “Permitir sempre” em um cartão de confirmação e aparece aqui."
+  },
+  "settings_permissions_used": {
+    "message": "Usado $1 vezes · desde $2"
+  },
+  "settings_permissions_remove": {
+    "message": "Remover"
+  },
+  "settings_permissions_hint": {
+    "message": "Estes passos rodam sem cartão, em qualquer chat, agente ou rotina. Pagar, excluir e dar acesso sempre perguntam."
   }
 }

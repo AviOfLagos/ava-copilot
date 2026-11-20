@@ -482,7 +482,13 @@ export class ThreadManager {
    *
    * @returns false when the thread is not waiting on this request
    */
-  async answer(threadId: string, requestId: string, approved: boolean, replies?: string[]): Promise<boolean> {
+  async answer(
+    threadId: string,
+    requestId: string,
+    approved: boolean,
+    replies?: string[],
+    always = false,
+  ): Promise<boolean> {
     const runner = this.running.get(threadId);
     const request = (await this.store.get(threadId))?.pendingRequest;
     if (!runner || !request || request.id !== requestId) {
@@ -490,7 +496,9 @@ export class ThreadManager {
     }
     // Answers only for a request that asked questions, one per question
     const answers = request.questions?.length && replies ? replies.slice(0, request.questions.length) : undefined;
-    if (!runner.executor.answerConfirmation(requestId, approved, answers)) {
+    // "Allow every time" counts only where the card offered it
+    const allowAlways = approved && always && !!request.always;
+    if (!runner.executor.answerConfirmation(requestId, approved, answers, allowAlways)) {
       return false;
     }
     const subject = request.target || request.intent;
@@ -500,7 +508,11 @@ export class ThreadManager {
     const note = this.store.addMessage(
       threadId,
       'system',
-      approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
+      allowAlways && request.always
+        ? t('gate_approvedAlways', [request.always.label])
+        : approved
+          ? t('gate_approved', [subject])
+          : t('gate_declinedByUser', [subject]),
     );
     // The step the Inbox asked for is answered
     void this.endings?.settled({ id: threadId, taskRunId: runner.taskRunId });

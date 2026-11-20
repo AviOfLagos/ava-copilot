@@ -25,6 +25,8 @@ export interface GateTarget {
   formHasPassword: boolean;
   // The element sits in a CAPTCHA widget
   inCaptcha: boolean;
+  // The element sits in a spreadsheet or data grid: Enter moves to the next cell and Delete clears one
+  inGrid: boolean;
 }
 
 export const EMPTY_TARGET: GateTarget = {
@@ -39,6 +41,7 @@ export const EMPTY_TARGET: GateTarget = {
   searchLike: false,
   formHasPassword: false,
   inCaptcha: false,
+  inGrid: false,
 };
 
 // Checked in order, so the more damaging kind wins when a label matches several
@@ -111,6 +114,11 @@ function isSubmitControl(target: GateTarget): boolean {
  */
 export function classifyClick(target: GateTarget): CommitKind | null {
   const isPlainLink = target.tagName === 'a' && /^https?:|^\//i.test(target.href) && target.role !== 'button';
+  const isGridButton = target.tagName === 'button' || target.role === 'button' || target.tagName === 'a';
+  if (target.inGrid && !isGridButton) {
+    // Clicking a cell selects it; its text ("Send", "Delete") is data, not a control
+    return null;
+  }
   const kind = classifyLabel(target.label) ?? classifyLabel(target.hints);
 
   if (isPlainLink) {
@@ -163,6 +171,11 @@ export function classifyKeys(keys: string, focus: GateTarget | null): CommitKind
     focus.tagName === 'input' && !['button', 'submit', 'image', 'checkbox', 'radio', 'file'].includes(focus.inputType);
   const isTextArea = focus.tagName === 'textarea' || focus.editable;
   const isButton = focus.tagName === 'button' || focus.role === 'button' || (focus.tagName === 'input' && !isTextInput);
+
+  if (focus.inGrid && !isButton && !modifiers.includes('control') && !modifiers.includes('meta')) {
+    // In a spreadsheet Enter confirms a cell and moves on, and Delete clears cells: editing, not committing
+    return null;
+  }
 
   if (isSpace) {
     // Space on a focused button clicks it; in a text box it is a character

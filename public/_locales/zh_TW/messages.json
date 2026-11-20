@@ -10358,5 +10358,44 @@
   },
   "brief_item_failed": {
     "message": "$1 已停止"
+  },
+  "gate_allowedByRule": {
+    "message": "一律允許：$1"
+  },
+  "gate_approvedAlways": {
+    "message": "一律允許：$1。可在「設定 › 權限」中移除。"
+  },
+  "gate_rule_label": {
+    "message": "在 $2 $1"
+  },
+  "gate_rule_toolLabel": {
+    "message": "執行 $1"
+  },
+  "gate_card_allowOnce": {
+    "message": "允許一次"
+  },
+  "gate_card_allowAlways": {
+    "message": "一律允許"
+  },
+  "gate_card_allowAlwaysAgain": {
+    "message": "再按一次以一律允許"
+  },
+  "gate_card_allowAlwaysHint": {
+    "message": "一律：Ava 不會再為「$1」詢問。可在「設定 › 權限」中移除。"
+  },
+  "settings_permissions": {
+    "message": "一律允許"
+  },
+  "settings_permissions_empty": {
+    "message": "目前沒有。在確認卡上選「一律允許」，就會顯示在這裡。"
+  },
+  "settings_permissions_used": {
+    "message": "已使用 $1 次 · 自 $2 起"
+  },
+  "settings_permissions_remove": {
+    "message": "移除"
+  },
+  "settings_permissions_hint": {
+    "message": "這些步驟在任何聊天、代理或例行工作中都不再顯示確認卡。付款、刪除和授予存取權一律會詢問。"
   }
 }

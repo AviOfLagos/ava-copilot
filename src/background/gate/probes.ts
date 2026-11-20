@@ -16,6 +16,8 @@ export interface RawElement {
   form: { attributes: Record<string, string>; hasPassword: boolean } | null;
   // The class, id, title and src of the element and each ancestor, joined
   ancestry: string;
+  // The element sits in a spreadsheet or data grid, where Enter and Delete edit cells
+  inGrid?: boolean;
 }
 
 export interface FocusReading {
@@ -72,6 +74,11 @@ export const readFocus = (): FocusReading => {
 
   const form = el.closest('form');
   const isField = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+  // Google Sheets edits cells in a contenteditable box outside its grid, so its page is matched too
+  const inGrid =
+    el.closest('[role="grid"], [role="treegrid"], [role="gridcell"]') !== null ||
+    /(^|\s)(cell-input|waffle-rich-text-editor)(\s|$)/.test(ancestry.join(' ')) ||
+    (location.hostname === 'docs.google.com' && location.pathname.startsWith('/spreadsheets/'));
   return {
     where: 'element',
     element: {
@@ -87,6 +94,7 @@ export const readFocus = (): FocusReading => {
         ? { attributes: attributesOf(form), hasPassword: form.querySelector('input[type="password"]') !== null }
         : null,
       ancestry: ancestry.join(' '),
+      inGrid,
     },
   };
 };

@@ -233,3 +233,28 @@ describe('asksForSecret', () => {
     }
   });
 });
+
+describe('spreadsheet grids', () => {
+  const cell = target({ tagName: 'div', editable: true, inGrid: true });
+  const gridInput = target({ tagName: 'input', inputType: 'text', inGrid: true });
+
+  it('lets Enter, Tab-like moves and Delete through in a cell', () => {
+    expect(classifyKeys('Enter', cell)).toBeNull();
+    expect(classifyKeys('Enter', gridInput)).toBeNull();
+    expect(classifyKeys('Delete', target({ tagName: 'div', role: 'gridcell', inGrid: true }))).toBeNull();
+    expect(classifyKeys('Backspace', cell)).toBeNull();
+  });
+
+  it('still holds Ctrl/Cmd+Enter in a grid, and a button in one', () => {
+    expect(classifyKeys('Meta+Enter', cell)).toBe('send');
+    expect(classifyClick(target({ tagName: 'button', label: 'Delete row', inGrid: true }))).toBe('delete');
+  });
+
+  it('does not read a cell that says "Send" as a send button', () => {
+    expect(classifyClick(target({ tagName: 'div', role: 'gridcell', label: 'Send', inGrid: true }))).toBeNull();
+  });
+
+  it('keeps holding Enter in a chat box outside a grid', () => {
+    expect(classifyKeys('Enter', target({ tagName: 'div', editable: true }))).toBe('send');
+  });
+});

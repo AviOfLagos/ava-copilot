@@ -1,5 +1,12 @@
 import { t } from '@extension/i18n';
-import { gateSettingsStore, onceStore, threadStore } from '@extension/storage';
+import {
+  canAllowAlways,
+  gateSettingsStore,
+  onceStore,
+  pageScope,
+  permissionRulesStore,
+  threadStore,
+} from '@extension/storage';
 import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -142,6 +149,16 @@ function commitStep(page: Page, kind: CommitKind, control: string, content: Comm
     parts: values.length > 0 ? values : [path, control.toLowerCase(), normalize(content.context)],
   };
 }
+
+// How a rule names the kind it covers, in the words the confirm card uses
+const KIND_TEXT = {
+  send: 'gate_kind_send',
+  publish: 'gate_kind_publish',
+  submit: 'gate_kind_submit',
+  delete: 'gate_kind_delete',
+  purchase: 'gate_kind_purchase',
+  permission: 'gate_kind_permission',
+} as const;
 
 function blocked(message: string): ReviewOutcome {
   return { proceed: false, result: new ActionResult({ error: message, includeInMemory: true }) };
@@ -304,15 +321,30 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
   const unattended = await isUnattended(context);
 
+  // "Allow every time": the user already said yes to this kind of step in this place. A repeat of a step
+  // (do once) is still asked, and money, deleting and access never get a rule.
+  const scope = pageScope(page.url());
+  const rule = repeat ? null : await permissionRulesStore.find(kind, scope).catch(() => null);
+  if (rule) {
+    await permissionRulesStore.used(rule.id).catch(() => undefined);
+    await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
+  }
+
   // Running a step again is the user's call, whatever the settings say
-  if (settings.confirm[kind] || unattended || repeat) {
+  if (!rule && (settings.confirm[kind] || unattended || repeat)) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     if (repeat) request.repeat = repeat;
+    else if (scope && canAllowAlways(kind)) {
+      request.always = { kind, scope, label: t('gate_rule_label', [t(KIND_TEXT[kind]), scope]) };
+    }
     const answer = await ask(context, request);
     if (answer !== 'approved') {
       // A refusal ends the task, so the agent cannot look for another way to do the same thing
       await context.stop();
       return blocked(t('gate_declined'));
+    }
+    if (request.always && context.confirmGate.takeAlways(request.id)) {
+      await permissionRulesStore.allow(request.always).catch(error => logger.warning('Could not save the rule', error));
     }
 
     // The answer can take a while. Run the action only if it is still the one that was approved.
