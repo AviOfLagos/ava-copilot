@@ -1091,12 +1091,51 @@ describe('failed tasks retry, then report (#66)', () => {
     expect(browser.tabs.size).toBe(1);
   });
 
-  it('drops a try that nobody follows without a word', async () => {
+  it('drops a try that nobody follows without a report, and the chat says it stopped trying', async () => {
     browser.open('https://news.example/');
     const threadId = await manager.send({ text: 'Agent task' });
     await failRun(threadId, 'The page did not load');
     await manager.dropRetry(threadId);
     expect((await store.get(threadId))?.failure).toMatchObject({ retryAt: null, reported: false });
+    expect((await store.messages(threadId)).at(-1)?.content).toBe('retry_stopped');
+    expect(inbox.size).toBe(0);
+  });
+
+  it('starts a chat once when two tries for it come due together', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    await failRun(threadId, 'The page did not load');
+    await Promise.all([
+      manager.continueThread(threadId, undefined, { auto: true }),
+      manager.continueThread(threadId, undefined, { auto: true }),
+    ]);
+    expect(FakeExecutor.created).toHaveLength(2);
+    expect((await store.messages(threadId)).filter(message => message.content === 'threads_resumed')).toHaveLength(1);
+  });
+
+  it('leaves a routine’s chat alone after a restart too: no try, no report', async () => {
+    const routine = await store.create({
+      title: 'Routine step',
+      origin: 'workflow',
+      status: 'running',
+      activeTask: 'Routine step',
+      runStartedAt: Date.now() - 5000,
+    });
+    const stale = await store.create({
+      title: 'Old routine step',
+      origin: 'workflow',
+      status: 'running',
+      activeTask: 'Old routine step',
+      runStartedAt: Date.now() - 3 * 60 * 60 * 1000,
+      updatedAt: Date.now() - 3 * 60 * 60 * 1000,
+    });
+    await manager.recover();
+    for (const id of [routine.id, stale.id]) {
+      const thread = await store.get(id);
+      expect(thread?.status).toBe('error');
+      expect(thread?.failure ?? null).toBeNull();
+    }
+    expect(queue.size).toBe(0);
     expect(inbox.size).toBe(0);
   });
 

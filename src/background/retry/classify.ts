@@ -70,14 +70,19 @@ export function nextRetryAt(triesSoFar: number, now: number): number | null {
  */
 export function codeOfStepError(message: string | null | undefined): FailureCode {
   const text = message ?? '';
+  // Only wording a model provider uses: a bare "404" or "billing" can be an element's number or a page's name
   if (
-    /\b402\b|payment required|insufficient[_ ](credit|fund|balance|quota)|billing|exceeded your current quota|out of credit/i.test(
+    /\b402\b[^.]{0,40}payment|payment required|insufficient[_ ](credits?|funds?|balance|quota)|exceeded your current quota|out of credits?|billing (hard )?limit/i.test(
       text,
     )
   ) {
     return 'billing';
   }
-  if (/\b404\b|model[^.]{0,40}(not found|does not exist|not exist)|no such model|unknown model/i.test(text)) {
+  if (
+    /\bmodel\b[^.]{0,60}(not found|does not exist|not exist)|no such model|unknown model|\b404\b[^.]{0,60}\bmodel\b/i.test(
+      text,
+    )
+  ) {
     return 'model_missing';
   }
   return 'max_failures';

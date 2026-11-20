@@ -290,6 +290,9 @@ export class RunEndings {
     const retryAt = thread.failure?.retryAt;
     if (!retryAt) return;
     const tries = thread.autoTries ?? 1;
+    // Exactly one job per waiting chat: a try that was waiting for a slot or postponed to tomorrow has a job
+    // under another key, and two jobs coming due together would start the chat twice
+    await this.deps.cancelJobs(retryJobPrefix(thread.id));
     await this.deps.schedule({
       kind: THREAD_RETRY_JOB,
       key: retryJobKey(thread.id, tries),

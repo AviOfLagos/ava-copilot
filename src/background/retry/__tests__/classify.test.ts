@@ -54,6 +54,9 @@ describe('what a step error says about steps that kept failing', () => {
       'billing',
     );
     expect(codeOfStepError('Insufficient credits')).toBe('billing');
+    // Only a provider's wording counts: an element's number or a page's name is not a missing model or a bill
+    expect(codeOfStepError('Element with index 404 not found')).toBe('max_failures');
+    expect(codeOfStepError('The Billing page did not load: /settings/billing returned 404')).toBe('max_failures');
     // A dropped network, a page that did not load, a busy model: worth trying again
     for (const message of [
       'Failed to fetch',

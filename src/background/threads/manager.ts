@@ -142,6 +142,8 @@ export class ThreadManager {
   private keepAliveTimer: ReturnType<typeof setInterval> | null = null;
   // Closed tabs already handled, so the second report of the same tab is ignored
   private readonly closedTabs = new Set<number>();
+  // Chats being continued right now
+  private readonly continuing = new Set<string>();
 
   /**
    * @param endings - What happens when a run ends with an error: a queued retry, or one report (../retry). Left
@@ -298,6 +300,22 @@ export class ThreadManager {
    * an interrupted task.
    */
   async continueThread(threadId: string, windowId?: number, options: { auto?: boolean } = {}): Promise<void> {
+    // One at a time per chat: two calls arriving together (two jobs due at once, a click during a queued try)
+    // would otherwise both get past "is it running" and start two runs on one chat
+    if (this.continuing.has(threadId)) return;
+    this.continuing.add(threadId);
+    try {
+      await this.continueOnce(threadId, windowId, options);
+    } finally {
+      this.continuing.delete(threadId);
+    }
+  }
+
+  private async continueOnce(
+    threadId: string,
+    windowId: number | undefined,
+    options: { auto?: boolean },
+  ): Promise<void> {
     await this.windDown(threadId);
     const thread = await this.store.get(threadId);
     if (!thread || this.running.has(threadId)) {
@@ -428,6 +446,8 @@ export class ThreadManager {
     const thread = await this.store.get(threadId);
     if (thread?.status === 'error' && thread.failure?.retryAt) {
       await this.store.update(threadId, { failure: { ...thread.failure, retryAt: null } });
+      // The chat itself still says it: someone reading it is not left with "trying again" and then nothing
+      await this.store.addMessage(threadId, 'system', t('retry_stopped'));
     }
   }
 
@@ -684,7 +704,9 @@ export class ThreadManager {
       // slept overnight) does not come back by itself: the user is told and continues it when they want.
       const stale = Date.now() - thread.updatedAt > STALE_RUN_MS;
       let ending: Ending | null = null;
-      if (this.endings && stale) {
+      if (thread.origin === 'workflow') {
+        // A routine follows its own browser step and reports its own failure: nothing from here (see settle)
+      } else if (this.endings && stale) {
         await this.endings.report(thread, 'needs_user', error.message);
         ending = { failure: { cls: 'needs_user', retryAt: null, reported: true }, autoTries: thread.autoTries ?? 0 };
       } else if (this.endings) {

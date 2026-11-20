@@ -223,6 +223,13 @@ describe('the queued try', () => {
     });
     await endings.requeue(thread({ failure: { cls: 'temporary', retryAt: null, reported: true } }));
     expect(jobs.size).toBe(1);
+
+    // A try that was waiting for a slot, or postponed to tomorrow, has its job under another key: after a
+    // restart there is still exactly one job for the chat, so the chat cannot be started twice
+    jobs.set(retryJobKey('chat-1', 2, 1000), { kind: THREAD_RETRY_JOB, key: 'x', runAt: now, payload: {} });
+    jobs.set(retryJobKey('chat-1', 2, 3), { kind: THREAD_RETRY_JOB, key: 'y', runAt: now, payload: {} });
+    await endings.requeue(thread({ autoTries: second.autoTries, failure: second.failure }));
+    expect([...jobs.keys()]).toEqual([retryJobKey('chat-1', 2)]);
   });
 });
 
