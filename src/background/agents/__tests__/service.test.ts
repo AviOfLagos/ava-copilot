@@ -466,6 +466,22 @@ describe('a run whose chat is queued to try again', () => {
     expect(inbox.filter(item => item.externalId.startsWith('ended:'))).toEqual([]);
   });
 
+  it('drops its chat’s queued try when the run ends first, so the chat never runs with nobody following it', async () => {
+    const agent = await addAgent();
+    const run = await service.requestRun(agent.id, { ...manual, attended: false });
+    const sent = await sentAt(0);
+    threads.running.delete(sent.threadId);
+    await db.threads.update(sent.threadId, {
+      status: 'error',
+      error: { kind: 'tab_closed', message: 'The tab was closed.' },
+      failure: { cls: 'temporary', retryAt: Date.now() + 60_000, reported: false },
+    });
+    // The user stops the run (or the browser was closed long enough for it to be marked interrupted)
+    await service.cancelRun(run.id);
+    await runEnded(run.id);
+    expect(threads.cancelled.map(item => item.threadId)).toContain(sent.threadId);
+  });
+
   it('still reports its own failure when the chat did not', async () => {
     const agent = await addAgent();
     const run = await service.requestRun(agent.id, { ...manual, attended: false });

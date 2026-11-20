@@ -23,13 +23,24 @@ export type FailureCode =
   | 'max_failures'
   // The user dismissed Chrome's debugging bar
   | 'debugger_closed'
+  // The model the settings name does not exist for this key
+  | 'model_missing'
+  // The model's account is out of credit or over its quota
+  | 'billing'
   | 'unknown';
 
 // Tried again after 1, 5, then 15 minutes: three tries
 export const RETRY_DELAYS_MS = [1, 5, 15].map(minutes => minutes * 60_000);
 export const MAX_AUTO_TRIES = RETRY_DELAYS_MS.length;
 
-const NEEDS_USER: ReadonlySet<FailureCode> = new Set(['auth', 'forbidden', 'extension_conflict', 'debugger_closed']);
+const NEEDS_USER: ReadonlySet<FailureCode> = new Set([
+  'auth',
+  'forbidden',
+  'extension_conflict',
+  'debugger_closed',
+  'model_missing',
+  'billing',
+]);
 const CANNOT: ReadonlySet<FailureCode> = new Set(['bad_request', 'url_not_allowed', 'max_steps']);
 
 /**
@@ -50,4 +61,24 @@ export function classify(kind: ThreadErrorKind, code: FailureCode | null | undef
 export function nextRetryAt(triesSoFar: number, now: number): number | null {
   const delay = RETRY_DELAYS_MS[triesSoFar];
   return delay === undefined ? null : now + delay;
+}
+
+/**
+ * What the words of a step's error say about why steps kept failing. Steps that fail three times in a row end a
+ * task as "too many failures", whatever was behind them; a missing model or an empty account will not pass by
+ * waiting, so they are told apart from a dropped network here.
+ */
+export function codeOfStepError(message: string | null | undefined): FailureCode {
+  const text = message ?? '';
+  if (
+    /\b402\b|payment required|insufficient[_ ](credit|fund|balance|quota)|billing|exceeded your current quota|out of credit/i.test(
+      text,
+    )
+  ) {
+    return 'billing';
+  }
+  if (/\b404\b|model[^.]{0,40}(not found|does not exist|not exist)|no such model|unknown model/i.test(text)) {
+    return 'model_missing';
+  }
+  return 'max_failures';
 }

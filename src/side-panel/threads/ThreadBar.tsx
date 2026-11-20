@@ -7,7 +7,17 @@ import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
 import type { PanelApi } from '../registry';
+import { MAX_AUTO_TRIES } from '@src/background/retry/classify';
 import ThreadVoicePicker from './ThreadVoicePicker';
+
+/** When the next try is due: the time, with the day when it is not today (an agent out of money waits a day). */
+function retryTime(at: number): string {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toDateString() === new Date().toDateString()
+    ? time
+    : `${date.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, ${time}`;
+}
 
 interface ThreadBarProps {
   thread: ThreadRecord;
@@ -154,9 +164,9 @@ export default function ThreadBar({
             {thread.failure?.retryAt && (
               <span className="text-muted-foreground block">
                 {t('retry_banner', [
-                  new Date(thread.failure.retryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  retryTime(thread.failure.retryAt),
                   String(thread.autoTries ?? 1),
-                  '3',
+                  String(MAX_AUTO_TRIES),
                 ])}
               </span>
             )}

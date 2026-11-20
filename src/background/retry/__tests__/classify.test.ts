@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classify, MAX_AUTO_TRIES, nextRetryAt } from '../classify';
+import { classify, codeOfStepError, MAX_AUTO_TRIES, nextRetryAt } from '../classify';
 
 describe('the class of a run that ended with an error', () => {
   it('is temporary for a closed tab and a restarted background, whatever else is known', () => {
@@ -15,7 +15,14 @@ describe('the class of a run that ended with an error', () => {
   });
 
   it('needs the user for a model key, another extension on the tab, and a closed debugging bar', () => {
-    for (const code of ['auth', 'forbidden', 'extension_conflict', 'debugger_closed'] as const) {
+    for (const code of [
+      'auth',
+      'forbidden',
+      'extension_conflict',
+      'debugger_closed',
+      'model_missing',
+      'billing',
+    ] as const) {
       expect(classify('failed', code)).toBe('needs_user');
     }
   });
@@ -35,5 +42,28 @@ describe('when the next try is due', () => {
     expect(nextRetryAt(2, now)).toBe(now + 15 * 60_000);
     expect(nextRetryAt(3, now)).toBeNull();
     expect(MAX_AUTO_TRIES).toBe(3);
+  });
+});
+
+describe('what a step error says about steps that kept failing', () => {
+  it('tells a missing model and an empty account from a passing failure', () => {
+    expect(codeOfStepError('404 The model `gpt-9` does not exist')).toBe('model_missing');
+    expect(codeOfStepError('Model claude-x not found')).toBe('model_missing');
+    expect(codeOfStepError('402 Payment Required')).toBe('billing');
+    expect(codeOfStepError('You exceeded your current quota, please check your plan and billing details')).toBe(
+      'billing',
+    );
+    expect(codeOfStepError('Insufficient credits')).toBe('billing');
+    // A dropped network, a page that did not load, a busy model: worth trying again
+    for (const message of [
+      'Failed to fetch',
+      'net::ERR_INTERNET_DISCONNECTED',
+      '503 Service Unavailable',
+      'Overloaded',
+      '',
+      null,
+    ]) {
+      expect(codeOfStepError(message)).toBe('max_failures');
+    }
   });
 });

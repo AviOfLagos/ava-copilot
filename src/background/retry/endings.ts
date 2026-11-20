@@ -1,5 +1,4 @@
 import { t } from '@extension/i18n';
-import { AppError } from '@extension/shared';
 import type {
   AgentProfile,
   ConfirmRequest,
@@ -29,18 +28,25 @@ import type { FailureCode } from './classify';
 const logger = createLogger('Retry');
 
 export const THREAD_RETRY_JOB = 'thread.retry';
-// One job per try, not one per chat: the job runner writes "done" on a job after its handler returns, and a
-// try that fails at once must not have its successor (queued by then) overwritten by that write
-export const retryJobKey = (threadId: string, triesSoFar: number): string => `thread-retry:${threadId}:${triesSoFar}`;
-// The job runner gives up on a job after this many attempts (see ../jobs/runner.ts)
-const JOB_LAST_ATTEMPT = 5;
-// A try that could not start (every slot busy, its tab in use) is tried again this soon
+// Every job of a chat starts with this, so they can all be dropped at once
+export const retryJobPrefix = (threadId: string): string => `thread-retry:${threadId}:`;
+// One job per try and per wait, not one per chat: the job runner writes "done" on a job after its handler
+// returns, and a job queued meanwhile under the same key (the next try, the same try a little later) would be
+// overwritten by that write
+export const retryJobKey = (threadId: string, triesSoFar: number, waits = 0): string =>
+  `${retryJobPrefix(threadId)}${triesSoFar}:${waits}`;
+// A try that cannot start (every slot busy, its tab in use) waits and looks again this often, for this long:
+// with three agents at work a full house is normal, and their own runs wait as long for a slot
 const START_AGAIN_MS = 30_000;
+const MAX_START_WAITS = 60;
+// An agent over its day's money is looked at again each morning, for at most a week
+const MAX_POSTPONED = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const INBOX_SOURCE = 'system';
-export const stuckItemId = (thread: Pick<ThreadRecord, 'id' | 'taskRunId'>): string =>
-  `${INBOX_SOURCE}|stuck:${thread.taskRunId ?? thread.id}`;
+// One per task and per round: the user's own Retry or Continue starts a new round, which may get stuck anew
+export const stuckItemId = (thread: Pick<ThreadRecord, 'id' | 'taskRunId' | 'retryRound'>): string =>
+  `${INBOX_SOURCE}|stuck:${thread.taskRunId ?? thread.id}:${thread.retryRound ?? 0}`;
 const needsExternalId = (thread: Pick<ThreadRecord, 'id' | 'taskRunId'>, kind: string): string =>
   `needs:${thread.taskRunId ?? thread.id}:${kind}`;
 
@@ -57,11 +63,17 @@ const isNeedsKind = (kind: string): kind is NeedsKind => kind in NEEDS_TITLES;
 export interface RetryPayload {
   threadId: string;
   taskRunId: string | null;
+  // Which try this is (the chat's autoTries when it was queued): a job left over from an earlier try does nothing
+  tries: number;
+  // How often this try waited for a free slot, and how many mornings for its agent's money
+  waits?: number;
+  postponed?: number;
 }
 
 export interface RunEndingDeps {
   schedule(request: { kind: string; key: string; runAt: number; payload: RetryPayload }): Promise<unknown>;
-  cancelJob(key: string): Promise<void>;
+  // Drops every job whose key starts with the prefix
+  cancelJobs(prefix: string): Promise<void>;
   inbox(draft: {
     source: string;
     externalId: string;
@@ -76,6 +88,10 @@ export interface RunEndingDeps {
   inboxItem(id: string): Promise<InboxItem | undefined>;
   // Marks an Inbox item done; a missing one is fine
   settleInbox(id: string): Promise<unknown>;
+  // Puts a done Inbox item back to unread
+  reopenInbox(id: string): Promise<unknown>;
+  // Whether the run that owns an agent's chat is still open and following it
+  ownerFollows(thread: ThreadRecord): Promise<boolean>;
   notice(notice: Notice): void;
   // A line in the chat itself
   note(threadId: string, text: string): Promise<unknown>;
@@ -94,6 +110,8 @@ export interface RetryThreads {
   postpone(threadId: string, retryAt: number): Promise<void>;
   // The queued try could not start: the thread is told to stop trying and report
   giveUp(threadId: string): Promise<void>;
+  // Nobody follows the chat any more: the try is dropped without a word (its owner reported)
+  drop(threadId: string): Promise<void>;
 }
 
 export interface Ending {
@@ -120,6 +138,8 @@ export function needOf(cls: FailureClass, code: FailureCode | null | undefined):
   if (cls === 'temporary') return t('retry_need_temporary', [String(MAX_AUTO_TRIES)]);
   if (cls === 'cannot') return t('retry_need_cannot');
   if (code === 'auth' || code === 'forbidden') return t('retry_need_key');
+  if (code === 'model_missing') return t('retry_need_model');
+  if (code === 'billing') return t('retry_need_billing');
   if (code === 'debugger_closed') return t('retry_need_debugger');
   if (code === 'extension_conflict') return t('retry_need_extension');
   return t('retry_need_user');
@@ -144,25 +164,35 @@ export class RunEndings {
     thread: ThreadRecord,
     error: { kind: ThreadErrorKind; message: string },
     code: FailureCode | null | undefined,
+    // The step error behind "too many failures", when the executor kept it: it says more than the count
+    detail?: string | null,
   ): Promise<Ending> {
     const cls = classify(error.kind, code);
     const tries = thread.autoTries ?? 0;
     const now = this.deps.now();
+    const why = detail?.trim() || error.message;
     const retryAt = cls === 'temporary' ? nextRetryAt(tries, now) : null;
     if (retryAt !== null) {
-      await this.deps.schedule({
-        kind: THREAD_RETRY_JOB,
-        key: retryJobKey(thread.id, tries),
-        runAt: retryAt,
-        payload: { threadId: thread.id, taskRunId: thread.taskRunId ?? null },
-      });
+      try {
+        await this.deps.schedule({
+          kind: THREAD_RETRY_JOB,
+          key: retryJobKey(thread.id, tries + 1),
+          runAt: retryAt,
+          payload: { threadId: thread.id, taskRunId: thread.taskRunId ?? null, tries: tries + 1 },
+        });
+      } catch (problem) {
+        // Not queued: saying so beats a chat that claims it will try again
+        logger.error('Could not queue a try', problem);
+        await this.report(thread, cls, why, code);
+        return { failure: { cls, retryAt: null, reported: true }, autoTries: tries };
+      }
       const minutes = Math.round((retryAt - now) / 60_000);
       await this.deps
         .note(thread.id, t('retry_queued', [String(minutes), String(tries + 1), String(MAX_AUTO_TRIES)]))
         .catch(problem => logger.warning('Could not note the queued try', problem));
       return { failure: { cls, retryAt, reported: false }, autoTries: tries + 1 };
     }
-    await this.report(thread, cls, error.message, code);
+    await this.report(thread, cls, why, code);
     return { failure: { cls, retryAt: null, reported: true }, autoTries: tries };
   }
 
@@ -170,7 +200,14 @@ export class RunEndings {
    * Tells the user a task is stuck: one Inbox item, and one WhatsApp line when it gave up after its tries.
    * Called again for the same task, it does nothing: there is never a second one.
    */
-  async report(thread: ThreadRecord, cls: FailureClass, reason: string, code?: FailureCode | null): Promise<void> {
+  async report(
+    thread: ThreadRecord,
+    cls: FailureClass,
+    reason: string,
+    code?: FailureCode | null,
+    // The chat's status does not change with this report, so nothing else will tell a chat started on WhatsApp
+    options: { direct?: boolean } = {},
+  ): Promise<void> {
     try {
       const id = stuckItemId(thread);
       if (await this.deps.inboxItem(id)) return;
@@ -188,8 +225,8 @@ export class RunEndings {
         agentId: thread.agentId ?? null,
         approval: { requestId: `thread:${thread.id}`, action: 'open_thread' },
       });
-      // A chat he started on WhatsApp is answered there by the bridge itself: no second line
-      if (cls === 'temporary' && thread.origin !== 'whatsapp') {
+      // A chat he started on WhatsApp is answered there by the bridge itself when it stops: no second line
+      if (cls === 'temporary' && (thread.origin !== 'whatsapp' || options.direct)) {
         this.deps.notice({ kind: 'approval', title: t('retry_stuck_line', [task, why, need]), key: id });
       }
     } catch (problem) {
@@ -205,6 +242,12 @@ export class RunEndings {
   async asked(thread: ThreadRecord, request: ConfirmRequest): Promise<void> {
     if (request.mode !== 'needs_user' || thread.agentId || !isNeedsKind(request.kind)) return;
     const host = hostOf(request.pageUrl);
+    // Asked again after the first one was answered (a second sign-in): the same item waits again
+    const id = `${INBOX_SOURCE}|${needsExternalId(thread, request.kind)}`;
+    if ((await this.deps.inboxItem(id).catch(() => undefined))?.status === 'done') {
+      await this.deps.reopenInbox(id).catch(problem => logger.warning('Could not ask again in the Inbox', problem));
+      return;
+    }
     await this.deps
       .inbox({
         source: INBOX_SOURCE,
@@ -227,13 +270,16 @@ export class RunEndings {
     }
   }
 
+  /** The task went on (it finished, or the user started it again): its "stuck" item no longer waits. */
+  async resolved(thread: Pick<ThreadRecord, 'id' | 'taskRunId' | 'retryRound'>): Promise<void> {
+    await this.deps.settleInbox(stuckItemId(thread)).catch(() => {});
+  }
+
   /** Drops a queued try: the user stopped it, or started something else in the chat. */
   async cancel(threadId: string): Promise<void> {
-    for (let tries = 0; tries < MAX_AUTO_TRIES; tries++) {
-      await this.deps
-        .cancelJob(retryJobKey(threadId, tries))
-        .catch(problem => logger.warning('Could not drop a try', problem));
-    }
+    await this.deps
+      .cancelJobs(retryJobPrefix(threadId))
+      .catch(problem => logger.warning('Could not drop a try', problem));
   }
 
   /**
@@ -243,59 +289,82 @@ export class RunEndings {
   async requeue(thread: ThreadRecord): Promise<void> {
     const retryAt = thread.failure?.retryAt;
     if (!retryAt) return;
+    const tries = thread.autoTries ?? 1;
     await this.deps.schedule({
       kind: THREAD_RETRY_JOB,
-      key: retryJobKey(thread.id, Math.max(0, (thread.autoTries ?? 1) - 1)),
+      key: retryJobKey(thread.id, tries),
       runAt: retryAt,
-      payload: { threadId: thread.id, taskRunId: thread.taskRunId ?? null },
+      payload: { threadId: thread.id, taskRunId: thread.taskRunId ?? null, tries },
     });
   }
 
   /**
-   * The retry job: picks the task up again if it is still waiting for exactly this try. An agent that spent its
-   * day's money waits for tomorrow instead. A try that cannot start now is tried again shortly, and given up
-   * (and reported) rather than left queued for ever.
+   * The retry job: picks the task up again if it is still waiting for exactly this try, and somebody still
+   * follows it. An agent that spent its day's money waits for tomorrow instead. A try that cannot start now
+   * (every slot busy) looks again every half minute for half an hour, then gives up and says so. It never throws:
+   * the job runner's own retries are not relied on, since they stop after five.
    */
-  async runRetry(job: Pick<JobRecord, 'payload' | 'attempts'>, threads: RetryThreads): Promise<void> {
-    const { threadId, taskRunId } = job.payload as RetryPayload;
+  async runRetry(job: Pick<JobRecord, 'payload'>, threads: RetryThreads): Promise<void> {
+    const payload = job.payload as RetryPayload;
+    const { threadId, taskRunId } = payload;
     const thread = await threads.thread(threadId);
-    // The user moved on (a new request, a manual retry, Stop) or the chat is gone: nothing to do
+    // The user moved on (a new request, a manual retry, Stop), the chat is gone, or this job is a leftover of
+    // an earlier try: nothing to do
     if (
       !thread ||
       thread.status !== 'error' ||
       !thread.failure?.retryAt ||
-      (thread.taskRunId ?? null) !== (taskRunId ?? null)
+      (thread.taskRunId ?? null) !== (taskRunId ?? null) ||
+      (thread.autoTries ?? 0) !== payload.tries
     ) {
       return;
     }
-    const last = job.attempts >= JOB_LAST_ATTEMPT;
-    if (thread.agentId && !last) {
-      const agent = await this.deps.agent(thread.agentId);
-      const cap = agent?.budget.dailyUsd ?? null;
-      if (agent && cap !== null && cap > 0 && (await this.deps.agentSpentUsd(agent.id)) >= cap) {
-        const now = this.deps.now();
-        const midnight = new Date(now);
-        midnight.setHours(24, 1, 0, 0);
-        const wait = Math.min(midnight.getTime() - now, DAY_MS);
-        await threads.postpone(threadId, now + wait);
-        throw new AppError('budget', `"${agent.name}" spent its money for today; its task is tried again tomorrow.`, {
-          retryable: true,
-          retryAfterMs: wait,
-        });
-      }
+    // An agent's chat is only worth trying while its run still follows it: a chat nobody follows would run with
+    // no step limit, no time limit and no budget check. Its run ended (the browser was closed, the user stopped
+    // it) and reported for itself.
+    if (thread.agentId && !(await this.deps.ownerFollows(thread).catch(() => false))) {
+      await threads.drop(threadId);
+      return;
     }
-    try {
-      await threads.resume(threadId);
-    } catch (problem) {
-      if (last) {
-        await threads.giveUp(threadId);
-        return;
-      }
-      throw new AppError('unavailable', problem instanceof Error ? problem.message : String(problem), {
-        cause: problem,
-        retryable: true,
-        retryAfterMs: START_AGAIN_MS,
+    const again = async (runAt: number, changes: Pick<RetryPayload, 'waits' | 'postponed'>) => {
+      const next = { ...payload, ...changes };
+      await this.deps.schedule({
+        kind: THREAD_RETRY_JOB,
+        key: retryJobKey(threadId, payload.tries, (next.waits ?? 0) + 1000 * (next.postponed ?? 0)),
+        runAt,
+        payload: next,
       });
+    };
+    try {
+      if (thread.agentId) {
+        const agent = await this.deps.agent(thread.agentId);
+        const cap = agent?.budget.dailyUsd ?? null;
+        if (agent && cap !== null && cap > 0 && (await this.deps.agentSpentUsd(agent.id)) >= cap) {
+          const postponed = (payload.postponed ?? 0) + 1;
+          if (postponed > MAX_POSTPONED) return void (await threads.giveUp(threadId));
+          const now = this.deps.now();
+          const midnight = new Date(now);
+          midnight.setHours(24, 1, 0, 0);
+          const runAt = now + Math.min(midnight.getTime() - now, DAY_MS);
+          await again(runAt, { postponed, waits: 0 });
+          await threads.postpone(threadId, runAt);
+          return;
+        }
+      }
+      try {
+        await threads.resume(threadId);
+      } catch (problem) {
+        const waits = (payload.waits ?? 0) + 1;
+        if (waits > MAX_START_WAITS) {
+          logger.warning('A queued try could not start and is given up', problem);
+          return void (await threads.giveUp(threadId));
+        }
+        await again(this.deps.now() + START_AGAIN_MS, { waits, postponed: payload.postponed });
+      }
+    } catch (problem) {
+      // Even the fallback failed (the job list could not be written): say so rather than go quiet
+      logger.error('A queued try could not be run or queued again', problem);
+      await threads.giveUp(threadId).catch(() => {});
     }
   }
 }

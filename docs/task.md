@@ -2535,6 +2535,19 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   the agent stops itself (budget, time, off its sites) is `quiet`: the chat neither retries nor reports.
 - Stop on a queued task, a new message, or the user's own Retry/Continue drops the queued try. A run left for more
   than an hour before the background came back is reported, not started by itself.
+- A chat is only tried while somebody follows it. An agent's chat needs its run still open (`ownerFollows`); a run
+  that ends first drops the chat's try (`AgentService.finish`). A routine's chat (origin `workflow`) is never tried
+  or reported from here: the routine fails its step and reports itself.
+- A try that cannot start (every slot busy) looks again every 30 s for 30 minutes as a job of its own, then gives up
+  and says so; it never leans on the job runner's five attempts. The tab it opened is closed again when it cannot
+  start.
+- "Too many failures" keeps the last step error: it is the reason in the Inbox item, and a missing model or an
+  account out of credit is classed as needing the user instead of being tried three times
+  (`codeOfStepError`).
+- The user's own Retry/Continue on a stuck task starts a new round (`retryRound`): the old Inbox item is settled, and
+  getting stuck again is reported again.
+- Known, not done: routines do not retry a browser step; time waited before a restart counts against an agent
+  run's 20 minutes; a tab reopened for an agent sits outside its tab group.
 - The unused `retryDelay` agent option is removed.
 - E2E: `threads.e2e.mjs` "a task that fails for a passing reason is tried again by itself a minute later…".
 

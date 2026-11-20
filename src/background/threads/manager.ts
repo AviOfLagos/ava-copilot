@@ -217,7 +217,7 @@ export class ThreadManager {
     // so what it already sent is found and not sent again (../once).
     // ...and no try queued for the old one comes back
     await this.endings?.cancel(thread.id);
-    await this.store.update(thread.id, { taskRunId: message.id, autoTries: 0, failure: null });
+    await this.store.update(thread.id, { taskRunId: message.id, autoTries: 0, retryRound: 0, failure: null });
     await this.placeInWorkspace(thread, text, request.workspaceId);
     await this.start(
       thread.id,
@@ -308,6 +308,9 @@ export class ThreadManager {
     if (!options.auto) await this.ownTry(threadId);
 
     let tabIds = await existingTabs(thread.boundTabIds);
+    // The tab opened here, to close again if the run cannot start: a try that waits for a free slot would
+    // otherwise leave one more tab behind each time it looks
+    let opened: number | null = null;
     if (tabIds.length === 0 && thread.boundUrl) {
       // In the window it was in (an agent's own window), else the one the user last worked in
       const own =
@@ -318,12 +321,17 @@ export class ThreadManager {
       // A try nobody clicked for does not take the user's place on screen
       const tab = await chrome.tabs.create({ url: thread.boundUrl, windowId: window.id, active: !options.auto });
       tabIds = tab.id !== undefined ? [tab.id] : [];
+      opened = tab.id ?? null;
     }
     const binding = tabIds.length ? new TabBinding(tabIds, null) : await this.bindingFor(thread, windowId);
-    this.assertFree(threadId, binding.tabIds);
-
-    await this.store.addMessage(threadId, 'system', t('threads_resumed'));
-    await this.start(threadId, thread.activeTask ?? CONTINUE_TASK, binding, true);
+    try {
+      this.assertFree(threadId, binding.tabIds);
+      await this.store.addMessage(threadId, 'system', t('threads_resumed'));
+      await this.start(threadId, thread.activeTask ?? CONTINUE_TASK, binding, true);
+    } catch (error) {
+      if (opened !== null) await chrome.tabs.remove(opened).catch(() => {});
+      throw error;
+    }
   }
 
   /**
@@ -389,7 +397,13 @@ export class ThreadManager {
   /** The user starts the task again themself: any queued try is dropped and the automatic tries start over. */
   private async ownTry(threadId: string): Promise<void> {
     await this.endings?.cancel(threadId);
-    await this.store.update(threadId, { autoTries: 0 });
+    const thread = await this.store.get(threadId);
+    // What was reported as stuck is being dealt with; a new round may get stuck, and be reported, once more
+    if (thread?.failure?.reported) await this.endings?.resolved(thread);
+    await this.store.update(threadId, {
+      autoTries: 0,
+      ...(thread?.failure?.reported ? { retryRound: (thread.retryRound ?? 0) + 1 } : {}),
+    });
   }
 
   /** Moves a thread's queued try to a later time (its agent's money for the day is spent). */
@@ -404,8 +418,17 @@ export class ThreadManager {
   async giveUpRetry(threadId: string): Promise<void> {
     const thread = await this.store.get(threadId);
     if (!thread || thread.status !== 'error' || !thread.failure || !this.endings) return;
-    await this.endings.report(thread, thread.failure.cls, thread.error?.message ?? '');
+    // Nothing else changes with this, so it is said directly, also to a chat started on WhatsApp
+    await this.endings.report(thread, thread.failure.cls, thread.error?.message ?? '', null, { direct: true });
     await this.store.update(threadId, { failure: { ...thread.failure, retryAt: null, reported: true } });
+  }
+
+  /** A queued try nobody follows any more (its agent's run ended and reported): dropped without a word. */
+  async dropRetry(threadId: string): Promise<void> {
+    const thread = await this.store.get(threadId);
+    if (thread?.status === 'error' && thread.failure?.retryAt) {
+      await this.store.update(threadId, { failure: { ...thread.failure, retryAt: null } });
+    }
   }
 
   /**
@@ -876,6 +899,11 @@ export class ThreadManager {
           : null;
       const ending = error && !stopped?.quiet ? await this.settle(runner, error) : null;
       await this.endings?.settled({ id: runner.threadId, taskRunId: runner.taskRunId });
+      // A task that got through is not stuck any more
+      if (!error && this.endings) {
+        const thread = await this.store.get(runner.threadId);
+        if (thread?.retryRound || thread?.autoTries) await this.endings.resolved(thread);
+      }
       try {
         await this.store.update(
           runner.threadId,
@@ -911,7 +939,15 @@ export class ThreadManager {
     try {
       const thread = await this.store.get(runner.threadId);
       if (!thread) return null;
-      return await this.endings.ended(thread, error, runner.stopReason?.code ?? runner.executor.failureCode);
+      // A routine follows its own browser step and reports its own failure (workflows/executors.ts): its chat is
+      // neither tried again nor reported from here
+      if (thread.origin === 'workflow') return null;
+      return await this.endings.ended(
+        thread,
+        error,
+        runner.stopReason?.code ?? runner.executor.failureCode,
+        runner.stopReason ? null : runner.executor.failureDetail,
+      );
     } catch (problem) {
       logger.error('Could not settle a failed run', problem);
       return null;

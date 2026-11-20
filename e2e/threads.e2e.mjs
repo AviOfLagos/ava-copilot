@@ -162,8 +162,9 @@ test('closing the tab while the task is only reading reopens it, tells the model
 
 test('a task that fails for a passing reason is tried again by itself a minute later, and finishes', async () => {
   mock.start('retry-later');
-  // The model cannot be reached, call after call: after three failed steps in a row the task gives up, for now
-  for (let i = 0; i < 12; i++) mock.failNext(404);
+  // The model cannot be reached, call after call (not a 404: a missing model would need the user, not a retry):
+  // after three failed steps in a row the task gives up, for now
+  for (let i = 0; i < 12; i++) mock.failNext(418);
   const session = await openSession(extension, mock);
   await session.send(task('retry-later'));
   const failed = await waitForThread(session.panel, 'retry-later', t => t.status === 'error');

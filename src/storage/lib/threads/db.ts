@@ -58,6 +58,9 @@ export interface ThreadRecord {
   failure?: ThreadFailure | null;
   // How many times the current task was tried again by itself; a new request starts at 0
   autoTries?: number;
+  // How often the user started the current task again themself (Retry, Continue): each round may get stuck, and
+  // be reported, once
+  retryRound?: number;
   // What the agent is doing right now, e.g. "Planning", while it runs
   activity: string;
   // The task of the current or interrupted run, kept so it can be resumed

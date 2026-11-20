@@ -24,6 +24,9 @@ let notices: Notice[];
 let notes: string[];
 let agents: Map<string, AgentProfile>;
 let spent: Map<string, number>;
+// Whether an agent's run still follows its chat
+let followed: boolean;
+let deps: RunEndingDeps;
 let endings: InstanceType<typeof RunEndings>;
 
 const thread = (fields: Partial<ThreadRecord> = {}): ThreadRecord =>
@@ -51,16 +54,28 @@ beforeEach(() => {
   notes = [];
   agents = new Map();
   spent = new Map();
-  const deps: RunEndingDeps = {
+  followed = true;
+  deps = {
     schedule: async request => void jobs.set(request.key, request),
-    cancelJob: async key => void jobs.delete(key),
+    cancelJobs: async prefix => {
+      for (const key of [...jobs.keys()]) if (key.startsWith(prefix)) jobs.delete(key);
+    },
     // Like the real Inbox: the same source and id never lands twice
     inbox: async draft => {
       const id = `${draft.source}|${draft.externalId}`;
       if (!inbox.has(id)) inbox.set(id, { ...draft, id, status: 'unread' } as unknown as InboxItem);
     },
     inboxItem: async id => inbox.get(id),
-    settleInbox: async id => void settled.push(id),
+    settleInbox: async id => {
+      settled.push(id);
+      const item = inbox.get(id);
+      if (item) item.status = 'done';
+    },
+    reopenInbox: async id => {
+      const item = inbox.get(id);
+      if (item) item.status = 'unread';
+    },
+    ownerFollows: async () => followed,
     notice: notice => void notices.push(notice),
     note: async (_threadId, text) => void notes.push(text),
     agent: async id => agents.get(id),
@@ -78,10 +93,10 @@ describe('a run that ends with an error', () => {
       const ending = await endings.ended(record, networkDown, 'max_failures');
       expect(ending.failure).toMatchObject({ cls: 'temporary', reported: false });
       delays.push((ending.failure.retryAt! - now) / 60_000);
-      expect(jobs.get(retryJobKey('chat-1', round))).toMatchObject({
+      expect(jobs.get(retryJobKey('chat-1', round + 1))).toMatchObject({
         kind: THREAD_RETRY_JOB,
         runAt: ending.failure.retryAt,
-        payload: { threadId: 'chat-1', taskRunId: 'task-1' },
+        payload: { threadId: 'chat-1', taskRunId: 'task-1', tries: round + 1 },
       });
       record = thread({ autoTries: ending.autoTries });
     }
@@ -143,14 +158,52 @@ describe('a run that ends with an error', () => {
     expect([...inbox.values()][0]).toMatchObject({ title: 'retry_stuck_title|Growth Lead', agentId: 'a1' });
     expect(notices).toHaveLength(1);
 
-    await endings.ended(
-      thread({ id: 'chat-2', taskRunId: 'task-2', origin: 'whatsapp', autoTries: 3 }),
-      networkDown,
-      null,
-    );
+    const fromWhatsApp = thread({ id: 'chat-2', taskRunId: 'task-2', origin: 'whatsapp', autoTries: 3 });
+    await endings.ended(fromWhatsApp, networkDown, null);
     expect(inbox.size).toBe(2);
-    // The WhatsApp bridge answers that chat itself
+    // The WhatsApp bridge answers that chat itself when it stops
     expect(notices).toHaveLength(1);
+    // ...but a report with no stop behind it (a queued try given up) has to be said directly
+    await endings.report({ ...fromWhatsApp, retryRound: 1 }, 'temporary', 'It could not start', null, { direct: true });
+    expect(notices).toHaveLength(2);
+  });
+});
+
+describe('getting stuck a second time', () => {
+  it('is reported again when the user started the task again themself, and once only per round', async () => {
+    const first = thread({ autoTries: 3 });
+    await endings.ended(first, networkDown, 'max_failures');
+    // The user clicked Continue: a new round, which fails its three tries too
+    const second = thread({ autoTries: 3, retryRound: 1 });
+    await endings.ended(second, networkDown, 'max_failures');
+    await endings.ended(second, networkDown, 'max_failures');
+    expect([...inbox.keys()]).toEqual([stuckItemId(first), stuckItemId(second)]);
+    expect(notices).toHaveLength(2);
+
+    // The task getting through settles its "stuck" item
+    await endings.resolved(second);
+    expect(settled).toContain(stuckItemId(second));
+  });
+
+  it('says so instead of claiming a retry when the try cannot be queued', async () => {
+    const broken = new RunEndings({
+      ...deps,
+      schedule: async () => {
+        throw new Error('the job list cannot be written');
+      },
+    });
+    const ending = await broken.ended(thread(), networkDown, 'max_failures');
+    expect(ending.failure).toEqual({ cls: 'temporary', retryAt: null, reported: true });
+    expect(inbox.size).toBe(1);
+    expect(notes).toEqual([]);
+  });
+
+  it('gives the reason behind "too many failures", and does not retry what waiting will not fix', async () => {
+    const failed = { kind: 'failed' as const, message: 'Task failed: Max failures reached' };
+    const ending = await endings.ended(thread(), failed, 'billing', 'You exceeded your current quota');
+    expect(ending.failure.cls).toBe('needs_user');
+    expect(jobs.size).toBe(0);
+    expect([...inbox.values()][0].body).toBe('You exceeded your current quota. retry_need_billing');
   });
 });
 
@@ -158,13 +211,16 @@ describe('the queued try', () => {
   it('is one job per try, dropped whichever it is, and put back when the background starts', async () => {
     const first = await endings.ended(thread(), networkDown, null);
     const second = await endings.ended(thread({ autoTries: first.autoTries }), networkDown, null);
-    expect([...jobs.keys()]).toEqual([retryJobKey('chat-1', 0), retryJobKey('chat-1', 1)]);
+    expect([...jobs.keys()]).toEqual([retryJobKey('chat-1', 1), retryJobKey('chat-1', 2)]);
     await endings.cancel('chat-1');
     expect(jobs.size).toBe(0);
 
     // The job list lost it, the chat still says when it will try: the try is queued again at that time
     await endings.requeue(thread({ autoTries: second.autoTries, failure: second.failure }));
-    expect(jobs.get(retryJobKey('chat-1', 1))).toMatchObject({ runAt: second.failure.retryAt });
+    expect(jobs.get(retryJobKey('chat-1', 2))).toMatchObject({
+      runAt: second.failure.retryAt,
+      payload: { tries: 2 },
+    });
     await endings.requeue(thread({ failure: { cls: 'temporary', retryAt: null, reported: true } }));
     expect(jobs.size).toBe(1);
   });
@@ -199,6 +255,11 @@ describe('a step only the user can do', () => {
     });
     await endings.settled(thread());
     expect(settled).toContain('system|needs:task-1:login');
+
+    // A second sign-in later in the same task: the same item waits again, still only one
+    await endings.asked(thread({ status: 'waiting_confirm' }), signIn());
+    expect([...inbox.values()]).toHaveLength(1);
+    expect([...inbox.values()][0].status).toBe('unread');
   });
 
   it('is left to the agent’s own Inbox item for an agent’s run, and is not made for a plain approval', async () => {
@@ -216,12 +277,13 @@ describe('the retry job', () => {
       resume,
       postpone: vi.fn(async () => {}),
       giveUp: vi.fn(async () => {}),
+      drop: vi.fn(async () => {}),
     };
     return threads;
   };
   const queued = (fields: Partial<ThreadRecord> = {}) =>
     thread({ failure: { cls: 'temporary', retryAt: now, reported: false }, autoTries: 1, ...fields });
-  const job = (attempts = 1) => ({ payload: { threadId: 'chat-1', taskRunId: 'task-1' }, attempts });
+  const job = (fields: object = {}) => ({ payload: { threadId: 'chat-1', taskRunId: 'task-1', tries: 1, ...fields } });
 
   it('picks the task up again', async () => {
     const threads = port(queued());
@@ -229,13 +291,15 @@ describe('the retry job', () => {
     expect(threads.resume).toHaveBeenCalledWith('chat-1');
   });
 
-  it('does nothing when the user moved on: a new request, Stop, a manual retry, a deleted chat', async () => {
+  it('does nothing when the user moved on, or when it is a leftover of an earlier try', async () => {
     for (const record of [
       undefined,
       queued({ taskRunId: 'a-new-request' }),
       queued({ status: 'running' }),
       queued({ status: 'idle' }),
       queued({ failure: { cls: 'temporary', retryAt: null, reported: false } }),
+      // The chat is already waiting for its second try: the first try's job must not start it early
+      queued({ autoTries: 2 }),
     ]) {
       const threads = port(record);
       await endings.runRetry(job(), threads);
@@ -243,36 +307,83 @@ describe('the retry job', () => {
     }
   });
 
-  it('waits for tomorrow instead of retrying when the agent spent its money for the day', async () => {
-    agents.set('a1', { id: 'a1', name: 'Growth Lead', budget: { dailyUsd: 1 } } as AgentProfile);
-    spent.set('a1', 1.2);
+  it('does not start an agent’s chat that no run follows any more: it is dropped without a second report', async () => {
+    agents.set('a1', { id: 'a1', name: 'Growth Lead', budget: { dailyUsd: null } } as AgentProfile);
+    followed = false;
     const threads = port(queued({ agentId: 'a1' }));
-    const thrown = await endings.runRetry(job(), threads).catch(error => error);
-    expect(thrown).toMatchObject({ kind: 'budget', retryable: true });
-    // Just after midnight, local time
-    const at = new Date(now + thrown.retryAfterMs);
-    expect([at.getDate(), at.getHours(), at.getMinutes()]).toEqual([21, 0, 1]);
-    expect(threads.postpone).toHaveBeenCalledWith('chat-1', now + thrown.retryAfterMs);
+    await endings.runRetry(job(), threads);
     expect(threads.resume).not.toHaveBeenCalled();
+    expect(threads.drop).toHaveBeenCalledWith('chat-1');
+    expect(threads.giveUp).not.toHaveBeenCalled();
+    expect(jobs.size).toBe(0);
 
-    // Under its cap it goes ahead: the spend of earlier tries counts, the try itself is not a new run
-    spent.set('a1', 0.4);
+    // With its run still open, the same chat is picked up
+    followed = true;
     await endings.runRetry(job(), threads);
     expect(threads.resume).toHaveBeenCalledTimes(1);
   });
 
-  it('tries again shortly when the task cannot start now, and gives up with a report rather than queue for ever', async () => {
+  it('waits for tomorrow instead of retrying when the agent spent its money for the day', async () => {
+    agents.set('a1', { id: 'a1', name: 'Growth Lead', budget: { dailyUsd: 1 } } as AgentProfile);
+    spent.set('a1', 1.2);
+    const threads = port(queued({ agentId: 'a1' }));
+    await endings.runRetry(job(), threads);
+    expect(threads.resume).not.toHaveBeenCalled();
+    // Queued for just after midnight, local time, and the chat says so
+    const [next] = [...jobs.values()];
+    const at = new Date(next.runAt);
+    expect([at.getDate(), at.getHours(), at.getMinutes()]).toEqual([21, 0, 1]);
+    expect(next.payload).toMatchObject({ tries: 1, postponed: 1 });
+    expect(threads.postpone).toHaveBeenCalledWith('chat-1', next.runAt);
+
+    // Under its cap the next morning it goes ahead: the spend of earlier tries counted, the try is not a new run
+    spent.set('a1', 0.4);
+    await endings.runRetry({ payload: next.payload }, threads);
+    expect(threads.resume).toHaveBeenCalledTimes(1);
+
+    // It does not wait for ever: after a week of mornings over the cap it gives up and says so
+    spent.set('a1', 5);
+    await endings.runRetry(job({ postponed: 7 }), threads);
+    expect(threads.giveUp).toHaveBeenCalledWith('chat-1');
+  });
+
+  it('keeps looking for a free slot for half an hour, then gives up with a report rather than queue for ever', async () => {
     const busy = vi.fn(async () => {
       throw new Error('Too many tasks are running');
     });
     const threads = port(queued(), busy);
-    await expect(endings.runRetry(job(1), threads)).rejects.toMatchObject({
-      kind: 'unavailable',
-      retryable: true,
-      retryAfterMs: 30_000,
-    });
+    await endings.runRetry(job(), threads);
+    // Not given up after a couple of minutes: it looks again in half a minute, as a job of its own
+    const [key, next] = [...jobs.entries()][0];
+    expect(next.runAt).toBe(now + 30_000);
+    expect(next.payload).toMatchObject({ tries: 1, waits: 1 });
+    expect(key).not.toBe(retryJobKey('chat-1', 1));
     expect(threads.giveUp).not.toHaveBeenCalled();
-    await endings.runRetry(job(5), threads);
+
+    await endings.runRetry(job({ waits: 59 }), threads);
+    expect(threads.giveUp).not.toHaveBeenCalled();
+    await endings.runRetry(job({ waits: 60 }), threads);
+    expect(threads.giveUp).toHaveBeenCalledWith('chat-1');
+
+    // Dropping the chat's tries drops the waiting ones too
+    await endings.cancel('chat-1');
+    expect(jobs.size).toBe(0);
+  });
+
+  it('says so, instead of going quiet, when a try can be neither started nor queued again', async () => {
+    const threads = port(
+      queued(),
+      vi.fn(async () => {
+        throw new Error('busy');
+      }),
+    );
+    const broken = new RunEndings({
+      ...deps,
+      schedule: async () => {
+        throw new Error('the job list cannot be written');
+      },
+    });
+    await broken.runRetry(job(), threads);
     expect(threads.giveUp).toHaveBeenCalledWith('chat-1');
   });
 });

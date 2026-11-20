@@ -3287,6 +3287,12 @@
   "retry_need_key": {
     "message": "Verifique a chave do modelo em Configurações e pressione Tentar de novo na conversa."
   },
+  "retry_need_model": {
+    "message": "O modelo das Configurações não foi encontrado. Escolha outro e pressione Tentar de novo na conversa."
+  },
+  "retry_need_billing": {
+    "message": "A conta do modelo está sem crédito ou acima do limite. Resolva isso e pressione Tentar de novo na conversa."
+  },
   "retry_need_debugger": {
     "message": "A barra de depuração precisa ficar aberta enquanto eu trabalho. Pressione Tentar de novo na conversa."
   },

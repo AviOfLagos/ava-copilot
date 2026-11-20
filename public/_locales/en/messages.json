@@ -3287,6 +3287,12 @@
   "retry_need_key": {
     "message": "Check the model key in Settings, then press Retry in the chat."
   },
+  "retry_need_model": {
+    "message": "The model in Settings was not found. Pick another one, then press Retry in the chat."
+  },
+  "retry_need_billing": {
+    "message": "The model account is out of credit or over its limit. Fix that, then press Retry in the chat."
+  },
   "retry_need_debugger": {
     "message": "The debugging bar has to stay open while I work. Press Retry in the chat."
   },

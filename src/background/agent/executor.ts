@@ -21,6 +21,7 @@ import {
   MaxFailuresReachedError,
 } from './agents/errors';
 import { URLNotAllowedError } from '../browser/views';
+import { codeOfStepError } from '../retry/classify';
 import type { FailureCode } from '../retry/classify';
 import { chatHistoryStore } from '@extension/storage/lib/chat';
 import type { AgentStepHistory } from './history';
@@ -77,6 +78,9 @@ export class Executor {
   private readonly channel: string | undefined;
   // Why the last run failed, as far as the error's type says; the thread manager classes the run by it
   failureCode: FailureCode | null = null;
+  // The last step error behind a "too many failures" end, in its own words: it says more than the count
+  failureDetail: string | null = null;
+  private lastStepError: string | null = null;
   constructor(
     task: string,
     taskId: string,
@@ -225,6 +229,8 @@ export class Executor {
     const context = this.context;
     context.startTask();
     this.failureCode = null;
+    this.failureDetail = null;
+    this.lastStepError = null;
     const allowedMaxSteps = this.context.options.maxSteps;
     // The turn's trace (telemetry/traces.ts): the user's message, every model call, and what they got back
     startTurn(this.context.taskId, { task: this.tasks[this.tasks.length - 1], channel: this.channel });
@@ -298,6 +304,12 @@ export class Executor {
       } else {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.failureCode = failureCodeOf(error);
+        // Three failed steps in a row: what the last one said tells a dropped network from a missing model
+        const lastStepError = this.lastStepError as string | null;
+        if (this.failureCode === 'max_failures' && lastStepError) {
+          this.failureCode = codeOfStepError(lastStepError);
+          this.failureDetail = lastStepError.replace(/\s+/g, ' ').trim().slice(0, 300);
+        }
         outcome = { answer: t('exec_task_fail', [errorMessage]), status: 'error', error: errorMessage };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_task_fail', [errorMessage]));
       }
@@ -358,6 +370,7 @@ export class Executor {
         throw error;
       }
       context.consecutiveFailures++;
+      this.lastStepError = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to execute planner: ${error}`);
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));
@@ -405,6 +418,7 @@ export class Executor {
         throw error;
       }
       context.consecutiveFailures++;
+      this.lastStepError = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to execute step: ${error}`);
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));

@@ -953,6 +953,14 @@ export class AgentService {
       }
     }
 
+    // The run no longer follows its chat: a try queued for the chat must not start with nobody watching its
+    // steps, its time, its sites or its money (src/background/retry)
+    if (threadId && (await this.db.threads.get(threadId))?.failure?.retryAt) {
+      await this.deps
+        .threads()
+        .cancel(threadId)
+        .catch(() => {});
+    }
     const usage = threadId && run.agentId ? await runUsage(this.db, run.agentId, threadId, run.startedAt) : null;
     // The run's end and the agent's counts change together: whoever sees the run ended (a run starting right after,
     // the agent page) also sees its failure count, so "paused after 3 failures in a row" never counts from stale data

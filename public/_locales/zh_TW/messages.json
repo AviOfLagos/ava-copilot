@@ -3287,6 +3287,12 @@
   "retry_need_key": {
     "message": "請到設定檢查模型金鑰，然後在對話中按「重試」。"
   },
+  "retry_need_model": {
+    "message": "找不到設定中的模型。請改選另一個，然後在對話中按「重試」。"
+  },
+  "retry_need_billing": {
+    "message": "模型帳戶餘額不足或超過用量上限。請先處理，再在對話中按「重試」。"
+  },
   "retry_need_debugger": {
     "message": "我工作時偵錯列必須保持開啟。請在對話中按「重試」。"
   },
