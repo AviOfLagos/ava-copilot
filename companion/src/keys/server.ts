@@ -118,7 +118,7 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
       title: 'Read or switch the gh or vercel account',
       description:
         'Reads the account a CLI is signed in as, or switches it and verifies. gh: switches gh auth and the global git commit ' +
-        'identity together (gh-switch); with `repo` it picks the right account for that repo and also aligns Vercel. vercel: ' +
+        'identity together (gh-switch); with `repo` it picks the right account for that repo, also aligns Vercel (reported under `vercel`), and checks the commit email that repo uses. vercel: ' +
         'activates a saved Vercel login (vercel-switch). Omit account and repo to only read the current one. Names only, never ' +
         'tokens. Avi gets a notification when an account changes. An account that is not signed in comes back unswitched: ' +
         'then use ask_human to have Avi sign in.',

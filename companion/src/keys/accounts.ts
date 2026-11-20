@@ -28,6 +28,8 @@ export interface SwitchResult {
   verified: boolean;
   accounts: string[];
   gitEmail?: string;
+  // gh with a repo: gh-switch --for-repo also aligns Vercel, so that change is reported too
+  vercel?: { from: string | null; to: string | null };
   message: string;
 }
 
@@ -74,7 +76,7 @@ export function parseVercelList(text: string): Map<string, string> {
   }
   return out;
 }
-export const parseVercelActive = (text: string): string | null => /userId\s+(\S+)/.exec(text)?.[1] ?? null;
+export const parseVercelActive = (text: string): string | null => /^\s*userId[ \t]+(\S+)/m.exec(text)?.[1] ?? null;
 
 const nameOf = (saved: Map<string, string>, userId: string | null) =>
   userId ? ([...saved].find(([, id]) => id === userId)?.[0] ?? null) : null;
@@ -118,22 +120,48 @@ export async function switchAccount(req: SwitchRequest, deps: AccountDeps): Prom
     if (req.account === before.active) {
       return { ...base, to: before.active, switched: false, verified: true, message: `GitHub is already on ${before.active}` };
     }
+    // gh-switch --for-repo also runs vercel-switch --for-repo: the same Vercel guard applies first
+    const vercelBefore = req.repo ? await vercelState(deps) : null;
+    if (vercelBefore?.activeId && !vercelBefore.active) {
+      return { ...base, to: before.active, switched: false, verified: false, message: 'gh-switch --for-repo would also switch Vercel, and the active Vercel login is not saved. Ask Avi to run `vercel-switch --save <name>` first.' };
+    }
     const ran = await deps.runner('gh-switch', req.account ? [req.account] : ['--for-repo'], { env, timeoutMs: 60_000, cwd: req.repo });
     if (ran.code !== 0) return { ...base, to: before.active, switched: false, verified: false, message: `gh-switch failed: ${tidy(plain(ran))}` };
     const after = await ghState(deps);
     // The account GitHub itself answers as, not only what the keyring says
     const who = (await deps.runner('gh', ['api', 'user', '--jq', '.login'], { env, timeoutMs: 20_000 })).stdout.trim();
     const email = (await deps.runner('git', ['config', '--global', 'user.email'], { env, timeoutMs: 10_000 })).stdout.trim();
+    // In a repo, commits use its own user.email when it pins one
+    const repoEmail = req.repo ? (await deps.runner('git', ['-C', req.repo, 'config', 'user.email'], { env, timeoutMs: 10_000 })).stdout.trim() : email;
     const wanted = req.account ?? after.active;
-    const verified = !!wanted && after.active === wanted && who === wanted;
+    const identityOk = !!email && repoEmail === email;
+    const verified = !!wanted && after.active === wanted && who === wanted && identityOk;
     if (after.active !== before.active && after.active) await notify(after.active);
+    let vercel: SwitchResult['vercel'];
+    if (vercelBefore) {
+      const vercelAfter = await vercelState(deps);
+      vercel = { from: vercelBefore.active, to: vercelAfter.active };
+      if (vercelAfter.active && vercelAfter.active !== vercelBefore.active) {
+        try {
+          await deps.notify?.(`Ava: ${req.agent} switched vercel`, `Now ${vercelAfter.active}. ${req.purpose}`);
+        } catch {
+          // courtesy only
+        }
+      }
+    }
+    const message = !identityOk
+      ? `GitHub is on ${after.active}, but this repo pins commits to ${repoEmail || 'no email'} (global is ${email}); commits here would not be attributed to ${after.active}`
+      : verified
+        ? `GitHub is on ${after.active} (commits as ${email})`
+        : `switched, but GitHub answers as ${who || 'nobody'}; check \`gh auth status\``;
     return {
       ...base,
       to: after.active,
       switched: after.active !== before.active,
       verified,
-      gitEmail: email || undefined,
-      message: verified ? `GitHub is on ${after.active} (commits as ${email})` : `switched, but GitHub answers as ${who || 'nobody'}; check \`gh auth status\``,
+      gitEmail: repoEmail || undefined,
+      ...(vercel ? { vercel } : {}),
+      message,
     };
   }
 

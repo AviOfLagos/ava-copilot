@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { parseGhStatus, parseVercelList, switchAccount } from '../keys/accounts';
+import { parseGhStatus, parseVercelActive, parseVercelList, switchAccount } from '../keys/accounts';
 import { askHuman, dialogText, validateAsk } from '../keys/ask';
 import { ensureMasker, maskerContent, sha256 } from '../keys/install';
 import { applyMask, MASK_MARKER, type MaskReport, planMask, secretEntries, variants } from '../keys/mask-core';
@@ -379,6 +379,49 @@ describe('switch_account', () => {
     const result = await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' });
     expect(result).toMatchObject({ from: 'an unsaved login', switched: false, verified: false });
     expect(result.message).toMatch(/--save/);
+  });
+
+  it('with a repo: reports the Vercel change gh-switch makes, and fails verification when the repo pins another email', async () => {
+    let active = 'AviOfLagos';
+    let vid = 'Iwk';
+    let pinned = '120939905+AviOfLagos@users.noreply.github.com';
+    const runner = fakeRunner(call => {
+      if (call.command === 'gh-switch') {
+        expect(call.args).toEqual(['--for-repo']);
+        expect(call.options.cwd).toBe('/repo');
+        active = 'getvettika-ui';
+        vid = 'S7M';
+        return {};
+      }
+      if (call.command === 'vercel-switch') return { stdout: call.args[0] === '--list' ? VLIST : vstatus(vid) };
+      if (call.command === 'gh' && call.args[0] === 'auth') return { stdout: GH(active) };
+      if (call.command === 'gh') return { stdout: `${active}\n` };
+      if (call.args[0] === '-C') return { stdout: `${pinned}\n` };
+      return { stdout: '309111286+getvettika-ui@users.noreply.github.com\n' };
+    });
+    const result = await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' });
+    expect(result).toMatchObject({ to: 'getvettika-ui', switched: true, verified: false, vercel: { from: 'nexprove', to: 'avi' } });
+    expect(result.message).toMatch(/pins commits/);
+    // without the pin it verifies
+    active = 'AviOfLagos';
+    vid = 'Iwk';
+    pinned = '309111286+getvettika-ui@users.noreply.github.com';
+    expect(await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' })).toMatchObject({ verified: true });
+  });
+
+  it('with a repo: refuses when gh-switch would overwrite an unsaved Vercel login', async () => {
+    const runner = fakeRunner(call => {
+      if (call.command === 'gh') return { stdout: GH('AviOfLagos') };
+      if (call.command === 'vercel-switch') return { stdout: call.args[0] === '--list' ? VLIST : vstatus('UNSAVED') };
+      return new Error('must not switch');
+    });
+    const result = await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' });
+    expect(result).toMatchObject({ switched: false, verified: false });
+    expect(result.message).toMatch(/not saved/);
+  });
+
+  it('reads "no login" when vercel-switch shows an empty userId', () => {
+    expect(parseVercelActive('active Vercel login\n  userId      \n  currentTeam team_2\n')).toBeNull();
   });
 
   it('refuses odd account names and relative repos before running anything', async () => {
