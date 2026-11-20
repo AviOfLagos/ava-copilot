@@ -4,6 +4,8 @@ Logged 2026-11-20 from Avi's brief. This is a spec; nothing here is built yet.
 It was reviewed once against the brief and the code, and the findings are
 folded in. Each numbered part maps to one GitHub issue (see "Build order").
 
+Tracking: epic #82 (issues #64 to #81). The Suture side is `AviOfLagos/suture#103`.
+
 First product: **Suture** (trysuture.com, repo `AviOfLagos/suture`, private).
 Marketing budget for everything: **$100**.
 
