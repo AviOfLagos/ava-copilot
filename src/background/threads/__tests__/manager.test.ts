@@ -23,7 +23,7 @@ class FakeExecutor {
   private finish!: () => void;
   private running: Promise<void> | null = null;
 
-  constructor(public options: { threadId: string; task: string; messageContext?: string }) {
+  constructor(public options: { threadId: string; task: string; messageContext?: string; browserContext?: unknown }) {
     this.tasks = [options.task];
     FakeExecutor.created.push(this);
   }
@@ -74,26 +74,81 @@ class FakeExecutor {
   addFollowUpTask(task: string) {
     this.tasks.push(task);
   }
+  // Whether the task typed into a field or clicked a submit in its last steps, and what the model is told next
+  midForm = false;
+  notes: string[] = [];
+  paused = false;
+  // Every hold and release, in order
+  holds: string[] = [];
+  isMidForm() {
+    return this.midForm;
+  }
+  async pause() {
+    this.paused = true;
+    this.holds.push('pause');
+  }
+  async resume() {
+    this.paused = false;
+    this.holds.push('resume');
+  }
+  resumeOnFreshPage(note: string) {
+    this.notes.push(note);
+    this.paused = false;
+    this.holds.push('fresh');
+  }
   notify() {}
   async cleanup() {}
 }
 
 vi.mock('../factory', () => ({
   resolveModels: vi.fn(async () => ({ navigator: {}, planner: {} })),
-  createBrowserContext: vi.fn(async () => ({ removeAttachedPage: vi.fn(), setBinding: vi.fn() })),
+  createBrowserContext: vi.fn(async (binding: unknown) => {
+    const context = {
+      // The run's own binding, so a test can let a tab join it the way the agent does
+      binding: binding as { add(tabId: number): void },
+      currentTabId: null as number | null,
+      // Tabs the task closed itself, and the sites it may not open
+      closed: new Set<number>(),
+      denied: [] as string[],
+      closedByTask: (tabId: number) => context.closed.has(tabId),
+      getConfig: () => ({ allowedUrls: [], deniedUrls: context.denied }),
+      removeAttachedPage: vi.fn(),
+      setBinding: vi.fn(),
+      updateCurrentTabId: vi.fn((tabId: number) => {
+        context.currentTabId = tabId;
+      }),
+    };
+    return context;
+  }),
   createExecutor: vi.fn(
-    async (options: { threadId: string; task: string; messageContext?: string }) => new FakeExecutor(options),
+    async (options: { threadId: string; task: string; messageContext?: string; browserContext?: unknown }) =>
+      new FakeExecutor(options),
   ),
 }));
 
 // A browser with one window; tests open tabs and pick the active one
 const browser = {
-  tabs: new Map<number, { id: number; url: string; title: string; active: boolean; groupId: number }>(),
+  tabs: new Map<
+    number,
+    { id: number; url: string; title: string; active: boolean; groupId: number; windowId: number; status: string }
+  >(),
+  // New tabs stay "loading" until a test says otherwise
+  slowLoad: false,
+  // The windows that are open; a tab opens in window 1 unless told otherwise
+  windows: new Set<number>([1]),
   nextId: 1,
-  open(url: string) {
+  open(url: string, windowId = 1, active = true) {
     const id = this.nextId++;
-    for (const tab of this.tabs.values()) tab.active = false;
-    this.tabs.set(id, { id, url, title: url, active: true, groupId: -1 });
+    if (active) for (const tab of this.tabs.values()) tab.active = false;
+    this.tabs.set(id, {
+      id,
+      url,
+      title: url,
+      active,
+      groupId: -1,
+      windowId,
+      status: this.slowLoad ? 'loading' : 'complete',
+    });
     return id;
   },
   activate(id: number) {
@@ -108,7 +163,10 @@ function installChrome() {
     runtime: { getPlatformInfo: async () => ({}) },
     tabGroups: { TAB_GROUP_ID_NONE: -1, update: async () => ({}) },
     windows: {
-      get: async (id: number) => ({ id, type: 'normal' }),
+      get: async (id: number) => {
+        if (!browser.windows.has(id)) throw new Error(`No window with id: ${id}`);
+        return { id, type: 'normal' };
+      },
       getLastFocused: async () => ({ id: 1, type: 'normal' }),
     },
     tabs: {
@@ -122,7 +180,11 @@ function installChrome() {
           q.active || q.highlighted ? tab.active : q.groupId === undefined || tab.groupId === q.groupId,
         ),
       group: async () => 9,
-      create: async ({ url }: { url: string }) => tabs.get(browser.open(url)),
+      create: async ({ url, windowId, active }: { url: string; windowId?: number; active?: boolean }) =>
+        tabs.get(browser.open(url, windowId ?? 1, active ?? true)),
+      remove: async (id: number) => {
+        tabs.delete(id);
+      },
     },
   });
 }
@@ -136,10 +198,19 @@ let store: ThreadStore;
 let manager: InstanceType<typeof ThreadManager>;
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+// The fake browser context a run was given (see the factory mock above)
+const contextOf = (executor: FakeExecutor) =>
+  (
+    executor.options as unknown as {
+      browserContext: { closed: Set<number>; denied: string[]; binding: { add(tabId: number): void } };
+    }
+  ).browserContext;
 const lastExecutor = () => FakeExecutor.created[FakeExecutor.created.length - 1];
 
 beforeEach(() => {
   browser.tabs.clear();
+  browser.windows = new Set([1]);
+  browser.slowLoad = false;
   browser.nextId = 1;
   FakeExecutor.created = [];
   settings.maxConcurrentThreads = 2;
@@ -251,9 +322,11 @@ describe('ThreadManager', () => {
     expect((await store.messages(threadId)).map(m => m.content)).toContain('gate_approved:Send message');
   });
 
-  it('stops a run whose tab closes, and keeps where it was', async () => {
+  it('stops a run whose tab closes in the middle of a form, and keeps where it was', async () => {
     const tabId = browser.open('https://form.example/quote');
     const threadId = await manager.send({ text: 'Fill the form' });
+    // A field was typed into in the last steps: a fresh page would not hold it
+    lastExecutor().midForm = true;
     browser.tabs.delete(tabId);
     await manager.onTabRemoved(tabId);
     await settle();
@@ -263,11 +336,15 @@ describe('ThreadManager', () => {
     expect(thread?.error?.kind).toBe('tab_closed');
     expect(thread?.boundUrl).toBe('https://form.example/quote');
     expect(thread?.activeTask).toBe('Fill the form');
+    // Nothing was opened again: the retry starts by checking what already happened
+    expect(browser.tabs.size).toBe(0);
+    expect(lastExecutor().notes).toEqual([]);
   });
 
   it('reopens the page of a closed tab and continues', async () => {
     const tabId = browser.open('https://form.example/quote');
     const threadId = await manager.send({ text: 'Fill the form' });
+    lastExecutor().midForm = true;
     browser.tabs.delete(tabId);
     await manager.onTabRemoved(tabId);
     await settle();
@@ -279,6 +356,227 @@ describe('ThreadManager', () => {
     expect(browser.tabs.get(thread!.boundTabIds[0])?.url).toBe('https://form.example/quote');
     expect(lastExecutor().options.task).toBe('Fill the form');
     expect(lastExecutor().options.messageContext).toContain('interrupted and is now resumed');
+  });
+
+  describe('a closed tab does not end the task (#65)', () => {
+    const close = async (tabId: number) => {
+      browser.tabs.delete(tabId);
+      await manager.onTabRemoved(tabId);
+      await settle();
+    };
+
+    it('reopens the tab on its last page while the task is reading, tells the model, and finishes', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      const executor = lastExecutor();
+      // The task moved on from the page it started on
+      browser.tabs.get(tabId)!.url = 'https://news.example/story/42';
+      await manager.onTabUpdated(tabId, browser.tabs.get(tabId)!);
+      expect((await store.get(threadId))?.boundUrl).toBe('https://news.example/story/42');
+
+      await close(tabId);
+
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('running');
+      expect(thread?.error).toBeNull();
+      expect(thread?.boundTabIds).toHaveLength(1);
+      const reopened = browser.tabs.get(thread!.boundTabIds[0]);
+      expect(reopened?.url).toBe('https://news.example/story/42');
+      expect(reopened?.windowId).toBe(1);
+      expect(executor.cancelled).toBe(false);
+      // The task was held while its page came back, so no step ran (and failed) on the dead tab
+      expect(executor.holds[0]).toBe('pause');
+      expect(executor.holds).toContain('fresh');
+      expect(executor.paused).toBe(false);
+      expect(executor.notes).toEqual([
+        'The tab was closed and reopened at https://news.example/story/42. It is a fresh page: check you are signed in and where you are before continuing.',
+      ]);
+      expect((await store.messages(threadId)).at(-1)?.content).toBe('threads_tabReopened:news.example');
+
+      // The same executor carries on in the new tab and the task finishes
+      await executor.complete('The top story is about tabs.');
+      await settle();
+      expect(FakeExecutor.created).toHaveLength(1);
+      expect((await store.get(threadId))?.status).toBe('idle');
+    });
+
+    it('handles one closed tab once, whichever of the two reports comes first', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      browser.tabs.delete(tabId);
+      // Chrome says it twice: the debugger lost its target, and the tab was removed
+      await Promise.all([manager.onDebuggerDetached(tabId, 'target_closed'), manager.onTabRemoved(tabId)]);
+      await manager.onTabRemoved(tabId);
+      await settle();
+
+      expect(browser.tabs.size).toBe(1);
+      expect(lastExecutor().notes).toHaveLength(1);
+      expect((await store.get(threadId))?.status).toBe('running');
+      const notes = (await store.messages(threadId)).filter(message => message.content.startsWith('threads_tab'));
+      expect(notes).toHaveLength(1);
+    });
+
+    it('leaves a tab alone when the debugger lost its target but the tab is still there', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      await manager.onDebuggerDetached(tabId, 'target_closed');
+      await settle();
+      expect(browser.tabs.size).toBe(1);
+      expect((await store.get(threadId))?.boundTabIds).toEqual([tabId]);
+      expect(lastExecutor().notes).toEqual([]);
+      // It can still be closed for real later
+      await close(tabId);
+      expect(lastExecutor().notes).toHaveLength(1);
+    });
+
+    it('reopens once per run: a second close ends the run as tab_closed', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      await close(tabId);
+      const second = (await store.get(threadId))!.boundTabIds[0];
+      await close(second);
+
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('error');
+      expect(thread?.error?.kind).toBe('tab_closed');
+      expect(browser.tabs.size).toBe(0);
+    });
+
+    it('does not reopen while a send waits for the click: the page held what the card shows', async () => {
+      const tabId = browser.open('https://mail.example/compose');
+      const threadId = await manager.send({ text: 'Send the reply' });
+      const request = { id: 'r1', taskId: threadId, mode: 'commit', kind: 'send', target: 'Send', intent: '' };
+      await lastExecutor().emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(request));
+      expect((await store.get(threadId))?.status).toBe('waiting_confirm');
+      await close(tabId);
+      expect((await store.get(threadId))?.error?.kind).toBe('tab_closed');
+      expect(browser.tabs.size).toBe(0);
+    });
+
+    it('opens the tab in the last focused window, in the background, when its window closed too', async () => {
+      browser.windows.add(7);
+      browser.open('https://other.example/');
+      const tabId = browser.open('https://news.example/', 7);
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([tabId]);
+      browser.windows.delete(7);
+      await close(tabId);
+
+      const reopened = browser.tabs.get((await store.get(threadId))!.boundTabIds[0]);
+      expect(reopened).toMatchObject({ url: 'https://news.example/', windowId: 1, active: false });
+    });
+
+    it('leaves a tab closed that the task closed itself', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Read it, then close the tab' });
+      contextOf(lastExecutor()).closed.add(tabId);
+      await close(tabId);
+      expect(browser.tabs.size).toBe(0);
+      expect((await store.get(threadId))?.error?.kind).toBe('tab_closed');
+    });
+
+    it('does not bring back a page the task may not open', async () => {
+      const tabId = browser.open('https://blocked.example/page');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      contextOf(lastExecutor()).denied.push('blocked.example');
+      await close(tabId);
+      expect(browser.tabs.size).toBe(0);
+      expect((await store.get(threadId))?.error?.kind).toBe('tab_closed');
+    });
+
+    it('brings back the page of a tab that joined the task later, not the page it started on', async () => {
+      const first = browser.open('https://a.example/start');
+      const threadId = await manager.send({ text: 'Follow the link and read it' });
+      // The task opens a second tab, then the first one closes: it goes on in the second
+      const second = browser.open('https://b.example/article');
+      contextOf(lastExecutor()).binding.add(second);
+      await settle();
+      await close(first);
+      expect((await store.get(threadId))?.status).toBe('running');
+
+      await close(second);
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('running');
+      expect(browser.tabs.get(thread!.boundTabIds[0])?.url).toBe('https://b.example/article');
+    });
+
+    it('holds the new tab for the task while it loads, and drops it when the task is stopped meanwhile', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      const executor = lastExecutor();
+      browser.slowLoad = true;
+      browser.tabs.delete(tabId);
+      const closing = manager.onTabRemoved(tabId);
+      await settle();
+      await settle();
+
+      // Still loading: the tab is already the task's, so no other chat can take it
+      const reopened = [...browser.tabs.keys()][0];
+      expect(reopened).toBeDefined();
+      expect(manager.holderOf(reopened)).toBe(threadId);
+      expect(executor.paused).toBe(true);
+      expect(executor.notes).toEqual([]);
+
+      await manager.cancel(threadId);
+      browser.tabs.get(reopened)!.status = 'complete';
+      await closing;
+      await settle();
+      expect(executor.notes).toEqual([]);
+      expect(browser.tabs.size).toBe(0);
+      expect((await store.get(threadId))?.error).toBeNull();
+    });
+
+    it('comes back in another window when the tab went with its whole window', async () => {
+      browser.windows.add(7);
+      const tabId = browser.open('https://news.example/', 7);
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      browser.tabs.delete(tabId);
+      // Chrome can still answer for a window that is on its way out
+      await manager.onTabRemoved(tabId, { windowClosing: true });
+      await settle();
+      expect(browser.tabs.get((await store.get(threadId))!.boundTabIds[0])?.windowId).toBe(1);
+    });
+
+    it('gives a stopped run no tab back: Stop is the only signal to end a task', async () => {
+      const tabId = browser.open('https://news.example/');
+      const threadId = await manager.send({ text: 'Summarise the top story' });
+      await manager.cancel(threadId);
+      await close(tabId);
+      expect(browser.tabs.size).toBe(0);
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('idle');
+      expect(thread?.error).toBeNull();
+    });
+
+    it('keeps going in its other tabs when one of several closes, and opens nothing', async () => {
+      const first = browser.open('https://a.example/');
+      const second = browser.open('https://b.example/');
+      // Both tabs are in one tab group, so the task is bound to both
+      browser.tabs.get(first)!.groupId = 5;
+      browser.tabs.get(second)!.groupId = 5;
+      const threadId = await manager.send({ text: 'Compare the two pages' });
+      expect((await store.get(threadId))?.boundTabIds.sort()).toEqual([first, second]);
+
+      await close(second);
+      const thread = await store.get(threadId);
+      expect(thread?.status).toBe('running');
+      expect(browser.tabs.size).toBe(1);
+      expect(lastExecutor().notes).toEqual([]);
+    });
+
+    it('goes back to the latest page, not the first one, on "Reopen and continue"', async () => {
+      const tabId = browser.open('https://shop.example/');
+      const threadId = await manager.send({ text: 'Fill the order form' });
+      browser.tabs.get(tabId)!.url = 'https://shop.example/checkout';
+      await manager.onTabUpdated(tabId, browser.tabs.get(tabId)!);
+      lastExecutor().midForm = true;
+      await close(tabId);
+      expect((await store.get(threadId))?.error?.kind).toBe('tab_closed');
+
+      await manager.continueThread(threadId);
+      const thread = await store.get(threadId);
+      expect(browser.tabs.get(thread!.boundTabIds[0])?.url).toBe('https://shop.example/checkout');
+    });
   });
 
   it('continues a finished thread with the executor that still holds its history', async () => {

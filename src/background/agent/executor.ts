@@ -156,6 +156,21 @@ export class Executor {
     return this.tasks[this.tasks.length - 1];
   }
 
+  /** Whether the task typed into a field or committed something in its last few steps. */
+  isMidForm(): boolean {
+    return this.context.isMidForm();
+  }
+
+  /**
+   * Lets a held task (see pause) go on in a fresh page: the model is told once, with the next page state it
+   * reads, and the steps that failed on the page it lost do not count against it.
+   */
+  resumeOnFreshPage(note: string): void {
+    this.context.notes.push(note);
+    this.context.consecutiveFailures = 0;
+    this.context.paused = false;
+  }
+
   /**
    * Shows a short status line to the user, e.g. that a model call is waiting to retry.
    */
@@ -194,7 +209,7 @@ export class Executor {
     logger.info(`🚀 Executing task: ${this.tasks[this.tasks.length - 1]}`);
     // reset the step counter
     const context = this.context;
-    context.nSteps = 0;
+    context.startTask();
     const allowedMaxSteps = this.context.options.maxSteps;
     // The turn's trace (telemetry/traces.ts): the user's message, every model call, and what they got back
     startTurn(this.context.taskId, { task: this.tasks[this.tasks.length - 1], channel: this.channel });
@@ -352,6 +367,8 @@ export class Executor {
         throw new Error(navOutput.error);
       }
       context.consecutiveFailures = 0;
+      // The model saw the page state of this step, notes included
+      context.notesDelivered();
       if (navOutput.result?.done) {
         return true;
       }

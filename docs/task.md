@@ -2497,6 +2497,26 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   is coarse on purpose (site + what is filled in): the same words to two people in one chat app need a second try
   and the user's click.
 
+### A closed tab does not end the task (2026-11-20, #65, docs/growth-team.md Part 1)
+
+- `ThreadManager` keeps the last page and window of every bound tab (`onTabUpdated`, from `tabs.onUpdated`) and keeps
+  `boundUrl` current, so "Reopen and continue" goes to the latest page.
+- A closed tab is handled once per tab id, whichever report comes first (`tabs.onRemoved`, or `debugger.onDetach`
+  with `target_closed`, which is ignored while the tab still exists).
+- When a run's last tab closes and it is not mid-form or mid-send (`AgentContext.isMidForm`: a field typed into, an
+  option chosen or a commit in the last 3 steps; or a commit waiting for the click), the tab is opened again on its
+  last page, in its window (or the last focused one, in the background, when the window closed too). The run is
+  paused while the page loads, so no step fails on the dead tab, and the next page state tells the model it is a
+  fresh page. One reopening per run.
+- Otherwise the run ends as `tab_closed`, as before; #66 queues that again.
+- Stop is the only signal that ends a task: a stopped run gets no tab back. Neither does a tab the task closed
+  itself (`close_tab`), a page the firewall or the agent's sites do not allow, or a tab whose own last page is not
+  known.
+- The mid-form marks start clean with every task (`AgentContext.startTask`): a kept executor runs follow-ups, and
+  what an earlier task typed says nothing about the next. A note to the model stays until a step that saw it goes
+  through.
+- E2E: `threads.e2e.mjs` "closing the tab while the task is only reading reopens it…".
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

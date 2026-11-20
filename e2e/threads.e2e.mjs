@@ -21,6 +21,8 @@ const writeMessage = text => page => [
 ];
 const clickSend = page => [{ click_element: { intent: 'Send it', index: page.find('div', 'Send message') } }];
 
+const readOn = () => [{ scroll_to_top: { intent: 'Read the page from the top' } }];
+
 const scenarios = {
   'parallel-a': [typeName('Ada'), slowly(4000, done)],
   'parallel-b': [typeName('Bob'), slowly(1000, done)],
@@ -28,6 +30,7 @@ const scenarios = {
   'tab-thief': [done],
   'stop-me': [slowly(10000, done)],
   'close-my-tab': [writeMessage('Draft for later'), clickSend, done],
+  'close-while-reading': [slowly(5000, readOn), readOn, done],
   'survive-restart': [writeMessage('Still here'), clickSend, clickSend, done],
   'first-task': [typeName('Grace'), done],
   'ws-task': [done],
@@ -124,6 +127,35 @@ test('closing the tab of a running thread stops it, and it can reopen the page a
     pages.some(page => page.url().includes('/fixture.html')),
     'the page was reopened',
   );
+  await session.panel.close();
+});
+
+test('closing the tab while the task is only reading reopens it, tells the model, and the task finishes', async () => {
+  mock.start('close-while-reading');
+  const session = await openSession(extension, mock);
+  await session.send(task('close-while-reading'));
+  const started = await waitForThread(session.panel, 'close-while-reading', t => t.status === 'running');
+  // The model is thinking about its first step (5 s): nothing was typed and nothing was submitted
+  await sleep(2000);
+
+  await session.web.close();
+  const finished = await waitForThread(session.panel, 'close-while-reading', t => t.status !== 'running', 40_000);
+  assert.equal(finished.status, 'idle');
+  assert.equal(finished.error, null);
+  assert.notEqual(finished.boundTabIds[0], started.boundTabIds[0]);
+  const pages = await extension.browser.pages();
+  assert.ok(
+    pages.some(page => page.url().includes('/fixture.html')),
+    'the page was reopened',
+  );
+  // The model was told, with the page state, that it is on a fresh page
+  const states = mock.runs.get('close-while-reading').navigatorCalls;
+  assert.ok(
+    states.some(state => state.includes('The tab was closed and reopened at')),
+    'the model was told the tab was reopened',
+  );
+  const text = await session.panelText();
+  assert.match(text, /opened again at/);
   await session.panel.close();
 });
 
