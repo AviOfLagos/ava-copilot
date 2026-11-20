@@ -217,6 +217,14 @@ const contextOf = (executor: FakeExecutor) =>
     }
   ).browserContext;
 const lastExecutor = () => FakeExecutor.created[FakeExecutor.created.length - 1];
+/**
+ * Waits until a run that was told to end has written its end. That takes several writes (its last events, its
+ * class, the thread's state), so one tick is not enough on a slow machine.
+ */
+const runEnded = async (executor: FakeExecutor) => {
+  for (let i = 0; i < 500 && manager.isRunning(executor.options.threadId); i++) await settle();
+  await settle();
+};
 
 beforeEach(() => {
   browser.tabs.clear();
@@ -261,7 +269,7 @@ describe('ThreadManager', () => {
     expect((await store.get(threadId))?.activity).toBe('navigating');
 
     await lastExecutor().complete('Posted in #general.');
-    await settle();
+    await runEnded(lastExecutor());
     thread = await store.get(threadId);
     expect(thread?.status).toBe('idle');
     expect(thread?.activity).toBe('');
@@ -283,7 +291,7 @@ describe('ThreadManager', () => {
       'workspace_placed:Nexprove',
     ]);
     await lastExecutor().complete('Done.');
-    await settle();
+    await runEnded(lastExecutor());
   });
 
   it('runs threads at the same time, up to the limit', async () => {
@@ -409,7 +417,7 @@ describe('ThreadManager', () => {
 
       // The same executor carries on in the new tab and the task finishes
       await executor.complete('The top story is about tabs.');
-      await settle();
+      await runEnded(executor);
       expect(FakeExecutor.created).toHaveLength(1);
       expect((await store.get(threadId))?.status).toBe('idle');
     });
@@ -597,7 +605,7 @@ describe('ThreadManager', () => {
     browser.open('https://chat.example');
     const threadId = await manager.send({ text: 'Find the standup time' });
     await lastExecutor().complete('10am.');
-    await settle();
+    await runEnded(lastExecutor());
 
     await manager.send({ threadId, text: 'Now post it' });
     expect(FakeExecutor.created).toHaveLength(1);
@@ -608,7 +616,7 @@ describe('ThreadManager', () => {
     browser.open('https://chat.example');
     const threadId = await manager.send({ text: 'Find the standup time' });
     await lastExecutor().complete('Not found.');
-    await settle();
+    await runEnded(lastExecutor());
 
     await manager.retry(threadId);
     expect(FakeExecutor.created).toHaveLength(2);
@@ -623,13 +631,13 @@ describe('ThreadManager', () => {
     const first = (await store.get(threadId))?.taskRunId;
     expect(first).toBeTruthy();
     await lastExecutor().complete('Sent.');
-    await settle();
+    await runEnded(lastExecutor());
 
     // A retry is the same task: what it already sent is found under the same id
     await manager.retry(threadId);
     expect((await store.get(threadId))?.taskRunId).toBe(first);
     await lastExecutor().complete('Sent.');
-    await settle();
+    await runEnded(lastExecutor());
 
     // A new request starts clean
     await manager.send({ threadId, text: 'Send it to the other channel too' });
@@ -896,7 +904,7 @@ describe('failed tasks retry, then report (#66)', () => {
     expect(lastExecutor().options.messageContext).toContain('interrupted and is now resumed');
 
     await lastExecutor().complete('The top story is about retries.');
-    await settle();
+    await runEnded(lastExecutor());
     thread = await store.get(threadId);
     expect(thread?.status).toBe('idle');
     expect(thread?.failure).toBeNull();
