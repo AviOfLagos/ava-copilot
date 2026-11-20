@@ -1035,6 +1035,24 @@
   "gate_stale": {
     "message": "The page changed while waiting for confirmation, so nothing was done."
   },
+  "gate_once_done": {
+    "message": "Já foi feito nesta tarefa, por isso não foi repetido: $1"
+  },
+  "gate_once_cutOff": {
+    "message": "Uma tentativa anterior pode ter funcionado, por isso não foi repetido: $1"
+  },
+  "gate_card_repeat_done": {
+    "message": "Isto já foi feito nesta tarefa às $1 ($2). Aprove apenas se quiser que seja feito de novo."
+  },
+  "gate_card_repeat_started": {
+    "message": "Uma tentativa anterior às $1 ($2) foi interrompida, então pode já ter funcionado. Verifique antes de aprovar."
+  },
+  "gate_card_repeat_earlier": {
+    "message": "Uma execução anterior desta tarefa já fez um passo parecido às $1 ($2). Confirme que não é o mesmo de novo antes de aprovar."
+  },
+  "gate_repeat_short": {
+    "message": "pode ser uma repetição"
+  },
   "gate_userContinued": {
     "message": "The user finished this step on the page themselves. Read the page again before the next action."
   },

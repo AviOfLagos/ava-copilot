@@ -10,6 +10,13 @@ interface ConfirmCardProps {
   isDarkMode?: boolean;
 }
 
+// What the card says when the step, or one like it, already exists (see src/background/once)
+const REPEAT_NOTES = {
+  done: 'gate_card_repeat_done',
+  started: 'gate_card_repeat_started',
+  earlier: 'gate_card_repeat_earlier',
+} as const;
+
 const KIND_LABELS = {
   send: 'gate_kind_send',
   publish: 'gate_kind_publish',
@@ -136,6 +143,15 @@ export default function ConfirmCard({ request, onAnswer, isDarkMode }: ConfirmCa
           </>
         )}
       </dl>
+
+      {isCommit && request.repeat && (
+        <p role="note" className="border-hold/45 bg-hold/10 mt-2.5 rounded-xl border p-2.5 font-medium">
+          {t(REPEAT_NOTES[request.repeat.status], [
+            new Date(request.repeat.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            request.repeat.label,
+          ])}
+        </p>
+      )}
 
       {isCommit && (
         <div className="mt-2.5 max-h-60 overflow-y-auto rounded-xl bg-black/20 p-2.5">

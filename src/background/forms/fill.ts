@@ -87,6 +87,8 @@ export async function fillFormAction(
       action: field.kind === 'tick' ? 'click_element' : 'input_text',
       args: { intent, index: field.index, text: field.value },
       node: field.node,
+      // Filling a field sends nothing: the button that submits the form is what takes a do-once key
+      once: false,
     });
     if (!review.proceed) return review.result;
   }

@@ -7,6 +7,7 @@ import type { ConnectorRecord, ToolFingerprint } from '../integrations/types';
 import type { JobRecord } from '../jobs/types';
 import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
+import type { OnceRecord } from '../once/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
@@ -38,6 +39,9 @@ export interface ThreadRecord {
   activity: string;
   // The task of the current or interrupted run, kept so it can be resumed
   activeTask: string | null;
+  // The id of that task: the same when it is resumed or retried, new for every new request. Do-once keys start
+  // with it (../once), so a retry finds what the task already sent. Absent on chats from before it existed.
+  taskRunId?: string | null;
   runStartedAt: number | null;
   // The request waiting for the user's decision, shown by any panel that opens the thread
   pendingRequest: ConfirmRequest | null;
@@ -331,6 +335,7 @@ export class AviCopilotDb extends Dexie {
   logs!: Table<LogEntry, string>;
   ambientSessions!: Table<AmbientSession, string>;
   ambientUtterances!: Table<AmbientUtterance, string>;
+  doOnce!: Table<OnceRecord, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -378,6 +383,10 @@ export class AviCopilotDb extends Dexie {
     this.version(6).stores({
       ambientSessions: 'id, startedAt',
       ambientUtterances: 'id, sessionId, [sessionId+startedAt], endedAt',
+    });
+    // Do-once keys (docs/growth-team.md, Part 2): only added, nothing stored is rewritten
+    this.version(7).stores({
+      doOnce: 'key, taskId, threadId, startedAt',
     });
   }
 }

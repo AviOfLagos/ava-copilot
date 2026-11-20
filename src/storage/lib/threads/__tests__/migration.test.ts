@@ -45,8 +45,9 @@ describe('database upgrade to version 5', () => {
     });
     // The job key is unique: the same key twice is refused
     await expect(db.jobs.add({ ...(await db.jobs.get('j1'))!, id: 'j2' })).rejects.toThrow();
-    // Later versions only add tables (version 6: ambient listening)
-    expect(db.verno).toBe(6);
+    // Later versions only add tables (version 6: ambient listening; version 7: do-once keys)
+    expect(db.verno).toBe(7);
+    expect(await db.doOnce.count()).toBe(0);
     expect(await db.ambientSessions.count()).toBe(0);
     expect(await db.ambientUtterances.count()).toBe(0);
     db.close();
