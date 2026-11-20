@@ -10745,5 +10745,35 @@
   },
   "checkin_body": {
     "message": "Aprove e eu começo agora, onde você pode ver. Recusar significa hoje não: só ofereço de novo amanhã. Nada é enviado sem o seu clique."
+  },
+  "rounds_failed_title": {
+    "message": "A ronda de $1 das $2 não rodou"
+  },
+  "rounds_failed_cut": {
+    "message": "Foi interrompida antes de terminar: o navegador ou a extensão parou. Roda de novo no próximo horário."
+  },
+  "checkin_failed": {
+    "message": "Não consegui começar o que você aprovou"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Notificações do Slack hoje, pelo menos: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "o produto não indica nenhum canal do Slack com o id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "nenhum conector do Slack está ativo neste espaço de trabalho."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "o conector do Slack precisa que você entre de novo."
+  },
+  "rounds_slack_asks_first": {
+    "message": "a ferramenta do Slack que lê um canal pede permissão antes de rodar. Deixe-a rodar sem perguntar em Conexões."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "o conector do Slack não tem ferramenta que leia um canal por um dia."
+  },
+  "rounds_slack_failed": {
+    "message": "não foi possível ler o Slack."
   }
 }

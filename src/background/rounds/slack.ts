@@ -12,22 +12,32 @@ import type { ConnectorService } from '../integrations/service';
  */
 
 export type SlackCounts =
-  | { ok: true; counts: Record<string, number>; channels: number }
+  // `partial`: the channel's answer was cut short, so the counts are "at least"
+  | { ok: true; counts: Record<string, number>; channels: number; partial?: boolean }
   // Why nothing was counted, as a short word: 'no_channels', 'not_connected', 'needs_sign_in', 'asks_first',
   // 'no_read_tool', 'failed'
   | { ok: false; reason: string; detail: string };
 
-// A kind is a short lower-case word in square brackets. "[source: x]" lines are where a sign-up came from, not a kind.
-const KIND = /\[([a-z][a-z_-]{1,24})\]/g;
+// A kind is a short lower-case word in square brackets that opens a message: at the start of a line, or right
+// after the quote or colon a tool puts before a message's text. "[source: x]" is where a sign-up came from, not a
+// kind; "[the docs](…)" is a link; a "[word]" in the middle of what somebody wrote is not a notification.
+const KIND = /(?:^|[\n"]|:\s)\s*\[([a-z][a-z_-]{1,24})\](?!\()/g;
+// A feed has a handful of kinds. More than this many different ones is not a feed's own vocabulary: only the
+// most frequent are kept, so text somebody wrote cannot mint a number for every word in brackets.
+export const MAX_KINDS = 8;
 
-/** How many messages of each kind a channel's text holds. */
+/** How many messages of each kind a channel's text holds: the most frequent kinds only. */
 export function countKinds(text: string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const match of text.matchAll(KIND)) {
     const kind = match[1]!.replace(/-/g, '_');
     counts[kind] = (counts[kind] ?? 0) + 1;
   }
-  return counts;
+  return Object.fromEntries(
+    Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, MAX_KINDS),
+  );
 }
 
 const READ_TOOL = /read_channel|channel_history|conversations?_history|get_channel_messages/i;
@@ -84,6 +94,7 @@ export async function slackCounts(
   }
 
   const counts: Record<string, number> = {};
+  let partial = false;
   for (const channel of channels) {
     const args = readArgs(reader.fingerprint.inputSchema, channel.id, Math.floor(since / 1000));
     if (!args)
@@ -93,10 +104,11 @@ export async function slackCounts(
       if ('refused' in prepared) return { ok: false, reason: 'failed', detail: prepared.refused };
       const result = await service.invoke(prepared, { retry: true, maxChars: 200_000 });
       if (result.isError) return { ok: false, reason: 'failed', detail: 'Slack answered with an error.' };
+      partial ||= result.truncated;
       for (const [kind, count] of Object.entries(countKinds(result.text))) counts[kind] = (counts[kind] ?? 0) + count;
     } catch {
       return { ok: false, reason: 'failed', detail: 'Slack could not be read.' };
     }
   }
-  return { ok: true, counts, channels: channels.length };
+  return { ok: true, counts, channels: channels.length, ...(partial ? { partial } : {}) };
 }

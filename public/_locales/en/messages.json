@@ -10745,5 +10745,35 @@
   },
   "checkin_body": {
     "message": "Approve and I start now, where you can watch. Decline means not today: I will not offer again until tomorrow. Nothing is sent without your click."
+  },
+  "rounds_failed_title": {
+    "message": "The $1 round at $2 did not run"
+  },
+  "rounds_failed_cut": {
+    "message": "It was cut off before it finished: the browser or the extension stopped. It runs again at its next time."
+  },
+  "checkin_failed": {
+    "message": "I could not start what you said yes to"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Slack notifications today, at least: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "the product names no Slack channel with its id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "no Slack connector is on for this workspace."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "the Slack connector needs you to sign in again."
+  },
+  "rounds_slack_asks_first": {
+    "message": "the Slack tool that reads a channel asks before it runs. Set it to run without asking in Connections."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "the Slack connector has no tool that reads one channel for one day."
+  },
+  "rounds_slack_failed": {
+    "message": "Slack could not be read."
   }
 }

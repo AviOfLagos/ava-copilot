@@ -10745,5 +10745,35 @@
   },
   "checkin_body": {
     "message": "同意的話我現在就開始，你可以在旁邊看。拒絕代表今天不要：明天之前我不會再問。沒有你的點擊，不會寄出任何東西。"
+  },
+  "rounds_failed_title": {
+    "message": "$2 的「$1」巡查未執行"
+  },
+  "rounds_failed_cut": {
+    "message": "尚未完成就被中斷：瀏覽器或擴充功能停止了。下一個時段會再執行。"
+  },
+  "checkin_failed": {
+    "message": "我無法開始你同意的工作"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "今日 Slack 通知，至少：$1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "產品未指定附有 ID 的 Slack 頻道。"
+  },
+  "rounds_slack_not_connected": {
+    "message": "此工作區未啟用 Slack 連接器。"
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "Slack 連接器需要你重新登入。"
+  },
+  "rounds_slack_asks_first": {
+    "message": "讀取頻道的 Slack 工具會先詢問才執行。請在「連接」中設定為不詢問即可執行。"
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "Slack 連接器沒有可讀取單一頻道單日訊息的工具。"
+  },
+  "rounds_slack_failed": {
+    "message": "無法讀取 Slack。"
   }
 }

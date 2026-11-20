@@ -4,10 +4,10 @@ import type { ProductProfile, RoundsState } from '@extension/storage';
 import { AppError, toAppError } from '@extension/shared';
 import { agentService } from '../agents/instance';
 import { stoppedThreads, waitingItems } from '../brief/brief';
-import type { BriefData } from '../brief/brief';
 import { inboxDecisions, waitingRuns } from '../brief/manager';
 import { collectProduct, markNoticed } from '../growth/collect';
 import { queryMetric } from '../growth/query';
+import { reasonText } from '../growth/reasons';
 import { createLogger } from '../log';
 import { whatChanged } from './plan';
 import { slackCounts } from './slack';
@@ -77,11 +77,14 @@ async function metricLines(productId: string, metric: string, today: string) {
   const flags: string[] = [];
 
   if (soFar === null && whole === null) {
-    const why = answer.byDay.find(entry => entry.date === today)?.detail ?? answer.source?.detail ?? '';
-    return { lines: [t('rounds_pulse_noReading', [name, why])], flags };
+    const reason = answer.byDay.find(entry => entry.date === today)?.reason ?? answer.source?.reason ?? null;
+    const why = reason ? reasonText(reason) : '';
+    return { lines: [t('rounds_pulse_noReading', [name, why])], flags, none: why };
   }
   const wholeDay = whatChanged(whole, week(yesterday));
-  if (wholeDay.flagged && whole !== null && wholeDay.average !== null) {
+  // A "yesterday" that was read before it ended is not a whole day: nothing is flagged on it
+  const wholeIsFinal = !answer.unfinished.includes(yesterday);
+  if (wholeIsFinal && wholeDay.flagged && whole !== null && wholeDay.average !== null) {
     flags.push(
       t(wholeDay.direction === 'up' ? 'rounds_pulse_flagUp' : 'rounds_pulse_flagDown', [
         name,
@@ -120,7 +123,8 @@ export async function productPulse(time: string, deps: PulseDeps = {}): Promise<
   for (const profile of readable) {
     const productId = profile.workspaceId;
     const flags: string[] = [];
-    digest.lines.push(`${profile.name || productId}`);
+    // The days are UTC days, as the product counts them
+    digest.lines.push(`${profile.name || productId} (UTC)`);
 
     if (profile.agentApi) {
       // Fresh numbers first; a failed read leaves "no reading" behind, never a zero
@@ -130,10 +134,17 @@ export async function productPulse(time: string, deps: PulseDeps = {}): Promise<
       });
       // The pulse says why itself, so the collector's own notice is not sent on top of it
       if (outcome?.notice) await markNoticed(productId, outcome.source, outcome.notice.reason).catch(() => undefined);
-      for (const metric of PULSE_METRICS) {
-        const part = await metricLines(productId, metric, today);
-        digest.lines.push(...part.lines.map(line => `  ${line}`));
-        flags.push(...part.flags);
+      const parts = [];
+      for (const metric of PULSE_METRICS) parts.push(await metricLines(productId, metric, today));
+      const reasons = new Set(parts.map(part => ('none' in part ? part.none : null)));
+      if (reasons.size === 1 && !reasons.has(null)) {
+        // Nothing could be read, all for one reason: said once, not once per number
+        digest.lines.push(`  ${t('rounds_pulse_noReading', [t('growth_title'), [...reasons][0] ?? ''])}`);
+      } else {
+        for (const part of parts) {
+          digest.lines.push(...part.lines.map(line => `  ${line}`));
+          flags.push(...part.flags);
+        }
       }
     }
 
@@ -142,7 +153,7 @@ export async function productPulse(time: string, deps: PulseDeps = {}): Promise<
         (): SlackCounts => ({ ok: false, reason: 'failed', detail: 'Slack could not be read.' }),
       );
       if (!slack.ok) {
-        digest.lines.push(`  ${t('rounds_pulse_slackOff', [slack.detail])}`);
+        digest.lines.push(`  ${t('rounds_pulse_slackOff', [slackReason(slack.reason)])}`);
       } else {
         const kinds = Object.entries(slack.counts).sort((a, b) => b[1] - a[1]);
         // Kept as numbers too, so tomorrow's pulse has something to compare with
@@ -159,9 +170,10 @@ export async function productPulse(time: string, deps: PulseDeps = {}): Promise<
           const part = await metricLines(productId, `slack_${kind}`, today);
           flags.push(...part.flags);
         }
-        digest.lines.push(
-          `  ${t('rounds_pulse_slack', [kinds.length ? kinds.map(([kind, count]) => `${kind.replace(/_/g, ' ')} ${count}`).join(', ') : '0'])}`,
-        );
+        const counted = kinds.length
+          ? kinds.map(([kind, count]) => `${kind.replace(/_/g, ' ')} ${count}`).join(', ')
+          : '0';
+        digest.lines.push(`  ${t(slack.partial ? 'rounds_pulse_slackAtLeast' : 'rounds_pulse_slack', [counted])}`);
       }
     }
     for (const flag of flags) digest.flagged.push({ productId, text: `${profile.name || productId}: ${flag}` });
@@ -169,6 +181,19 @@ export async function productPulse(time: string, deps: PulseDeps = {}): Promise<
   if (digest.flagged.length) digest.lines.unshift(...digest.flagged.map(flag => flag.text), '');
   return digest;
 }
+
+const SLACK_REASONS: Record<string, string> = {
+  no_channels: 'rounds_slack_no_channels',
+  not_connected: 'rounds_slack_not_connected',
+  needs_sign_in: 'rounds_slack_needs_sign_in',
+  asks_first: 'rounds_slack_asks_first',
+  no_read_tool: 'rounds_slack_no_read_tool',
+  failed: 'rounds_slack_failed',
+};
+
+/** Why Slack was not read, in the user's language. */
+const slackReason = (reason: string): string =>
+  t((SLACK_REASONS[reason] ?? 'rounds_slack_failed') as Parameters<typeof t>[0]);
 
 // ── Stuck work ────────────────────────────────────────────────────────────────────────────────────
 
@@ -188,13 +213,12 @@ export async function stuckWork(
   });
   const stopped = stoppedThreads(threads, now);
   const items = waitingItems({
-    now,
     waiting: threads.filter(thread => thread.status === 'waiting_confirm' && !thread.archived),
     stopped,
     inbox,
     runs: await waitingRuns(),
     agentNames: Object.fromEntries(agents.map(agent => [agent.id, agent.name])),
-  } as unknown as BriefData);
+  });
 
   const kindText = {
     approval: t('rounds_stuck_approval'),

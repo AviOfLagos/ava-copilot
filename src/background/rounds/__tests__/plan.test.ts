@@ -111,6 +111,17 @@ describe('Slack notification counts', () => {
       'A person wrote: see [1] and [the docs](https://x.test)',
     ].join('\n');
     expect(countKinds(text)).toEqual({ signup: 2, payment: 1, access_request: 1 });
+    // A tool that hands messages over as JSON, or with the sender before the text
+    expect(countKinds('{"text": "[signup] a"}\nava-bot: [feedback] b')).toEqual({ signup: 1, feedback: 1 });
+  });
+
+  it('does not count a word in brackets in the middle of what somebody wrote, and keeps to a few kinds', () => {
+    expect(countKinds('please look at this [urgent] thing\nsee [docs](https://x.test)')).toEqual({});
+    const many = Array.from(
+      { length: 30 },
+      (_, index) => `[kind${String.fromCharCode(97 + (index % 26))}${index > 25 ? 'x' : ''}] m`,
+    );
+    expect(Object.keys(countKinds(many.join('\n'))).length).toBe(8);
   });
 
   it('asks a read tool for one channel since a time, and refuses a tool that cannot say since when', () => {

@@ -132,8 +132,8 @@ test('the product pulse reads the product’s numbers, and says "no reading" wit
     'the pulse',
   );
   assert.match(first.body, /Rocket Shop/);
-  assert.match(first.body, /Sign-ups: no reading\. No token for the product API is saved in Ava yet\./);
-  assert.doesNotMatch(first.body, /Sign-ups: 0/);
+  assert.match(first.body, /Numbers: no reading\. No token for the product’s numbers API is saved in Ava yet\./);
+  assert.doesNotMatch(first.body, /Sign-ups: 0|: 0 today/);
 
   // With the token, the next pulse has numbers
   const today = suture.today();

@@ -36,6 +36,8 @@ const world = {
   retry: vi.fn(async () => undefined),
   notices: [] as { title: string; key: string }[],
   collected: [] as string[],
+  // Set to make the stuck-work round throw
+  breakStuck: false,
 };
 vi.mock('../../agents/instance', () => ({
   agentService: {
@@ -62,7 +64,10 @@ vi.mock('../../brief/manager', async () => {
   return {
     inboxDecisions: async () =>
       (await db.inbox.toArray()).filter(item => item.kind === 'approval' && item.status === 'unread'),
-    waitingRuns: async () => [],
+    waitingRuns: async () => {
+      if (world.breakStuck) throw new Error('The database is busy');
+      return [];
+    },
   };
 });
 
@@ -89,6 +94,18 @@ async function addMailAgent() {
   await db.agents.put({ id: 'mail', name: 'Mail', template: 'team_mail', enabled: true } as never);
 }
 
+const failedChat = (over: Partial<ThreadRecord> = {}) =>
+  thread({
+    id: 't2',
+    title: 'Reply to Ada',
+    origin: 'agent',
+    status: 'error',
+    error: { kind: 'failed', message: 'The page did not load' },
+    failure: { cls: 'temporary', retryAt: null, reported: true },
+    activeTask: 'Reply to Ada',
+    ...over,
+  });
+
 function thread(over: Partial<ThreadRecord>): ThreadRecord {
   return {
     id: 't1',
@@ -104,7 +121,7 @@ function thread(over: Partial<ThreadRecord>): ThreadRecord {
 beforeEach(async () => {
   for (const key of Object.keys(local)) delete local[key];
   for (const key of Object.keys(session)) delete session[key];
-  Object.assign(world, { events: [], runs: [], notices: [], collected: [] });
+  Object.assign(world, { events: [], runs: [], notices: [], collected: [], breakStuck: false });
   world.requestRun.mockClear();
   world.retry.mockClear();
   await Promise.all(
@@ -120,6 +137,15 @@ beforeEach(async () => {
   // The browser has been open since early morning
   session['rounds-started'] = at('06:00');
 });
+
+const offers = async () => (await items()).filter(item => item.kind === 'approval');
+const quietDay = async () => {
+  await addMailAgent();
+  await roundsStore.update('2026-11-19', state => ({
+    ...state,
+    ran: { 'pulse|08:30': 1, 'pulse|16:00': 1, 'mail|09:00': 1, 'mail|14:00': 1, 'stuck|12:00': 1 },
+  }));
+};
 
 /** Marks slots as run, so a test can look at the round it is about. */
 const ranAlready = (...slots: string[]) =>
@@ -216,6 +242,62 @@ describe('rounds', () => {
   });
 });
 
+describe('never silent', () => {
+  it('says so when a round fails, and does not run that slot again', async () => {
+    await ranAlready('pulse|08:30', 'mail|09:00');
+    world.breakStuck = true;
+    await tick(at('12:05'));
+    world.breakStuck = false;
+    await tick(at('12:10'));
+    const made = await items();
+    expect(made).toHaveLength(1);
+    expect(made[0]).toMatchObject({ kind: 'alert', title: 'rounds_failed_title|rounds_name_stuck|12:00' });
+    expect(made[0]?.body).toContain('The database is busy');
+  });
+
+  it('says so when a round was cut off by the background stopping, once', async () => {
+    // As a background that died in the middle of the 12:00 round left it
+    await ranAlready('pulse|08:30', 'mail|09:00');
+    await roundsStore.update('2026-11-19', state => ({ ...state, ran: { ...state.ran, 'stuck|12:00': -1 } }));
+    await tick(at('12:10'));
+    await tick(at('12:15'));
+    const made = await items();
+    expect(made).toHaveLength(1);
+    expect(made[0]).toMatchObject({ title: 'rounds_failed_title|rounds_name_stuck|12:00', body: 'rounds_failed_cut' });
+    expect((await roundsStore.today('2026-11-19')).ran['stuck|12:00']).toBe(0);
+  });
+
+  it('a whole day with no instructions: every digest, and at most two offers', async () => {
+    await addMailAgent();
+    await productStore.save(suture());
+    // The background ticks every five minutes from early morning to late evening
+    for (let minutes = 6 * 60; minutes < 23 * 60; minutes += 5) {
+      await tick(at(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`));
+    }
+    const made = await items();
+    const digests = made.filter(item => item.kind === 'result').map(item => item.title);
+    expect(digests).toEqual(
+      expect.arrayContaining(['rounds_pulse_title|08:30', 'rounds_stuck_title|12:00', 'rounds_pulse_title|16:00']),
+    );
+    expect(digests).toHaveLength(3);
+    // Mail went to the Mail agent, once per slot
+    expect(
+      world.requestRun.mock.calls.map(call => (call as unknown as [string, { firingKey: string }])[1].firingKey),
+    ).toEqual(['round:mail:2026-11-19:09:00', 'round:mail:2026-11-19:14:00']);
+    expect(made.filter(item => item.kind === 'approval')).toHaveLength(2);
+    expect(made.filter(item => item.kind === 'alert')).toHaveLength(0);
+  });
+
+  it('looking at the state never turns the day over', async () => {
+    await quietDay();
+    await tick(at('09:05'));
+    // The settings screen looks first thing next morning, before any tick
+    const peeked = await roundsStore.peek('2026-11-20');
+    expect(peeked.checkins.offers).toBe(0);
+    expect((await roundsStore.get())?.day).toBe('2026-11-19');
+  });
+});
+
 describe('the product pulse', () => {
   // Wednesday 2026-11-18 is "yesterday" for a pulse on the 19th (UTC)
   const now = Date.parse('2026-11-19T07:30:00Z');
@@ -248,7 +330,22 @@ describe('the product pulse', () => {
       readAt: now,
     });
     const pulse = await productPulse('08:30', { now: () => now, products: async () => [suture()] });
-    expect(pulse.lines).toContain('  rounds_pulse_noReading|rounds_metric_signups|The API is switched off.');
+    expect(pulse.lines).toContain('  rounds_pulse_noReading|rounds_metric_signups|growth_reason_agent_api_off');
+    // When nothing at all could be read, for one reason, it is said once
+    for (const metric of ['waitlist', 'access_requests', 'feedback']) {
+      await growthStore.record({
+        ok: false,
+        productId: 'suture',
+        source: 'product',
+        metric,
+        date: today,
+        reason: 'agent_api_off',
+        detail: 'The API is switched off.',
+        readAt: now,
+      });
+    }
+    const all = await productPulse('08:30', { now: () => now, products: async () => [suture()] });
+    expect(all.lines).toEqual(['Suture (UTC)', '  rounds_pulse_noReading|growth_title|growth_reason_agent_api_off']);
     expect(pulse.flagged).toEqual([]);
   });
 
@@ -274,7 +371,7 @@ describe('the product pulse', () => {
         detail: 'No Slack connector is on for this workspace.',
       }),
     });
-    expect(off.lines).toContain('  rounds_pulse_slackOff|No Slack connector is on for this workspace.');
+    expect(off.lines).toContain('  rounds_pulse_slackOff|rounds_slack_not_connected');
   });
 
   it('tells the product notify channel only when something was flagged, and only over WhatsApp', async () => {
@@ -325,15 +422,6 @@ describe('check-ins', () => {
     await tick(at('15:55'));
     expect((await items()).filter(item => item.kind === 'approval')).toHaveLength(1);
   });
-
-  const quietDay = async () => {
-    await addMailAgent();
-    await roundsStore.update('2026-11-19', state => ({
-      ...state,
-      ran: { 'pulse|08:30': 1, 'pulse|16:00': 1, 'mail|09:00': 1, 'mail|14:00': 1, 'stuck|12:00': 1 },
-    }));
-  };
-  const offers = async () => (await items()).filter(item => item.kind === 'approval');
 
   it('makes at most two offers a day', async () => {
     await quietDay();
@@ -389,6 +477,7 @@ describe('check-ins', () => {
     await tick(at('09:05'));
     expect(await offers()).toHaveLength(0);
 
+    await db.threads.put(failedChat());
     await roundsStore.update('2026-11-19', state => ({
       ...state,
       findings: { ...state.findings, failed: [{ threadId: 't2', title: 'Reply to Ada' }] },
@@ -398,6 +487,62 @@ describe('check-ins', () => {
     expect(offer?.title).toBe('checkin_retry|1|Reply to Ada');
     await answerCheckIn(offer!.approval!.requestId, true, at('09:11'));
     expect(world.retry).toHaveBeenCalledWith('t2');
+  });
+
+  it('takes an offer once: two clicks at once start the work once', async () => {
+    await quietDay();
+    await tick(at('09:05'));
+    const [offer] = await offers();
+    const id = offer!.approval!.requestId;
+    await Promise.all([answerCheckIn(id, true, at('09:06')), answerCheckIn(id, true, at('09:06'))]);
+    await answerCheckIn(id, true, at('09:07'));
+    expect(world.requestRun).toHaveBeenCalledTimes(1);
+    expect(world.requestRun.mock.calls[0]).toMatchObject(['mail', { attended: true, firingKey: id }]);
+    // Answered: it no longer sits in the Inbox as something to decide
+    expect((await offers())[0]).toMatchObject({ status: 'done' });
+  });
+
+  it('a "not today" on an offer that is no longer open silences nothing, and a forged id starts nothing', async () => {
+    await quietDay();
+    await answerCheckIn('checkin:2026-11-19:9', false, at('09:06'));
+    await answerCheckIn('checkin:2026-11-19:9', true, at('09:06'));
+    expect((await roundsStore.today('2026-11-19')).checkins.silenced).toBe(false);
+    expect(world.requestRun).not.toHaveBeenCalled();
+  });
+
+  it('does not try again a chat the user already tried again meanwhile', async () => {
+    await roundsStore.update('2026-11-19', state => ({
+      ...state,
+      ran: { 'pulse|08:30': 1, 'pulse|16:00': 1, 'mail|09:00': 1, 'mail|14:00': 1, 'stuck|12:00': 1 },
+      findings: { failed: [{ threadId: 't2', title: 'Reply to Ada' }] },
+    }));
+    await db.threads.put(failedChat());
+    await tick(at('09:10'));
+    const [offer] = await offers();
+    // The user pressed Retry themselves: the chat is running again
+    await db.threads.put(failedChat({ status: 'running', error: null, failure: null }));
+    await answerCheckIn(offer!.approval!.requestId, true, at('09:12'));
+    expect(world.retry).not.toHaveBeenCalled();
+  });
+
+  it('tells the user when what they said yes to could not start', async () => {
+    await quietDay();
+    await tick(at('09:05'));
+    const [offer] = await offers();
+    world.requestRun.mockRejectedValueOnce(new Error('"Mail" has used its runs for today.'));
+    await answerCheckIn(offer!.approval!.requestId, true, at('09:06'));
+    const alert = (await items()).find(item => item.kind === 'alert');
+    expect(alert).toMatchObject({ title: 'checkin_failed', body: '"Mail" has used its runs for today.' });
+  });
+
+  it('counts a follow-up in an old chat as the user being at work', async () => {
+    await quietDay();
+    // A chat from last week, written in again at 11:00
+    await db.threads.put(thread({ id: 'old', origin: 'user', createdAt: at('08:00', 12), updatedAt: at('11:00') }));
+    await tick(at('13:30'));
+    expect(await offers()).toHaveLength(0);
+    await tick(at('14:05'));
+    expect(await offers()).toHaveLength(1);
   });
 
   it('closes offers nobody answered when the day turns, so they do not count as waiting on the user', async () => {

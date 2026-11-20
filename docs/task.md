@@ -2688,7 +2688,16 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - **Not built here:** reading Slack in the browser tab when no connector is on (it needs an agent run with a
   skill, not plain code); the Slack count has not been run against the live Slack connector, only against a
   stand-in with the documented tool shape.
-- Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers), `e2e/rounds.e2e.mjs`.
+- After review: an offer is taken once (two clicks start the work once) and is closed in the Inbox when answered
+  or when the day turns; a retry offer only touches chats that still stand failed; an offer never counts as
+  "waiting on you" in the brief; a round that fails or was cut off by the background stopping says so in the
+  Inbox, once; "quiet" is the newest change to a chat the user started, not its creation; a yesterday read before
+  it ended is not flagged; Slack kinds count only at the start of a message, the eight most frequent; Settings
+  only looks at the state and never turns the day over.
+- Known and left: rounds are on by default; the pulse's days are UTC days (said in the digest); a Slack kind that
+  stops appearing is not flagged as a drop; only today's Slack messages are read.
+- Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers, a simulated full day),
+  `e2e/rounds.e2e.mjs`.
 
 ## 5. Risks, in order
 

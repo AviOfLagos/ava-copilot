@@ -36,12 +36,18 @@ registerRecovery('rounds', async () => {
 
 async function status() {
   const now = Date.now();
-  const state = await roundsStore.today(localDay(now));
+  // Only looks: the day's state is turned over by the tick, which closes yesterday's offers as it does
+  const state = await roundsStore.peek(localDay(now));
+  const ranAt = (slot: string) => {
+    const at = state.ran[slot];
+    // A slot that is running now has not run yet
+    return at === undefined || at < 0 ? null : at;
+  };
   return {
     enabled: state.enabled,
     rounds: ROUNDS.map(plan => ({
       id: plan.id,
-      times: plan.times.map(time => ({ time, ranAt: state.ran[`${plan.id}|${time}`] ?? null })),
+      times: plan.times.map(time => ({ time, ranAt: ranAt(`${plan.id}|${time}`) })),
     })),
     next: dueRound(now, state.ran)?.round ?? null,
     offersToday: state.checkins.offers,
