@@ -137,6 +137,15 @@ export default function ConfirmCard({ request, onAnswer, isDarkMode }: ConfirmCa
         )}
       </dl>
 
+      {isCommit && request.repeat && (
+        <p role="note" className="border-hold/45 bg-hold/10 mt-2.5 rounded-xl border p-2.5 font-medium">
+          {t(request.repeat.status === 'done' ? 'gate_card_repeat_done' : 'gate_card_repeat_started', [
+            new Date(request.repeat.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            request.repeat.label,
+          ])}
+        </p>
+      )}
+
       {isCommit && (
         <div className="mt-2.5 max-h-60 overflow-y-auto rounded-xl bg-black/20 p-2.5">
           {request.fields.length === 0 && !request.context && (

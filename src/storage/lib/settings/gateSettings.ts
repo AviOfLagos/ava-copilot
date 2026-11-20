@@ -37,6 +37,9 @@ export interface ConfirmRequest {
   context: string;
   // What the agent needs to know to finish a form, all asked at once (kind 'questions')
   questions?: string[];
+  // This step, or one like it, already exists in this task (see ../once): it is 'done', or it was 'started' and
+  // cut off before its result was recorded. The card says so, and only the user's click runs it again.
+  repeat?: { status: 'started' | 'done'; at: number; label: string };
 }
 
 // Interface for the confirm gate settings

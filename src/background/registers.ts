@@ -29,3 +29,4 @@ import './calendar/register';
 import './update/register';
 import './setup/register';
 import './telemetry/register';
+import './once/register';

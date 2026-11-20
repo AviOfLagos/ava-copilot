@@ -2470,6 +2470,24 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Known, not from this change: `companion/src/__tests__/sessions.test.ts` reads a spike recording deleted on
   2026-10-17 (631aa92) and fails; CI does not run the companion's tests.
 
+### Do-once keys (2026-11-20, #64, docs/growth-team.md Part 2)
+
+- Every step that sends, posts, submits, grants or creates writes a record before it acts ("started") and when its
+  result is in ("done"): table `doOnce` (Dexie version 7, `src/storage/lib/once`), logic in `src/background/once`.
+  The key is the task, what the step is, and a hash of what it acts on; no content is kept.
+- Where it is checked: `gate/review.ts` (every commit on a page: `reviewAction` writes "started" last,
+  `verifyCommit` / `settleCommit` close it) and `integrations/action.ts` (every connector tool that is not a plain
+  read). WhatsApp sends and Drive create/share name their own step.
+- A step that is done, or one cut off before its result was recorded, is not run again by itself: the model is told
+  once, and a second try goes to the user on the confirm card, which says why (`ConfirmRequest.repeat`). A cut-off
+  step also holds back the next commit on the same site or tool, because a retry rarely words a message the same way.
+- The task id is `ThreadRecord.taskRunId`: new for every request (`ThreadManager.send`), kept through resume and
+  retry. A run that picks a task up again is told what it already sent (`onceNote`).
+- A tool whose schema has a string `idempotency_key` (or `idempotencyKey`) gets the key, so the far side can refuse
+  a repeat too.
+- Not covered here: routine (workflow) tool steps keep their own rule (a side effect cut off mid-call is
+  `unknown_outcome`); `Page.clickElementNode` still clicks a second time when the first click times out after 2 s.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

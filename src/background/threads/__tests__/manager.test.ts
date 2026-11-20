@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AviCopilotDb, createThreadStore } from '@extension/storage';
+import { AviCopilotDb, createThreadStore, onceStore } from '@extension/storage';
 import type { ThreadStore } from '@extension/storage';
 import { Actors, AgentEvent, ExecutionState } from '../../agent/event/types';
 import type { EventCallback } from '../../agent/event/types';
@@ -303,6 +303,47 @@ describe('ThreadManager', () => {
     expect(lastExecutor().tasks).toEqual(['Find the standup time']);
     const notes = (await store.messages(threadId)).filter(message => message.actor === 'system');
     expect(notes.at(-1)?.content).toContain('threads_retried');
+  });
+
+  it('gives every new request its own task id, and keeps it through a retry', async () => {
+    browser.open('https://chat.example');
+    const threadId = await manager.send({ text: 'Send the standup note' });
+    const first = (await store.get(threadId))?.taskRunId;
+    expect(first).toBeTruthy();
+    await lastExecutor().complete('Sent.');
+    await settle();
+
+    // A retry is the same task: what it already sent is found under the same id
+    await manager.retry(threadId);
+    expect((await store.get(threadId))?.taskRunId).toBe(first);
+    await lastExecutor().complete('Sent.');
+    await settle();
+
+    // A new request starts clean
+    await manager.send({ threadId, text: 'Send it to the other channel too' });
+    expect((await store.get(threadId))?.taskRunId).not.toBe(first);
+  });
+
+  it('tells a resumed run what its task already sent and what was cut off', async () => {
+    const tabId = browser.open('https://chat.example');
+    const thread = await store.create({
+      status: 'running',
+      activeTask: 'Email the three testers',
+      runStartedAt: Date.now() - 1000,
+      boundTabIds: [tabId],
+      taskRunId: `task-${crypto.randomUUID()}`,
+    });
+    const step = { taskId: thread.taskRunId!, threadId: thread.id, what: 'tool', label: 'Nex Mail › send_email' };
+    const sent = await onceStore.begin({ ...step, target: 'first', scope: 'mail:send_email' });
+    await onceStore.finish(sent.record.key, 'the tool answered');
+    await onceStore.begin({ ...step, target: 'second', scope: 'mail:send_email', label: 'send on mail.example' });
+
+    await manager.recover();
+
+    const context = lastExecutor().options.messageContext ?? '';
+    expect(context).toContain('Already done in this task, do not do these again:\n- Nex Mail › send_email');
+    expect(context).toMatch(/Cut off before the result was recorded[^\n]*\n- send on mail\.example/);
+    await onceStore.db.doOnce.where('taskId').equals(thread.taskRunId!).delete();
   });
 
   it('starts an old thread with its conversation as context when nothing is in memory', async () => {

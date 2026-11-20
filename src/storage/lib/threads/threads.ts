@@ -122,8 +122,9 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
 
     /** Deletes a thread and all its messages. */
     async remove(id: string): Promise<void> {
-      await db.transaction('rw', db.threads, db.messages, async () => {
+      await db.transaction('rw', db.threads, db.messages, db.doOnce, async () => {
         await messagesOf(id).delete();
+        await db.doOnce.where('threadId').equals(id).delete();
         await db.threads.delete(id);
       });
     },

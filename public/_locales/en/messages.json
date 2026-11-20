@@ -1035,6 +1035,21 @@
   "gate_stale": {
     "message": "The page changed while waiting for confirmation, so nothing was done."
   },
+  "gate_once_done": {
+    "message": "Already done in this task, so it was not repeated: $1"
+  },
+  "gate_once_cutOff": {
+    "message": "An earlier try may have gone through, so it was not repeated: $1"
+  },
+  "gate_card_repeat_done": {
+    "message": "This was already done in this task at $1 ($2). Approve only if you want it done again."
+  },
+  "gate_card_repeat_started": {
+    "message": "An earlier try at $1 ($2) was cut off, so it may already have gone through. Check before you approve."
+  },
+  "gate_repeat_short": {
+    "message": "may be a repeat"
+  },
   "gate_userContinued": {
     "message": "The user finished this step on the page themselves. Read the page again before the next action."
   },

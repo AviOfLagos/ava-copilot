@@ -1035,6 +1035,21 @@
   "gate_stale": {
     "message": "The page changed while waiting for confirmation, so nothing was done."
   },
+  "gate_once_done": {
+    "message": "這項工作中已經做過，所以沒有重複：$1"
+  },
+  "gate_once_cutOff": {
+    "message": "先前的嘗試可能已經成功，所以沒有重複：$1"
+  },
+  "gate_card_repeat_done": {
+    "message": "這項工作已在 $1 做過這件事（$2）。只有在你想再做一次時才核准。"
+  },
+  "gate_card_repeat_started": {
+    "message": "先前在 $1 的嘗試（$2）被中斷，可能已經成功。核准前請先確認。"
+  },
+  "gate_repeat_short": {
+    "message": "可能是重複"
+  },
   "gate_userContinued": {
     "message": "The user finished this step on the page themselves. Read the page again before the next action."
   },

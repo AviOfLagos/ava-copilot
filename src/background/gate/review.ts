@@ -1,5 +1,5 @@
 import { t } from '@extension/i18n';
-import { gateSettingsStore, threadStore } from '@extension/storage';
+import { gateSettingsStore, onceStore, threadStore } from '@extension/storage';
 import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -7,6 +7,8 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import type Page from '../browser/page';
 import type { DOMElementNode } from '../browser/dom/views';
 import { createLogger } from '../log';
+import { beginOnce, checkOnce, stepFor } from '../once';
+import type { OnceInput } from '../once';
 import { alwaysAsks } from './origins';
 import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TARGET } from './classify';
 import type { GateTarget } from './classify';
@@ -21,10 +23,13 @@ const VERIFY_DELAY_MS = 1500;
 const MAX_SNIPPETS = 5;
 const SNIPPET_LENGTH = 80;
 
-// An action the gate reviews before it runs
-export type GatedAction =
+// An action the gate reviews before it runs. `once` names the step for its do-once key when the caller knows
+// better than the page what it acts on (a chat's name, a file and who it is shared with); `false` for an action
+// that only fills a field, which commits nothing yet.
+export type GatedAction = (
   | { action: 'click_element' | 'input_text'; args: Record<string, unknown>; node: DOMElementNode }
-  | { action: 'send_keys'; args: Record<string, unknown> };
+  | { action: 'send_keys'; args: Record<string, unknown> }
+) & { once?: OnceInput | false };
 
 // A commit that may run, with what is needed to check its effect afterwards
 export interface ApprovedCommit {
@@ -33,6 +38,8 @@ export interface ApprovedCommit {
   // Pieces of the committed text, and how often each showed on the page before the action
   snippets: string[];
   visibleBefore: number[];
+  // The do-once record written before the action ran ("started"): `verifyCommit` or `settleCommit` closes it
+  onceKey: string | null;
 }
 
 export type ReviewOutcome =
@@ -109,6 +116,31 @@ function snippetsOf(fields: ConfirmField[]): string[] {
     .filter(value => value.length >= 4 && !/^•+$/.test(value))
     .map(value => value.slice(0, SNIPPET_LENGTH))
     .slice(0, MAX_SNIPPETS);
+}
+
+/**
+ * The do-once step of a commit on a page: the site and what is committed. Where the commit is reached from (a
+ * button or Enter, this path or that) is left out on purpose, so a retry that gets there another way still finds
+ * it. A control with nothing filled in around it (Publish, Merge, Grant) is told apart by its page and label.
+ */
+function commitStep(page: Page, kind: CommitKind, control: string, content: CommitContent): OnceInput {
+  let host = '';
+  let path = '';
+  try {
+    ({ host, pathname: path } = new URL(page.url()));
+  } catch {
+    // A page with no proper address still gets a key, from what is committed
+  }
+  const values = content.fields
+    .map(field => normalize(field.value))
+    .filter(value => value && !/^•+$/.test(value))
+    .sort();
+  return {
+    what: 'commit',
+    scope: host,
+    label: host ? `${kind} on ${host}` : kind,
+    parts: values.length > 0 ? values : [path, control.toLowerCase(), normalize(content.context)],
+  };
 }
 
 function blocked(message: string): ReviewOutcome {
@@ -255,12 +287,24 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   }
 
   const content = await readContent(page, gated);
+
+  // Do once: a step this task already did, or one that was cut off, is not run again by itself
+  const step =
+    gated.once === false ? null : await stepFor(context, gated.once ?? commitStep(page, kind, control, content));
+  const once = step ? await checkOnce(context, step) : { state: 'clear' as const };
+  if (once.state === 'told') {
+    return { proceed: false, result: once.result };
+  }
+  const repeat = once.state === 'ask' ? once.repeat : undefined;
+
   const settings = await gateSettingsStore.getSettings();
   // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
   const unattended = await isUnattended(context);
 
-  if (settings.confirm[kind] || unattended) {
+  // Running a step again is the user's call, whatever the settings say
+  if (settings.confirm[kind] || unattended || repeat) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
+    if (repeat) request.repeat = repeat;
     const answer = await ask(context, request);
     if (answer !== 'approved') {
       // A refusal ends the task, so the agent cannot look for another way to do the same thing
@@ -283,7 +327,24 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   } catch (error) {
     logger.warning('Could not read the page before the commit', error);
   }
-  return { proceed: true, commit: { kind, urlBefore: page.url(), snippets, visibleBefore } };
+  // "Started" is written last, right before the caller acts: nothing between here and the act can fail quietly
+  const claim = step ? await beginOnce(context, step, repeat !== undefined) : null;
+  if (claim && 'result' in claim) {
+    return { proceed: false, result: claim.result };
+  }
+  return {
+    proceed: true,
+    commit: { kind, urlBefore: page.url(), snippets, visibleBefore, onceKey: claim?.record.key ?? null },
+  };
+}
+
+/**
+ * Closes the do-once record of a commit whose caller checks the result itself: it went through.
+ * A commit that is never settled stays at "started", which is right when the caller cannot tell.
+ */
+export async function settleCommit(commit: ApprovedCommit | null, result: string): Promise<void> {
+  if (!commit?.onceKey) return;
+  await onceStore.finish(commit.onceKey, result).catch(error => logger.warning('Could not record a result', error));
 }
 
 /**
@@ -311,6 +372,8 @@ export async function verifyCommit(context: AgentContext, page: Page, commit: Ap
     logger.warning('Could not read the page after the commit', error);
   }
 
+  // The action returned: the step is done, with what the page showed
+  await settleCommit(commit, message);
   await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_VERIFY, message);
   return message;
 }

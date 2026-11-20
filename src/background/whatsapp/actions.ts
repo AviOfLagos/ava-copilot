@@ -161,6 +161,13 @@ export function registerWhatsappActions(): void {
         const review = await reviewAction(context, page, {
           action: 'send_keys',
           args: { keys: 'Enter', intent: `Send on WhatsApp to "${recipient}": ${input.message}`, commits: true },
+          // Do once per chat and message: the same words to another chat are another step
+          once: {
+            what: 'whatsapp.send',
+            scope: 'web.whatsapp.com',
+            label: 'send on WhatsApp',
+            parts: [recipient.toLowerCase(), input.message],
+          },
         });
         if (!review.proceed) {
           return new ActionResult({

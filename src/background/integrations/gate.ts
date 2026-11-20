@@ -19,6 +19,8 @@ export interface ToolCallReview {
   tool: Pick<ToolFingerprint, 'tool' | 'title' | 'annotations'>;
   args: Record<string, unknown>;
   intent: string;
+  // Set when this call, or a cut-off one to the same tool, already exists in the task: the card says so
+  repeat?: ConfirmRequest['repeat'];
 }
 
 /**
@@ -67,6 +69,7 @@ export function toolCallRequest(context: Pick<AgentContext, 'taskId'>, review: T
     fields: argumentFields(review.args),
     // The server's own description is not shown here: it does not get a voice on the card that approves it
     context: '',
+    ...(review.repeat ? { repeat: review.repeat } : {}),
   };
 }
 

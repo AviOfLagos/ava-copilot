@@ -130,5 +130,7 @@ export function describeRequest(request: ConfirmRequest | null | undefined): str
   }
   // The control's label comes from the page: kept short, with no links
   const target = plainOutside(request.target || request.intent || '', 80);
-  return target ? `${request.kind}: ${target}` : request.kind;
+  // A step the task may already have done says so, wherever the approval is read
+  const repeat = request.repeat ? ` (${t('gate_repeat_short')})` : '';
+  return `${target ? `${request.kind}: ${target}` : request.kind}${repeat}`;
 }

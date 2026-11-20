@@ -17,6 +17,7 @@ import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
+import { onceNote } from '../once';
 import type { UsageScope } from '../usage/meter';
 import { groupTabs, TabBinding, tabsToBind } from './binding';
 import { createBrowserContext, createExecutor, resolveModels } from './factory';
@@ -148,7 +149,10 @@ export class ThreadManager {
     await this.checkCapacity();
     const binding = await this.bindingFor(thread, request.windowId);
 
-    await this.store.addMessage(thread.id, 'user', text, { attachments });
+    const message = await this.store.addMessage(thread.id, 'user', text, { attachments });
+    // A new request is a new task: its do-once keys start clean. Resuming or retrying keeps the task it has,
+    // so what it already sent is found and not sent again (../once).
+    await this.store.update(thread.id, { taskRunId: message.id });
     await this.placeInWorkspace(thread, text, request.workspaceId);
     await this.start(
       thread.id,
@@ -479,7 +483,9 @@ export class ThreadManager {
         logger.warning('Could not summarize the thread', error);
       }
     }
-    return buildRunContext({ memory }, recent, resumed ? RESUME_NOTE : '');
+    // A run that picks a task up again is told what the task already sent and what was cut off mid-send
+    const note = [resumed ? RESUME_NOTE : '', await onceNote(thread.taskRunId)].filter(Boolean).join('\n\n');
+    return buildRunContext({ memory }, recent, note);
   }
 
   private async start(
