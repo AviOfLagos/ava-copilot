@@ -83,6 +83,7 @@ function fakeContext(threadId: string, answer: 'approve' | 'decline' = 'approve'
     confirmGate,
     controller: new AbortController(),
     stop: vi.fn(async () => confirmGate.cancelAll()),
+    markForm: vi.fn(),
     emitEvent: vi.fn(async (_actor: unknown, state: string, details: string) => {
       if (state === ExecutionState.ACT_CONFIRM) {
         const request = JSON.parse(details) as ConfirmRequest;
@@ -91,7 +92,7 @@ function fakeContext(threadId: string, answer: 'approve' | 'decline' = 'approve'
       }
     }),
   };
-  return { context: context as unknown as AgentContext, requests, stop: context.stop };
+  return { context: context as unknown as AgentContext, requests, stop: context.stop, markForm: context.markForm };
 }
 
 const pressEnter = { action: 'send_keys' as const, args: { keys: 'Enter', intent: 'Send the reply' } };
@@ -329,5 +330,28 @@ describe('do once on a page', () => {
     const review = await reviewAction(fakeContext(threadId).context, page, { ...clickSend(), once: false });
     expect(review.proceed && review.commit?.onceKey).toBeNull();
     expect(await db.doOnce.count()).toBe(0);
+  });
+
+  it('marks the task as mid-form when it types into a field or commits, and not when the gate holds it back', async () => {
+    const threadId = await runningThread();
+    const typing = fakeContext(threadId);
+    const field = new DOMElementNode({
+      tagName: 'input',
+      xpath: 'input',
+      attributes: {},
+      children: [],
+      isVisible: true,
+    });
+    await reviewAction(typing.context, page, { action: 'input_text', args: { index: 1, text: 'Ada' }, node: field });
+    expect(typing.markForm).toHaveBeenCalledTimes(1);
+
+    const sending = fakeContext(threadId);
+    await act(sending.context, page, state, pressEnter);
+    expect(sending.markForm).toHaveBeenCalledTimes(1);
+
+    // The same send again is held back: nothing ran, so nothing is marked
+    const again = fakeContext(threadId);
+    await act(again.context, page, state, pressEnter);
+    expect(again.markForm).not.toHaveBeenCalled();
   });
 });

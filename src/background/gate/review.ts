@@ -283,6 +283,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     kind = classifyLabel(`${intent} ${target.label}`) ?? 'submit';
   }
   if (kind === null) {
+    // Typing into a field: the task is now in the middle of a form
+    if (gated.action === 'input_text') context.markForm?.();
     return { proceed: true, commit: null };
   }
 
@@ -333,6 +335,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   if (claim && 'result' in claim) {
     return { proceed: false, result: claim.result };
   }
+  // A submit or a send is about to run: a page lost right after it is not reopened blindly
+  context.markForm?.();
   return {
     proceed: true,
     commit: { kind, urlBefore: page.url(), snippets, visibleBefore, onceKey: claim?.record.key ?? null },

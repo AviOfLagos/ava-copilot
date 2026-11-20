@@ -181,16 +181,21 @@ chrome.runtime.onMessage.addListener(message => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Where each bound tab is now, so a closed one can be opened again on its last page
+  if (tabId && (changeInfo.url || changeInfo.status === 'complete')) {
+    void threads.onTabUpdated(tabId, tab);
+  }
   if (tabId && changeInfo.status === 'complete' && tab.url?.startsWith('http')) {
     await injectBuildDomTreeScripts(tabId);
   }
 });
 
-// The user dismissed Chrome's debugging bar on a tab: stop only the thread working there
+// The user dismissed Chrome's debugging bar on a tab: stop only the thread working there. A tab that closed
+// reports here too ('target_closed') as well as in tabs.onRemoved; the thread manager handles it once.
 chrome.debugger.onDetach.addListener(async (source, reason) => {
   logger.info('Debugger detached', source, reason);
-  if (reason === 'canceled_by_user' && source.tabId) {
-    await threads.onDebuggerDetached(source.tabId);
+  if ((reason === 'canceled_by_user' || reason === 'target_closed') && source.tabId) {
+    await threads.onDebuggerDetached(source.tabId, reason);
   }
 });
 
@@ -454,7 +459,10 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
           }
           try {
-            return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio, message.threadId) });
+            return port.postMessage({
+              type: 'speech_to_text_result',
+              text: await transcribe(message.audio, message.threadId),
+            });
           } catch (error) {
             logger.error('Speech-to-text failed:', error);
             // A plain sentence; the panel keeps the recording and offers to try again

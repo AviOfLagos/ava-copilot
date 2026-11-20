@@ -94,6 +94,8 @@ export async function fillFormAction(
   }
 
   const filled: string[] = [];
+  // Whatever gets filled below, the task is now in the middle of a form
+  if (planned.length > 0) context.markForm?.();
   for (const field of planned) {
     try {
       if (field.kind === 'select') {

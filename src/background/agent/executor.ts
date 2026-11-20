@@ -156,6 +156,21 @@ export class Executor {
     return this.tasks[this.tasks.length - 1];
   }
 
+  /** Whether the task typed into a field or committed something in its last few steps. */
+  isMidForm(): boolean {
+    return this.context.isMidForm();
+  }
+
+  /**
+   * Lets a held task (see pause) go on in a fresh page: the model is told once, with the next page state it
+   * reads, and the steps that failed on the page it lost do not count against it.
+   */
+  resumeOnFreshPage(note: string): void {
+    this.context.notes.push(note);
+    this.context.consecutiveFailures = 0;
+    this.context.paused = false;
+  }
+
   /**
    * Shows a short status line to the user, e.g. that a model call is waiting to retry.
    */

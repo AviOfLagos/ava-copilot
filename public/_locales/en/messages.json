@@ -10242,5 +10242,8 @@
   },
   "voice_engine_name_gemini": {
     "message": "Gemini"
+  },
+  "threads_tabReopened": {
+    "message": "The tab was closed, so it was opened again at $1 and the task carries on. Press Stop to end it."
   }
 }

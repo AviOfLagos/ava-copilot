@@ -39,6 +39,12 @@ const WIND_DOWN_MS = 5_000;
 // How long handing the tabs back may take before the run is recorded as ended anyway
 const CLEANUP_MS = 5_000;
 
+// Tab ids already handled as closed; Chrome reports one closed tab twice (tabs.onRemoved, debugger.onDetach)
+const MAX_CLOSED_REMEMBERED = 500;
+
+// How long a reopened tab gets to load before the task goes on in it anyway
+const REOPEN_LOAD_MS = 10_000;
+
 const RESUME_NOTE =
   'This task was interrupted and is now resumed. The page may have changed, so read it again before acting. Any action that was waiting for confirmation did not happen.';
 const CONTINUE_TASK = 'Continue the task where you left off.';
@@ -60,7 +66,40 @@ interface Runner {
   ended: boolean;
   // The events still being recorded, in order; the run's end waits for them
   records: Promise<void>;
+  // Where each bound tab last was, kept as it navigates: a closed tab can no longer be asked
+  tabs: Map<number, TabPlace>;
+  // The run's one reopening of a closed tab is used up
+  reopened: boolean;
 }
+
+interface TabPlace {
+  url: string;
+  windowId: number | null;
+}
+
+const isWebPage = (url: string | undefined | null): url is string => !!url && /^https?:/i.test(url);
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** Waits for a tab to finish loading, up to a limit; a tab that is gone ends the wait. */
+async function loaded(tabId: number, timeoutMs: number): Promise<void> {
+  const until = Date.now() + timeoutMs;
+  for (;;) {
+    const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+    if (!tab || tab.status !== 'loading' || Date.now() >= until) return;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+
+/** What the model is told, with its next look at the page, when its tab was closed and opened again. */
+export const reopenedNote = (url: string): string =>
+  `The tab was closed and reopened at ${url}. It is a fresh page: check you are signed in and where you are before continuing.`;
 
 type Parked = Pick<Runner, 'executor' | 'browserContext' | 'binding' | 'modelKey'>;
 
@@ -86,6 +125,8 @@ export class ThreadManager {
   private readonly running = new Map<string, Runner>();
   private readonly parked = new Map<string, Parked>();
   private keepAliveTimer: ReturnType<typeof setInterval> | null = null;
+  // Closed tabs already handled, so the second report of the same tab is ignored
+  private readonly closedTabs = new Set<number>();
 
   constructor(private readonly store: ThreadStore = threadStore) {}
 
@@ -365,8 +406,38 @@ export class ThreadManager {
     return true;
   }
 
-  /** A tab closed: the threads bound to it lose it, and a run left with no tab stops. */
+  /**
+   * A bound tab moved to another page: remember where, since a closed tab cannot be asked, and keep the
+   * thread's page current so "Reopen and continue" goes to the latest page, not the first one.
+   */
+  async onTabUpdated(tabId: number, tab: Pick<chrome.tabs.Tab, 'url' | 'windowId'>): Promise<void> {
+    if (!isWebPage(tab.url)) return;
+    for (const runner of this.running.values()) {
+      if (!runner.binding.has(tabId)) continue;
+      const before = runner.tabs.get(tabId);
+      runner.tabs.set(tabId, { url: tab.url, windowId: tab.windowId ?? before?.windowId ?? null });
+      // The page the run is working on, or its only one
+      const current = runner.browserContext.currentTabId ?? null;
+      if (before?.url !== tab.url && (current === tabId || (current === null && runner.binding.size === 1))) {
+        await this.store.update(runner.threadId, { boundUrl: tab.url });
+      }
+    }
+  }
+
+  /**
+   * A tab closed: the threads bound to it lose it. A run left with no tab gets its page back once
+   * (docs/growth-team.md, Part 1) unless it was in the middle of a form or a send; then it ends as
+   * `tab_closed`, which is retried by checking first what already happened.
+   *
+   * Chrome reports one closed tab twice, as a removed tab and as a detached debugger. Both come here, and
+   * only the first report of a tab id is handled.
+   */
   async onTabRemoved(tabId: number): Promise<void> {
+    if (this.closedTabs.has(tabId)) return;
+    this.closedTabs.add(tabId);
+    if (this.closedTabs.size > MAX_CLOSED_REMEMBERED) {
+      this.closedTabs.delete(this.closedTabs.values().next().value as number);
+    }
     for (const parked of this.parked.values()) {
       parked.binding.remove(tabId);
     }
@@ -374,16 +445,91 @@ export class ThreadManager {
       if (!runner.binding.has(tabId)) {
         continue;
       }
+      const place = runner.tabs.get(tabId);
+      runner.tabs.delete(tabId);
+      // Other tabs remain: the run goes on in them
+      if (runner.binding.size > 1) {
+        runner.binding.remove(tabId);
+        runner.browserContext.removeAttachedPage(tabId);
+        continue;
+      }
+      const outcome = await this.reopen(runner, tabId, place);
+      if (outcome === 'reopened') continue;
       runner.binding.remove(tabId);
       runner.browserContext.removeAttachedPage(tabId);
-      if (runner.binding.size === 0) {
-        await this.cancel(runner.threadId, { kind: 'tab_closed', message: t('threads_tabClosed') });
-      }
+      if (outcome === 'ended') continue;
+      await this.cancel(runner.threadId, { kind: 'tab_closed', message: t('threads_tabClosed') });
     }
   }
 
-  /** The user closed Chrome's debugging bar on a tab: the run working there stops. */
-  async onDebuggerDetached(tabId: number): Promise<void> {
+  /**
+   * Opens a run's closed tab again on its last page and makes it the run's tab.
+   *
+   * @returns 'reopened'; 'ended' when the run was stopped meanwhile; 'no' when the tab must stay closed: the
+   *   run was mid-form or mid-send, already used its one reopening, or has no page to go back to
+   */
+  private async reopen(runner: Runner, tabId: number, place?: TabPlace): Promise<'reopened' | 'ended' | 'no'> {
+    // Stop is the only signal that the user wants the task ended; a stopped run gets no tab back
+    if (runner.cancelled || runner.ended) return 'ended';
+    if (runner.reopened) return 'no';
+    const thread = await this.store.get(runner.threadId);
+    // Typed into a field or clicked a submit in the last steps, or a commit is waiting for the click: the page
+    // held something a fresh one does not, so it is not reopened blindly
+    if (runner.executor.isMidForm() || thread?.status === 'waiting_confirm') return 'no';
+    const url = place?.url ?? thread?.boundUrl;
+    if (!isWebPage(url)) return 'no';
+
+    runner.reopened = true;
+    // The task waits between steps while its page comes back: steps on the dead page would only fail, and
+    // three failures in a row end a task
+    void runner.executor.pause();
+    try {
+      // The same window, or the last one the user worked in when the window closed too
+      const same =
+        place?.windowId != null ? await chrome.windows.get(place.windowId).catch(() => undefined) : undefined;
+      const window = same ?? (await chrome.windows.getLastFocused({ windowTypes: ['normal'] }));
+      if (window?.id === undefined) return 'no';
+      // In its own window the tab comes back where it was; in another window it does not take the user's place
+      const tab = await chrome.tabs.create({ url, windowId: window.id, active: same !== undefined });
+      if (tab.id === undefined) return 'no';
+      await loaded(tab.id, REOPEN_LOAD_MS);
+      if (runner.cancelled || runner.ended || this.running.get(runner.threadId) !== runner) {
+        await chrome.tabs.remove(tab.id).catch(() => {});
+        return 'ended';
+      }
+      runner.binding.add(tab.id);
+      runner.binding.remove(tabId);
+      runner.browserContext.removeAttachedPage(tabId);
+      runner.browserContext.updateCurrentTabId(tab.id);
+      runner.tabs.set(tab.id, { url, windowId: window.id });
+      runner.executor.resumeOnFreshPage(reopenedNote(url));
+      await this.store.addMessage(runner.threadId, 'system', t('threads_tabReopened', [hostOf(url)]));
+      await this.store.update(runner.threadId, { boundTabIds: runner.binding.tabIds, boundUrl: url });
+      logger.info('Reopened the closed tab of thread', runner.threadId);
+      return 'reopened';
+    } catch (error) {
+      logger.warning('Could not reopen the closed tab', error);
+      return 'no';
+    } finally {
+      // Whatever happened, the task is not left waiting: it goes on, or it is stopped right after this
+      void runner.executor.resume();
+    }
+  }
+
+  /**
+   * The debugger left a tab. When the user dismissed Chrome's debugging bar, the run working there stops.
+   * When the tab itself went away ('target_closed'), it is a closed tab like any other.
+   */
+  async onDebuggerDetached(tabId: number, reason: string = 'canceled_by_user'): Promise<void> {
+    if (reason === 'target_closed') {
+      // Only a tab that is really gone: the same reason is given when a tab's page is swapped
+      const exists = await chrome.tabs.get(tabId).then(
+        () => true,
+        () => false,
+      );
+      if (!exists) await this.onTabRemoved(tabId);
+      return;
+    }
     const threadId = this.holderOf(tabId);
     if (threadId) {
       await this.cancel(threadId, { kind: 'failed', message: t('threads_debuggerClosed') });
@@ -556,7 +702,13 @@ export class ThreadManager {
       failure: null,
       ended: false,
       records: Promise.resolve(),
+      tabs: new Map(),
+      reopened: false,
     };
+    for (const tabId of binding.tabIds) {
+      const tab = tabId === firstTab?.id ? firstTab : await chrome.tabs.get(tabId).catch(() => undefined);
+      if (isWebPage(tab?.url)) runner.tabs.set(tabId, { url: tab.url, windowId: tab.windowId ?? null });
+    }
     executor.clearExecutionEvents();
     // One at a time and in order: two events recorded at once could land in the wrong order
     executor.subscribeExecutionEvents(

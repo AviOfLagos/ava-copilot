@@ -145,6 +145,8 @@ export function registerWhatsappActions(): void {
         const problem = await openChat(found.tabId, found.sel, input.chat);
         if (problem) return fail(context, problem);
         const typed = await runInTab(found.tabId, typeInComposer, { sel: found.sel, text: input.message });
+        // A draft sits in the chat box: the task is mid-send until it goes or is dropped
+        context.markForm?.();
         if (!typed?.ok) return fail(context, 'The message box of that chat was not found.');
         // The card names the chat the page really has open, never the model's own wording: a message read from
         // another chat can't dress up where this one goes

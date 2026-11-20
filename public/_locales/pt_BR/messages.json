@@ -10242,5 +10242,8 @@
   },
   "voice_engine_name_gemini": {
     "message": "Gemini"
+  },
+  "threads_tabReopened": {
+    "message": "A aba foi fechada, então foi aberta de novo em $1 e a tarefa continua. Pressione Parar para encerrá-la."
   }
 }

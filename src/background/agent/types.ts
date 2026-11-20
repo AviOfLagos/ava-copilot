@@ -53,6 +53,10 @@ export class AgentContext {
   confirmGate: ConfirmGate;
   // The task and its follow-ups, shared with the executor; skills are matched against them
   tasks: string[] = [];
+  // Things the next state message tells the model once, e.g. that its closed tab was reopened
+  notes: string[] = [];
+  // The steps in which the task typed into a field or committed something (a send, a submit)
+  private formSteps: number[] = [];
 
   constructor(
     taskId: string,
@@ -88,6 +92,20 @@ export class AgentContext {
       details: eventDetails,
     });
     await this.eventManager.emit(event);
+  }
+
+  /** Notes that this step typed into a field or committed something. */
+  markForm(): void {
+    if (this.formSteps[this.formSteps.length - 1] !== this.nSteps) this.formSteps.push(this.nSteps);
+    if (this.formSteps.length > 20) this.formSteps.shift();
+  }
+
+  /**
+   * Whether the task is in the middle of a form or a send: it typed into a field or committed something in
+   * the last few steps. A page lost at that point is not reopened blindly (docs/growth-team.md, Part 1).
+   */
+  isMidForm(steps = 3): boolean {
+    return this.formSteps.some(step => step > this.nSteps - steps);
   }
 
   async pause() {

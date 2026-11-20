@@ -74,6 +74,11 @@ export default class BrowserContext {
     return windows.size === 0 || windows.has(tab.windowId);
   }
 
+  /** The tab this context works in now, if any. */
+  public get currentTabId(): number | null {
+    return this._currentTabId;
+  }
+
   public updateCurrentTabId(tabId: number): void {
     // only update tab id, but don't attach it.
     this._currentTabId = tabId;

@@ -10242,5 +10242,8 @@
   },
   "voice_engine_name_gemini": {
     "message": "Gemini"
+  },
+  "threads_tabReopened": {
+    "message": "分頁已關閉，所以已在 $1 重新開啟，工作繼續進行。按「停止」可結束。"
   }
 }

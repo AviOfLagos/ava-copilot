@@ -141,6 +141,8 @@ export async function callToolAction(
   const claim = step ? await beginOnce(context, step, asked) : null;
   if (claim && 'result' in claim) return claim.result;
   const onceKey = claim?.record.key ?? null;
+  // A tool that acts is a send: a tab lost right after it is not reopened blindly
+  if (claim) context.markForm?.();
   if (claim) await passKey(fingerprint.inputSchema, prepared.args, claim.record);
 
   try {

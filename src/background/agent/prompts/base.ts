@@ -73,6 +73,10 @@ abstract class BasePrompt {
       }
     }
 
+    // Told once: what happened to the task's tabs between steps (see ThreadManager, a closed tab reopened)
+    for (const note of context.notes.splice(0)) {
+      actionResultsDescription += `\nNotice: ${note}`;
+    }
     const skills = await skillSectionFor(context, browserState.url);
     const workspace = await workspaceSectionFor(context);
     const tools = await connectorToolsSectionFor(context);
