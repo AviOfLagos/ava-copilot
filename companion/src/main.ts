@@ -1,9 +1,12 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBrain } from './app';
 import { PairingStore } from './auth/pairing';
 import { loadConfig } from './config';
 import { probeDocker } from './sandbox/docker';
 import { hostToolEnv, runProcess } from './sandbox/process';
+import { ensureMasker, findClaude, registerClaude, serverCommand, stableNode, vaultInstalled } from './keys/install';
+import { serveKeys } from './keys/server';
 
 /**
  * ava-brain start          serve on 127.0.0.1 (the LaunchAgent runs this)
@@ -11,6 +14,8 @@ import { hostToolEnv, runProcess } from './sandbox/process';
  * ava-brain unpair         forget the paired browser
  * ava-brain status         pairing and Docker, in a few lines
  * ava-brain sandbox-build  build the sandbox image (needs Docker running and the network, once)
+ * ava-brain keys install   install the Ava Keys masker and register its MCP server with Claude Code
+ * ava-brain keys-mcp       the Ava Keys MCP server on stdio (agents start this; see docs/ava-keys.md)
  * (the old `avi-brain` command still works as an alias)
  */
 
@@ -81,8 +86,32 @@ async function main(): Promise<void> {
       }
       return;
     }
+    case 'keys-mcp': {
+      // stdout is the MCP channel: nothing else may write to it
+      await serveKeys({ runner: runProcess, packageDir: config.packageDir, nodePath: stableNode(), home: homedir(), version: config.version });
+      return;
+    }
+    case 'keys': {
+      if (process.argv[3] !== 'install') {
+        process.stderr.write('Use: ava-brain keys install\n');
+        process.exitCode = 2;
+        return;
+      }
+      const masker = ensureMasker({ packageDir: config.packageDir, nodePath: stableNode(), home: homedir() });
+      process.stdout.write(`Masker: ${masker.path} (${masker.wrote ? 'written' : 'up to date'})\n`);
+      if (!vaultInstalled()) {
+        process.stdout.write('Vault: offboard-vault is not installed. In the offboard repo run: node offboard.mjs vault init\n');
+      } else process.stdout.write('Vault: offboard-vault is installed (root-owned)\n');
+      const claude = findClaude();
+      if (!claude) process.stdout.write('Claude Code: not found, skipped\n');
+      else {
+        const said = await registerClaude(runProcess, { claude, command: serverCommand(stableNode(), config.packageDir), home: homedir() });
+        process.stdout.write(`${said}\nRemove it with: claude mcp remove --scope user ava-keys\n`);
+      }
+      return;
+    }
     default:
-      process.stderr.write(`Unknown command "${command}". Use start, pair, unpair, status or sandbox-build.\n`);
+      process.stderr.write(`Unknown command "${command}". Use start, pair, unpair, status, sandbox-build, keys install or keys-mcp.\n`);
       process.exitCode = 2;
   }
 }

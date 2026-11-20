@@ -24,7 +24,7 @@ const RULES: { kind: string; pattern: RegExp }[] = [
   { kind: 'JSON web token', pattern: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
   {
     kind: 'password or key assignment',
-    pattern: /\b(?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\b\s*[:=]\s*["']?[^\s"']{12,}/gi,
+    pattern: /\b(?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\b\s*[:=]\s*["']?(?!«)[^\s"']{12,}/gi,
   },
 ];
 
@@ -34,6 +34,25 @@ export function scanForSecrets(text: string): SecretFinding[] {
     for (const match of text.matchAll(rule.pattern)) findings.push({ kind: rule.kind, index: match.index ?? 0 });
   }
   return findings.sort((a, b) => a.index - b.index);
+}
+
+// For replacing rather than finding: a private key goes from its BEGIN line through its END line
+const BLOCKS: Record<string, RegExp> = {
+  'private key':
+    /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END [^-\n]*-----|$)/g,
+};
+
+/** The text with every finding replaced by «redacted: kind», and the kinds found (Ava Keys' second net). */
+export function redactSecrets(text: string): { text: string; kinds: string[] } {
+  const kinds = new Set<string>();
+  let out = text;
+  for (const rule of RULES) {
+    out = out.replace(BLOCKS[rule.kind] ?? rule.pattern, () => {
+      kinds.add(rule.kind);
+      return `«redacted: ${rule.kind}»`;
+    });
+  }
+  return { text: out, kinds: [...kinds] };
 }
 
 /** A sentence about what was found, for the refusal. */
