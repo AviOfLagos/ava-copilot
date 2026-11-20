@@ -10541,5 +10541,89 @@
   },
   "product_card_now": {
     "message": "目前：$1"
+  },
+  "product_api": {
+    "message": "數據 API 網址"
+  },
+  "growth_title": {
+    "message": "數據"
+  },
+  "growth_hint": {
+    "message": "Ava 每兩小時以程式從此產品自己的 API 讀取數據。讀不到的數字會顯示為「無讀數」，絕不顯示為 0。"
+  },
+  "growth_token": {
+    "message": "API 權杖"
+  },
+  "growth_token_saved": {
+    "message": "已儲存：$1"
+  },
+  "growth_token_placeholder": {
+    "message": "在此貼上權杖"
+  },
+  "growth_token_save": {
+    "message": "儲存權杖"
+  },
+  "growth_token_remove": {
+    "message": "移除權杖"
+  },
+  "growth_readNow": {
+    "message": "立即讀取"
+  },
+  "growth_reading": {
+    "message": "讀取中…"
+  },
+  "growth_connected": {
+    "message": "已連線。上次讀取：$1。"
+  },
+  "growth_connectedBut": {
+    "message": "已連線，但有一個數字讀不到：$1"
+  },
+  "growth_notConnected": {
+    "message": "未連線：$1"
+  },
+  "growth_never": {
+    "message": "尚未讀取。"
+  },
+  "growth_signupsToday": {
+    "message": "今日註冊數（UTC）：$1"
+  },
+  "growth_noReading": {
+    "message": "無讀數"
+  },
+  "growth_noApi": {
+    "message": "此產品尚未設定數據 API 網址。"
+  },
+  "growth_notice_title": {
+    "message": "$1：數據尚未連線"
+  },
+  "growth_notice_noZero": {
+    "message": "在修正之前，這些數字會顯示為「無讀數」。Ava 不會以 0 代替。"
+  },
+  "growth_reason_not_set": {
+    "message": "產品數據 API 的網址缺少或不是 https。請在工作區的產品中設定。"
+  },
+  "growth_reason_no_token": {
+    "message": "Ava 尚未儲存產品數據 API 的權杖。請在工作區的產品中的「數據」貼上。"
+  },
+  "growth_reason_agent_api_off": {
+    "message": "產品的 API 在它那一端是關閉的：那邊尚未設定權杖。請先在產品端設定權杖，再把同一個貼到這裡。"
+  },
+  "growth_reason_unauthorized": {
+    "message": "產品拒絕了權杖：權杖錯誤，或已在產品端變更。請貼上目前的權杖。"
+  },
+  "growth_reason_unreachable": {
+    "message": "產品的 API 沒有回應：這台電腦離線，或網址有誤。"
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "產品的 API 以 Ava 不認得的格式回應，因此沒有當作數字讀取。API 可能已變更。"
+  },
+  "growth_reason_not_available": {
+    "message": "產品本身沒有記錄這個數字。"
+  },
+  "growth_reason_failed": {
+    "message": "產品的 API 拒絕了請求。"
+  },
+  "growth_reason_no_collector": {
+    "message": "尚無任何程式讀取此來源。"
   }
 }

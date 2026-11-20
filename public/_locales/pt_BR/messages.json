@@ -10541,5 +10541,89 @@
   },
   "product_card_now": {
     "message": "agora: $1"
+  },
+  "product_api": {
+    "message": "Endereço da API de números"
+  },
+  "growth_title": {
+    "message": "Números"
+  },
+  "growth_hint": {
+    "message": "A Ava lê os números deste produto na API dele, por código, a cada duas horas. Um número que não pôde ser lido aparece como “sem leitura”, nunca como 0."
+  },
+  "growth_token": {
+    "message": "Token da API"
+  },
+  "growth_token_saved": {
+    "message": "Salvo: $1"
+  },
+  "growth_token_placeholder": {
+    "message": "Cole o token aqui"
+  },
+  "growth_token_save": {
+    "message": "Salvar token"
+  },
+  "growth_token_remove": {
+    "message": "Remover token"
+  },
+  "growth_readNow": {
+    "message": "Ler agora"
+  },
+  "growth_reading": {
+    "message": "Lendo…"
+  },
+  "growth_connected": {
+    "message": "Conectado. Última leitura: $1."
+  },
+  "growth_connectedBut": {
+    "message": "Conectado, mas um número não pôde ser lido: $1"
+  },
+  "growth_notConnected": {
+    "message": "Não conectado: $1"
+  },
+  "growth_never": {
+    "message": "Ainda não lido."
+  },
+  "growth_signupsToday": {
+    "message": "Cadastros hoje (UTC): $1"
+  },
+  "growth_noReading": {
+    "message": "sem leitura"
+  },
+  "growth_noApi": {
+    "message": "Nenhum endereço de API de números está definido para este produto."
+  },
+  "growth_notice_title": {
+    "message": "$1: os números não estão conectados"
+  },
+  "growth_notice_noZero": {
+    "message": "Até isso ser resolvido, esses números aparecem como “sem leitura”. A Ava não mostra 0 no lugar deles."
+  },
+  "growth_reason_not_set": {
+    "message": "O endereço da API de números do produto está faltando ou não é https. Defina-o no produto do espaço de trabalho."
+  },
+  "growth_reason_no_token": {
+    "message": "Ainda não há token da API de números do produto salvo na Ava. Cole-o no produto do espaço de trabalho, em Números."
+  },
+  "growth_reason_agent_api_off": {
+    "message": "A API do produto está desligada do lado dele: ainda não há token definido lá. Defina o token no produto e cole o mesmo aqui."
+  },
+  "growth_reason_unauthorized": {
+    "message": "O produto recusou o token: está errado ou foi alterado no produto. Cole o atual."
+  },
+  "growth_reason_unreachable": {
+    "message": "A API do produto não respondeu: este computador está offline ou o endereço está errado."
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "A API do produto respondeu em um formato que a Ava não conhece, então não foi lida como números. A API pode ter mudado."
+  },
+  "growth_reason_not_available": {
+    "message": "O próprio produto não registra esse número."
+  },
+  "growth_reason_failed": {
+    "message": "A API do produto recusou o pedido."
+  },
+  "growth_reason_no_collector": {
+    "message": "Nada lê esta fonte ainda."
   }
 }

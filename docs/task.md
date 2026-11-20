@@ -2625,6 +2625,35 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   same instant can lose one of the saves.
 - Tests: `storage/lib/products/__tests__`, `background/products/__tests__`, `e2e/products.e2e.mjs`.
 
+### Growth numbers: the store and the collectors (2026-11-20, #70, docs/growth-team.md Part 7)
+
+- Database version 8 (`src/storage/lib/growth`): `growthMetrics` (a number that was read: product, UTC day,
+  source, metric, value, and optionally channel, campaign, post), `growthReadings` (for one metric on one day:
+  read, or not and why), `growthSources` (whether a source can be reached now, and the reason last told), and
+  `growthLinks`. A day with no "ok" reading has no number: **it is "no reading", never 0.** A failed read never
+  replaces a number that was read earlier; the answer says when it was read.
+- The product collector (`background/growth/collect.ts`, `suture.ts`) reads the Suture agent API
+  (`<admin console>/api/agent/v1`, bearer token) for yesterday and today, every two hours and on "Read now":
+  sign-ups, waitlist, access requests and feedback (each with its sources and campaigns), spend, orgs, orgs
+  active in 7 days, orgs on a paid plan. Every answer is checked against the documented shape; anything else is
+  "no reading". Off (503 `agent_api_off`), a refused token (401), no token, or no answer make the source "not
+  connected" with that reason, after one request. One failure makes one Inbox item; the next comes after it
+  worked again or for another reason.
+- The token is in the vault (`product-api:<workspaceId>`), pasted in the workspace screen under Numbers, which
+  also shows the state and "Sign-ups today". It is never in source, storage.local, a log or a reply.
+- `metrics_query(metric, from/to or days, by)` is the only way an agent reads numbers, for the product of its own
+  workspace only. `make_link(url, source, medium, campaign)` tags a link to the product's own site and keeps it.
+- **Where the live API differs from Part 13** (the API wins): no emails or names come back, only counts and
+  sources; `/signups` can say it has no reading; `/payments` always does (Suture keeps no payment records), so
+  `payments` is "no reading" and `paid_orgs` is read instead; `/spend` is cost to serve, not revenue.
+- **Not built here, and why:** the page collector for the super admin (the API is live, and its rule, "check it
+  is the page you expect or record no reading", is applied to the API's answers instead); the social and email
+  collectors (their sources arrive with #76 and #79); Slack counts (they come with the product pulse, #71); link
+  clicks (nothing counts a click yet: a link's effect is read as sign-ups by campaign).
+- A new call outside the model provider: the product's own API, at the address in its profile, https only (plain
+  http on this computer for tests), with no cookies.
+- Tests: `background/growth/__tests__`, `e2e/growth.e2e.mjs` with `e2e/mock-suture.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

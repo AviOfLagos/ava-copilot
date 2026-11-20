@@ -15,6 +15,7 @@ export * from './account';
 export { default as favoritesStorage } from './prompt/favorites';
 export * from './workspaces';
 export * from './products';
+export * from './growth';
 export * from './graph';
 export * from './agents';
 export * from './workflows';

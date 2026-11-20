@@ -20,6 +20,15 @@ export interface SlackChannelRef {
   id: string;
 }
 
+// 'suture-agent-v1': the read calls of the Suture agent API (`<admin console>/api/agent/v1`, a bearer token)
+export interface ProductAgentApi {
+  kind: 'suture-agent-v1';
+  baseUrl: string;
+}
+
+/** Where a product's API token is kept in the vault. */
+export const productApiTokenRef = (workspaceId: string) => `product-api:${workspaceId}`;
+
 export interface ProductProfile {
   workspaceId: string;
   name: string;
@@ -42,6 +51,9 @@ export interface ProductProfile {
   // The admin console, and the login that may use it
   superAdmin: { url: string; account: string } | null;
   slackChannels: SlackChannelRef[];
+  // The product's own API that reports its numbers (sign-ups, waitlist, feedback…), read by plain code on a
+  // schedule. Its token is never here: it is in the vault, under `productApiTokenRef(workspaceId)`.
+  agentApi: ProductAgentApi | null;
   // account = the login the account check (#43) looks for
   social: Partial<Record<SocialPlatform, { handle: string; account: string }>>;
   // The address outreach comes from
@@ -75,6 +87,7 @@ export function emptyProductProfile(workspace: Pick<Workspace, 'id' | 'name'>): 
     repo: '',
     superAdmin: null,
     slackChannels: [],
+    agentApi: null,
     social: {},
     email: null,
     postalAddress: '',
@@ -113,6 +126,7 @@ const amount = (value: unknown): number | null =>
 export function cleanProductProfile(profile: ProductProfile): ProductProfile {
   const superAdminUrl = text(profile.superAdmin?.url, LINE);
   const from = text(profile.email?.from, LINE);
+  const apiBase = text(profile.agentApi?.baseUrl, 300);
   const metric = text(profile.northStar?.metric, LINE);
   const weeklyTarget = amount(profile.northStar?.weeklyTarget);
   const total = amount(profile.budget?.totalUsd);
@@ -141,6 +155,7 @@ export function cleanProductProfile(profile: ProductProfile): ProductProfile {
       .map(channel => ({ name: text(channel?.name, 80), id: text(channel?.id, 40) }))
       .filter(channel => channel.name || channel.id)
       .slice(0, LIST),
+    agentApi: apiBase ? { kind: 'suture-agent-v1', baseUrl: apiBase } : null,
     social,
     email: from ? { from, replyTo: text(profile.email?.replyTo, LINE), via: 'nexmail' } : null,
     postalAddress: text(profile.postalAddress, 300),

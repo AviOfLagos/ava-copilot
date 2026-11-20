@@ -8,6 +8,7 @@ import type { JobRecord } from '../jobs/types';
 import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
+import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
@@ -362,6 +363,11 @@ export class AviCopilotDb extends Dexie {
   ambientSessions!: Table<AmbientSession, string>;
   ambientUtterances!: Table<AmbientUtterance, string>;
   doOnce!: Table<OnceRecord, string>;
+  // The growth numbers (../growth): what was read, whether each day was read, each source's state, links made
+  growthMetrics!: Table<GrowthMetric, string>;
+  growthReadings!: Table<GrowthReading, string>;
+  growthSources!: Table<GrowthSourceState, string>;
+  growthLinks!: Table<GrowthLink, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -413,6 +419,12 @@ export class AviCopilotDb extends Dexie {
     // Do-once keys (docs/growth-team.md, Part 2): only added, nothing stored is rewritten
     this.version(7).stores({
       doOnce: 'key, taskId, threadId, startedAt',
+    });
+    this.version(8).stores({
+      growthMetrics: 'id, productId, [productId+metric+date]',
+      growthReadings: 'id, productId, [productId+metric+date]',
+      growthSources: 'id, productId',
+      growthLinks: 'id, productId',
     });
   }
 }

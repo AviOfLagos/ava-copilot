@@ -10541,5 +10541,89 @@
   },
   "product_card_now": {
     "message": "now: $1"
+  },
+  "product_api": {
+    "message": "Numbers API address"
+  },
+  "growth_title": {
+    "message": "Numbers"
+  },
+  "growth_hint": {
+    "message": "Ava reads this product’s numbers from its own API, by code, every two hours. A number that could not be read shows as “no reading”, never as 0."
+  },
+  "growth_token": {
+    "message": "API token"
+  },
+  "growth_token_saved": {
+    "message": "Saved: $1"
+  },
+  "growth_token_placeholder": {
+    "message": "Paste the token here"
+  },
+  "growth_token_save": {
+    "message": "Save token"
+  },
+  "growth_token_remove": {
+    "message": "Remove token"
+  },
+  "growth_readNow": {
+    "message": "Read now"
+  },
+  "growth_reading": {
+    "message": "Reading…"
+  },
+  "growth_connected": {
+    "message": "Connected. Last read $1."
+  },
+  "growth_connectedBut": {
+    "message": "Connected, but one number could not be read: $1"
+  },
+  "growth_notConnected": {
+    "message": "Not connected: $1"
+  },
+  "growth_never": {
+    "message": "Not read yet."
+  },
+  "growth_signupsToday": {
+    "message": "Sign-ups today (UTC): $1"
+  },
+  "growth_noReading": {
+    "message": "no reading"
+  },
+  "growth_noApi": {
+    "message": "No numbers API address is set for this product."
+  },
+  "growth_notice_title": {
+    "message": "$1: the numbers are not connected"
+  },
+  "growth_notice_noZero": {
+    "message": "Until this is fixed, these numbers read “no reading”. Ava will not show 0 in their place."
+  },
+  "growth_reason_not_set": {
+    "message": "The address of the product’s numbers API is missing, or is not an https address. Set it in the workspace’s product."
+  },
+  "growth_reason_no_token": {
+    "message": "No token for the product’s numbers API is saved in Ava yet. Paste it in the workspace’s product, under Numbers."
+  },
+  "growth_reason_agent_api_off": {
+    "message": "The product’s API is switched off on its side: no token is set there yet. Set the token on the product, then paste the same one here."
+  },
+  "growth_reason_unauthorized": {
+    "message": "The product refused the token: it is wrong, or was changed on the product. Paste the current one."
+  },
+  "growth_reason_unreachable": {
+    "message": "The product’s API did not answer: this computer is offline, or the address is wrong."
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "The product’s API answered in a shape Ava does not know, so it was not read as numbers. The API may have changed."
+  },
+  "growth_reason_not_available": {
+    "message": "The product itself does not record this number."
+  },
+  "growth_reason_failed": {
+    "message": "The product’s API refused the request."
+  },
+  "growth_reason_no_collector": {
+    "message": "Nothing reads this source yet."
   }
 }

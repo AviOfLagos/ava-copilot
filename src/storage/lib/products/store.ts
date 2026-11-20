@@ -1,7 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import { activeSeedProfile, workspaceStore } from '../workspaces';
-import { SUTURE_PROFILE, SUTURE_SEED, SUTURE_WORKSPACE } from './seed';
+import { SUTURE_AGENT_API, SUTURE_API_SEED, SUTURE_PROFILE, SUTURE_SEED, SUTURE_WORKSPACE } from './seed';
 import { cleanProductProfile } from './types';
 import type { ProductProfile } from './types';
 
@@ -27,7 +27,8 @@ let seeding: Promise<ProductsState> | null = null;
  */
 async function ensureSeeded(): Promise<ProductsState> {
   const state = (await storage.get()) ?? { items: {}, seeds: [] };
-  if (activeSeedProfile() !== 'avi' || state.seeds.includes(SUTURE_SEED)) return state;
+  if (activeSeedProfile() !== 'avi') return state;
+  if (state.seeds.includes(SUTURE_SEED)) return state.seeds.includes(SUTURE_API_SEED) ? state : addApiAddress(state);
   seeding ??= (async () => {
     try {
       if (!(await workspaceStore.get(SUTURE_WORKSPACE.id))) {
@@ -38,7 +39,8 @@ async function ensureSeeded(): Promise<ProductsState> {
         items: fresh.items[SUTURE_PROFILE.workspaceId]
           ? fresh.items
           : { ...fresh.items, [SUTURE_PROFILE.workspaceId]: { ...SUTURE_PROFILE, updatedAt: Date.now() } },
-        seeds: [...new Set([...fresh.seeds, SUTURE_SEED])],
+        // A fresh profile carries the API address already
+        seeds: [...new Set([...fresh.seeds, SUTURE_SEED, SUTURE_API_SEED])],
       };
       await storage.set(next);
       return next;
@@ -47,6 +49,20 @@ async function ensureSeeded(): Promise<ProductsState> {
     }
   })();
   return seeding;
+}
+
+/** Gives the seeded Suture profile its API address, once, unless the owner removed the profile or set one. */
+async function addApiAddress(state: ProductsState): Promise<ProductsState> {
+  const profile = state.items[SUTURE_PROFILE.workspaceId];
+  const next: ProductsState = {
+    items:
+      profile && !profile.agentApi && profile.repo === SUTURE_PROFILE.repo
+        ? { ...state.items, [profile.workspaceId]: { ...profile, agentApi: SUTURE_AGENT_API } }
+        : state.items,
+    seeds: [...state.seeds, SUTURE_API_SEED],
+  };
+  await storage.set(next);
+  return next;
 }
 
 export const productStore = {

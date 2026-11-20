@@ -136,6 +136,22 @@ describe('productStore', () => {
       expect(suture?.pricing).toContain('$149 a month');
     });
 
+    it('carries the address of the product API, and never a token', async () => {
+      const suture = (await productStore.forWorkspace('suture'))!;
+      expect(suture.agentApi).toEqual({ kind: 'suture-agent-v1', baseUrl: 'https://admin.trysuture.com/api/agent/v1' });
+      expect(JSON.stringify(data)).not.toMatch(/token|bearer/i);
+    });
+
+    it('adds the API address once to a profile seeded before it existed, and not after the owner cleared it', async () => {
+      const suture = (await productStore.forWorkspace('suture'))!;
+      // As an install seeded by the first step only looked
+      data.products = { items: { suture: { ...suture, agentApi: undefined } }, seeds: ['suture-2026-11'] };
+      expect((await productStore.forWorkspace('suture'))?.agentApi?.baseUrl).toContain('admin.trysuture.com');
+      await productStore.save({ ...(await productStore.forWorkspace('suture'))!, agentApi: null });
+      await productStore.seed();
+      expect((await productStore.forWorkspace('suture'))?.agentApi).toBeNull();
+    });
+
     it('leaves what the owner has not said yet empty, never guessed', async () => {
       const suture = (await productStore.forWorkspace('suture'))!;
       expect(suture.email).toBeNull();
