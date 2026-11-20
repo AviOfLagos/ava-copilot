@@ -119,3 +119,19 @@ describe('targetFromRaw', () => {
     expect(target.label).toBe('Message #general');
   });
 });
+
+describe('grids', () => {
+  it('marks a cell inside a role=grid as in a grid, so clicking it is not a commit', () => {
+    const cell = el('div', { role: 'gridcell' }, ['Send']);
+    el('div', { role: 'grid' }, [el('div', { role: 'row' }, [cell])]);
+    const target = describeTarget(cell);
+    expect(target.inGrid).toBe(true);
+    expect(classifyClick(target)).toBeNull();
+  });
+
+  it('leaves an ordinary button outside a grid alone', () => {
+    const button = el('button', {}, ['Send']);
+    el('form', {}, [button]);
+    expect(describeTarget(button).inGrid).toBe(false);
+  });
+});

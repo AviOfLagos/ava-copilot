@@ -1,5 +1,12 @@
 import { t } from '@extension/i18n';
-import { gateSettingsStore, onceStore, threadStore } from '@extension/storage';
+import {
+  canAllowAlways,
+  gateSettingsStore,
+  onceStore,
+  pageScope,
+  permissionRulesStore,
+  threadStore,
+} from '@extension/storage';
 import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -143,6 +150,16 @@ function commitStep(page: Page, kind: CommitKind, control: string, content: Comm
   };
 }
 
+// How a rule names the kind it covers, in the words the confirm card uses
+const KIND_TEXT = {
+  send: 'gate_kind_send',
+  publish: 'gate_kind_publish',
+  submit: 'gate_kind_submit',
+  delete: 'gate_kind_delete',
+  purchase: 'gate_kind_purchase',
+  permission: 'gate_kind_permission',
+} as const;
+
 function blocked(message: string): ReviewOutcome {
   return { proceed: false, result: new ActionResult({ error: message, includeInMemory: true }) };
 }
@@ -253,6 +270,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   let target = EMPTY_TARGET;
   let focus: FocusReading | null = null;
   let kind: CommitKind | null = null;
+  // The kind is a worst-case guess, not what the page shows: no "Allow every time" rule may cover it
+  let guessed = false;
   let needsUser: NeedsUserKind | null = null;
   let control: string;
 
@@ -261,7 +280,9 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     focus = await readFocusSafely(page);
     target = targetFromRaw(focus?.element);
     // Focus that cannot be read (an iframe, or a failed read) is treated as the worst case
-    kind = classifyKeys(keys, focus === null || focus.where === 'frame' ? null : target);
+    const unreadable = focus === null || focus.where === 'frame';
+    kind = classifyKeys(keys, unreadable ? null : target);
+    guessed = unreadable;
     if (kind !== null && target.formHasPassword) {
       needsUser = 'login';
     }
@@ -281,6 +302,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   }
   if (kind === null && declared) {
     kind = classifyLabel(`${intent} ${target.label}`) ?? 'submit';
+    guessed = true;
   }
   if (kind === null) {
     // Typing into a field: the task is now in the middle of a form
@@ -304,15 +326,32 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
   const unattended = await isUnattended(context);
 
+  // "Allow every time": the user already said yes to this kind of step in this place. Looked up only when a
+  // card would show. A repeat of a step (do once) is still asked, money, deleting and access never get a rule,
+  // and neither does a kind that is only a guess (focus that could not be read, or the model's word).
+  const needsCard = settings.confirm[kind] || unattended || !!repeat;
+  const scope = guessed ? '' : pageScope(page.url());
+  const rule = needsCard && !repeat && scope ? await permissionRulesStore.find(kind, scope).catch(() => null) : null;
+  if (rule) {
+    await permissionRulesStore.used(rule.id).catch(() => undefined);
+    await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
+  }
+
   // Running a step again is the user's call, whatever the settings say
-  if (settings.confirm[kind] || unattended || repeat) {
+  if (!rule && needsCard) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     if (repeat) request.repeat = repeat;
+    else if (scope && canAllowAlways(kind)) {
+      request.always = { kind, scope, label: t('gate_rule_label', [t(KIND_TEXT[kind]), scope]) };
+    }
     const answer = await ask(context, request);
     if (answer !== 'approved') {
       // A refusal ends the task, so the agent cannot look for another way to do the same thing
       await context.stop();
       return blocked(t('gate_declined'));
+    }
+    if (request.always && context.confirmGate.takeAlways(request.id)) {
+      await permissionRulesStore.allow(request.always).catch(error => logger.warning('Could not save the rule', error));
     }
 
     // The answer can take a while. Run the action only if it is still the one that was approved.

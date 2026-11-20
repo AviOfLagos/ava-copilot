@@ -6,7 +6,7 @@ import { HoldButton } from './ui/hold-button';
 
 interface ConfirmCardProps {
   request: ConfirmRequest;
-  onAnswer: (approved: boolean, replies?: string[]) => void;
+  onAnswer: (approved: boolean, replies?: string[], always?: boolean) => void;
   isDarkMode?: boolean;
 }
 
@@ -178,7 +178,7 @@ export default function ConfirmCard({ request, onAnswer, isDarkMode }: ConfirmCa
         </Button>
         {isCommit ? (
           <HoldButton className="flex-[1.4]" onConfirm={() => onAnswer(true)} armedLabel={t('gate_card_confirmAgain')}>
-            {t('gate_card_confirm')}
+            {request.always ? t('gate_card_allowOnce') : t('gate_card_confirm')}
           </HoldButton>
         ) : (
           <Button variant="default" size="lg" className="flex-[1.4]" onClick={() => onAnswer(true)}>
@@ -186,6 +186,19 @@ export default function ConfirmCard({ request, onAnswer, isDarkMode }: ConfirmCa
           </Button>
         )}
       </div>
+      {isCommit && request.always && (
+        <>
+          <HoldButton
+            className="mt-2 w-full"
+            onConfirm={() => onAnswer(true, undefined, true)}
+            armedLabel={t('gate_card_allowAlwaysAgain')}>
+            {t('gate_card_allowAlways')}
+          </HoldButton>
+          <p className="text-muted-foreground mt-1.5 text-center text-[11px]">
+            {t('gate_card_allowAlwaysHint', [request.always.label])}
+          </p>
+        </>
+      )}
       {isCommit && <p className="text-muted-foreground mt-2 text-center text-[11px]">{t('gate_card_holdHint')}</p>}
     </div>
   );

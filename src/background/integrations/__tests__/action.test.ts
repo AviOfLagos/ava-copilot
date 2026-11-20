@@ -73,6 +73,9 @@ beforeEach(async () => {
   sending.mode = 'answer';
   // Do-once records live in the shared database: each test starts with none
   await db.doOnce.clear();
+  // And with no "Allow every time" rules
+  const { permissionRulesStore } = await import('@extension/storage');
+  for (const rule of await permissionRulesStore.list()) await permissionRulesStore.remove(rule.id);
   mcp = fakeMcpServer([
     {
       name: 'lookup_order',
@@ -178,6 +181,35 @@ describe('call_tool', () => {
     });
     expect(mcp.state.calls).toEqual([{ tool: 'send_message', args: { channel: '#general', text: 'Ship it' } }]);
     expect(result.extractedContent).toContain('sent');
+  });
+
+  it('after Allow every time, the same tool runs again without a card, until the rule is removed', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    for (const rule of await permissionRulesStore.list()) await permissionRulesStore.remove(rule.id);
+    const first = fakeContext('none');
+    (first.context as unknown as { emitEvent: unknown }).emitEvent = vi.fn(
+      async (_actor: unknown, state: string, details: string) => {
+        if (state !== ExecutionState.ACT_CONFIRM) return;
+        const request = JSON.parse(details) as ConfirmRequest;
+        first.requests.push(request);
+        setTimeout(() => first.context.confirmGate.answer(request.id, true, undefined, true));
+      },
+    );
+    await callToolAction(service, first.context, input('send_message', { channel: '#general', text: 'one' }));
+    expect(first.requests[0].always?.kind).toBe('tool');
+    const [rule] = await permissionRulesStore.list();
+    expect(rule.scope).toMatch(/^tool:.+\/send_message@/);
+
+    const later = fakeContext('decline');
+    await callToolAction(service, later.context, input('send_message', { channel: '#general', text: 'two' }));
+    expect(later.requests).toHaveLength(0);
+    expect(mcp.state.calls).toHaveLength(2);
+
+    await permissionRulesStore.remove(rule.id);
+    const after = fakeContext('decline');
+    await callToolAction(service, after.context, input('send_message', { channel: '#general', text: 'three' }));
+    expect(after.requests).toHaveLength(1);
+    expect(mcp.state.calls).toHaveLength(2);
   });
 
   it('stops the task when the user declines, and sends nothing', async () => {

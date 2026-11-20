@@ -165,8 +165,8 @@ export class Executor {
    *
    * @returns false when no such request is waiting
    */
-  answerConfirmation(requestId: string, approved: boolean, replies?: string[]): boolean {
-    return this.context.confirmGate.answer(requestId, approved, replies);
+  answerConfirmation(requestId: string, approved: boolean, replies?: string[], always = false): boolean {
+    return this.context.confirmGate.answer(requestId, approved, replies, always);
   }
 
   /** The task this executor works on now: the latest follow-up, or the first task. */

@@ -8,9 +8,10 @@ import {
   gateSettingsStore,
   generalSettingsStore,
   localDay,
+  permissionRulesStore,
   usageStore,
 } from '@extension/storage';
-import type { CommitKind, GeneralSettingsConfig } from '@extension/storage';
+import type { CommitKind, GeneralSettingsConfig, PermissionRule } from '@extension/storage';
 import { Switch } from '../../components/ui/switch';
 import { useAssistantName } from '../../hooks/useAssistant';
 import { saveTheme, useTheme } from '../../layout/theme';
@@ -182,6 +183,49 @@ export function ConfirmSection() {
         ))}
       </div>
       <p className="text-muted-foreground px-3 pb-3 text-[11.5px]">{t('settings_gate_hint')}</p>
+    </>
+  );
+}
+
+/** What the user allowed every time, with a Remove for each. Money, deleting and access are never on it. */
+export function PermissionsSection() {
+  const [rules, setRules] = useState<PermissionRule[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => void permissionRulesStore.list().then(next => alive && setRules(next));
+    load();
+    const stop = permissionRulesStore.subscribe(load);
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, []);
+  if (!rules) return null;
+  return (
+    <>
+      {rules.length === 0 ? (
+        <p className="text-muted-foreground p-3 text-[12px]">{t('settings_permissions_empty')}</p>
+      ) : (
+        <ul className="divide-input divide-y">
+          {rules.map(rule => (
+            <li key={rule.id} className="flex items-center gap-3 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12.5px] font-medium">{rule.label}</div>
+                <div className="text-muted-foreground text-[11px]">
+                  {t('settings_permissions_used', [String(rule.uses), new Date(rule.createdAt).toLocaleDateString()])}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void permissionRulesStore.remove(rule.id)}
+                className="border-input hover:bg-muted rounded-full border px-2.5 py-1 text-[12px]">
+                {t('settings_permissions_remove')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-muted-foreground px-3 pb-3 text-[11.5px]">{t('settings_permissions_hint')}</p>
     </>
   );
 }
