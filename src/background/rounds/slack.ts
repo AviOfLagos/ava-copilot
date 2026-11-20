@@ -18,10 +18,11 @@ export type SlackCounts =
   // 'no_read_tool', 'failed'
   | { ok: false; reason: string; detail: string };
 
-// A kind is a short lower-case word in square brackets that opens a message: at the start of a line, or right
-// after the quote or colon a tool puts before a message's text. "[source: x]" is where a sign-up came from, not a
-// kind; "[the docs](…)" is a link; a "[word]" in the middle of what somebody wrote is not a notification.
-const KIND = /(?:^|[\n"]|:\s)\s*\[([a-z][a-z_-]{1,24})\](?!\()/g;
+// A kind is a few lower-case words in square brackets that open a message ("[signup]", "[talk to us]"): at the
+// start of a line, or right after the quote or colon a tool puts before a message's text. "[source: x]" is where
+// a sign-up came from, not a kind (it has a colon); "[the docs](…)" is a link; a "[word]" in the middle of what
+// somebody wrote is not a notification.
+const KIND = /(?:^|[\n"]|:\s)\s*\[([a-z][a-z _-]{1,24})\](?!\()/g;
 // A feed has a handful of kinds. More than this many different ones is not a feed's own vocabulary: only the
 // most frequent are kept, so text somebody wrote cannot mint a number for every word in brackets.
 export const MAX_KINDS = 8;
@@ -30,7 +31,7 @@ export const MAX_KINDS = 8;
 export function countKinds(text: string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const match of text.matchAll(KIND)) {
-    const kind = match[1]!.replace(/-/g, '_');
+    const kind = match[1]!.trim().replace(/[\s-]+/g, '_');
     counts[kind] = (counts[kind] ?? 0) + 1;
   }
   return Object.fromEntries(

@@ -111,6 +111,10 @@ describe('Slack notification counts', () => {
       'A person wrote: see [1] and [the docs](https://x.test)',
     ].join('\n');
     expect(countKinds(text)).toEqual({ signup: 2, payment: 1, access_request: 1 });
+    // A kind of several words, as the live feed writes it, with its source on the next line
+    expect(
+      countKinds('[talk to us] new inquiry · plan enterprise · "We run [agents] in prod"\n[source: unknown]'),
+    ).toEqual({ talk_to_us: 1 });
     // A tool that hands messages over as JSON, or with the sender before the text
     expect(countKinds('{"text": "[signup] a"}\nava-bot: [feedback] b')).toEqual({ signup: 1, feedback: 1 });
   });
