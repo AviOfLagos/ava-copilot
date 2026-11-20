@@ -137,9 +137,7 @@ export class MorningBrief {
         ? t('brief_calendar_notConnected')
         : calendar.state === 'failed'
           ? calendar.asOf
-            ? t('brief_calendar_failedAsOf', [
-                new Date(calendar.asOf).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
-              ])
+            ? t('brief_calendar_failedAsOf', [asOfText(calendar.asOf, now)])
             : t('brief_calendar_failed')
           : undefined;
 
@@ -235,6 +233,15 @@ export class MorningBrief {
   private async overCap(): Promise<boolean> {
     return isOverDailyBudget();
   }
+}
+
+/** When the calendar was last read: the time, with the day when that was not today. */
+export function asOfText(asOf: number, now: number): string {
+  const date = new Date(asOf);
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return date.toDateString() === new Date(now).toDateString()
+    ? time
+    : `${time}, ${date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`;
 }
 
 /**

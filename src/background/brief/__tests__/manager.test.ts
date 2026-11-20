@@ -36,7 +36,7 @@ vi.mock('../../history/summaries', () => ({
 }));
 
 const { briefSettingsStore, db, threadStore } = await import('@extension/storage');
-const { MorningBrief } = await import('../manager');
+const { asOfText, MorningBrief } = await import('../manager');
 const { registerNoticeSink } = await import('../../notices');
 import type { CalendarReading, CalendarWatcher } from '../../calendar/watcher';
 import type { Notice } from '../../notices';
@@ -97,6 +97,22 @@ describe('the morning brief', () => {
     const { said, line } = await make();
     expect(said).toMatch(/brief_calendar_failedAsOf\|[^\n]+\n- [^\n]*Standup/);
     expect(line.startsWith('brief_source_failed|brief_source_calendar')).toBe(true);
+  });
+
+  it('says which day the calendar was last read when that was not today', async () => {
+    const twoDaysAgo = Date.now() - 48 * HOUR;
+    reading = { state: 'failed', events: [], error: 'no permission', asOf: twoDaysAgo };
+    const { said } = await make();
+    const day = new Date(twoDaysAgo).toLocaleDateString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    expect(said).toContain(day.replace(/[`<>[\]!]/g, ''));
+    // The same day: the time alone
+    expect(asOfText(new Date(2026, 10, 20, 9, 0).getTime(), new Date(2026, 10, 20, 10, 0).getTime())).not.toContain(
+      ',',
+    );
   });
 
   it('counts 1 waiting with one pending approval, and names it on WhatsApp', async () => {
