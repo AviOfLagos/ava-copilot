@@ -278,7 +278,10 @@ export class Executor {
       if (this.generalSettings?.replayHistoricalTasks) {
         const historyString = JSON.stringify(this.context.history);
         logger.info(`Executor history size: ${historyString.length}`);
-        await chatHistoryStore.storeAgentStepHistory(this.context.taskId, this.tasks[0], historyString);
+        // Kept for replay only: a failure here must never turn a finished task into a failed one
+        await chatHistoryStore
+          .storeAgentStepHistory(this.context.taskId, this.tasks[0], historyString)
+          .catch(error => logger.warning('Task history was not kept for replay', error));
       } else {
         logger.info('Replay historical tasks is disabled, skipping history storage');
       }

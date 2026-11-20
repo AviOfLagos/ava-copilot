@@ -572,6 +572,25 @@ describe('Ava on WhatsApp: what is never taken as his words', () => {
     await settle();
     expect(service.pull().map(item => item.id)).toEqual(['new']);
   });
+
+  it('answers what he sent while the line was down once it reconnects, unless it is stale', async () => {
+    const { driver, service, settle, advance } = await linked();
+    const HOUR = 60 * 60_000;
+    // Linked at 1,000,000 ms; the line drops, and comes back two hours later
+    advance(2 * HOUR);
+    driver.events!.ready({ number: ME, selfIds: [SELF] });
+    // Dated an hour ago (in seconds, as WhatsApp sends it), delivered only now
+    driver.deliver({ id: 'while-down', body: 'are you there?', at: (1_000_000 + HOUR) / 1000 });
+    driver.deliver({ id: 'before-link', body: 'last week', at: 1 });
+    await settle();
+    expect(service.pull().map(item => item.id)).toEqual(['while-down']);
+    // Half a day later, a message from back then is too old to act on
+    advance(13 * HOUR);
+    driver.events!.ready({ number: ME, selfIds: [SELF] });
+    driver.deliver({ id: 'stale', body: 'send it now', at: (1_000_000 + 1.5 * HOUR) / 1000 });
+    await settle();
+    expect(service.pull().map(item => item.id)).toEqual(['while-down']);
+  });
 });
 
 describe('Ava on WhatsApp: the owner and quiet hours', () => {
