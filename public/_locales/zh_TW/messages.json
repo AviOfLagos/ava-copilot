@@ -10353,6 +10353,9 @@
   "brief_item_needsYou": {
     "message": "$1 需要登入或驗證碼"
   },
+  "brief_item_cap": {
+    "message": "$1 已達花費上限"
+  },
   "brief_item_failed": {
     "message": "$1 已停止"
   }

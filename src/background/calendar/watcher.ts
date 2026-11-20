@@ -79,7 +79,8 @@ export class CalendarWatcher {
       if (!stored || this.readAt > 0) return;
       this.events = (stored.events ?? []).map(event => ({ allDay: false, location: '', ...event }));
       this.source = stored.source ?? null;
-      this.okAt = stored.okAt ?? (stored.error === null && stored.readAt > 0 ? stored.readAt : null);
+      // Only a read that came from a calendar counts: with none connected, "no error" was stored too
+      this.okAt = stored.okAt ?? (stored.error === null && stored.readAt > 0 && stored.source ? stored.readAt : null);
     })();
     return this.hydrating;
   }
@@ -157,7 +158,12 @@ export class CalendarWatcher {
    */
   async reading(hours = 24): Promise<CalendarReading> {
     const settings = await calendarSettingsStore.getSettings();
-    if (!(await this.sources(settings)).length) {
+    const paired = (await brainSettingsStore.getSettings().catch(() => ({ paired: false }))).paired;
+    // The Mac's Calendar with no calendar ticked reads as empty without an error: that is not a connected calendar
+    const usable = planSources({ paired, settings }).filter(
+      name => !(name === 'mac' && settings.macCalendarIds?.length === 0),
+    );
+    if (!usable.length) {
       return { state: 'not_connected', events: [], error: null, asOf: null };
     }
     await this.hydrate();

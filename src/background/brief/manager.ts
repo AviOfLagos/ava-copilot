@@ -22,7 +22,7 @@ import {
   stoppedThreads,
 } from './brief';
 import type { BriefData, BriefSource, SourceState, WaitingRun } from './brief';
-import type { AgentTaskState, InboxItem } from '@extension/storage';
+import type { InboxItem } from '@extension/storage';
 import { toneLine } from '../personalities/prompt';
 import { loadIdentityContext } from '../identity/context';
 import { briefContext, goalLines } from '../identity/prompt';
@@ -136,15 +136,25 @@ export class MorningBrief {
       calendar.state === 'not_connected'
         ? t('brief_calendar_notConnected')
         : calendar.state === 'failed'
-          ? calendar.asOf
+          ? // "What it showed at …" only with something to show: an empty list under it would read as a free day
+            calendar.asOf && calendar.events.length > 0
             ? t('brief_calendar_failedAsOf', [asOfText(calendar.asOf, now)])
             : t('brief_calendar_failed')
           : undefined;
 
     const threads = await read(t('brief_source_chats'), () => db.threads.toArray(), []);
-    const inbox = await read(t('brief_source_inbox'), () => inboxDecisions(), []);
-    const agents = await read(t('brief_source_agents'), () => db.agents.toArray(), []);
-    const runs = await waitingRuns().catch(() => []);
+    const chatIds = new Set(threads.map(thread => thread.id));
+    // An item that points at a chat since deleted waits on nothing
+    const inbox = (await read(t('brief_source_inbox'), () => inboxDecisions(), [])).filter(item => {
+      const chat = item.approval?.requestId.startsWith('thread:') ? item.approval.requestId.slice(7) : null;
+      return chat === null || chatIds.has(chat);
+    });
+    // Agents and their waiting runs are one source: either both were read or the brief says they were not
+    const { agents, runs } = await read(
+      t('brief_source_agents'),
+      async () => ({ agents: await db.agents.toArray(), runs: await waitingRuns() }),
+      { agents: [], runs: [] },
+    );
     const nodes = await read(t('brief_source_knowledge'), () => graphStore.nodes(), []);
     // Who the brief is for and what they are working towards (all workspaces: the brief covers every one)
     const identity = await loadIdentityContext(null);
@@ -154,7 +164,7 @@ export class MorningBrief {
       calendarNote,
       actions: nodes.filter(node => node.type === 'action'),
       decisions: nodes.filter(node => node.type === 'decision'),
-      waiting: threads.filter(thread => thread.status === 'waiting_confirm'),
+      waiting: threads.filter(thread => thread.status === 'waiting_confirm' && !thread.archived),
       stopped: stoppedThreads(threads, now),
       inbox,
       runs,
@@ -256,19 +266,30 @@ export async function inboxDecisions(): Promise<InboxItem[]> {
   );
 }
 
-/** Agent and routine runs that wait for the user's click, by the name the user knows them by. */
+/**
+ * Agent and routine runs that wait for the user's click, by the name the user knows them by, with the chat or the
+ * run each one waits on: an agent's run waits in its chat, a routine's browser step in a chat of its own, and a
+ * routine's agent step on that agent's run. The brief counts each such chain once.
+ */
 export async function waitingRuns(): Promise<WaitingRun[]> {
   const runs = await db.runs.where('status').equals('waiting_user').toArray();
   return Promise.all(
     runs.map(async run => {
-      const task = await db.runSteps.where('runId').equals(run.id).toArray();
-      const state = task.find(step => step.nodeId === 'task')?.state as AgentTaskState | null | undefined;
+      const states = (await db.runSteps.where('runId').equals(run.id).toArray()).map(
+        step => (step.state ?? {}) as { threadId?: unknown; agentRunId?: unknown },
+      );
+      const threadId = states.map(state => state.threadId).find((id): id is string => typeof id === 'string');
       const owner = run.agentId
         ? (await db.agents.get(run.agentId))?.name
         : run.workflowId
           ? (await db.workflows.get(run.workflowId))?.name
           : undefined;
-      return { runId: run.id, name: owner || 'A run', threadId: state?.threadId ?? null };
+      return {
+        runId: run.id,
+        name: owner || 'A run',
+        threadId: threadId ?? null,
+        innerRunIds: states.map(state => state.agentRunId).filter((id): id is string => typeof id === 'string'),
+      };
     }),
   );
 }

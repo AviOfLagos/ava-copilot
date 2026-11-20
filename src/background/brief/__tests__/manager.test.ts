@@ -101,7 +101,16 @@ describe('the morning brief', () => {
 
   it('says which day the calendar was last read when that was not today', async () => {
     const twoDaysAgo = Date.now() - 48 * HOUR;
-    reading = { state: 'failed', events: [], error: 'no permission', asOf: twoDaysAgo };
+    const standup = {
+      id: 'a',
+      title: 'Standup',
+      start: Date.now() + HOUR,
+      end: Date.now() + 2 * HOUR,
+      joinUrl: null,
+      allDay: false,
+      location: '',
+    };
+    reading = { state: 'failed', events: [standup], error: 'no permission', asOf: twoDaysAgo };
     const { said } = await make();
     const day = new Date(twoDaysAgo).toLocaleDateString(undefined, {
       weekday: 'short',
@@ -113,6 +122,67 @@ describe('the morning brief', () => {
     expect(asOfText(new Date(2026, 10, 20, 9, 0).getTime(), new Date(2026, 10, 20, 10, 0).getTime())).not.toContain(
       ',',
     );
+  });
+
+  it('does not say "this is what it showed" over an empty list: with nothing to show it says meetings may be missing', async () => {
+    reading = { state: 'failed', events: [], error: 'no permission', asOf: Date.now() - 60 * HOUR };
+    const { said } = await make();
+    expect(said).toContain("**Today's calendar**\nbrief_calendar_failed");
+    expect(said).not.toContain('brief_calendar_failedAsOf');
+  });
+
+  it('counts a routine whose browser step waits for a click as 1, not as its chat plus its run', async () => {
+    const thread = await threadStore.create({
+      title: 'Post the weekly update',
+      status: 'waiting_confirm',
+      origin: 'workflow',
+    });
+    await db.runs.put({
+      id: 'r1',
+      kind: 'workflow',
+      workflowId: 'w1',
+      agentId: null,
+      status: 'waiting_user',
+      startedAt: 1,
+    } as never);
+    // A routine's step keeps its chat under its own node id, not under "task" as an agent's run does
+    await db.runSteps.put({
+      id: 's1',
+      runId: 'r1',
+      index: 0,
+      nodeId: 'n-browse',
+      status: 'waiting_user',
+      state: { threadId: thread.id, tabId: 5 },
+    } as never);
+    const { said, line } = await make();
+    expect(said).toContain('**Waiting on you (1)**');
+    expect(line).toBe('brief_line_noMeetings brief_line_waiting|1|brief_item_approve|Post the weekly update');
+    await db.runSteps.clear();
+  });
+
+  it('does not count an Inbox item whose chat was deleted, or an archived chat that still waits', async () => {
+    await db.inbox.put({
+      id: 'system|stuck:gone',
+      source: 'system',
+      externalId: 'stuck:gone',
+      kind: 'alert',
+      title: 'Stuck on a deleted chat',
+      body: '',
+      links: [],
+      priority: 'high',
+      status: 'unread',
+      snoozeUntil: null,
+      workspaceId: null,
+      agentId: null,
+      runId: null,
+      approval: { requestId: 'thread:no-such-chat', action: 'open_thread' },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await threadStore.create({ title: 'Archived and waiting', status: 'waiting_confirm', archived: true });
+    const { said, line } = await make();
+    expect(said).not.toContain('Waiting on you');
+    expect(line).toBe('brief_line_noMeetings brief_line_noWaiting');
   });
 
   it('counts 1 waiting with one pending approval, and names it on WhatsApp', async () => {

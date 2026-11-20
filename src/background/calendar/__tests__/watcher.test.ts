@@ -28,6 +28,7 @@ const data = vi.hoisted(() => {
 // The calendar the watcher reads: connected or not, answering or failing
 const calendar = vi.hoisted(() => ({
   connected: true,
+  kind: 'ics' as 'ics' | 'mac',
   fail: null as string | null,
   events: [] as {
     id: string;
@@ -40,7 +41,7 @@ const calendar = vi.hoisted(() => ({
   }[],
 }));
 vi.mock('../sources', () => ({
-  planSources: () => (calendar.connected ? ['ics'] : []),
+  planSources: () => (calendar.connected ? [calendar.kind] : []),
   icsSource: () => ({ name: 'ics' }),
   macSource: () => ({ name: 'mac' }),
   readFromSources: async () =>
@@ -52,7 +53,7 @@ vi.mock('../../companion/client', () => ({ companionClient: {} }));
 vi.mock('../../companion/state', () => ({ brainSettingsStore: { getSettings: async () => ({ paired: false }) } }));
 
 const { CalendarWatcher } = await import('../watcher');
-const { upcomingEventsStore } = await import('@extension/storage');
+const { calendarSettingsStore, upcomingEventsStore } = await import('@extension/storage');
 
 const HOUR = 3_600_000;
 const standup = () => ({
@@ -68,6 +69,7 @@ const standup = () => ({
 beforeEach(async () => {
   for (const key of Object.keys(data)) delete data[key];
   calendar.connected = true;
+  calendar.kind = 'ics';
   calendar.fail = null;
   calendar.events = [standup()];
   await upcomingEventsStore.set({ events: [], readAt: 0, error: null, source: null });
@@ -117,6 +119,25 @@ describe('a calendar that is not connected', () => {
     calendar.connected = false;
     const reading = await new CalendarWatcher().reading(24);
     expect(reading).toEqual({ state: 'not_connected', events: [], error: null, asOf: null });
+  });
+
+  it('says so for the Mac’s Calendar with no calendar ticked, which reads as empty without an error', async () => {
+    calendar.kind = 'mac';
+    await calendarSettingsStore.set({ ...(await calendarSettingsStore.get()), macCalendarIds: [] });
+    expect((await new CalendarWatcher().reading(24)).state).toBe('not_connected');
+    await calendarSettingsStore.set({ ...(await calendarSettingsStore.get()), macCalendarIds: null });
+    expect((await new CalendarWatcher().reading(24)).state).toBe('read');
+  });
+
+  it('does not quote a time from when no calendar was connected as the last good read', async () => {
+    // Nothing connected: the store says "no error" for a read that read no calendar
+    calendar.connected = false;
+    await new CalendarWatcher().refresh();
+    // A calendar is connected, it does not answer, and the background restarts
+    calendar.connected = true;
+    calendar.fail = 'The iCal address answered 404';
+    const reading = await new CalendarWatcher().reading(24);
+    expect(reading).toMatchObject({ state: 'failed', events: [], asOf: null });
   });
 
   it('is told apart from a connected calendar with nothing on it', async () => {

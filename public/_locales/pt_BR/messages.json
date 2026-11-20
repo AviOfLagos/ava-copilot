@@ -10353,6 +10353,9 @@
   "brief_item_needsYou": {
     "message": "$1 precisa de login ou de um código"
   },
+  "brief_item_cap": {
+    "message": "$1 chegou ao limite de gastos"
+  },
   "brief_item_failed": {
     "message": "$1 parou"
   }

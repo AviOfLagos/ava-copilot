@@ -18,6 +18,8 @@ export interface WaitingRun {
   name: string;
   // The chat it waits in, when it has one
   threadId: string | null;
+  // The runs it waits on in turn (a routine whose step is an agent's run): the same wait
+  innerRunIds?: string[];
 }
 
 /** One thing that waits on the user. */
@@ -25,6 +27,8 @@ export interface WaitingItem {
   // What it is about, for telling the same thing apart when it shows up in two places
   key: string;
   kind: 'approval' | 'needs_user' | 'decision' | 'failed';
+  // For 'needs_user': the chat is held at the spending limit, not at a sign-in
+  cap?: boolean;
   title: string;
   // For a failed task: why it stopped
   detail?: string;
@@ -128,17 +132,27 @@ export function waitingItems(data: BriefData): WaitingItem[] {
     (thread.agentId && data.agentNames?.[thread.agentId]) || thread.title || 'Untitled';
 
   for (const thread of data.waiting) {
+    const needsUser = thread.pendingRequest?.mode === 'needs_user';
     add({
       key: `thread:${thread.id}`,
-      kind: thread.pendingRequest?.mode === 'needs_user' ? 'needs_user' : 'approval',
+      kind: needsUser ? 'needs_user' : 'approval',
+      ...(needsUser && thread.pendingRequest?.kind === 'cap' ? { cap: true } : {}),
       title: nameOf(thread),
     });
   }
-  for (const run of data.runs ?? []) {
-    const key = run.threadId ? `thread:${run.threadId}` : `run:${run.runId}`;
+  // A run waits in a chat, or on another run (a routine whose step is an agent's run): each chain is one wait.
+  // Inner runs first, so the outer one is recognised as the same thing.
+  const runs = [...(data.runs ?? [])].sort((a, b) => (a.innerRunIds?.length ?? 0) - (b.innerRunIds?.length ?? 0));
+  for (const run of runs) {
+    const own = `run:${run.runId}`;
+    const sameWait =
+      (run.threadId !== null && seen.has(`thread:${run.threadId}`)) ||
+      (run.innerRunIds ?? []).some(inner => seen.has(`run:${inner}`));
+    if (!sameWait) {
+      add({ key: run.threadId ? `thread:${run.threadId}` : own, kind: 'approval', title: run.name });
+    }
     // The run's own Inbox item is the same wait
-    add({ key, kind: 'approval', title: run.name }, `run:${run.runId}`);
-    seen.add(`run:${run.runId}`);
+    seen.add(own);
   }
   const failed = data.stopped.map(thread => ({
     key: `thread:${thread.id}`,
@@ -169,9 +183,9 @@ export function briefLine(
   calendar: { name: string; state: SourceState },
   say: (key: BriefLineKey, substitutions?: string[]) => string,
 ): string {
-  const events = todaysEvents(data.events, data.now);
-  // The first meeting with a time: an all-day entry has none worth saying
-  const first = events.find(event => !event.allDay) ?? events[0];
+  // Meetings have a time: an all-day entry (a holiday, a birthday) is not one, and "at 12:00 AM" would be wrong
+  const events = todaysEvents(data.events, data.now).filter(event => !event.allDay);
+  const first = events[0];
   const meetings =
     calendar.state === 'not_connected'
       ? say('brief_source_notConnected', [calendar.name])
@@ -189,7 +203,7 @@ export function briefLine(
     ? top.kind === 'approval'
       ? say('brief_item_approve', [plain(top.title, 60)])
       : top.kind === 'needs_user'
-        ? say('brief_item_needsYou', [plain(top.title, 60)])
+        ? say(top.cap ? 'brief_item_cap' : 'brief_item_needsYou', [plain(top.title, 60)])
         : top.kind === 'failed'
           ? say('brief_item_failed', [plain(top.title, 60)])
           : plain(top.title, 60)
@@ -214,6 +228,7 @@ export type BriefLineKey =
   | 'brief_line_waitingMore'
   | 'brief_item_approve'
   | 'brief_item_needsYou'
+  | 'brief_item_cap'
   | 'brief_item_failed';
 
 /** The sources a brief read and the ones it could not, as one line. */
@@ -253,7 +268,10 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
 
   const events = todaysEvents(data.events, data.now);
   const eventLines = events
-    .map(event => `- ${clock(event.start)}: ${plain(event.title, 80)}${event.joinUrl ? ' (has a call link)' : ''}`)
+    .map(
+      event =>
+        `- ${event.allDay ? 'All day' : clock(event.start)}: ${plain(event.title, 80)}${event.joinUrl ? ' (has a call link)' : ''}`,
+    )
     .join('\n');
   // A calendar that is not connected, or could not be read, is said: an empty list would read as a free day
   const calendar = data.calendarNote
@@ -267,7 +285,9 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
       case 'approval':
         return `- "${title}" waits for your click`;
       case 'needs_user':
-        return `- "${title}" needs a step only you can do (a sign-in, a CAPTCHA or a code)`;
+        return item.cap
+          ? `- "${title}" is held at the spending limit`
+          : `- "${title}" needs a step only you can do (a sign-in, a CAPTCHA or a code)`;
       case 'decision':
         return `- ${title} (in your Inbox)`;
       default:

@@ -2567,6 +2567,10 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - The WhatsApp line and the desktop notification name the first meeting by its time and the top waiting item by
   name (`briefLine`): "2 meetings, first at 10:00. 3 waiting on you: approve Suture post, and 2 more." A meeting's
   title is never in it. `brief_counts` is gone.
+- After review: a routine waiting on a click is one thing, whether it waits in a chat of its own or on an agent's
+  run (`waitingRuns` follows the chain); an all-day entry is not a meeting and has no time; "this is what it showed
+  at …" names the day and is only said with events to show; the Mac's Calendar with no calendar ticked counts as
+  not connected; an Inbox item whose chat was deleted and an archived chat are not counted.
 - Not built here: the Team section (#78). From #32, still open: asking for the Mac's Calendar permission again while
   it is lost, and showing it on the setup checklist.
 

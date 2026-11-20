@@ -145,6 +145,48 @@ describe('what waits on you', () => {
     expect(text).toContain('- Approve the Suture post (in your Inbox)');
   });
 
+  it('counts a routine waiting on a click once, whether it waits in a chat of its own or on an agent’s run', () => {
+    // A routine's browser step asks before acting: its chat waits, its run waits, and the Inbox has its item
+    const browserStep = brief({
+      waiting: [chat('t1', { title: 'Post the weekly update' })],
+      runs: [{ runId: 'r1', name: 'Monday report', threadId: 't1' }],
+      inbox: [
+        inboxItem('workflow:w1|r1:n1', { runId: 'r1', approval: { requestId: 'thread:t1', action: 'open_thread' } }),
+      ],
+    });
+    expect(waitingItems(browserStep)).toHaveLength(1);
+    expect(briefLine(browserStep, calendar(), say)).toBe(
+      'No meetings today. 1 waiting on you: approve Post the weekly update.',
+    );
+
+    // A routine whose step is an agent's run: the routine's run waits on the agent's run, which waits in its chat
+    const agentStep = brief({
+      waiting: [chat('t2', { title: 'Draft the post', agentId: 'social' })],
+      runs: [
+        { runId: 'outer', name: 'Launch routine', threadId: null, innerRunIds: ['inner'] },
+        { runId: 'inner', name: 'Product Social Manager', threadId: 't2' },
+      ],
+      inbox: [
+        inboxItem('agent:social|inner:click', {
+          runId: 'inner',
+          approval: { requestId: 'thread:t2', action: 'open_thread' },
+        }),
+      ],
+      agentNames: { social: 'Product Social Manager' },
+    });
+    expect(waitingItems(agentStep).map(item => item.title)).toEqual(['Product Social Manager']);
+  });
+
+  it('says a chat held at the spending limit is at its limit, not that it needs a sign-in', () => {
+    const data = brief({
+      waiting: [chat('t1', { title: 'Research run', pendingRequest: { mode: 'needs_user', kind: 'cap' } as never })],
+    });
+    expect(briefLine(data, calendar(), say)).toBe(
+      'No meetings today. 1 waiting on you: Research run is at its spending limit.',
+    );
+    expect(briefMarkdown(data)).toContain('- "Research run" is held at the spending limit');
+  });
+
   it('does not count a failed task that is queued to try again by itself, an archived one, or an old one', () => {
     const failed = (id: string, fields: Partial<ThreadRecord> = {}) =>
       chat(id, { status: 'error', error: { kind: 'tab_closed', message: 'The tab was closed.' }, ...fields });
@@ -172,6 +214,15 @@ describe('the WhatsApp line', () => {
     expect(briefLine(data, calendar(), say)).toBe(
       `2 meetings, first at ${clock(at(10))}. 3 waiting on you: approve Suture post, and 2 more.`,
     );
+  });
+
+  it('does not call an all-day entry a meeting, or give it a time', () => {
+    const holiday = { ...meeting('h', new Date(2026, 10, 20, 0, 0).getTime()), title: 'Public holiday', allDay: true };
+    const data = brief({ events: [{ ...holiday, end: holiday.start + 24 * HOUR }] });
+    expect(briefLine(data, calendar(), say)).toBe('No meetings today. Nothing waiting on you.');
+    expect(briefMarkdown(data)).toContain('- All day: Public holiday');
+    const withMeeting = brief({ events: [{ ...holiday, end: holiday.start + 24 * HOUR }, meeting('a', at(10))] });
+    expect(briefLine(withMeeting, calendar(), say)).toBe(`1 meeting, at ${clock(at(10))}. Nothing waiting on you.`);
   });
 
   it('never carries a meeting’s title, and keeps what a page or an invite wrote on one plain line', () => {
