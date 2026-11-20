@@ -72,7 +72,7 @@ All tools take a `purpose` (one short sentence, shown to Avi) and return JSON te
 | `ask_human` | v0 | Show Avi numbered steps (dialog + notification now; Ava panel with on-screen pointers later) and wait for his answer. | `{answer: "done" \| "cant" \| "timeout", seconds}` |
 | `list_secrets` | v1 | Projects, envs and secret names. No prompt (names only). | `{projects: {p: {env: [names]}}}` |
 | `sign_in` | v1 | Make sure a site is signed in as an account in Ava's browser profile. Uses the vault for the password, the site adapter for the clicks, `ask_human` for 2FA or a CAPTCHA. | `{signedIn, account, steps}` |
-| `switch_account` | v1 | For a CLI (`gh`, `vercel`, `gcloud`) or a site: read the current account, switch to the named one, verify. Reuses `gh-switch`, `vercel-switch`, and the account check of issue #43. | `{from, to, verified}` |
+| `switch_account` | v1 (gh, vercel shipped) | For a CLI (`gh`, `vercel`, `gcloud`) or a site: read the current account, switch to the named one, verify. Reuses `gh-switch`, `vercel-switch`, and the account check of issue #43. | `{from, to, verified}` |
 | `do_action` | v2 | A named, deterministic action on a known site or app ("add env var on Vercel project X", "invite @y to the GitHub org") or, for an unknown screen, a goal handed to the local model. Each action declares the secrets it may use. | `{done, evidence, steps}` |
 | `get_status` | v1 | Is Ava Brain up, is the vault installed, which agents are registered. | names and booleans |
 
@@ -192,7 +192,10 @@ browser's hands. Ava Keys fits without moving:
 1. **v0** (this PR): `run_with_secrets`, `ask_human` (dialog), `ava-brain keys-mcp`, `ava-brain keys install` for
    Claude Code. Tests.
 2. `list_secrets`, `get_status`; Cursor and Codex registration; `keys uninstall`.
-3. `switch_account` for `gh` and `vercel` (wraps `gh-switch`, `vercel-switch`), then sites, sharing #43's check.
+3. `switch_account` for `gh` and `vercel` (wraps `gh-switch`, `vercel-switch`; shipped), then sites, sharing #43's check.
+   No Touch ID (no secret value is used; agents already run these scripts), but Avi gets a notification on every change.
+   It refuses to switch Vercel away from an unsaved login (that login would be lost) and does nothing when already on
+   the account asked for.
 4. `ask_human` in the Ava panel with pointers.
 5. `sign_in` through offboard's browser profile and adapters.
 6. `do_action` with deterministic adapters; local-model fallback for unknown screens.

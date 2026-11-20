@@ -1,5 +1,5 @@
 /**
- * Ava Keys MCP server (stdio): `ava-brain keys-mcp`. v0 tools: run_with_secrets, ask_human.
+ * Ava Keys MCP server (stdio): `ava-brain keys-mcp`. Tools: run_with_secrets, ask_human, switch_account.
  * Results are JSON text with names, counts and masked output; never a secret value. stdout is the MCP channel,
  * so nothing else here writes to it.
  */
@@ -7,7 +7,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import type { ProcessRunner } from '../sandbox/process';
-import { askHuman } from './ask';
+import { switchAccount } from './accounts';
+import { askHuman, notifyAvi } from './ask';
 import { ensureMasker } from './install';
 import { runWithSecrets } from './run';
 
@@ -107,6 +108,36 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
         return text(result);
       } catch (error) {
         return text({ answer: 'error', message: (error as Error).message }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    'switch_account',
+    {
+      title: 'Read or switch the gh or vercel account',
+      description:
+        'Reads the account a CLI is signed in as, or switches it and verifies. gh: switches gh auth and the global git commit ' +
+        'identity together (gh-switch); with `repo` it picks the right account for that repo, also aligns Vercel (reported under `vercel`), and checks the commit email that repo uses. vercel: ' +
+        'activates a saved Vercel login (vercel-switch). Omit account and repo to only read the current one. Names only, never ' +
+        'tokens. Avi gets a notification when an account changes. An account that is not signed in comes back unswitched: ' +
+        'then use ask_human to have Avi sign in.',
+      inputSchema: {
+        tool: z.enum(['gh', 'vercel']),
+        account: z.string().min(1).max(39).optional().describe('Exact account name (gh login, or saved Vercel login name)'),
+        repo: z.string().optional().describe('Absolute repo folder: switch to the account that repo needs'),
+        purpose: z.string().min(3).max(120).describe('Why, in a few words (shown in the notification)'),
+      },
+    },
+    async input => {
+      try {
+        const result = await switchAccount(
+          { tool: input.tool, account: input.account, repo: input.repo, purpose: input.purpose, agent: agent() },
+          { runner: deps.runner, home: deps.home, notify: (title, body) => notifyAvi(title, body, deps.runner) },
+        );
+        return text(result, !result.verified);
+      } catch (error) {
+        return text({ verified: false, message: (error as Error).message }, true);
       }
     },
   );
