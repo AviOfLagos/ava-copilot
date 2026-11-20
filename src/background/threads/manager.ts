@@ -10,6 +10,7 @@ import {
 } from '@extension/storage';
 import type { MessageAttachment, ThreadErrorKind, ThreadRecord, ThreadStore } from '@extension/storage';
 import type BrowserContext from '../browser/context';
+import { isUrlAllowed } from '../browser/util';
 import type { Executor } from '../agent/executor';
 import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentEvent } from '../agent/event/types';
@@ -432,7 +433,7 @@ export class ThreadManager {
    * Chrome reports one closed tab twice, as a removed tab and as a detached debugger. Both come here, and
    * only the first report of a tab id is handled.
    */
-  async onTabRemoved(tabId: number): Promise<void> {
+  async onTabRemoved(tabId: number, info: { windowClosing?: boolean } = {}): Promise<void> {
     if (this.closedTabs.has(tabId)) return;
     this.closedTabs.add(tabId);
     if (this.closedTabs.size > MAX_CLOSED_REMEMBERED) {
@@ -453,7 +454,7 @@ export class ThreadManager {
         runner.browserContext.removeAttachedPage(tabId);
         continue;
       }
-      const outcome = await this.reopen(runner, tabId, place);
+      const outcome = await this.reopen(runner, tabId, place, info.windowClosing === true);
       if (outcome === 'reopened') continue;
       runner.binding.remove(tabId);
       runner.browserContext.removeAttachedPage(tabId);
@@ -465,46 +466,64 @@ export class ThreadManager {
   /**
    * Opens a run's closed tab again on its last page and makes it the run's tab.
    *
+   * @param windowClosing - The tab went with its whole window, so it comes back in another one
    * @returns 'reopened'; 'ended' when the run was stopped meanwhile; 'no' when the tab must stay closed: the
-   *   run was mid-form or mid-send, already used its one reopening, or has no page to go back to
+   *   task closed it itself, was mid-form or mid-send, already used its one reopening, or has no page to go
+   *   back to
    */
-  private async reopen(runner: Runner, tabId: number, place?: TabPlace): Promise<'reopened' | 'ended' | 'no'> {
+  private async reopen(
+    runner: Runner,
+    tabId: number,
+    place: TabPlace | undefined,
+    windowClosing: boolean,
+  ): Promise<'reopened' | 'ended' | 'no'> {
     // Stop is the only signal that the user wants the task ended; a stopped run gets no tab back
     if (runner.cancelled || runner.ended) return 'ended';
     if (runner.reopened) return 'no';
-    const thread = await this.store.get(runner.threadId);
-    // Typed into a field or clicked a submit in the last steps, or a commit is waiting for the click: the page
-    // held something a fresh one does not, so it is not reopened blindly
-    if (runner.executor.isMidForm() || thread?.status === 'waiting_confirm') return 'no';
-    const url = place?.url ?? thread?.boundUrl;
+    // A tab the task closed itself (close_tab) was meant to go
+    if (runner.browserContext.closedByTask(tabId)) return 'no';
+    // Typed into a field or clicked a submit in the last steps: the page held something a fresh one does not
+    if (runner.executor.isMidForm()) return 'no';
+    // Only the page this very tab was on: another tab's page would be the wrong one to bring back
+    const url = place?.url;
     if (!isWebPage(url)) return 'no';
+    // ...and only where the task may go (the firewall, an agent's own sites)
+    const { allowedUrls, deniedUrls } = runner.browserContext.getConfig();
+    if (!isUrlAllowed(url, allowedUrls, deniedUrls)) return 'no';
 
-    runner.reopened = true;
-    // The task waits between steps while its page comes back: steps on the dead page would only fail, and
-    // three failures in a row end a task
+    // From here, before anything is awaited, the task waits between steps: steps on the dead page would only
+    // fail, and three failures in a row end a task
     void runner.executor.pause();
     try {
+      // A commit waiting for the click: the card shows what the lost page held
+      if ((await this.store.get(runner.threadId))?.status === 'waiting_confirm') return 'no';
+      runner.reopened = true;
       // The same window, or the last one the user worked in when the window closed too
       const same =
-        place?.windowId != null ? await chrome.windows.get(place.windowId).catch(() => undefined) : undefined;
+        !windowClosing && place?.windowId != null
+          ? await chrome.windows.get(place.windowId).catch(() => undefined)
+          : undefined;
       const window = same ?? (await chrome.windows.getLastFocused({ windowTypes: ['normal'] }));
       if (window?.id === undefined) return 'no';
       // In its own window the tab comes back where it was; in another window it does not take the user's place
       const tab = await chrome.tabs.create({ url, windowId: window.id, active: same !== undefined });
       if (tab.id === undefined) return 'no';
-      await loaded(tab.id, REOPEN_LOAD_MS);
-      if (runner.cancelled || runner.ended || this.running.get(runner.threadId) !== runner) {
-        await chrome.tabs.remove(tab.id).catch(() => {});
-        return 'ended';
-      }
+      // It is the run's tab from this moment: no other chat can take it, and closing it is seen
       runner.binding.add(tab.id);
       runner.binding.remove(tabId);
       runner.browserContext.removeAttachedPage(tabId);
       runner.browserContext.updateCurrentTabId(tab.id);
       runner.tabs.set(tab.id, { url, windowId: window.id });
+      await this.store.update(runner.threadId, { boundTabIds: runner.binding.tabIds, boundUrl: url });
+
+      await loaded(tab.id, REOPEN_LOAD_MS);
+      if (runner.cancelled || runner.ended || this.running.get(runner.threadId) !== runner) {
+        // Stopped, or the new tab was closed too, while it loaded
+        if (runner.binding.has(tab.id)) await chrome.tabs.remove(tab.id).catch(() => {});
+        return 'reopened';
+      }
       runner.executor.resumeOnFreshPage(reopenedNote(url));
       await this.store.addMessage(runner.threadId, 'system', t('threads_tabReopened', [hostOf(url)]));
-      await this.store.update(runner.threadId, { boundTabIds: runner.binding.tabIds, boundUrl: url });
       logger.info('Reopened the closed tab of thread', runner.threadId);
       return 'reopened';
     } catch (error) {
@@ -709,6 +728,17 @@ export class ThreadManager {
       const tab = tabId === firstTab?.id ? firstTab : await chrome.tabs.get(tabId).catch(() => undefined);
       if (isWebPage(tab?.url)) runner.tabs.set(tabId, { url: tab.url, windowId: tab.windowId ?? null });
     }
+    // A tab that joins later (one the task opens, a free one it takes over) is tracked from then on
+    binding.onAdd = tabId => {
+      void chrome.tabs.get(tabId).then(
+        tab => {
+          if (isWebPage(tab.url) && !runner.tabs.has(tabId)) {
+            runner.tabs.set(tabId, { url: tab.url, windowId: tab.windowId ?? null });
+          }
+        },
+        () => {},
+      );
+    };
     executor.clearExecutionEvents();
     // One at a time and in order: two events recorded at once could land in the wrong order
     executor.subscribeExecutionEvents(

@@ -11,6 +11,8 @@ export class TabBinding {
   // Whether a tab outside the binding may join it: set by the thread manager to "no other running
   // thread holds it". Unset, only bound tabs and tabs they open are allowed.
   canAdopt: ((tabId: number) => boolean) | null = null;
+  // Told when a tab joins the binding mid-run (one the task opened, or a free one it took over)
+  onAdd: ((tabId: number) => void) | null = null;
 
   constructor(
     tabIds: number[],
@@ -24,7 +26,9 @@ export class TabBinding {
   }
 
   add(tabId: number): void {
+    const joined = !this.tabs.has(tabId);
     this.tabs.add(tabId);
+    if (joined) this.onAdd?.(tabId);
   }
 
   remove(tabId: number): void {

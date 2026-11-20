@@ -209,7 +209,7 @@ export class Executor {
     logger.info(`🚀 Executing task: ${this.tasks[this.tasks.length - 1]}`);
     // reset the step counter
     const context = this.context;
-    context.nSteps = 0;
+    context.startTask();
     const allowedMaxSteps = this.context.options.maxSteps;
     // The turn's trace (telemetry/traces.ts): the user's message, every model call, and what they got back
     startTurn(this.context.taskId, { task: this.tasks[this.tasks.length - 1], channel: this.channel });
@@ -367,6 +367,8 @@ export class Executor {
         throw new Error(navOutput.error);
       }
       context.consecutiveFailures = 0;
+      // The model saw the page state of this step, notes included
+      context.notesDelivered();
       if (navOutput.result?.done) {
         return true;
       }

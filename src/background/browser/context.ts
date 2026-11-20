@@ -74,6 +74,14 @@ export default class BrowserContext {
     return windows.size === 0 || windows.has(tab.windowId);
   }
 
+  // Tabs the task closed itself (close_tab): they are not opened again for it
+  private _closedByTask = new Set<number>();
+
+  /** Whether the task closed this tab itself. */
+  public closedByTask(tabId: number): boolean {
+    return this._closedByTask.has(tabId);
+  }
+
   /** The tab this context works in now, if any. */
   public get currentTabId(): number | null {
     return this._currentTabId;
@@ -359,6 +367,7 @@ export default class BrowserContext {
     if (this._binding && !this._binding.has(tabId)) {
       throw new TabNotBoundError(tabId);
     }
+    this._closedByTask.add(tabId);
     await this.detachPage(tabId);
     await chrome.tabs.remove(tabId);
     // update current tab id if needed

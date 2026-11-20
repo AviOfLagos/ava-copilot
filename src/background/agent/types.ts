@@ -53,8 +53,10 @@ export class AgentContext {
   confirmGate: ConfirmGate;
   // The task and its follow-ups, shared with the executor; skills are matched against them
   tasks: string[] = [];
-  // Things the next state message tells the model once, e.g. that its closed tab was reopened
+  // Things the state message tells the model, e.g. that its closed tab was reopened. A note stays until a step
+  // that was shown it goes through: a model call that fails must not swallow it.
   notes: string[] = [];
+  private notesShown = 0;
   // The steps in which the task typed into a field or committed something (a send, a submit)
   private formSteps: number[] = [];
 
@@ -94,6 +96,27 @@ export class AgentContext {
     await this.eventManager.emit(event);
   }
 
+  /** The notes for the state message being built. They are shown again until `notesDelivered`. */
+  readNotes(): string[] {
+    this.notesShown = this.notes.length;
+    return [...this.notes];
+  }
+
+  /** A step went through: the notes it was shown are done with. */
+  notesDelivered(): void {
+    this.notes.splice(0, this.notesShown);
+    this.notesShown = 0;
+  }
+
+  /**
+   * A new task starts and its steps count from 0 again: what an earlier task typed says nothing about this one.
+   * (A finished executor is kept for follow-ups, so the same context runs task after task.)
+   */
+  startTask(): void {
+    this.nSteps = 0;
+    this.formSteps = [];
+  }
+
   /** Notes that this step typed into a field or committed something. */
   markForm(): void {
     if (this.formSteps[this.formSteps.length - 1] !== this.nSteps) this.formSteps.push(this.nSteps);
@@ -102,10 +125,12 @@ export class AgentContext {
 
   /**
    * Whether the task is in the middle of a form or a send: it typed into a field or committed something in
-   * the last few steps. A page lost at that point is not reopened blindly (docs/growth-team.md, Part 1).
+   * the step it is in or the last 3 it finished. A page lost at that point is not reopened blindly
+   * (docs/growth-team.md, Part 1).
    */
   isMidForm(steps = 3): boolean {
-    return this.formSteps.some(step => step > this.nSteps - steps);
+    // nSteps is the number of finished steps, and so the index of the one running now
+    return this.formSteps.some(step => step >= this.nSteps - steps);
   }
 
   async pause() {

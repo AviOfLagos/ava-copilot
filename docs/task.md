@@ -2509,7 +2509,12 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   paused while the page loads, so no step fails on the dead tab, and the next page state tells the model it is a
   fresh page. One reopening per run.
 - Otherwise the run ends as `tab_closed`, as before; #66 queues that again.
-- Stop is the only signal that ends a task: a stopped run gets no tab back.
+- Stop is the only signal that ends a task: a stopped run gets no tab back. Neither does a tab the task closed
+  itself (`close_tab`), a page the firewall or the agent's sites do not allow, or a tab whose own last page is not
+  known.
+- The mid-form marks start clean with every task (`AgentContext.startTask`): a kept executor runs follow-ups, and
+  what an earlier task typed says nothing about the next. A note to the model stays until a step that saw it goes
+  through.
 - E2E: `threads.e2e.mjs` "closing the tab while the task is only reading reopens it…".
 
 ## 5. Risks, in order

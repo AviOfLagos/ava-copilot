@@ -199,8 +199,8 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener(tabId => {
-  void threads.onTabRemoved(tabId);
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  void threads.onTabRemoved(tabId, { windowClosing: removeInfo?.isWindowClosing });
   void meetings.onTabRemoved(tabId);
 });
 
