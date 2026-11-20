@@ -237,6 +237,9 @@ beforeEach(() => {
 
 afterEach(async () => {
   await manager.cancelAll();
+  // A run's end is several writes (its events, its class, the queued try, the thread's state): wait until every
+  // run has written it before the database goes away, or a late write fails the whole suite as an unhandled error
+  for (let i = 0; i < 500 && manager.runningCount > 0; i++) await settle();
   await settle();
   await db.delete();
   vi.unstubAllGlobals();
