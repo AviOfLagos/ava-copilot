@@ -33,3 +33,18 @@ await build({
 });
 chmodSync(outfile, 0o755);
 console.log(`Built ${outfile}`);
+
+// The Ava Keys masker: its own small file, node built-ins only, installed as ~/.ava-keys/mask (src/keys/install.ts)
+const maskfile = resolve(here, 'dist/ava-keys-mask.mjs');
+await build({
+  absWorkingDir: here,
+  entryPoints: [resolve(here, 'src/keys/mask.ts')],
+  outfile: maskfile,
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  legalComments: 'none',
+  logLevel: 'warning',
+});
+console.log(`Built ${maskfile}`);
