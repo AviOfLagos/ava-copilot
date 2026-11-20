@@ -4,7 +4,7 @@ import { AviCopilotDb, createThreadStore, localDay } from '@extension/storage';
 import type { AgentProfile, AgentTaskState, RunRecord, ThreadErrorKind, UsageEvent } from '@extension/storage';
 import { JobRunner } from '../../jobs/runner';
 import type { InboxDraft } from '../../workflows/inbox';
-import { AgentService, AGENT_RUN_JOB, AUTO_PAUSE_AFTER, runJobKey, scheduleJobKey } from '../service';
+import { AgentService, AGENT_RUN_JOB, AUTO_PAUSE_AFTER, runJobKey, scheduleJobKey, waitsFor } from '../service';
 import type { AgentServiceDeps, ThreadsPort, WindowPort } from '../service';
 import { agentRecord, profile } from './fixtures';
 
@@ -16,7 +16,7 @@ const AGENT_WINDOW = 77;
 class FakeThreads implements ThreadsPort {
   running = new Set<string>();
   sent: { threadId: string; text: string }[] = [];
-  cancelled: { threadId: string; reason?: { kind: ThreadErrorKind; message: string } | null }[] = [];
+  cancelled: { threadId: string; reason?: { kind: ThreadErrorKind; message: string; quiet?: boolean } | null }[] = [];
   // The user's own chats running
   others = 0;
   held = new Set<number>();
@@ -32,7 +32,7 @@ class FakeThreads implements ThreadsPort {
     this.sent.push(request);
     return request.threadId;
   }
-  async cancel(threadId: string, reason?: { kind: ThreadErrorKind; message: string } | null) {
+  async cancel(threadId: string, reason?: { kind: ThreadErrorKind; message: string; quiet?: boolean } | null) {
     this.cancelled.push({ threadId, reason });
     this.running.delete(threadId);
     await this.db.threads.update(threadId, {
@@ -389,7 +389,8 @@ describe('budgets', () => {
     expect(ended.status).toBe('failed');
     expect(ended.error).toMatchObject({ kind: 'budget' });
     expect(ended.modelCalls).toBe(3);
-    expect(threads.cancelled[0]).toMatchObject({ threadId: sent.threadId, reason: { kind: 'failed' } });
+    // Stopped quietly: the run reports its own limit, so its chat neither tries again nor reports for itself
+    expect(threads.cancelled[0]).toMatchObject({ threadId: sent.threadId, reason: { kind: 'failed', quiet: true } });
   });
 
   it(`pauses an agent after ${AUTO_PAUSE_AFTER} failed runs in a row, and says so in the Inbox`, async () => {
@@ -415,6 +416,90 @@ describe('budgets', () => {
 
     const resumed = await service.setEnabled(agent.id, true);
     expect(resumed).toMatchObject({ enabled: true, pausedReason: null, failuresInRow: 0 });
+  });
+});
+
+/**
+ * Agent runs use the same retry queue as every chat (docs/growth-team.md, Part 2, issue #66): the chat is queued
+ * to try again, and the run goes on with it instead of ending.
+ */
+describe('a run whose chat is queued to try again', () => {
+  it('is not failed when its tab closes: the same run goes on and ends with the later try', async () => {
+    const agent = await addAgent();
+    const run = await service.requestRun(agent.id, { ...manual, attended: false });
+    const sent = await sentAt(0);
+    // The chat ends with a closed tab and is queued to try again in a minute (the thread manager wrote both)
+    threads.running.delete(sent.threadId);
+    await db.threads.update(sent.threadId, {
+      status: 'error',
+      error: { kind: 'tab_closed', message: 'The tab was closed.' },
+      failure: { cls: 'temporary', retryAt: Date.now() + 60_000, reported: false },
+    });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    expect((await runOf(run.id)).status).toBe('running');
+    expect(inbox.filter(item => item.externalId.startsWith('ended:'))).toEqual([]);
+
+    // The queued try picks the chat up again and it finishes
+    threads.running.add(sent.threadId);
+    await db.threads.update(sent.threadId, { status: 'running', error: null, failure: null });
+    await threads.answer(sent.threadId, 'Posted.');
+    expect((await runEnded(run.id)).status).toBe('succeeded');
+
+    // One run, not two: a retry does not use up the runs a day
+    expect(await db.runs.where('agentId').equals(agent.id).count()).toBe(1);
+    expect((await db.agents.get(agent.id))?.failuresInRow ?? 0).toBe(0);
+  });
+
+  it('ends failed once the tries are used up, without a second Inbox item when the chat already reported', async () => {
+    const agent = await addAgent();
+    const run = await service.requestRun(agent.id, { ...manual, attended: false });
+    const sent = await sentAt(0);
+    threads.running.delete(sent.threadId);
+    await db.threads.update(sent.threadId, {
+      status: 'error',
+      error: { kind: 'failed', message: 'The page did not load' },
+      // The chat told the user it is stuck (one Inbox item, one WhatsApp line)
+      failure: { cls: 'temporary', retryAt: null, reported: true },
+    });
+    expect((await runEnded(run.id)).status).toBe('failed');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    expect(inbox.filter(item => item.externalId.startsWith('ended:'))).toEqual([]);
+  });
+
+  it('drops its chat’s queued try when the run ends first, so the chat never runs with nobody following it', async () => {
+    const agent = await addAgent();
+    const run = await service.requestRun(agent.id, { ...manual, attended: false });
+    const sent = await sentAt(0);
+    threads.running.delete(sent.threadId);
+    await db.threads.update(sent.threadId, {
+      status: 'error',
+      error: { kind: 'tab_closed', message: 'The tab was closed.' },
+      failure: { cls: 'temporary', retryAt: Date.now() + 60_000, reported: false },
+    });
+    // The user stops the run (or the browser was closed long enough for it to be marked interrupted)
+    await service.cancelRun(run.id);
+    await runEnded(run.id);
+    expect(threads.cancelled.map(item => item.threadId)).toContain(sent.threadId);
+  });
+
+  it('still reports its own failure when the chat did not', async () => {
+    const agent = await addAgent();
+    const run = await service.requestRun(agent.id, { ...manual, attended: false });
+    await threads.fail((await sentAt(0)).threadId, 'boom');
+    expect((await runEnded(run.id)).status).toBe('failed');
+    await until(async () => inbox.some(item => item.externalId === `ended:${run.id}`), 'its own Inbox item');
+  });
+});
+
+describe('what an agent’s Inbox item says it waits for', () => {
+  it('names a step only the user can do, and a click otherwise', () => {
+    const request = (fields: object) =>
+      ({ mode: 'needs_user', kind: 'login', pageUrl: 'https://admin.trysuture.com/login', ...fields }) as never;
+    expect(waitsFor(request({}))).toBe('needs you to sign in on admin.trysuture.com');
+    expect(waitsFor(request({ kind: 'captcha', pageUrl: '' }))).toBe('needs you to solve a CAPTCHA');
+    expect(waitsFor(request({ kind: 'code' }))).toBe('needs a code from you on admin.trysuture.com');
+    expect(waitsFor(request({ mode: 'commit', kind: 'send' }))).toBe('waits for your click');
+    expect(waitsFor(null)).toBe('waits for your click');
   });
 });
 

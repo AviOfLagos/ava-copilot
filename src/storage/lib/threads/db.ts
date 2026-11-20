@@ -19,6 +19,23 @@ export type ThreadStatus = 'idle' | 'running' | 'waiting_confirm' | 'error';
 // Why a thread stopped with an error: its tab closed, the background restarted, or the task failed
 export type ThreadErrorKind = 'tab_closed' | 'interrupted' | 'failed';
 
+/**
+ * Whether trying again can help a run that ended with an error (docs/growth-team.md, Part 2):
+ * - 'temporary': the tab closed, the network dropped, the model was overloaded, the background restarted, the
+ *   page did not load. Tried again by itself after 1, 5 and 15 minutes.
+ * - 'needs_user': a key, a sign-in or a step only the user can do. No retry; one Inbox item saying which step.
+ * - 'cannot': the site blocks it, or what was asked for cannot be done. No retry; one Inbox item saying why.
+ */
+export type FailureClass = 'temporary' | 'needs_user' | 'cannot';
+
+export interface ThreadFailure {
+  cls: FailureClass;
+  // When the next automatic try is due; null when none is queued
+  retryAt: number | null;
+  // The Inbox item (and the WhatsApp line) saying the task is stuck is out: there is never a second one
+  reported: boolean;
+}
+
 export type MessageActor = 'user' | 'system' | 'planner' | 'navigator';
 
 export interface ThreadRecord {
@@ -33,8 +50,17 @@ export interface ThreadRecord {
   boundGroupId: number | null;
   // The page the thread was working on, to reopen it when the tab is gone
   boundUrl: string | null;
+  // The window that page was in, so it is reopened there (an agent's own window) and not in the user's
+  boundWindowId?: number | null;
   status: ThreadStatus;
   error: { kind: ThreadErrorKind; message: string } | null;
+  // With an error: its class, and whether another try is queued or the user has been told
+  failure?: ThreadFailure | null;
+  // How many times the current task was tried again by itself; a new request starts at 0
+  autoTries?: number;
+  // How often the user started the current task again themself (Retry, Continue): each round may get stuck, and
+  // be reported, once
+  retryRound?: number;
   // What the agent is doing right now, e.g. "Planning", while it runs
   activity: string;
   // The task of the current or interrupted run, kept so it can be resumed

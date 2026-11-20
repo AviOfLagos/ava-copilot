@@ -31,6 +31,7 @@ const scenarios = {
   'stop-me': [slowly(10000, done)],
   'close-my-tab': [writeMessage('Draft for later'), clickSend, done],
   'close-while-reading': [slowly(5000, readOn), readOn, done],
+  'retry-later': [done],
   'survive-restart': [writeMessage('Still here'), clickSend, clickSend, done],
   'first-task': [typeName('Grace'), done],
   'ws-task': [done],
@@ -156,6 +157,36 @@ test('closing the tab while the task is only reading reopens it, tells the model
   );
   const text = await session.panelText();
   assert.match(text, /opened again at/);
+  await session.panel.close();
+});
+
+test('a task that fails for a passing reason is tried again by itself a minute later, and finishes', async () => {
+  mock.start('retry-later');
+  // The model cannot be reached, call after call (not a 404: a missing model would need the user, not a retry):
+  // after three failed steps in a row the task gives up, for now
+  for (let i = 0; i < 12; i++) mock.failNext(418);
+  const session = await openSession(extension, mock);
+  await session.send(task('retry-later'));
+  const failed = await waitForThread(session.panel, 'retry-later', t => t.status === 'error');
+  // The outage is over
+  mock.run.failures.length = 0;
+  assert.equal(failed.failure.cls, 'temporary');
+  assert.equal(failed.failure.reported, false);
+  assert.equal(failed.autoTries, 1);
+  const wait = failed.failure.retryAt - Date.now();
+  assert.ok(wait > 30_000 && wait <= 60_000, `the next try is a minute away (got ${wait} ms)`);
+  assert.match(await session.panelText(), /Trying again/);
+
+  // Nobody touches it: the job runner picks the task up again and it finishes
+  const finished = await waitForThread(session.panel, 'retry-later', t => t.status === 'idle', 150_000);
+  assert.equal(finished.error, null);
+  assert.equal(finished.failure, null);
+  assert.equal(finished.taskRunId, failed.taskRunId);
+  // The chat shows the whole story: it failed, said it would try again, resumed, and finished
+  assert.match(
+    await session.panelText(),
+    /Max failures reached.*Trying again in 1 min.*Resumed\..*E2E scenario finished/,
+  );
   await session.panel.close();
 });
 

@@ -2517,6 +2517,40 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   through.
 - E2E: `threads.e2e.mjs` "closing the tab while the task is only reading reopens it…".
 
+### Failed tasks retry, then report (2026-11-20, #66, docs/growth-team.md Part 2)
+
+- Every run that ends with an error gets a class (`src/background/retry/classify.ts`, on `ThreadRecord.failure`):
+  **temporary** (tab closed, background restarted, steps that kept failing, anything not understood), **needs the
+  user** (model key, another extension on the tab, the debugging bar closed), **cannot** (blocked site, refused
+  request, out of steps). The executor says what it knows through `Executor.failureCode`.
+- Temporary: the job runner tries again after 1, 5 and 15 minutes (job `thread.retry`, `retry/endings.ts`). A try is
+  `continueThread(…, { auto: true })`: the same task (`taskRunId`, so do-once keys hold), resumed from the transcript
+  with the note of what was already done, its page reopened in its own window without taking the screen.
+- After the last try, or at once for the other two classes: one Inbox item (`system|stuck:<task>`), and one WhatsApp
+  line for a temporary failure. `report` checks the Inbox first, so there is never a second one.
+- A step only the user can do (sign-in, CAPTCHA, code) is one Inbox item while the chat waits, per task and kind; an
+  agent's own Inbox item now names the step.
+- Agent runs use the same queue: while the chat is queued, the run stays open (`agents/service.ts`), so it is one run
+  for `runsPerDay`; model spend still counts toward `dailyUsd`, and an agent over its cap waits for tomorrow. A run
+  the agent stops itself (budget, time, off its sites) is `quiet`: the chat neither retries nor reports.
+- Stop on a queued task, a new message, or the user's own Retry/Continue drops the queued try. A run left for more
+  than an hour before the background came back is reported, not started by itself.
+- A chat is only tried while somebody follows it. An agent's chat needs its run still open (`ownerFollows`); a run
+  that ends first drops the chat's try (`AgentService.finish`). A routine's chat (origin `workflow`) is never tried
+  or reported from here: the routine fails its step and reports itself.
+- A try that cannot start (every slot busy) looks again every 30 s for 30 minutes as a job of its own, then gives up
+  and says so; it never leans on the job runner's five attempts. The tab it opened is closed again when it cannot
+  start.
+- "Too many failures" keeps the last step error: it is the reason in the Inbox item, and a missing model or an
+  account out of credit is classed as needing the user instead of being tried three times
+  (`codeOfStepError`).
+- The user's own Retry/Continue on a stuck task starts a new round (`retryRound`): the old Inbox item is settled, and
+  getting stuck again is reported again.
+- Known, not done: routines do not retry a browser step; time waited before a restart counts against an agent
+  run's 20 minutes; a tab reopened for an agent sits outside its tab group.
+- The unused `retryDelay` agent option is removed.
+- E2E: `threads.e2e.mjs` "a task that fails for a passing reason is tried again by itself a minute later…".
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -7,7 +7,17 @@ import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
 import type { PanelApi } from '../registry';
+import { MAX_AUTO_TRIES } from '@src/background/retry/classify';
 import ThreadVoicePicker from './ThreadVoicePicker';
+
+/** When the next try is due: the time, with the day when it is not today (an agent out of money waits a day). */
+function retryTime(at: number): string {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toDateString() === new Date().toDateString()
+    ? time
+    : `${date.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, ${time}`;
+}
 
 interface ThreadBarProps {
   thread: ThreadRecord;
@@ -16,6 +26,8 @@ interface ThreadBarProps {
   onContinue: () => void;
   // Re-runs the thread's last task with a fresh agent; shown for every error kind
   onRetry: () => void;
+  // Drops the try that is queued for a task that stopped by itself
+  onStopRetry?: () => void;
   // Opens the notes of the meeting this thread was made for
   onOpenMeeting?: () => void;
   onWorkspace: (workspaceId: string | null) => void;
@@ -31,6 +43,7 @@ export default function ThreadBar({
   onRebind,
   onContinue,
   onRetry,
+  onStopRetry,
   onOpenMeeting,
   onPopOut,
   onWorkspace,
@@ -146,8 +159,24 @@ export default function ThreadBar({
         <div
           role="status"
           className="border-destructive/40 bg-destructive/10 flex items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-[12px]">
-          <span>{thread.error.message}</span>
+          <span>
+            {thread.error.message}
+            {thread.failure?.retryAt && (
+              <span className="text-muted-foreground block">
+                {t('retry_banner', [
+                  retryTime(thread.failure.retryAt),
+                  String(thread.autoTries ?? 1),
+                  String(MAX_AUTO_TRIES),
+                ])}
+              </span>
+            )}
+          </span>
           <div className="flex shrink-0 items-center gap-1.5">
+            {thread.failure?.retryAt && onStopRetry && (
+              <Button size="sm" variant="outline" onClick={onStopRetry}>
+                {t('retry_stopTrying')}
+              </Button>
+            )}
             {thread.error.kind !== 'failed' && (
               <Button size="sm" variant="destructive" onClick={onContinue}>
                 {thread.error.kind === 'tab_closed' ? t('threads_reopenContinue') : t('threads_continue')}

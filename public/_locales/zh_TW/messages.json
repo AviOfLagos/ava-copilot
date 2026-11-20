@@ -3257,6 +3257,69 @@
   "retry_action": {
     "message": "重試"
   },
+  "retry_queued": {
+    "message": "還沒完成就停了。$1 分鐘後再試（第 $2 次，共 $3 次）。"
+  },
+  "retry_stopped": {
+    "message": "已停止，不會自動再試。"
+  },
+  "retry_banner": {
+    "message": "將於 $1 再試（第 $2 次，共 $3 次）"
+  },
+  "retry_stopTrying": {
+    "message": "不要再試"
+  },
+  "retry_untitled": {
+    "message": "一項工作"
+  },
+  "retry_stuck_title": {
+    "message": "卡在：$1"
+  },
+  "retry_stuck_line": {
+    "message": "卡在 $1：$2 $3"
+  },
+  "retry_need_temporary": {
+    "message": "我又試了 $1 次。想再試時，請開啟對話並按「重試」。"
+  },
+  "retry_need_cannot": {
+    "message": "這件事我做不到。請開啟對話查看停在哪裡。"
+  },
+  "retry_need_key": {
+    "message": "請到設定檢查模型金鑰，然後在對話中按「重試」。"
+  },
+  "retry_need_model": {
+    "message": "找不到設定中的模型。請改選另一個，然後在對話中按「重試」。"
+  },
+  "retry_need_billing": {
+    "message": "模型帳戶餘額不足或超過用量上限。請先處理，再在對話中按「重試」。"
+  },
+  "retry_need_debugger": {
+    "message": "我工作時偵錯列必須保持開啟。請在對話中按「重試」。"
+  },
+  "retry_need_extension": {
+    "message": "另一個擴充功能正在使用這個分頁。請先關閉它，再在對話中按「重試」。"
+  },
+  "retry_need_user": {
+    "message": "需要你處理。請開啟對話查看步驟，然後按「繼續」。"
+  },
+  "retry_needs_login": {
+    "message": "需要登入：$1"
+  },
+  "retry_needs_captcha": {
+    "message": "需要你完成 CAPTCHA：$1"
+  },
+  "retry_needs_code": {
+    "message": "需要驗證碼：$1"
+  },
+  "retry_needs_cap": {
+    "message": "花費上限需要你處理：$1"
+  },
+  "retry_needs_body": {
+    "message": "請開啟對話，自己在 $1 完成這個步驟，然後按「繼續」。"
+  },
+  "retry_needs_bodyNoHost": {
+    "message": "請開啟對話，自己完成這個步驟，然後按「繼續」。"
+  },
   "retry_fromHere": {
     "message": "從這裡重試"
   },

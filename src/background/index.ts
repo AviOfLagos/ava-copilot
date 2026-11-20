@@ -5,6 +5,7 @@ import { createLogger } from './log';
 import { holdForDictation, releaseDictation, sttErrorMessage, transcribeSpeech } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
+import { runEndings } from './retry/register';
 import { MeetingManager } from './meetings/manager';
 import { dispatchCommand, registerRecovery, runRecoveries } from './registry';
 import { setServices } from './registry/services';
@@ -30,7 +31,8 @@ import { resolveModels } from './threads/factory';
 const logger = createLogger('background');
 
 // Every run belongs to a thread; the manager runs several at once, each on its own tabs
-const threads = new ThreadManager();
+// Failed runs are queued to try again, or reported once (./retry)
+const threads = new ThreadManager(undefined, runEndings);
 const meetings = new MeetingManager();
 const kb = new KnowledgeBase();
 setKnowledgeBase(kb);

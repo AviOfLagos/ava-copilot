@@ -3257,6 +3257,69 @@
   "retry_action": {
     "message": "Retry"
   },
+  "retry_queued": {
+    "message": "It stopped before it finished. Trying again in $1 min (try $2 of $3)."
+  },
+  "retry_stopped": {
+    "message": "Stopped. It will not be tried again by itself."
+  },
+  "retry_banner": {
+    "message": "Trying again at $1 (try $2 of $3)"
+  },
+  "retry_stopTrying": {
+    "message": "Stop trying"
+  },
+  "retry_untitled": {
+    "message": "a task"
+  },
+  "retry_stuck_title": {
+    "message": "Stuck on $1"
+  },
+  "retry_stuck_line": {
+    "message": "Stuck on $1: $2 $3"
+  },
+  "retry_need_temporary": {
+    "message": "I tried $1 more times. Open the chat and press Retry when you want another go."
+  },
+  "retry_need_cannot": {
+    "message": "I cannot do this one. Open the chat to see where it stopped."
+  },
+  "retry_need_key": {
+    "message": "Check the model key in Settings, then press Retry in the chat."
+  },
+  "retry_need_model": {
+    "message": "The model in Settings was not found. Pick another one, then press Retry in the chat."
+  },
+  "retry_need_billing": {
+    "message": "The model account is out of credit or over its limit. Fix that, then press Retry in the chat."
+  },
+  "retry_need_debugger": {
+    "message": "The debugging bar has to stay open while I work. Press Retry in the chat."
+  },
+  "retry_need_extension": {
+    "message": "Another extension is using the tab. Turn it off, then press Retry in the chat."
+  },
+  "retry_need_user": {
+    "message": "It needs you. Open the chat to see the step, then press Continue."
+  },
+  "retry_needs_login": {
+    "message": "Sign in needed: $1"
+  },
+  "retry_needs_captcha": {
+    "message": "A CAPTCHA needs you: $1"
+  },
+  "retry_needs_code": {
+    "message": "A code is needed: $1"
+  },
+  "retry_needs_cap": {
+    "message": "The spending limit needs you: $1"
+  },
+  "retry_needs_body": {
+    "message": "Open the chat, do the step on $1 yourself, then press Continue."
+  },
+  "retry_needs_bodyNoHost": {
+    "message": "Open the chat, do the step yourself, then press Continue."
+  },
   "retry_fromHere": {
     "message": "Retry from here"
   },
