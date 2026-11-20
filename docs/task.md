@@ -2574,6 +2574,30 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Not built here: the Team section (#78). From #32, still open: asking for the Mac's Calendar permission again while
   it is lost, and showing it on the setup checklist.
 
+### Ava knows every open tab (2026-11-20, #68, docs/growth-team.md Part 3)
+
+- `src/background/browser/tabRegistry.ts`: per tab its window, address, site, title, when it opened and when it was
+  last in front, fed by the tab events and kept in `chrome.storage.session`. `list()` always asks Chrome which tabs
+  exist now, so a missed event can make an age wrong but never lists a tab that is gone. Private windows, pop-up
+  windows and the agents' own window are never listed. Which task holds a tab is asked from the thread manager when
+  the list is read (`src/background/tabs/register.ts`).
+- A new task that names a site the user already has open starts on that tab, in whichever window it is
+  (`tabsToBind(windowId, hint)`, `tabs/reuse.ts`). The hint is plain code (`tabs/hint.ts`): a written address
+  ("facebook.com"), or the site's name after a word that points at a place ("on Slack", "go to Facebook"). A task
+  about the page in front ("summarise this page") names no site. The chat says "Using the facebook.com tab you
+  already have open." and the tab comes to the front of its own window.
+- `_adoptable` (`browser/context.ts`): a task a person gave (typed, said, sent from WhatsApp) may take a free tab from
+  any ordinary window. **A decision beyond the spec:** an agent's or a routine's run keeps the old rule, the windows
+  it already works in, so it never takes a tab the user has open (`TabBinding.anyWindow`).
+- The state message lists the task's own window one by one, as before, and sums up the other windows by site:
+  "facebook.com: 1 tab, open 3 h, last used 20 min ago", at most 30 lines, busy tabs marked (`tabs/section.ts`).
+  `find_tab(query)` gives ids for `switch_tab`; titles come back wrapped as outside content.
+- `groupTabs` groups only the tabs in the first tab's window: grouping a tab taken over elsewhere would move it.
+- No new permission. Not built here: `history` as an optional permission and `search_history` (the second half of
+  Part 3, to follow once reuse has been used for a while).
+- Tests: `browser/__tests__/tabRegistry.test.ts`, `tabs/__tests__`, the "#68" block in
+  `threads/__tests__/manager.test.ts`, and `e2e/tabs.e2e.mjs` (a second window, real tabs).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

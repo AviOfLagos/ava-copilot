@@ -9,6 +9,7 @@ import { skillSectionFor } from '@src/background/skills/inject';
 import { workspaceSectionFor } from '@src/background/workspaces/inject';
 import { connectorToolsSectionFor } from '@src/background/integrations/section';
 import { teamSectionFor } from '@src/background/agents/team-section';
+import { tabsViewFor } from '@src/background/tabs/section';
 
 const logger = createLogger('BasePrompt');
 /**
@@ -83,8 +84,10 @@ abstract class BasePrompt {
     const tools = await connectorToolsSectionFor(context);
     const team = await teamSectionFor(context);
     const currentTab = `{id: ${browserState.tabId}, url: ${browserState.url}, title: ${browserState.title}}`;
+    // Tabs in the user's other windows are summed up by site instead of listed one by one (find_tab gives ids)
+    const tabsView = await tabsViewFor(context, browserState);
     const otherTabs = browserState.tabs
-      .filter(tab => tab.id !== browserState.tabId)
+      .filter(tab => tab.id !== browserState.tabId && (tabsView.near?.has(tab.id) ?? true))
       .map(tab => `- {id: ${tab.id}, url: ${tab.url}, title: ${tab.title}}`);
     const stateDescription = `
 [Task history memory ends]
@@ -93,7 +96,7 @@ The following is one-time information - if you need to remember it write it to m
 Current tab: ${currentTab}
 Other available tabs:
   ${otherTabs.join('\n')}
-Interactive elements from top layer of the current page inside the viewport:
+${tabsView.section}Interactive elements from top layer of the current page inside the viewport:
 ${formattedElementsText}
 ${stepInfoDescription}
 ${actionResultsDescription}

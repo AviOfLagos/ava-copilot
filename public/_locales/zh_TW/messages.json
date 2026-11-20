@@ -1110,6 +1110,9 @@
   "threads_tabInUse": {
     "message": "Tab is in use by thread \"$1\"."
   },
+  "threads_reusedTab": {
+    "message": "使用你已開啟的 $1 分頁。"
+  },
   "threads_tabClosed": {
     "message": "The tab this thread was working in was closed."
   },

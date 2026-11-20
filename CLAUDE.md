@@ -39,6 +39,9 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   `src/side-panel/components/ai` are ported from AI Elements (Apache 2.0, keep the header notice); `components/ui` holds
   the orbs (MorphOrb, LiveOrb, the dotted ThinkingOrb) and primitives. MorphOrb animates on animation frames, so E2E
   tests bring the panel tab to the front before using it.
+- Open tabs: `src/background/browser/tabRegistry.ts` (ages and last use, in session storage) and `src/background/tabs`
+  (the site a task names, `find_tab`, the state message's list by site). A person's task may start on, or move to, a
+  free tab in any ordinary window; an agent's run stays in the windows it already uses (`TabBinding.anyWindow`).
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

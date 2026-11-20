@@ -1110,6 +1110,9 @@
   "threads_tabInUse": {
     "message": "Tab is in use by thread \"$1\"."
   },
+  "threads_reusedTab": {
+    "message": "Using the $1 tab you already have open."
+  },
   "threads_tabClosed": {
     "message": "The tab this thread was working in was closed."
   },

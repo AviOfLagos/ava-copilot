@@ -30,3 +30,4 @@ import './update/register';
 import './setup/register';
 import './telemetry/register';
 import './once/register';
+import './tabs/register';
