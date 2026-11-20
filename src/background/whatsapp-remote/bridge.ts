@@ -500,6 +500,8 @@ export class WhatsAppBridge {
         return;
       }
       if (thread.status === 'error') {
+        // Queued to try again by itself (src/background/retry): he hears when it is done, or stuck for good
+        if (thread.failure?.retryAt) return;
         await this.say(t('wava_reply_stopped', [plainOutside(thread.error?.message ?? '', 200)]), 'reply', replyTo);
         return;
       }

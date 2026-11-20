@@ -3257,6 +3257,63 @@
   "retry_action": {
     "message": "Tentar de novo"
   },
+  "retry_queued": {
+    "message": "Parou antes de terminar. Tentando de novo em $1 min (tentativa $2 de $3)."
+  },
+  "retry_stopped": {
+    "message": "Parado. Não será tentado de novo sozinho."
+  },
+  "retry_banner": {
+    "message": "Tentando de novo às $1 (tentativa $2 de $3)"
+  },
+  "retry_stopTrying": {
+    "message": "Parar de tentar"
+  },
+  "retry_untitled": {
+    "message": "uma tarefa"
+  },
+  "retry_stuck_title": {
+    "message": "Travado em $1"
+  },
+  "retry_stuck_line": {
+    "message": "Travado em $1: $2 $3"
+  },
+  "retry_need_temporary": {
+    "message": "Tentei mais $1 vezes. Abra a conversa e pressione Tentar de novo quando quiser outra tentativa."
+  },
+  "retry_need_cannot": {
+    "message": "Não consigo fazer esta. Abra a conversa para ver onde parou."
+  },
+  "retry_need_key": {
+    "message": "Verifique a chave do modelo em Configurações e pressione Tentar de novo na conversa."
+  },
+  "retry_need_debugger": {
+    "message": "A barra de depuração precisa ficar aberta enquanto eu trabalho. Pressione Tentar de novo na conversa."
+  },
+  "retry_need_extension": {
+    "message": "Outra extensão está usando a aba. Desative-a e pressione Tentar de novo na conversa."
+  },
+  "retry_need_user": {
+    "message": "Precisa de você. Abra a conversa para ver o passo e pressione Continuar."
+  },
+  "retry_needs_login": {
+    "message": "É preciso entrar na conta: $1"
+  },
+  "retry_needs_captcha": {
+    "message": "Um CAPTCHA precisa de você: $1"
+  },
+  "retry_needs_code": {
+    "message": "É preciso um código: $1"
+  },
+  "retry_needs_cap": {
+    "message": "O limite de gastos precisa de você: $1"
+  },
+  "retry_needs_body": {
+    "message": "Abra a conversa, faça o passo em $1 você mesmo e pressione Continuar."
+  },
+  "retry_needs_bodyNoHost": {
+    "message": "Abra a conversa, faça o passo você mesmo e pressione Continuar."
+  },
   "retry_fromHere": {
     "message": "Repetir a partir daqui"
   },

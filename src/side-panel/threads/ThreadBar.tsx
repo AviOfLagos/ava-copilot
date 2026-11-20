@@ -16,6 +16,8 @@ interface ThreadBarProps {
   onContinue: () => void;
   // Re-runs the thread's last task with a fresh agent; shown for every error kind
   onRetry: () => void;
+  // Drops the try that is queued for a task that stopped by itself
+  onStopRetry?: () => void;
   // Opens the notes of the meeting this thread was made for
   onOpenMeeting?: () => void;
   onWorkspace: (workspaceId: string | null) => void;
@@ -31,6 +33,7 @@ export default function ThreadBar({
   onRebind,
   onContinue,
   onRetry,
+  onStopRetry,
   onOpenMeeting,
   onPopOut,
   onWorkspace,
@@ -146,8 +149,24 @@ export default function ThreadBar({
         <div
           role="status"
           className="border-destructive/40 bg-destructive/10 flex items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-[12px]">
-          <span>{thread.error.message}</span>
+          <span>
+            {thread.error.message}
+            {thread.failure?.retryAt && (
+              <span className="text-muted-foreground block">
+                {t('retry_banner', [
+                  new Date(thread.failure.retryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  String(thread.autoTries ?? 1),
+                  '3',
+                ])}
+              </span>
+            )}
+          </span>
           <div className="flex shrink-0 items-center gap-1.5">
+            {thread.failure?.retryAt && onStopRetry && (
+              <Button size="sm" variant="outline" onClick={onStopRetry}>
+                {t('retry_stopTrying')}
+              </Button>
+            )}
             {thread.error.kind !== 'failed' && (
               <Button size="sm" variant="destructive" onClick={onContinue}>
                 {thread.error.kind === 'tab_closed' ? t('threads_reopenContinue') : t('threads_continue')}

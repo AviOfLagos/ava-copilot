@@ -74,6 +74,14 @@ class FakeExecutor {
   addFollowUpTask(task: string) {
     this.tasks.push(task);
   }
+  // What the executor knows about why it failed (src/background/retry/classify.ts)
+  failureCode: string | null = null;
+  /** Ends the run the way a failed task does. */
+  async fail(message: string, code: string | null = 'max_failures') {
+    this.failureCode = code;
+    await this.emit(Actors.SYSTEM, ExecutionState.TASK_FAIL, message);
+    this.finish();
+  }
   // Whether the task typed into a field or clicked a submit in its last steps, and what the model is told next
   midForm = false;
   notes: string[] = [];
@@ -192,6 +200,9 @@ function installChrome() {
 // --- tests -------------------------------------------------------------------------------------
 
 const { ThreadManager } = await import('../manager');
+const { RunEndings, retryJobKey } = await import('../../retry/endings');
+import type { RetryPayload } from '../../retry/endings';
+import type { InboxItem } from '@extension/storage';
 
 let db: AviCopilotDb;
 let store: ThreadStore;
@@ -789,5 +800,269 @@ describe('ThreadManager', () => {
       expect((await store.get(threadId))?.status).toBe('running');
       expect(manager.isRunning(threadId)).toBe(true);
     });
+  });
+});
+
+/**
+ * Failed tasks retry, then report (docs/growth-team.md, Part 2, issue #66): the thread manager with the real
+ * run endings, over a job list, an Inbox and a list of WhatsApp notices that the tests can read.
+ */
+describe('failed tasks retry, then report (#66)', () => {
+  let queue: Map<string, { runAt: number; payload: RetryPayload }>;
+  let inbox: Map<string, InboxItem>;
+  let settledItems: string[];
+  let whatsapp: string[];
+  let endings: InstanceType<typeof RunEndings>;
+
+  beforeEach(() => {
+    queue = new Map();
+    inbox = new Map();
+    settledItems = [];
+    whatsapp = [];
+    endings = new RunEndings({
+      schedule: async request => void queue.set(request.key, request),
+      cancelJob: async key => void queue.delete(key),
+      inbox: async draft => {
+        const id = `${draft.source}|${draft.externalId}`;
+        if (!inbox.has(id)) inbox.set(id, { ...draft, id } as unknown as InboxItem);
+      },
+      inboxItem: async id => inbox.get(id),
+      settleInbox: async id => void settledItems.push(id),
+      notice: notice => void whatsapp.push(notice.title),
+      note: (threadId, text) => store.addMessage(threadId, 'system', text),
+      agent: async () => undefined,
+      agentSpentUsd: async () => 0,
+      now: Date.now,
+    });
+    manager = new ThreadManager(store, endings);
+  });
+
+  /** The job runner reaching the queued try: runs it the way the registered handler does. */
+  const runQueuedTry = async (threadId: string) => {
+    const key = [...queue.keys()].find(candidate => candidate.startsWith(`thread-retry:${threadId}:`));
+    const job = key ? queue.get(key) : undefined;
+    if (!key || !job) throw new Error('no try is queued');
+    queue.delete(key);
+    await endings.runRetry(
+      { payload: job.payload, attempts: 1 },
+      {
+        thread: id => store.get(id),
+        resume: id => manager.continueThread(id, undefined, { auto: true }),
+        postpone: (id, retryAt) => manager.postponeRetry(id, retryAt),
+        giveUp: id => manager.giveUpRetry(id),
+      },
+    );
+    await settle();
+  };
+  const minutesUntil = (at: number) => Math.round((at - Date.now()) / 60_000);
+  /** Fails the running task and waits until its end is written. */
+  const failRun = async (threadId: string, message: string, code: string | null = 'max_failures') => {
+    await lastExecutor().fail(message, code);
+    for (let i = 0; i < 200 && manager.isRunning(threadId); i++) await settle();
+  };
+
+  it('finishes a task on a later try, with nobody touching it, after the network dropped', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    const task = (await store.get(threadId))!.taskRunId;
+    await failRun(threadId, 'net::ERR_INTERNET_DISCONNECTED');
+
+    // Not silent, and not given up: it is queued to try again in a minute
+    let thread = await store.get(threadId);
+    expect(thread?.status).toBe('error');
+    expect(thread?.failure).toMatchObject({ cls: 'temporary', reported: false });
+    expect(minutesUntil(thread!.failure!.retryAt!)).toBe(1);
+    expect(thread?.autoTries).toBe(1);
+    expect((await store.messages(threadId)).at(-1)?.content).toBe('retry_queued:1:1:3');
+    expect(inbox.size).toBe(0);
+
+    await runQueuedTry(threadId);
+
+    // The same task, picked up from its transcript by a new run
+    thread = await store.get(threadId);
+    expect(thread?.status).toBe('running');
+    expect(thread?.taskRunId).toBe(task);
+    expect(thread?.failure).toBeNull();
+    expect(FakeExecutor.created).toHaveLength(2);
+    expect(lastExecutor().options.task).toBe('Summarise the top story');
+    expect(lastExecutor().options.messageContext).toContain('interrupted and is now resumed');
+
+    await lastExecutor().complete('The top story is about retries.');
+    await settle();
+    thread = await store.get(threadId);
+    expect(thread?.status).toBe('idle');
+    expect(thread?.failure).toBeNull();
+    expect(inbox.size).toBe(0);
+    expect(whatsapp).toEqual([]);
+    expect(queue.size).toBe(0);
+  });
+
+  it('tries after 1, 5 and 15 minutes, then leaves exactly one Inbox item and one WhatsApp line', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    const waits: number[] = [];
+    for (let round = 0; round < 3; round++) {
+      await failRun(threadId, 'The page did not load');
+      waits.push(minutesUntil((await store.get(threadId))!.failure!.retryAt!));
+      expect(inbox.size).toBe(0);
+      await runQueuedTry(threadId);
+    }
+    expect(waits).toEqual([1, 5, 15]);
+
+    await failRun(threadId, 'The page did not load');
+    const thread = await store.get(threadId);
+    expect(thread?.failure).toEqual({ cls: 'temporary', retryAt: null, reported: true });
+    expect(queue.size).toBe(0);
+    expect(FakeExecutor.created).toHaveLength(4);
+    expect([...inbox.values()].map(item => item.title)).toEqual(['retry_stuck_title:Summarise the top story']);
+    expect(whatsapp).toHaveLength(1);
+    expect(whatsapp[0]).toContain('retry_stuck_line:Summarise the top story:The page did not load.');
+  });
+
+  it('does not retry a task that needs the user: one Inbox item says what to do', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    await failRun(threadId, 'The API key was refused', 'auth');
+    expect((await store.get(threadId))?.failure).toEqual({ cls: 'needs_user', retryAt: null, reported: true });
+    expect(queue.size).toBe(0);
+    expect([...inbox.values()].map(item => item.body)).toEqual(['The API key was refused. retry_need_key']);
+    expect(whatsapp).toEqual([]);
+  });
+
+  it('produces exactly one Inbox item that says so when a task needs a sign-in, and settles it after', async () => {
+    browser.open('https://admin.example/login');
+    const threadId = await manager.send({ text: 'Check the waitlist' });
+    const signIn = (id: string) =>
+      JSON.stringify({
+        id,
+        taskId: threadId,
+        mode: 'needs_user',
+        kind: 'login',
+        intent: 'Sign in',
+        target: 'Password',
+        pageTitle: 'Sign in',
+        pageUrl: 'https://admin.example/login',
+        fields: [],
+        context: '',
+      });
+    await lastExecutor().emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, signIn('r1'));
+    await settle();
+    // The page asks again (a second form): still one item
+    await lastExecutor().emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, signIn('r2'));
+    await settle();
+
+    expect([...inbox.values()]).toHaveLength(1);
+    expect([...inbox.values()][0]).toMatchObject({
+      kind: 'approval',
+      title: 'retry_needs_login:Check the waitlist',
+      body: 'retry_needs_body:admin.example',
+      approval: { requestId: `thread:${threadId}`, action: 'open_thread' },
+    });
+    expect(queue.size).toBe(0);
+
+    await manager.answer(threadId, 'r2', true);
+    await settle();
+    expect(settledItems).toContain([...inbox.keys()][0]);
+  });
+
+  it('queues a task whose tab closed in the middle of a form, and the try reopens its page without taking the screen', async () => {
+    const tabId = browser.open('https://form.example/quote');
+    const threadId = await manager.send({ text: 'Fill the form' });
+    lastExecutor().midForm = true;
+    browser.tabs.delete(tabId);
+    await manager.onTabRemoved(tabId);
+    for (let i = 0; i < 200 && manager.isRunning(threadId); i++) await settle();
+    expect((await store.get(threadId))?.error?.kind).toBe('tab_closed');
+    expect((await store.get(threadId))?.failure?.cls).toBe('temporary');
+    expect(browser.tabs.size).toBe(0);
+
+    await runQueuedTry(threadId);
+    const thread = await store.get(threadId);
+    expect(thread?.status).toBe('running');
+    expect(browser.tabs.get(thread!.boundTabIds[0])).toMatchObject({
+      url: 'https://form.example/quote',
+      active: false,
+    });
+    // The retry starts by checking what already happened
+    expect(lastExecutor().options.messageContext).toContain('interrupted and is now resumed');
+  });
+
+  it('is not tried again once Stop is pressed while a try is queued', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    await failRun(threadId, 'The page did not load');
+    expect(queue.size).toBe(1);
+
+    await manager.cancel(threadId);
+    expect(queue.size).toBe(0);
+    expect((await store.get(threadId))?.failure).toMatchObject({ retryAt: null, reported: false });
+    expect((await store.messages(threadId)).at(-1)?.content).toBe('retry_stopped');
+    expect(inbox.size).toBe(0);
+  });
+
+  it('drops the queued try and starts counting again when the user sends something new or retries themself', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    await failRun(threadId, 'The page did not load');
+    expect((await store.get(threadId))?.autoTries).toBe(1);
+
+    await manager.retry(threadId);
+    expect(queue.size).toBe(0);
+    expect((await store.get(threadId))?.autoTries).toBe(0);
+    await failRun(threadId, 'The page did not load');
+    expect(queue.size).toBe(1);
+
+    await manager.send({ threadId, text: 'Never mind, open the sports page' });
+    expect(queue.size).toBe(0);
+    const thread = await store.get(threadId);
+    expect(thread?.autoTries).toBe(0);
+    expect(thread?.failure).toBeNull();
+  });
+
+  it('does not try, and does not report, a run that its owner stopped and reports itself', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Agent task' });
+    await manager.cancel(threadId, { kind: 'failed', message: 'It spent its money for today.', quiet: true });
+    await settle();
+    const thread = await store.get(threadId);
+    expect(thread?.error).toEqual({ kind: 'failed', message: 'It spent its money for today.' });
+    expect(thread?.failure ?? null).toBeNull();
+    expect(queue.size).toBe(0);
+    expect(inbox.size).toBe(0);
+  });
+
+  it('puts a waiting chat’s try back in the job list when the background starts', async () => {
+    browser.open('https://news.example/');
+    const threadId = await manager.send({ text: 'Summarise the top story' });
+    await failRun(threadId, 'The page did not load');
+    const retryAt = (await store.get(threadId))!.failure!.retryAt;
+    queue.clear();
+
+    await manager.recover();
+    expect(queue.get(retryJobKey(threadId, 0))).toMatchObject({ runAt: retryAt });
+  });
+
+  it('queues a run the background cut off a moment ago, and only reports one left for hours', async () => {
+    const recent = await store.create({
+      status: 'running',
+      activeTask: 'Post the note',
+      runStartedAt: Date.now() - 5000,
+    });
+    const old = await store.create({
+      title: 'Send the report',
+      status: 'running',
+      activeTask: 'Send the report',
+      runStartedAt: Date.now() - 3 * 60 * 60 * 1000,
+      updatedAt: Date.now() - 3 * 60 * 60 * 1000,
+    });
+
+    await manager.recover();
+
+    expect((await store.get(recent.id))?.failure).toMatchObject({ cls: 'temporary', reported: false });
+    expect(queue.has(retryJobKey(recent.id, 0))).toBe(true);
+    // Hours later nobody expects it to start by itself: the user is told, once, and continues it when they want
+    expect((await store.get(old.id))?.failure).toEqual({ cls: 'needs_user', retryAt: null, reported: true });
+    expect(queue.has(retryJobKey(old.id, 0))).toBe(false);
+    expect([...inbox.values()].map(item => item.title)).toEqual(['retry_stuck_title:Send the report']);
   });
 });

@@ -334,6 +334,24 @@ describe('answers back on WhatsApp', () => {
     expect(h.sent[0].text).toBe('wava_reply_stopped|The tab was closed.');
   });
 
+  it('says nothing while a stopped turn is queued to try again, and says it stopped once the tries are used up', async () => {
+    const h = harness();
+    const stopped = {
+      status: 'error' as const,
+      error: { kind: 'tab_closed' as const, message: 'The tab was closed.' },
+    };
+    await h.bridge.onThreadUpdate(thread({ status: 'running' }), {
+      ...stopped,
+      failure: { cls: 'temporary', retryAt: Date.now() + 60_000, reported: false },
+    });
+    expect(h.sent).toEqual([]);
+    await h.bridge.onThreadUpdate(thread({ status: 'running' }), {
+      ...stopped,
+      failure: { cls: 'temporary', retryAt: null, reported: true },
+    });
+    expect(h.sent.map(message => message.text)).toEqual(['wava_reply_stopped|The tab was closed.']);
+  });
+
   it('picks the answer after the last message he sent', () => {
     expect(
       answerOf([said(1, 'user', 'a'), said(2, 'planner', 'old'), said(3, 'user', 'b'), said(4, 'system', 'Cancelled')])

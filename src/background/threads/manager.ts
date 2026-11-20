@@ -19,6 +19,8 @@ import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
 import { onceNote } from '../once';
+import type { FailureCode } from '../retry/classify';
+import type { Ending, RunEndings } from '../retry/endings';
 import type { UsageScope } from '../usage/meter';
 import { groupTabs, TabBinding, tabsToBind } from './binding';
 import { createBrowserContext, createExecutor, resolveModels } from './factory';
@@ -50,7 +52,17 @@ const RESUME_NOTE =
   'This task was interrupted and is now resumed. The page may have changed, so read it again before acting. Any action that was waiting for confirmation did not happen.';
 const CONTINUE_TASK = 'Continue the task where you left off.';
 
-type StopReason = { kind: ThreadErrorKind; message: string };
+// An interrupted run that was last active longer ago than this is not tried again by itself either
+const STALE_RUN_MS = 60 * 60 * 1000;
+
+type StopReason = {
+  kind: ThreadErrorKind;
+  message: string;
+  // What is known about why, for the run's failure class (../retry/classify.ts)
+  code?: FailureCode;
+  // Whoever stopped the run reports it itself (an agent's own limits): no retry and no report from here
+  quiet?: boolean;
+};
 
 interface Runner {
   threadId: string;
@@ -71,6 +83,8 @@ interface Runner {
   tabs: Map<number, TabPlace>;
   // The run's one reopening of a closed tab is used up
   reopened: boolean;
+  // The task this run works on (ThreadRecord.taskRunId)
+  taskRunId: string | null;
 }
 
 interface TabPlace {
@@ -129,7 +143,14 @@ export class ThreadManager {
   // Closed tabs already handled, so the second report of the same tab is ignored
   private readonly closedTabs = new Set<number>();
 
-  constructor(private readonly store: ThreadStore = threadStore) {}
+  /**
+   * @param endings - What happens when a run ends with an error: a queued retry, or one report (../retry). Left
+   *   out, a failed run just stays failed, as in most tests.
+   */
+  constructor(
+    private readonly store: ThreadStore = threadStore,
+    private readonly endings: RunEndings | null = null,
+  ) {}
 
   isRunning(threadId: string): boolean {
     return this.running.has(threadId);
@@ -194,7 +215,9 @@ export class ThreadManager {
     const message = await this.store.addMessage(thread.id, 'user', text, { attachments });
     // A new request is a new task: its do-once keys start clean. Resuming or retrying keeps the task it has,
     // so what it already sent is found and not sent again (../once).
-    await this.store.update(thread.id, { taskRunId: message.id });
+    // ...and no try queued for the old one comes back
+    await this.endings?.cancel(thread.id);
+    await this.store.update(thread.id, { taskRunId: message.id, autoTries: 0, failure: null });
     await this.placeInWorkspace(thread, text, request.workspaceId);
     await this.start(
       thread.id,
@@ -274,18 +297,26 @@ export class ThreadManager {
    * Continues a thread that stopped with an error: reopens its page when its tab closed, or picks up
    * an interrupted task.
    */
-  async continueThread(threadId: string, windowId?: number): Promise<void> {
+  async continueThread(threadId: string, windowId?: number, options: { auto?: boolean } = {}): Promise<void> {
     await this.windDown(threadId);
     const thread = await this.store.get(threadId);
     if (!thread || this.running.has(threadId)) {
       return;
     }
     await this.checkCapacity();
+    // The user's own click starts the count of automatic tries again; a queued try is that same task going on
+    if (!options.auto) await this.ownTry(threadId);
 
     let tabIds = await existingTabs(thread.boundTabIds);
     if (tabIds.length === 0 && thread.boundUrl) {
-      const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });
-      const tab = await chrome.tabs.create({ url: thread.boundUrl, windowId: window.id, active: true });
+      // In the window it was in (an agent's own window), else the one the user last worked in
+      const own =
+        thread.boundWindowId != null
+          ? await chrome.windows.get(thread.boundWindowId).catch(() => undefined)
+          : undefined;
+      const window = own ?? (await chrome.windows.getLastFocused({ windowTypes: ['normal'] }));
+      // A try nobody clicked for does not take the user's place on screen
+      const tab = await chrome.tabs.create({ url: thread.boundUrl, windowId: window.id, active: !options.auto });
       tabIds = tab.id !== undefined ? [tab.id] : [];
     }
     const binding = tabIds.length ? new TabBinding(tabIds, null) : await this.bindingFor(thread, windowId);
@@ -313,6 +344,7 @@ export class ThreadManager {
     this.assertFree(threadId, binding.tabIds);
     // A parked agent would carry on from where it stopped; a retry starts over
     this.parked.delete(threadId);
+    await this.ownTry(threadId);
     await this.store.addMessage(threadId, 'system', t('threads_retried'));
     await this.start(threadId, task, binding, false, await this.mediaFor(thread, lastRequest?.attachments ?? []));
   }
@@ -337,6 +369,12 @@ export class ThreadManager {
           true,
         );
       }
+      // Stop on a task that waits to be tried again: it is not tried again
+      if (!this.running.has(threadId) && thread?.status === 'error' && thread.failure?.retryAt) {
+        await this.endings?.cancel(threadId);
+        await this.store.update(threadId, { failure: { ...thread.failure, retryAt: null } });
+        await this.store.addMessage(threadId, 'system', t('retry_stopped'));
+      }
       return;
     }
     // A later reason, e.g. the tab closing while the stop winds down, does not replace the first
@@ -346,6 +384,28 @@ export class ThreadManager {
     }
     runner.cancelled = true;
     await runner.executor.cancel();
+  }
+
+  /** The user starts the task again themself: any queued try is dropped and the automatic tries start over. */
+  private async ownTry(threadId: string): Promise<void> {
+    await this.endings?.cancel(threadId);
+    await this.store.update(threadId, { autoTries: 0 });
+  }
+
+  /** Moves a thread's queued try to a later time (its agent's money for the day is spent). */
+  async postponeRetry(threadId: string, retryAt: number): Promise<void> {
+    const thread = await this.store.get(threadId);
+    if (thread?.status === 'error' && thread.failure?.retryAt) {
+      await this.store.update(threadId, { failure: { ...thread.failure, retryAt } });
+    }
+  }
+
+  /** A queued try could not be started: stop trying and tell the user, once. */
+  async giveUpRetry(threadId: string): Promise<void> {
+    const thread = await this.store.get(threadId);
+    if (!thread || thread.status !== 'error' || !thread.failure || !this.endings) return;
+    await this.endings.report(thread, thread.failure.cls, thread.error?.message ?? '');
+    await this.store.update(threadId, { failure: { ...thread.failure, retryAt: null, reported: true } });
   }
 
   /**
@@ -399,6 +459,8 @@ export class ThreadManager {
       'system',
       approved ? t('gate_approved', [subject]) : t('gate_declinedByUser', [subject]),
     );
+    // The step the Inbox asked for is answered
+    void this.endings?.settled({ id: threadId, taskRunId: runner.taskRunId });
     const state =
       this.running.get(threadId) === runner && !runner.ended
         ? this.store.update(threadId, { pendingRequest: null, status: 'running' })
@@ -420,7 +482,10 @@ export class ThreadManager {
       // The page the run is working on, or its only one
       const current = runner.browserContext.currentTabId ?? null;
       if (before?.url !== tab.url && (current === tabId || (current === null && runner.binding.size === 1))) {
-        await this.store.update(runner.threadId, { boundUrl: tab.url });
+        await this.store.update(runner.threadId, {
+          boundUrl: tab.url,
+          boundWindowId: tab.windowId ?? before?.windowId ?? null,
+        });
       }
     }
   }
@@ -514,7 +579,11 @@ export class ThreadManager {
       runner.browserContext.removeAttachedPage(tabId);
       runner.browserContext.updateCurrentTabId(tab.id);
       runner.tabs.set(tab.id, { url, windowId: window.id });
-      await this.store.update(runner.threadId, { boundTabIds: runner.binding.tabIds, boundUrl: url });
+      await this.store.update(runner.threadId, {
+        boundTabIds: runner.binding.tabIds,
+        boundUrl: url,
+        boundWindowId: window.id,
+      });
 
       await loaded(tab.id, REOPEN_LOAD_MS);
       if (runner.cancelled || runner.ended || this.running.get(runner.threadId) !== runner) {
@@ -551,7 +620,11 @@ export class ThreadManager {
     }
     const threadId = this.holderOf(tabId);
     if (threadId) {
-      await this.cancel(threadId, { kind: 'failed', message: t('threads_debuggerClosed') });
+      await this.cancel(threadId, {
+        kind: 'failed',
+        message: t('threads_debuggerClosed'),
+        code: 'debugger_closed',
+      });
     }
   }
 
@@ -560,6 +633,12 @@ export class ThreadManager {
    * an older one is marked interrupted for the user to continue.
    */
   async recover(): Promise<void> {
+    // A chat waiting to be tried again has its job (again): nothing is left saying "trying again" with no try
+    if (this.endings) {
+      for (const thread of await this.store.db.threads.where('status').equals('error').toArray()) {
+        await this.endings.requeue(thread).catch(error => logger.error('Could not queue a try again', error));
+      }
+    }
     for (const thread of await this.store.unfinished()) {
       const recent = thread.runStartedAt !== null && Date.now() - thread.runStartedAt < RESUME_WINDOW_MS;
       const tabIds = await existingTabs(thread.boundTabIds);
@@ -574,9 +653,28 @@ export class ThreadManager {
           logger.error('Could not resume thread', thread.id, error);
         }
       }
+      const error = {
+        kind: tabIds.length ? ('interrupted' as const) : ('tab_closed' as const),
+        message: t('threads_interrupted'),
+      };
+      // A run cut off a while ago is tried again like any temporary failure. One left for hours (the laptop
+      // slept overnight) does not come back by itself: the user is told and continues it when they want.
+      const stale = Date.now() - thread.updatedAt > STALE_RUN_MS;
+      let ending: Ending | null = null;
+      if (this.endings && stale) {
+        await this.endings.report(thread, 'needs_user', error.message);
+        ending = { failure: { cls: 'needs_user', retryAt: null, reported: true }, autoTries: thread.autoTries ?? 0 };
+      } else if (this.endings) {
+        ending = await this.endings.ended(thread, error, null).catch(problem => {
+          logger.error('Could not settle an interrupted thread', problem);
+          return null;
+        });
+      }
       await this.store.update(thread.id, {
         status: 'error',
-        error: { kind: tabIds.length ? 'interrupted' : 'tab_closed', message: t('threads_interrupted') },
+        error,
+        failure: ending?.failure ?? null,
+        ...(ending ? { autoTries: ending.autoTries } : {}),
         activity: '',
         pendingRequest: null,
       });
@@ -700,11 +798,13 @@ export class ThreadManager {
         error: null,
         activity: '',
         activeTask: task,
+        failure: null,
         runStartedAt: Date.now(),
         pendingRequest: null,
         boundTabIds: binding.tabIds,
         boundGroupId: groupId,
         boundUrl: firstTab?.url ?? thread.boundUrl,
+        boundWindowId: firstTab?.windowId ?? thread.boundWindowId ?? null,
       },
       true,
     );
@@ -723,6 +823,7 @@ export class ThreadManager {
       records: Promise.resolve(),
       tabs: new Map(),
       reopened: false,
+      taskRunId: thread.taskRunId ?? null,
     };
     for (const tabId of binding.tabIds) {
       const tab = tabId === firstTab?.id ? firstTab : await chrome.tabs.get(tabId).catch(() => undefined);
@@ -767,13 +868,23 @@ export class ThreadManager {
       if (!runner.cancelled) {
         this.park(runner);
       }
-      const error = runner.stopReason ?? (runner.failure ? { kind: 'failed' as const, message: runner.failure } : null);
+      const stopped = runner.stopReason;
+      const error = stopped
+        ? { kind: stopped.kind, message: stopped.message }
+        : runner.failure
+          ? { kind: 'failed' as const, message: runner.failure }
+          : null;
+      const ending = error && !stopped?.quiet ? await this.settle(runner, error) : null;
+      await this.endings?.settled({ id: runner.threadId, taskRunId: runner.taskRunId });
       try {
         await this.store.update(
           runner.threadId,
           {
             status: error ? 'error' : 'idle',
             error,
+            // Written with the status, so whoever sees the error also sees whether a try is queued
+            failure: ending?.failure ?? null,
+            ...(ending ? { autoTries: ending.autoTries } : {}),
             activity: '',
             activeTask: error ? runner.executor.currentTask : null,
             runStartedAt: null,
@@ -788,6 +899,22 @@ export class ThreadManager {
         this.running.delete(runner.threadId);
         this.updateKeepAlive();
       }
+    }
+  }
+
+  /**
+   * A run ended with an error: it is queued to be tried again, or the user is told, before the thread shows the
+   * error (../retry). Never throws: the run's end is written whatever happens here.
+   */
+  private async settle(runner: Runner, error: { kind: ThreadErrorKind; message: string }): Promise<Ending | null> {
+    if (!this.endings) return null;
+    try {
+      const thread = await this.store.get(runner.threadId);
+      if (!thread) return null;
+      return await this.endings.ended(thread, error, runner.stopReason?.code ?? runner.executor.failureCode);
+    } catch (problem) {
+      logger.error('Could not settle a failed run', problem);
+      return null;
     }
   }
 
@@ -815,6 +942,9 @@ export class ThreadManager {
           t('gate_waiting', [effect.request.target || effect.request.intent]),
         );
         await this.store.update(runner.threadId, { pendingRequest: effect.request, status: 'waiting_confirm' });
+        // A step only the user can do (a sign-in, a CAPTCHA) is also one item in the Inbox, saying which
+        const thread = this.endings ? await this.store.get(runner.threadId) : undefined;
+        if (thread) await this.endings?.asked(thread, effect.request);
       }
       if (effect.activity !== undefined) {
         await this.store.update(runner.threadId, { activity: effect.activity });
