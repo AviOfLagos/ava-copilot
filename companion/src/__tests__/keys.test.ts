@@ -121,7 +121,8 @@ describe('the masker process', () => {
 
   it('does not hang on a daemon that keeps the output open, and stops it', () => {
     const started = Date.now();
-    const r = runMasker('sleep 60 & echo "bg=$!"; echo done', { API_KEY: SECRET });
+    // the daemon ignores SIGTERM: only SIGKILL stops it
+    const r = runMasker('sh -c \'trap "" TERM; sleep 60\' & echo "bg=$!"; echo done', { API_KEY: SECRET });
     expect(Date.now() - started).toBeLessThan(15_000);
     expect(r.report?.stdout).toContain('done');
     const pid = Number(/bg=(\d+)/.exec(r.report?.stdout ?? '')?.[1]);
@@ -185,7 +186,9 @@ describe('run_with_secrets', () => {
 
   it('passes on only offboard\'s own lines when nothing ran', async () => {
     const runner = fakeRunner(call =>
-      call.args[0] === 'list' ? { stdout: LIST } : { code: 1, stderr: `node: something quoting ${SECRET}\nvault: refused: parent has NODE_X set\n` },
+      call.args[0] === 'list'
+        ? { stdout: LIST }
+        : { code: 1, stderr: `node: something quoting ${SECRET}\nvault: The property 'options.env['X']' Received '${SECRET}'\nvault: refused: parent has NODE_X set\n` },
     );
     const result = await runWithSecrets(req, deps(runner));
     expect(result.message).toContain('vault: refused');

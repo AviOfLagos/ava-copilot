@@ -198,7 +198,8 @@ export async function runWithSecrets(req: RunRequest, deps: RunDeps): Promise<Ru
     const why = redactSecrets(
       result.stderr
         .split('\n')
-        .filter(line => line.startsWith('vault:'))
+        // node's own spawn errors quote env values ("Received '...'"): never pass those on
+        .filter(line => line.startsWith('vault:') && !/Received|options\.env/.test(line))
         .slice(-3)
         .join(' ')
         .slice(0, 400),

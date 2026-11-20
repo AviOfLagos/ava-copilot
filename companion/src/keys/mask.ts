@@ -119,8 +119,15 @@ async function main(): Promise<void> {
   });
   clearTimeout(timer);
   clearInterval(watch);
-  // Nothing the command started may outlive it with the secrets in its environment
-  stopGroup();
+  // Nothing the command started may outlive it with the secrets in its environment. The leader is gone, so the
+  // group gets SIGKILL now (a SIGTERM-ignoring daemon would otherwise outlive our exit)
+  if (child.pid) {
+    try {
+      process.kill(-child.pid, 'SIGKILL');
+    } catch {
+      // group already empty
+    }
+  }
   emit({
     ...base,
     exitCode: result.code,

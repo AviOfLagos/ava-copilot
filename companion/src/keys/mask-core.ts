@@ -70,7 +70,7 @@ export function base64Cores(bytes: Buffer): string[] {
     const b64 = Buffer.concat([Buffer.alloc(k), bytes]).toString('base64');
     const core = b64.slice(Math.ceil((8 * k) / 6), Math.floor((8 * n) / 6));
     // Too short a core would mask ordinary text by chance
-    if (core.length >= 8) out.push(core, core.replace(/\+/g, '-').replace(/\//g, '_'));
+    if (core.length >= 6) out.push(core, core.replace(/\+/g, '-').replace(/\//g, '_'));
   }
   return out;
 }
