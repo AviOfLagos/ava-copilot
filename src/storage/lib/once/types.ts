@@ -7,9 +7,8 @@
  *   here: the step may or may not have gone through, so it is never repeated without the user's click.
  * - 'done': the act returned and its result was recorded. A retry skips it.
  * - 'failed': the act certainly did not happen (the tool refused it, the page was never touched). It may run again.
- * - 'superseded': the user looked at a 'started' or 'done' step and chose to run it again; the newer record counts.
  */
-export type OnceStatus = 'started' | 'done' | 'failed' | 'superseded';
+export type OnceStatus = 'started' | 'done' | 'failed';
 
 export interface OnceRecord {
   // `${taskId}|${what}|${target}`: the primary key, so two writers can never both start the same step
@@ -39,6 +38,9 @@ export interface OnceRecord {
   result: string | null;
   // When the model was last told this step already exists, so a second try in the same run goes to the user
   toldAt: number | null;
+  // When the user, shown that this step was cut off, approved a different step on the same site or tool. From
+  // then on it holds back only itself (its own key), not everything else there.
+  ackAt: number | null;
 }
 
 export interface OnceStep {

@@ -266,7 +266,8 @@ export class ActionBuilder {
 
         try {
           const initialTabIds = await this.context.browserContext.getAllTabIds();
-          await page.clickElementNode(this.context.options.useVision, elementNode);
+          // A click that commits is tried once: a second try could send twice
+          await page.clickElementNode(this.context.options.useVision, elementNode, { once: review.commit !== null });
           let msg = t('act_click_ok', [input.index.toString(), elementNode.getAllTextTillNextClickableElement(2)]);
           logger.info(msg);
           const verification = await verifyCommit(this.context, page, review.commit);

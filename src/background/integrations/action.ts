@@ -117,7 +117,8 @@ export async function callToolAction(
         });
   const once = step ? await checkOnce(context, step) : { state: 'clear' as const };
   if (once.state === 'told') return once.result;
-  const repeat = once.state === 'ask' ? once.repeat : undefined;
+  const asked = once.state === 'ask' ? once : null;
+  const repeat = asked?.repeat;
 
   if (policy === 'approve') {
     // In a chat an agent or a routine started, the card waits there and the Inbox points the user to it
@@ -137,7 +138,7 @@ export async function callToolAction(
   }
 
   // "Started" is written before the call, so a background that dies mid-call leaves a record a retry will find
-  const claim = step ? await beginOnce(context, step, repeat !== undefined) : null;
+  const claim = step ? await beginOnce(context, step, asked) : null;
   if (claim && 'result' in claim) return claim.result;
   const onceKey = claim?.record.key ?? null;
   if (claim) await passKey(fingerprint.inputSchema, prepared.args, claim.record);

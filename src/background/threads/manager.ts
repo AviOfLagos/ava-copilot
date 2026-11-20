@@ -484,7 +484,7 @@ export class ThreadManager {
       }
     }
     // A run that picks a task up again is told what the task already sent and what was cut off mid-send
-    const note = [resumed ? RESUME_NOTE : '', await onceNote(thread.taskRunId)].filter(Boolean).join('\n\n');
+    const note = [resumed ? RESUME_NOTE : '', await onceNote(thread)].filter(Boolean).join('\n\n');
     return buildRunContext({ memory }, recent, note);
   }
 

@@ -295,7 +295,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   if (once.state === 'told') {
     return { proceed: false, result: once.result };
   }
-  const repeat = once.state === 'ask' ? once.repeat : undefined;
+  const asked = once.state === 'ask' ? once : null;
+  const repeat = asked?.repeat;
 
   const settings = await gateSettingsStore.getSettings();
   // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
@@ -328,7 +329,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     logger.warning('Could not read the page before the commit', error);
   }
   // "Started" is written last, right before the caller acts: nothing between here and the act can fail quietly
-  const claim = step ? await beginOnce(context, step, repeat !== undefined) : null;
+  const claim = step ? await beginOnce(context, step, asked) : null;
   if (claim && 'result' in claim) {
     return { proceed: false, result: claim.result };
   }
@@ -359,21 +360,27 @@ export async function verifyCommit(context: AgentContext, page: Page, commit: Ap
   await new Promise(resolve => setTimeout(resolve, VERIFY_DELAY_MS));
 
   let message = t('gate_verify_unknown');
+  // What the page showed, in words that keep nothing of it: no address, no text
+  let outcome: string | null = null;
   try {
     const effect = await page.evaluateInPage(readCommitEffect, commit.snippets);
     if (effect.visible.some((count, i) => count > commit.visibleBefore[i])) {
       message = t('gate_verify_shown');
+      outcome = 'the page showed it';
     } else if (effect.url !== commit.urlBefore) {
       message = t('gate_verify_moved', [effect.url]);
+      outcome = 'the page moved on';
     } else if (commit.snippets.length > 0 && !effect.pending.some(Boolean)) {
       message = t('gate_verify_cleared');
+      outcome = 'the text left the box';
     }
   } catch (error) {
     logger.warning('Could not read the page after the commit', error);
   }
 
-  // The action returned: the step is done, with what the page showed
-  await settleCommit(commit, message);
+  // The page shows it went through: the step is done. When the page shows nothing (a validation error, an
+  // overlay, a slow site), the step stays at "started": saying "already done" then could drop a send for good.
+  if (outcome) await settleCommit(commit, outcome);
   await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_VERIFY, message);
   return message;
 }

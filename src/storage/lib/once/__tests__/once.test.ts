@@ -69,29 +69,63 @@ describe('do-once records', () => {
     await once.begin(step());
     // The same send in other words hashes differently, but the cut-off one still stands in the way
     const reworded = step({ target: 'hash-b' });
-    expect((await once.blocking(reworded))?.target).toBe('hash-a');
+    expect(await once.blocking(reworded)).toMatchObject({ why: 'cut_off', record: { target: 'hash-a' } });
     expect((await once.begin(reworded)).fresh).toBe(false);
-    // Another tool, or another task, is not held up
+    // Another tool is not held up, and neither is another chat
     expect(await once.blocking(step({ target: 'hash-b', scope: 'slack:post_message' }))).toBeNull();
-    expect(await once.blocking(step({ taskId: 'task-2' }))).toBeNull();
+    expect(await once.blocking(step({ taskId: 'task-2', threadId: 'thread-2' }))).toBeNull();
   });
 
-  it('does not block further steps on a site once the earlier one is done', async () => {
+  it('keeps a cut-off step in the way when the same chat asks again: "continue" is a new task, not a new outcome', async () => {
+    await once.begin(step());
+    const nextRequest = step({ taskId: 'task-2', target: 'hash-b' });
+    expect(await once.blocking(nextRequest)).toMatchObject({ why: 'cut_off', record: { taskId: 'task-1' } });
+    expect((await once.begin(nextRequest)).fresh).toBe(false);
+  });
+
+  it('does not block further steps of the same run once the earlier one is done', async () => {
     const { record } = await once.begin(step());
     await once.finish(record.key, 'sent');
-    expect(await once.blocking(step({ target: 'hash-b' }))).toBeNull();
+    expect(await once.blocking(step({ target: 'hash-b' }), record.startedAt - 1)).toBeNull();
     expect((await once.begin(step({ target: 'hash-b' }))).fresh).toBe(true);
   });
 
-  it('runs a step again only when the user chose to, and sets the cut-off ones aside', async () => {
-    await once.begin(step());
-    const again = await once.begin(step({ target: 'hash-b' }), { again: true });
-    expect(again.fresh).toBe(true);
-    expect((await once.get(onceKey(step())))?.status).toBe('superseded');
-    // The same step the user re-runs keeps count, and a done one counts as redone
-    await once.finish(again.record.key, 'sent');
-    const third = await once.begin(step({ target: 'hash-b' }), { again: true });
-    expect(third.record.attempts).toBe(2);
+  it('stands in the way of a later run of the task that sends there again: it may be the same in other words', async () => {
+    const { record } = await once.begin(step());
+    await once.finish(record.key, 'sent');
+    const retriedAt = record.startedAt + 1;
+    const reworded = step({ target: 'hash-b' });
+    expect(await once.blocking(reworded, retriedAt)).toMatchObject({ why: 'earlier', record: { target: 'hash-a' } });
+    expect((await once.begin(reworded, { since: retriedAt })).fresh).toBe(false);
+    // Another task, even in the same chat, starts clean: a new request is the user's to make
+    expect(await once.blocking(step({ taskId: 'task-2', target: 'hash-b' }), retriedAt)).toBeNull();
+  });
+
+  it('runs a step in the way of a cut-off one only when the user chose to, and the cut-off one still blocks itself', async () => {
+    const cutOff = await once.begin(step());
+    const other = step({ target: 'hash-b' });
+    // The user saw the card about the cut-off step and approved this other one
+    const approved = await once.begin(other, { again: true, ack: cutOff.record.key });
+    expect(approved.fresh).toBe(true);
+    await once.finish(approved.record.key, 'sent');
+
+    // The click was on the other step's content: the cut-off step itself is still never repeated by itself
+    const first = await once.get(cutOff.record.key);
+    expect(first?.status).toBe('started');
+    expect(first?.ackAt).not.toBeNull();
+    expect(await once.begin(step())).toMatchObject({ fresh: false, why: 'same' });
+    // ...but it no longer holds back everything else on that tool
+    expect(await once.blocking(step({ target: 'hash-c' }))).toBeNull();
+  });
+
+  it('counts the runs the user asked for again', async () => {
+    const first = await once.begin(step());
+    const again = await once.begin(step(), { again: true });
+    expect(again.record.attempts).toBe(2);
+    expect(again.record.redone).toBe(0);
+    await once.finish(first.record.key, 'sent');
+    const third = await once.begin(step(), { again: true });
+    expect(third.record.attempts).toBe(3);
     expect(third.record.redone).toBe(1);
   });
 

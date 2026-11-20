@@ -19,6 +19,15 @@ const { db, onceStore, threadStore } = await import('@extension/storage');
 const { beginOnce, canonicalJson, checkOnce, digest, idempotencyKeyOf, onceNote, pruneOnce, stepFor } =
   await import('../index');
 import type { AgentContext } from '../../agent/types';
+import type { OnceAsk } from '../index';
+import type { OnceRecord } from '@extension/storage';
+
+// What checkOnce hands back once the user was shown a record and approved the card
+const approved = (record: OnceRecord): OnceAsk => ({
+  state: 'ask',
+  repeat: { status: 'started', at: record.startedAt, label: record.label },
+  blockKey: record.key,
+});
 
 const contextOf = (threadId: string) =>
   ({ taskId: threadId, emitEvent: vi.fn(async () => {}) }) as unknown as AgentContext;
@@ -61,7 +70,7 @@ describe('checking a step', () => {
     const context = contextOf(thread.id);
     const step = await stepFor(context, input);
     expect((await checkOnce(context, step)).state).toBe('clear');
-    await beginOnce(context, step, false);
+    await beginOnce(context, step, null);
 
     expect((await checkOnce(context, step)).state).toBe('told');
     const second = await checkOnce(context, step);
@@ -76,28 +85,67 @@ describe('checking a step', () => {
   it('refuses the loser when two writers start the same step', async () => {
     const context = contextOf('no-such-thread');
     const step = await stepFor(context, input);
-    const [a, b] = await Promise.all([beginOnce(context, step, false), beginOnce(context, step, false)]);
+    const [a, b] = await Promise.all([beginOnce(context, step, null), beginOnce(context, step, null)]);
     expect(['record' in a, 'record' in b].sort()).toEqual([false, true]);
   });
 
   it('gives a tool the same key for a cut-off call run again, and a new one once it was done', async () => {
     const context = contextOf('no-such-thread');
     const step = await stepFor(context, input);
-    const first = await beginOnce(context, step, false);
-    const again = await beginOnce(context, step, true);
-    if (!('record' in first) || !('record' in again)) throw new Error('expected both to start');
+    const first = await beginOnce(context, step, null);
+    if (!('record' in first)) throw new Error('expected it to start');
+    const again = await beginOnce(context, step, approved(first.record));
+    if (!('record' in again)) throw new Error('expected it to start again');
     expect(await idempotencyKeyOf(again.record)).toBe(await idempotencyKeyOf(first.record));
     await onceStore.finish(again.record.key, 'the tool answered');
-    const redone = await beginOnce(context, step, true);
+    const redone = await beginOnce(context, step, approved(again.record));
     if (!('record' in redone)) throw new Error('expected it to start');
     expect(await idempotencyKeyOf(redone.record)).not.toBe(await idempotencyKeyOf(first.record));
   });
 });
 
+describe('a retried run that sends on the same site or tool again', () => {
+  it('goes straight to the user with a note, without sending the model away: only the user can tell a repeat', async () => {
+    const thread = await threadStore.create();
+    await threadStore.update(thread.id, { taskRunId: 'request-3', runStartedAt: Date.now() - 10 });
+    const context = contextOf(thread.id);
+    const sent = await beginOnce(context, await stepFor(context, input), null);
+    if (!('record' in sent)) throw new Error('expected it to start');
+    await onceStore.finish(sent.record.key, 'the tool answered');
+
+    // The same run sends another, different email: nothing in its way
+    const next = await stepFor(context, { ...input, parts: ['{"to":"tomi"}'] });
+    expect((await checkOnce(context, next)).state).toBe('clear');
+
+    // The task is retried. The model words the first email differently, so its hash is new.
+    await new Promise(resolve => setTimeout(resolve, 5));
+    await threadStore.update(thread.id, { runStartedAt: Date.now() });
+    const reworded = await stepFor(context, { ...input, parts: ['{"to":"ada","body":"Hello again"}'] });
+    expect(await checkOnce(context, reworded)).toMatchObject({
+      state: 'ask',
+      repeat: { status: 'earlier', label: 'Nex Mail › send_email' },
+      blockKey: sent.record.key,
+    });
+    // Without the user's click it is not started
+    expect('result' in (await beginOnce(context, reworded, null))).toBe(true);
+  });
+});
+
+describe('when the records cannot be read', () => {
+  it('refuses the step instead of running it without a check', async () => {
+    const read = vi.spyOn(threadStore, 'get').mockRejectedValue(new Error('database is closed'));
+    try {
+      await expect(stepFor(contextOf('any-thread'), input)).rejects.toThrow('database is closed');
+    } finally {
+      read.mockRestore();
+    }
+  });
+});
+
 describe('what a resumed run is told', () => {
   it('says nothing for a task that has sent nothing', async () => {
-    expect(await onceNote('request-none')).toBe('');
-    expect(await onceNote(null)).toBe('');
+    expect(await onceNote({ id: 'chat-none', taskRunId: 'request-none' })).toBe('');
+    expect(await onceNote({ id: 'chat-none', taskRunId: null })).toBe('');
   });
 
   it('lists what is done and what was cut off, and leaves out what failed', async () => {
@@ -107,7 +155,7 @@ describe('what a resumed run is told', () => {
     const failed = await onceStore.begin({ ...step, target: 'b', scope: 's2', label: 'Slack › post_message' });
     await onceStore.fail(failed.record.key, 'forbidden');
     await onceStore.begin({ ...step, target: 'c', scope: 's3', label: 'send on mail.example' });
-    const note = await onceNote('request-2');
+    const note = await onceNote({ id: 't', taskRunId: 'request-2' });
     expect(note).toContain('do not do these again:\n- Nex Mail › send_email');
     expect(note).toContain("never repeat one without the user's click:\n- send on mail.example");
     expect(note).not.toContain('Slack');
@@ -126,7 +174,7 @@ describe('old records', () => {
     });
     const old = await onceStore.begin({
       taskId: 'y',
-      threadId: 't',
+      threadId: 'u',
       what: 'tool',
       target: 'b',
       scope: 's',

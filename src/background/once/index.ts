@@ -1,6 +1,6 @@
 import { t } from '@extension/i18n';
 import { onceStore, threadStore } from '@extension/storage';
-import type { ConfirmRequest, OnceRecord, OnceStep } from '@extension/storage';
+import type { ConfirmRequest, OnceRecord, OnceStep, ThreadRecord } from '@extension/storage';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -19,7 +19,12 @@ const logger = createLogger('DoOnce');
  * - a step left at "started" was cut off before its result was recorded. It may have gone through, so it is not
  *   run again either: the model is told to look for evidence first;
  * - if the model then tries once more, the user is asked on the confirm card, which says why. Only that click
- *   runs it again.
+ *   runs it again;
+ * - a cut-off step holds back every other step on the same site or tool in its chat, and a step an earlier run
+ *   of the task finished puts its note on the card of the next one there: a retry seldom words a message the
+ *   same way twice, so the hash alone cannot tell a repeat from a new step. The user can.
+ *
+ * If the records cannot be read, the step is refused: the check fails closed.
  *
  * Callers: `gate/review.ts` for anything committed on a page, `integrations/action.ts` for a connector's tool.
  */
@@ -45,8 +50,15 @@ export type OnceCheck =
   | { state: 'clear' }
   // It exists and the model has not been told in this run: return this to the model and do not act
   | { state: 'told'; result: ActionResult }
-  // The model was told and tries again: only the user's click runs it. Put `repeat` on the confirm request.
-  | { state: 'ask'; repeat: NonNullable<ConfirmRequest['repeat']> };
+  // Only the user's click runs it: put `repeat` on the confirm request, and pass this to beginOnce once approved
+  | OnceAsk;
+
+export interface OnceAsk {
+  state: 'ask';
+  repeat: NonNullable<ConfirmRequest['repeat']>;
+  // The record the card tells the user about
+  blockKey: string;
+}
 
 const normalize = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
@@ -74,7 +86,8 @@ export function canonicalJson(value: unknown): string {
  * retried, a new one for every new request (see ThreadManager.send).
  */
 export async function stepFor(context: Pick<AgentContext, 'taskId'>, input: OnceInput): Promise<OnceStep> {
-  const thread = await threadStore.get(context.taskId).catch(() => undefined);
+  // A read that fails is not caught: without the task's id its records would be missed, so the step is refused
+  const thread = await threadStore.get(context.taskId);
   return {
     taskId: thread?.taskRunId || context.taskId,
     threadId: context.taskId,
@@ -92,7 +105,7 @@ function toldMessage(record: OnceRecord): string {
   if (record.status === 'done') {
     return `Already done in this task: ${record.label}, at ${when}${record.result ? ` (${record.result})` : ''}. It was NOT run again, so nothing went out twice. Carry on with the next step. Only if this really is a different step (another recipient, another item), run the action again: the user will be asked first.`;
   }
-  return `An earlier step of this task, ${record.label} at ${when}, was cut off before its result was recorded, so it may already have gone through. Nothing was done now. First look for evidence: the sent items, the thread, the page it would have changed. If it went through, skip this step and carry on. If you are sure it did not, run the action again: the user will be asked first.`;
+  return `An earlier step in this chat, ${record.label} at ${when}, was cut off before its result was recorded, so it may already have gone through. Nothing was done now. First look for evidence: the sent items, the thread, the page it would have changed. If it went through, skip this step and carry on. If you are sure it did not, run the action again: the user will be asked first.`;
 }
 
 function refused(context: Context, record: OnceRecord): ActionResult {
@@ -108,15 +121,21 @@ function refused(context: Context, record: OnceRecord): ActionResult {
  * Looks for a record that stands in the way of a step, before anything is shown to the user or done.
  */
 export async function checkOnce(context: Context, step: OnceStep): Promise<OnceCheck> {
-  const record = await onceStore.blocking(step);
-  if (!record) return { state: 'clear' };
-  const thread = await threadStore.get(context.taskId).catch(() => undefined);
+  const since = (await threadStore.get(context.taskId))?.runStartedAt ?? 0;
+  const block = await onceStore.blocking(step, since);
+  if (!block) return { state: 'clear' };
+  const { record, why } = block;
+  const ask = (status: OnceAsk['repeat']['status']): OnceAsk => ({
+    state: 'ask',
+    repeat: { status, at: record.startedAt, label: record.label },
+    blockKey: record.key,
+  });
+  // A step an earlier run finished on this site or tool: this one may be new, or the same in other words. The
+  // model cannot tell and is not sent away; the card says so and the user decides.
+  if (why === 'earlier') return ask('earlier');
   // Told since this run started, and it tries again: the model cannot settle it, the user can
-  if (record.toldAt !== null && record.toldAt >= (thread?.runStartedAt ?? 0)) {
-    return {
-      state: 'ask',
-      repeat: { status: record.status === 'done' ? 'done' : 'started', at: record.startedAt, label: record.label },
-    };
+  if (record.toldAt !== null && record.toldAt >= since) {
+    return ask(record.status === 'done' ? 'done' : 'started');
   }
   await onceStore.told(record.key);
   logger.info(`Not repeated (${record.status}): ${record.label}`);
@@ -127,15 +146,18 @@ export async function checkOnce(context: Context, step: OnceStep): Promise<OnceC
  * Writes "started" right before the act. The caller must then call `onceStore.finish` (it went through) or
  * `onceStore.fail` (it certainly did not); a step it cannot tell about stays at "started".
  *
- * @param again - The user was shown that the step exists (`repeat` on the card) and approved it
- * @returns The record to settle, or what to tell the model when another writer started the step first
+ * @param asked - What `checkOnce` returned when the user was shown the card with its `repeat` and approved it;
+ *   null when nothing stood in the way
+ * @returns The record to settle, or what to tell the model when a record stands in the way after all (another
+ *   writer started the step first)
  */
 export async function beginOnce(
   context: Context,
   step: OnceStep,
-  again: boolean,
+  asked: OnceAsk | null,
 ): Promise<{ record: OnceRecord } | { result: ActionResult }> {
-  const claim = await onceStore.begin(step, { again });
+  const since = (await threadStore.get(context.taskId))?.runStartedAt ?? 0;
+  const claim = await onceStore.begin(step, { again: asked !== null, ack: asked?.blockKey, since });
   if (claim.fresh) return { record: claim.record };
   await onceStore.told(claim.record.key);
   return { result: refused(context, claim.record) };
@@ -150,14 +172,14 @@ export async function idempotencyKeyOf(record: OnceRecord): Promise<string> {
 }
 
 /**
- * What a resumed or retried run is told about its own task: what already went out, and what was cut off.
- * Empty when the task has done nothing yet.
+ * What a resumed or retried run is told: what its task already sent, and what was cut off in its chat.
+ * Empty when there is nothing of either.
  */
-export async function onceNote(taskId: string | null | undefined): Promise<string> {
-  if (!taskId) return '';
-  const records = await onceStore.forTask(taskId).catch(() => []);
-  const done = records.filter(record => record.status === 'done');
-  const cutOff = records.filter(record => record.status === 'started');
+export async function onceNote(thread: Pick<ThreadRecord, 'id' | 'taskRunId'>): Promise<string> {
+  const done = thread.taskRunId
+    ? (await onceStore.forTask(thread.taskRunId)).filter(record => record.status === 'done')
+    : [];
+  const cutOff = await onceStore.cutOff(thread.id);
   if (done.length + cutOff.length === 0) return '';
   const line = (record: OnceRecord) => `- ${record.label}, at ${timeOf(record.startedAt)}`;
   return [

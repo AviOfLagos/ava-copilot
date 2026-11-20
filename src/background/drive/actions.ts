@@ -349,7 +349,8 @@ export function registerDriveActions(drive: DriveService): void {
         let onceKey: string | null;
         // A private Doc in the user's own Drive is an edit. A chat no one watches still asks first, and so does
         // a Doc this task already made or may have made
-        if ((await unattended(context.taskId)) || (await onceStore.blocking(step)) !== null) {
+        const since = (await threadStore.get(context.taskId))?.runStartedAt ?? 0;
+        if ((await unattended(context.taskId)) || (await onceStore.blocking(step, since)) !== null) {
           const page = await context.browserContext.getCurrentPage();
           const review = await reviewAction(context, page, {
             action: 'send_keys',
@@ -359,7 +360,7 @@ export function registerDriveActions(drive: DriveService): void {
           if (!review.proceed) return review.result;
           onceKey = review.commit?.onceKey ?? null;
         } else {
-          const claim = await beginOnce(context, step, false);
+          const claim = await beginOnce(context, step, null);
           if ('result' in claim) return claim.result;
           onceKey = claim.record.key;
         }

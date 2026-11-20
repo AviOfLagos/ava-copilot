@@ -188,28 +188,77 @@ describe('do once on a page', () => {
     expect(state.sends).toBe(1);
   });
 
-  it('skips a step that is done, and still lets a different one through', async () => {
+  it('skips a step that is done, and still lets a different one through in the same run', async () => {
     const threadId = await runningThread();
     const first = fakeContext(threadId);
     const sent = await act(first.context, page, state, pressEnter);
     expect(await verifyCommit(first.context, page, sent.proceed ? sent.commit : null)).toBe('gate_verify_shown');
     const key = sent.proceed ? sent.commit?.onceKey : null;
-    expect((await onceStore.get(key!))?.status).toBe('done');
+    const record = await onceStore.get(key!);
+    expect(record?.status).toBe('done');
+    // What the page showed is kept in words of ours: no address, no text
+    expect(record?.result).toBe('the page showed it');
 
-    await tick();
-    await restart(threadId);
-    const retry = fakeContext(threadId);
-    const again = await act(retry.context, page, state, clickSend());
+    const again = await act(first.context, page, state, clickSend());
     expect(again.proceed ? '' : again.result.error).toMatch(/Already done in this task/);
-    expect(retry.requests).toHaveLength(0);
+    expect(first.requests).toHaveLength(1);
     expect(state.sends).toBe(1);
 
-    // The next message of the same task is a different step: the usual card, no repeat note
+    // The next message of the same run is a different step: the usual card, no repeat note
     state.fields = [{ label: 'Message', value: 'And bring the deck.' }];
-    const next = await act(retry.context, page, state, pressEnter);
+    const next = await act(first.context, page, state, pressEnter);
     expect(next.proceed).toBe(true);
-    expect(retry.requests[0].repeat).toBeUndefined();
+    expect(first.requests[1].repeat).toBeUndefined();
     expect(state.sends).toBe(2);
+  });
+
+  it('asks the user, with a note, when a retried run sends a reworded message where an earlier run already sent', async () => {
+    const threadId = await runningThread();
+    // The user turned the Send confirmation off: only the do-once check stands between a retry and a second send
+    const { gateSettingsStore } = await import('@extension/storage');
+    await gateSettingsStore.setConfirm('send', false);
+    try {
+      const first = fakeContext(threadId);
+      const sent = await act(first.context, page, state, pressEnter);
+      expect(first.requests).toHaveLength(0);
+      await verifyCommit(first.context, page, sent.proceed ? sent.commit : null);
+
+      // The background died before the result reached the chat's history, or the user pressed Retry: the
+      // model writes the message again, in other words
+      await tick();
+      await restart(threadId);
+      state.fields = [{ label: 'Message', value: 'See you at ten o’clock.' }];
+      const retry = fakeContext(threadId, 'decline');
+      const again = await act(retry.context, page, state, pressEnter);
+      expect(retry.requests).toHaveLength(1);
+      expect(retry.requests[0].repeat?.status).toBe('earlier');
+      expect(again.proceed).toBe(false);
+      expect(state.sends).toBe(1);
+    } finally {
+      await gateSettingsStore.setConfirm('send', true);
+    }
+  });
+
+  it('leaves a step at "started" when the page shows no sign it went through, so it is never called done', async () => {
+    const threadId = await runningThread();
+    const first = fakeContext(threadId);
+    const review = await reviewAction(first.context, page, pressEnter);
+    // The click ran but the page shows nothing new (a validation error, an overlay): state.sends stays 0
+    state.fields = [{ label: 'Message', value: 'See you at 10.' }];
+    const stuck = fakePage({ ...state, sends: 0 });
+    Object.assign(stuck, {
+      evaluateInPage: async (fn: unknown, arg: unknown) =>
+        fn === readCommitEffect
+          ? { url: state.url, visible: (arg as string[]).map(() => 0), pending: (arg as string[]).map(() => true) }
+          : (page as unknown as { evaluateInPage: (f: unknown, a: unknown) => unknown }).evaluateInPage(fn, arg),
+    });
+    expect(await verifyCommit(first.context, stuck, review.proceed ? review.commit : null)).toBe('gate_verify_unknown');
+    const key = review.proceed ? review.commit?.onceKey : null;
+    expect((await onceStore.get(key!))?.status).toBe('started');
+
+    // The next try is told it may have gone through and to look, not that it is done
+    const again = await reviewAction(first.context, page, pressEnter);
+    expect(again.proceed ? '' : again.result.error).toMatch(/cut off before its result was recorded/);
   });
 
   it('starts clean for a new request in the same chat', async () => {

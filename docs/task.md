@@ -2479,14 +2479,22 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   `verifyCommit` / `settleCommit` close it) and `integrations/action.ts` (every connector tool that is not a plain
   read). WhatsApp sends and Drive create/share name their own step.
 - A step that is done, or one cut off before its result was recorded, is not run again by itself: the model is told
-  once, and a second try goes to the user on the confirm card, which says why (`ConfirmRequest.repeat`). A cut-off
-  step also holds back the next commit on the same site or tool, because a retry rarely words a message the same way.
+  once, and a second try goes to the user on the confirm card, which says why (`ConfirmRequest.repeat`).
+- A retry rarely words a message the same way, so the hash alone cannot tell a repeat. Two rules cover that: a
+  cut-off step holds back every other commit on the same site or tool in its chat (also after "continue", which is a
+  new task) until the user has seen a card about it; and in a retried or resumed run, a commit where an earlier run
+  of the task already finished one goes to the user with a note, whatever the confirm settings say.
+- A commit the page shows no sign of (`gate_verify_unknown`) stays "started", never "done". A click that commits is
+  tried one way only (`Page.clickElementNode({ once })`): the fallback click could send twice.
+- If the records cannot be read, the step is refused.
 - The task id is `ThreadRecord.taskRunId`: new for every request (`ThreadManager.send`), kept through resume and
   retry. A run that picks a task up again is told what it already sent (`onceNote`).
 - A tool whose schema has a string `idempotency_key` (or `idempotencyKey`) gets the key, so the far side can refuse
   a repeat too.
 - Not covered here: routine (workflow) tool steps keep their own rule (a side effect cut off mid-call is
-  `unknown_outcome`); `Page.clickElementNode` still clicks a second time when the first click times out after 2 s.
+  `unknown_outcome`); `hand_to_agent`, `run_agent`, `run_workflow` and `say_in_meeting` take no key yet. The page key
+  is coarse on purpose (site + what is filled in): the same words to two people in one chat app need a second try
+  and the user's click.
 
 ## 5. Risks, in order
 
