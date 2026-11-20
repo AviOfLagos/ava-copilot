@@ -5,6 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { parseGhStatus, parseVercelList, switchAccount } from '../keys/accounts';
 import { askHuman, dialogText, validateAsk } from '../keys/ask';
 import { ensureMasker, maskerContent, sha256 } from '../keys/install';
 import { applyMask, MASK_MARKER, type MaskReport, planMask, secretEntries, variants } from '../keys/mask-core';
@@ -289,7 +290,7 @@ describe('install and the MCP server', () => {
     const client = new Client({ name: 'claude-code', version: '1' });
     await client.connect(b);
     const tools = (await client.listTools()).tools.map(t => t.name).sort();
-    expect(tools).toEqual(['ask_human', 'run_with_secrets']);
+    expect(tools).toEqual(['ask_human', 'run_with_secrets', 'switch_account']);
 
     const ran = await client.callTool({ name: 'run_with_secrets', arguments: { project: 'go-solar-me', env: 'local', command: '/usr/bin/true', purpose: 'test run', cwd: dir.path } });
     const ranText = (ran.content as { text: string }[])[0].text;
@@ -300,5 +301,90 @@ describe('install and the MCP server', () => {
     const asked = await client.callTool({ name: 'ask_human', arguments: { purpose: 'Enter the 2FA code', steps: [{ text: 'Type the code from your phone' }] } });
     expect(JSON.parse((asked.content as { text: string }[])[0].text).answer).toBe('done');
     await client.close();
+  });
+});
+
+describe('switch_account', () => {
+  const GH = (active: string) => `github.com
+  \u2713 Logged in to github.com account AviOfLagos (keyring)
+  - Active account: ${active === 'AviOfLagos'}
+  - Token: gho_************************************
+  \u2713 Logged in to github.com account getvettika-ui (keyring)
+  - Active account: ${active === 'getvettika-ui'}
+`;
+  const VLIST = `\u001b[1msaved Vercel logins:\u001b[0m
+  avi          userId S7M
+      team_1\taviofla
+  nexprove     userId Iwk
+      team_2\tnexzlab
+`;
+  const vstatus = (id: string) => `active Vercel login\n  userId      ${id}\n  currentTeam team_2\n`;
+  const req = { purpose: 'push the fix', agent: 'claude-code' };
+
+  it('parses accounts, never the token line', () => {
+    expect(parseGhStatus(GH('getvettika-ui'))).toEqual({ active: 'getvettika-ui', accounts: ['AviOfLagos', 'getvettika-ui'] });
+    expect([...parseVercelList(VLIST)]).toEqual([['avi', 'S7M'], ['nexprove', 'Iwk']]);
+  });
+
+  it('switches gh, verifies with GitHub itself, and tells Avi', async () => {
+    let active = 'AviOfLagos';
+    const notes: string[] = [];
+    const runner = fakeRunner(call => {
+      if (call.command === 'gh-switch') {
+        active = call.args[0];
+        return { stdout: `-> Switched to ${active}` };
+      }
+      if (call.command === 'gh' && call.args[0] === 'auth') return { stdout: GH(active) };
+      if (call.command === 'gh' && call.args[0] === 'api') return { stdout: `${active}\n` };
+      if (call.command === 'git') return { stdout: '309111286+getvettika-ui@users.noreply.github.com\n' };
+      return new Error(`unexpected ${call.command}`);
+    });
+    const result = await switchAccount({ ...req, tool: 'gh', account: 'getvettika-ui' }, { runner, home: '/h', notify: async (t, b) => void notes.push(`${t} | ${b}`) });
+    expect(result).toMatchObject({ from: 'AviOfLagos', to: 'getvettika-ui', switched: true, verified: true });
+    expect(notes).toEqual(['Ava: claude-code switched gh | Now getvettika-ui. push the fix']);
+    expect(runner.calls.find(c => c.command === 'gh-switch')?.options.env.PATH).toContain('/h/.local/bin');
+    expect(JSON.stringify(result)).not.toContain('gho_');
+  });
+
+  it('only reads when no account is given, and refuses accounts that are not signed in', async () => {
+    const runner = fakeRunner(call => (call.command === 'gh' ? { stdout: GH('AviOfLagos') } : new Error('must not switch')));
+    expect(await switchAccount({ ...req, tool: 'gh' }, { runner, home: '/h' })).toMatchObject({ from: 'AviOfLagos', switched: false, verified: true });
+    const nope = await switchAccount({ ...req, tool: 'gh', account: 'someone' }, { runner, home: '/h' });
+    expect(nope).toMatchObject({ switched: false, verified: false });
+    expect(nope.message).toMatch(/gh auth login/);
+  });
+
+  it('switches vercel between saved logins', async () => {
+    let id = 'Iwk';
+    const runner = fakeRunner(call => {
+      if (call.command !== 'vercel-switch') return new Error('unexpected');
+      if (call.args[0] === '--list') return { stdout: VLIST };
+      if (call.args.length === 0) return { stdout: vstatus(id) };
+      id = call.args[0] === 'avi' ? 'S7M' : id;
+      return { stdout: '-> switched' };
+    });
+    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({ from: 'nexprove', to: 'avi', switched: true, verified: true });
+    // already there: nothing is copied over the live login
+    const calls = runner.calls.length;
+    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({ switched: false, verified: true });
+    expect(runner.calls.slice(calls).every(c => c.args.length === 0 || c.args[0] === '--list')).toBe(true);
+  });
+
+  it('never switches away from an unsaved Vercel login (it would be lost)', async () => {
+    const runner = fakeRunner(call => {
+      if (call.args[0] === '--list') return { stdout: VLIST };
+      if (call.args.length === 0) return { stdout: vstatus('UNSAVED') };
+      return new Error('must not switch');
+    });
+    const result = await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' });
+    expect(result).toMatchObject({ from: 'an unsaved login', switched: false, verified: false });
+    expect(result.message).toMatch(/--save/);
+  });
+
+  it('refuses odd account names and relative repos before running anything', async () => {
+    const runner = fakeRunner(() => new Error('must not run'));
+    await expect(switchAccount({ ...req, tool: 'gh', account: '-x; rm' }, { runner, home: '/h' })).rejects.toThrow(/letters, digits/);
+    await expect(switchAccount({ ...req, tool: 'gh', account: '-' }, { runner, home: '/h' })).rejects.toThrow(/letters, digits/);
+    await expect(switchAccount({ ...req, tool: 'gh', repo: 'here' }, { runner, home: '/h' })).rejects.toThrow(/absolute/);
   });
 });

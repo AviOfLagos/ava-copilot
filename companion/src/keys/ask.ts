@@ -78,3 +78,12 @@ export async function askHuman(req: AskRequest, runner: ProcessRunner, now: () =
   if (said === 'timeout' || result.timedOut) return { answer: 'timeout', seconds, message: `no answer in ${secs} seconds` };
   throw new Error(`the dialog could not be shown (${result.stderr.trim().slice(0, 200) || `exit ${result.code}`})`);
 }
+
+/** A notification only, no wait (text passed as arguments, never spliced into the script). */
+export async function notifyAvi(title: string, body: string, runner: ProcessRunner): Promise<void> {
+  const clean = (t: string, n: number) => t.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, ' ').slice(0, n);
+  await runner('/usr/bin/osascript', ['-e', 'on run argv\n  display notification (item 2 of argv) with title (item 1 of argv)\nend run', clean(title, 80), clean(body, 200)], {
+    env: { PATH: '/usr/bin:/bin', HOME: process.env.HOME, LANG: 'en_US.UTF-8' },
+    timeoutMs: 10_000,
+  });
+}
