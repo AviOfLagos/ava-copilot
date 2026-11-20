@@ -2652,6 +2652,13 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   clicks (nothing counts a click yet: a link's effect is read as sign-ups by campaign).
 - A new call outside the model provider: the product's own API, at the address in its profile, https only (plain
   http on this computer for tests), with no cookies.
+- After review: a number that says how things stand (`orgs`, `active_orgs`, `paid_orgs`) is never added up over
+  days, the answer gives the latest; a day read before it was over is marked "not final" and is read again later,
+  as is a day that could not be read (up to two older days a run, within a week); a list cut at the row limit
+  never replaces a whole one; only the API's own `agent_api_off` counts as off; a notice is marked as told only
+  once the Inbox has it; the token is kept under the host it was saved for (`product-api:<workspace>@<host>`), so
+  changing the address never sends it elsewhere; `paid_orgs` is the product's own count; the collect job is
+  scheduled once, not on every start of the background.
 - Tests: `background/growth/__tests__`, `e2e/growth.e2e.mjs` with `e2e/mock-suture.mjs`.
 
 ## 5. Risks, in order

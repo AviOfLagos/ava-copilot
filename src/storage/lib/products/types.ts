@@ -26,8 +26,24 @@ export interface ProductAgentApi {
   baseUrl: string;
 }
 
-/** Where a product's API token is kept in the vault. */
-export const productApiTokenRef = (workspaceId: string) => `product-api:${workspaceId}`;
+const apiHost = (baseUrl: string): string => {
+  try {
+    return new URL(baseUrl.trim()).host.toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+/** The start of every vault name that holds a token of this workspace's product API. */
+export const productApiTokenPrefix = (workspaceId: string) => `product-api:${workspaceId}@`;
+
+/**
+ * Where a product's API token is kept in the vault. The name carries the host the token was saved for, so a
+ * token is only ever sent to that host: change the address and there is no token for the new one until the user
+ * pastes it again.
+ */
+export const productApiTokenRef = (workspaceId: string, baseUrl: string) =>
+  `${productApiTokenPrefix(workspaceId)}${apiHost(baseUrl)}`;
 
 export interface ProductProfile {
   workspaceId: string;
@@ -52,7 +68,7 @@ export interface ProductProfile {
   superAdmin: { url: string; account: string } | null;
   slackChannels: SlackChannelRef[];
   // The product's own API that reports its numbers (sign-ups, waitlist, feedback…), read by plain code on a
-  // schedule. Its token is never here: it is in the vault, under `productApiTokenRef(workspaceId)`.
+  // schedule. Its token is never here: it is in the vault, under `productApiTokenRef(workspaceId, baseUrl)`.
   agentApi: ProductAgentApi | null;
   // account = the login the account check (#43) looks for
   social: Partial<Record<SocialPlatform, { handle: string; account: string }>>;

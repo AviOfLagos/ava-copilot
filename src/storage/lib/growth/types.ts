@@ -13,7 +13,7 @@ export type GrowthSource = 'product' | 'social' | 'email' | 'slack' | 'links';
 export const GROWTH_SOURCES: GrowthSource[] = ['product', 'social', 'email', 'slack', 'links'];
 
 export interface GrowthMetric {
-  // productId|date|source|metric|channel|campaign|postId: reading the same thing again replaces it
+  // Made from the product, day, source, metric, channel, campaign and post: reading the same thing again replaces it
   id: string;
   // The workspace whose product it is (one product per workspace)
   productId: string;
@@ -99,12 +99,24 @@ export interface GrowthLink {
 export const metricId = (
   row: Pick<GrowthMetric, 'productId' | 'date' | 'source' | 'metric' | 'channel' | 'campaign' | 'postId'>,
 ) =>
-  [row.productId, row.date, row.source, row.metric, row.channel ?? '', row.campaign ?? '', row.postId ?? ''].join('|');
+  // As JSON, not joined by a mark: a channel's name is a visitor's words and may hold any character
+  JSON.stringify([
+    row.productId,
+    row.date,
+    row.source,
+    row.metric,
+    row.channel ?? null,
+    row.campaign ?? null,
+    row.postId ?? null,
+  ]);
 
 export const readingId = (row: Pick<GrowthReading, 'productId' | 'source' | 'metric' | 'date'>) =>
   [row.productId, row.source, row.metric, row.date].join('|');
 
 export const sourceStateId = (productId: string, source: GrowthSource) => `${productId}|${source}`;
+
+/** When a UTC day ends: a number read before this is the day so far, not the day. */
+export const dayEnd = (day: string): number => Date.parse(`${day}T00:00:00Z`) + 86_400_000;
 
 /** The UTC day of a moment, YYYY-MM-DD. */
 export const utcDay = (at: number): string => new Date(at).toISOString().slice(0, 10);

@@ -15,8 +15,8 @@ vi.hoisted(() => {
   });
 });
 
-const { db, emptyProductProfile, growthStore } = await import('@extension/storage');
-const { collectProduct, PRODUCT_METRICS } = await import('../collect');
+const { db, emptyProductProfile, growthStore, productApiTokenRef } = await import('@extension/storage');
+const { collectProduct, markNoticed, PRODUCT_METRICS } = await import('../collect');
 const { createSutureClient, safeApiBase } = await import('../suture');
 const { answerText, queryMetric, rangeProblem } = await import('../query');
 const { makeLink, utmTag } = await import('../links');
@@ -140,6 +140,12 @@ const deps = (token: string | null = TOKEN) => ({
   token: async () => token,
   client: (baseUrl: string, value: string) => createSutureClient(baseUrl, value, fakeFetch),
 });
+/** Collects, and marks a notice as delivered the way the Inbox step does. */
+const told = async () => {
+  const outcome = await collectProduct(profile(), deps());
+  if (outcome?.notice) await markNoticed('acme', 'product', outcome.notice.reason);
+  return outcome;
+};
 const ask = (metric: string, from = YESTERDAY, to = TODAY, by?: 'channel' | 'campaign') =>
   queryMetric(growthStore, { productId: 'acme', metric, from, to, by });
 
@@ -219,14 +225,14 @@ describe('the product collector', () => {
 
   it('tells the user once per failure, and again only after it worked or for another reason', async () => {
     api.mode = 'off';
-    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'agent_api_off' });
-    expect((await collectProduct(profile(), deps()))?.notice).toBeNull();
+    expect((await told())?.notice).toMatchObject({ reason: 'agent_api_off' });
+    expect((await told())?.notice).toBeNull();
     api.mode = 'offline';
-    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'unreachable' });
+    expect((await told())?.notice).toMatchObject({ reason: 'unreachable' });
     api.mode = 'ok';
-    expect((await collectProduct(profile(), deps()))?.notice).toBeNull();
+    expect((await told())?.notice).toBeNull();
     api.mode = 'off';
-    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'agent_api_off' });
+    expect((await told())?.notice).toMatchObject({ reason: 'agent_api_off' });
   });
 
   it('keeps a number that was read when a later read fails, and says when it was read', async () => {
@@ -247,6 +253,7 @@ describe('the product collector', () => {
     expect((await ask('signups')).byDay[0]).toMatchObject({ value: null, reason: 'unexpected_shape' });
     // The other numbers are still read
     expect((await ask('waitlist')).total).toBe(1);
+    await markNoticed('acme', 'product', 'unexpected_shape');
     expect((await collectProduct(profile(), deps()))?.notice).toBeNull();
   });
 
@@ -258,7 +265,10 @@ describe('the product collector', () => {
     // Payments are never recorded by this product: no number, and no alarm either
     expect((await ask('payments')).total).toBeNull();
     expect(answerText(await ask('payments'), 'Acme')).toContain('paid_orgs');
-    expect(outcome?.notice).toBeNull();
+    // Sign-ups that stopped being tracked are worth one notice; payments, never recorded, are not
+    expect(outcome?.notice).toMatchObject({ reason: 'not_available' });
+    api.mode = 'ok';
+    expect((await told())?.notice).toBeNull();
   });
 
   it('reads nothing for a product with no API, and sends no token to an address that is not safe', async () => {
@@ -272,6 +282,112 @@ describe('the product collector', () => {
     );
     expect(outcome).toMatchObject({ connected: false, reason: 'not_set' });
     expect(api.calls).toHaveLength(0);
+  });
+});
+
+describe('after review: what a number is, and is not', () => {
+  it('never adds up a number that says how things stand: a week of 9 orgs is 9 orgs', async () => {
+    const base = { productId: 'acme', source: 'product' as const, metric: 'orgs', ok: true as const };
+    await growthStore.record({ ...base, date: '2026-11-17', total: 8, readAt: NOW - 2 * 86_400_000 });
+    await growthStore.record({ ...base, date: YESTERDAY, total: 9, readAt: NOW - 86_400_000 });
+    await growthStore.record({ ...base, date: TODAY, total: 9, readAt: NOW });
+    const answer = await ask('orgs', '2026-11-17', TODAY);
+    expect(answer).toMatchObject({ total: 9, latestOn: TODAY });
+    const text = answerText(answer, 'Acme');
+    expect(text).toContain('Latest: 9 (as it stood on 2026-11-19)');
+    expect(text).not.toContain('Total');
+  });
+
+  it('says a day read before it was over is the count so far', async () => {
+    await collectProduct(profile(), deps());
+    const answer = await ask('signups');
+    // Yesterday was read after it ended; today at 10:00
+    expect(answer.unfinished).toEqual([TODAY]);
+    expect(answerText(answer, 'Acme')).toContain('Not final: 2026-11-19 was read before the day was over');
+  });
+
+  it('reads a day again that was read before it was over, once the browser is back days later', async () => {
+    await collectProduct(profile(), deps());
+    api.calls = [];
+    // Three days on: the 19th was last read at 10:00, so its number is from noon of a day long over
+    const later = NOW + 3 * 86_400_000;
+    await collectProduct(profile(), { ...deps(), now: () => later });
+    const asked = api.calls.filter(call => call.url.startsWith('/api/agent/v1/signups')).map(call => call.url);
+    expect(asked.some(url => url.includes('since=2026-11-19'))).toBe(true);
+    expect((await ask('signups', TODAY, TODAY)).unfinished).toEqual([]);
+  });
+
+  it('does not let a list cut at the row limit replace a whole one read earlier', async () => {
+    const base = {
+      productId: 'acme',
+      source: 'product' as const,
+      metric: 'waitlist',
+      date: YESTERDAY,
+      ok: true as const,
+    };
+    await growthStore.record({ ...base, total: 620, readAt: NOW });
+    await growthStore.record({ ...base, total: 500, partial: true, readAt: NOW + 1 });
+    expect((await ask('waitlist', YESTERDAY, YESTERDAY)).total).toBe(620);
+  });
+
+  it('keeps parts apart whatever characters a visitor put in their names, and drops a part with no name', async () => {
+    await growthStore.record({
+      productId: 'acme',
+      source: 'product',
+      metric: 'signups',
+      date: YESTERDAY,
+      ok: true,
+      total: 6,
+      byChannel: [
+        { channel: '|b', value: 1 },
+        { channel: 'a|', value: 2 },
+        { channel: '', value: 3 },
+      ],
+      byCampaign: [{ campaign: 'b|', value: 4 }],
+      readAt: NOW,
+    });
+    const answer = await ask('signups', YESTERDAY, YESTERDAY, 'channel');
+    expect(answer.total).toBe(6);
+    expect(answer.parts).toEqual([
+      { name: 'a|', value: 2 },
+      { name: '|b', value: 1 },
+    ]);
+  });
+
+  it('calls only the API\'s own "off" answer off: a 503 page from the host is a failure, not a missing token', async () => {
+    const page = (async () => new Response('<html>Service Unavailable</html>', { status: 503 })) as typeof fetch;
+    const client = createSutureClient(BASE, TOKEN, page);
+    expect(await client.check()).toMatchObject({ ok: false, reason: 'failed' });
+    const bare = (async () => json(503, { error: { code: 'agent_api_off' } })) as typeof fetch;
+    expect(await createSutureClient(BASE, TOKEN, bare).check()).toMatchObject({ ok: false, reason: 'agent_api_off' });
+  });
+
+  it('refuses to send a token with a line break in it, and drops anything after "?" in the address', async () => {
+    const outcome = await collectProduct(profile(), deps(`${TOKEN}\n`));
+    expect(outcome).toMatchObject({ connected: false, reason: 'unauthorized' });
+    expect(api.calls).toHaveLength(0);
+    expect(safeApiBase('https://admin.example.test/api/agent/v1?x=1#frag')?.href).toBe(
+      'https://admin.example.test/api/agent/v1',
+    );
+  });
+
+  it('tells again when the notice could not be delivered: it is marked as told only once it was', async () => {
+    api.mode = 'off';
+    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'agent_api_off' });
+    // The Inbox refused it, so nothing marked it: the next run tries again
+    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'agent_api_off' });
+    await markNoticed('acme', 'product', 'agent_api_off');
+    expect((await collectProduct(profile(), deps()))?.notice).toBeNull();
+  });
+
+  it('says so once when the product stops tracking sign-ups, and stays quiet about payments', async () => {
+    api.mode = 'signups-untracked';
+    expect((await collectProduct(profile(), deps()))?.notice).toMatchObject({ reason: 'not_available' });
+  });
+
+  it('keeps a token under the host it was saved for', () => {
+    expect(productApiTokenRef('acme', BASE)).toBe('product-api:acme@admin.example.test');
+    expect(productApiTokenRef('acme', 'https://evil.test/api')).not.toBe(productApiTokenRef('acme', BASE));
   });
 });
 

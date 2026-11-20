@@ -3,14 +3,17 @@
 // product's numbers, "read now", saving the product API token to the vault).
 import { z } from 'zod';
 import { t } from '@extension/i18n';
-import { toAppError } from '@extension/shared';
+import { AppError, toAppError } from '@extension/shared';
 import {
+  db,
   deleteSecret,
   growthStore,
   last4,
+  productApiTokenPrefix,
   productApiTokenRef,
   productStore,
   putSecret,
+  secretVault,
   utcDay,
 } from '@extension/storage';
 import type { NoReadingReason, ProductProfile } from '@extension/storage';
@@ -26,9 +29,10 @@ import {
   metricsQueryAction,
   metricsQueryActionSchema,
 } from './actions';
-import { collectProduct } from './collect';
+import { collectProduct, markNoticed } from './collect';
 import type { CollectOutcome } from './collect';
 import { queryMetric } from './query';
+import { safeApiBase } from './suture';
 
 const logger = createLogger('Growth');
 
@@ -64,6 +68,14 @@ async function tell(profile: ProductProfile, outcome: CollectOutcome): Promise<v
     priority: 'normal',
     workspaceId: profile.workspaceId,
   });
+  // Only now is it told: had the Inbox refused the item, the next run would try again
+  await markNoticed(profile.workspaceId, outcome.source, outcome.notice.reason);
+}
+
+/** Every token this workspace's product API has in the vault, whatever host each was saved for. */
+async function tokenRefs(id: string): Promise<string[]> {
+  const prefix = productApiTokenPrefix(id);
+  return (await secretVault.refs()).filter(ref => ref.startsWith(prefix));
 }
 
 /** Reads every product that has an API to read. One product failing never stops the others. */
@@ -89,8 +101,12 @@ registerJobHandler(COLLECT_JOB, async () => {
 });
 
 registerRecovery('growth', async () => {
-  // A run missed while the browser was closed happens once when it opens, if still within the two hours
-  await jobs.schedule({ kind: COLLECT_JOB, key: COLLECT_JOB, cron: COLLECT_CRON, catchUpMs: 2 * 60 * 60 * 1000 });
+  // Scheduled once: scheduling again on every start of the background would push a run that is due to the
+  // next slot, and a run missed while the browser was closed would never happen
+  const existing = await db.jobs.where('key').equals(COLLECT_JOB).first();
+  if (!existing || existing.cron !== COLLECT_CRON || existing.status === 'failed') {
+    await jobs.schedule({ kind: COLLECT_JOB, key: COLLECT_JOB, cron: COLLECT_CRON, catchUpMs: 2 * 60 * 60 * 1000 });
+  }
 });
 
 registerAgentAction({
@@ -119,8 +135,10 @@ async function statusOf(id: string) {
   const state = await growthStore.sourceState(id, 'product');
   const today = utcDay(Date.now());
   const signups = await queryMetric(growthStore, { productId: id, metric: 'signups', from: today, to: today });
-  const ref = productApiTokenRef(id);
-  const tail = await last4(ref).catch(() => null);
+  // The token saved for the address the product has now; one saved for another address does not count
+  const tail = profile?.agentApi?.baseUrl
+    ? await last4(productApiTokenRef(id, profile.agentApi.baseUrl)).catch(() => null)
+    : null;
   return {
     hasApi: !!profile?.agentApi?.baseUrl,
     // Only whether a token is saved and its last characters: the token itself never leaves the vault
@@ -154,17 +172,22 @@ command('growth_collect', z.object({ workspaceId }), async input => {
 });
 // The user's own paste, from the workspace screen: into the vault and nowhere else. An empty one removes it.
 command('growth_set_token', z.object({ workspaceId, token: z.string().max(400) }), async input => {
-  const ref = productApiTokenRef(input.workspaceId);
+  const profile = await productStore.forWorkspace(input.workspaceId);
+  const baseUrl = profile?.agentApi?.baseUrl ?? '';
   const token = input.token.trim();
-  if (token) await putSecret(ref, token);
-  else await deleteSecret(ref);
+  // One token per product: what was saved for an earlier address goes when a new one is saved or it is removed
+  for (const ref of await tokenRefs(input.workspaceId)) await deleteSecret(ref);
+  if (token) {
+    if (!safeApiBase(baseUrl)) throw new AppError('invalid', reasonText('not_set'), { retryable: false });
+    await putSecret(productApiTokenRef(input.workspaceId, baseUrl), token);
+  }
   return statusOf(input.workspaceId);
 });
 
 // The workspace was deleted: its numbers, its links and its token go with it
 command('growth_forget', z.object({ workspaceId }), async input => {
   await growthStore.forget(input.workspaceId);
-  await deleteSecret(productApiTokenRef(input.workspaceId));
+  for (const ref of await tokenRefs(input.workspaceId)) await deleteSecret(ref);
   return null;
 });
 

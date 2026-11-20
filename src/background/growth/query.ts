@@ -1,4 +1,4 @@
-import { shiftDay } from '@extension/storage';
+import { dayEnd, shiftDay } from '@extension/storage';
 import type { GrowthMetric, GrowthReading, GrowthSourceState, GrowthStore, NoReadingReason } from '@extension/storage';
 
 /**
@@ -7,6 +7,10 @@ import type { GrowthMetric, GrowthReading, GrowthSourceState, GrowthStore, NoRea
  */
 
 export type QueryBy = 'day' | 'channel' | 'campaign';
+
+// Numbers that say how things stand at one moment, not how many happened in a day: they are never added up
+// across days. Seven days of "10 orgs" is 10 orgs, not 70.
+export const SNAPSHOT_METRICS = new Set(['orgs', 'active_orgs', 'paid_orgs']);
 export const MAX_RANGE_DAYS = 92;
 
 export interface MetricQuery {
@@ -23,8 +27,13 @@ export interface MetricAnswer {
   metric: string;
   from: string;
   to: string;
-  // The sum over the days that were read; null when no day in the range was read
+  // The sum over the days that were read, or for a number that says how things stand (orgs) the latest one
+  // read; null when no day in the range was read
   total: number | null;
+  // A standing number: `total` is the latest reading, taken on this day
+  latestOn: string | null;
+  // Days read before they were over: their numbers are "so far"
+  unfinished: string[];
   // Some day's list was cut at the product's row limit: the total is "at least" this
   atLeast: boolean;
   daysRead: number;
@@ -88,13 +97,21 @@ export async function queryMetric(store: GrowthStore, query: MetricQuery): Promi
       : { date, value: null, readAt: null, reason: reading?.reason ?? null, detail: reading?.detail ?? null };
   });
   const read = byDay.filter(day => day.value !== null);
+  const snapshot = SNAPSHOT_METRICS.has(query.metric);
+  const latest = read[read.length - 1];
   const source = readings[0] ? await store.sourceState(query.productId, readings[0].source) : undefined;
   return {
     productId: query.productId,
     metric: query.metric,
     from: query.from,
     to: query.to,
-    total: read.length ? read.reduce((sum, day) => sum + (day.value ?? 0), 0) : null,
+    total: !read.length
+      ? null
+      : snapshot
+        ? (latest?.value ?? null)
+        : read.reduce((sum, day) => sum + (day.value ?? 0), 0),
+    latestOn: snapshot ? (latest?.date ?? null) : null,
+    unfinished: snapshot ? [] : read.filter(day => (day.readAt ?? 0) < dayEnd(day.date)).map(day => day.date),
     atLeast: readings.some(reading => reading.status === 'ok' && reading.partial === true),
     daysRead: read.length,
     daysAsked: days.length,
@@ -152,9 +169,16 @@ export function answerText(answer: MetricAnswer, productName: string): string {
     return lines.join('\n');
   }
 
-  lines.push(
-    `Total: ${answer.atLeast ? 'at least ' : ''}${amount(answer.total)} over ${answer.daysRead} of ${answer.daysAsked} ${answer.daysAsked === 1 ? 'day' : 'days'}`,
-  );
+  if (answer.latestOn) {
+    // How things stand, not a count of events: the latest reading, never a sum
+    lines.push(
+      `Latest: ${answer.atLeast ? 'at least ' : ''}${amount(answer.total)} (as it stood on ${answer.latestOn})`,
+    );
+  } else {
+    lines.push(
+      `Total: ${answer.atLeast ? 'at least ' : ''}${amount(answer.total)} over ${answer.daysRead} of ${answer.daysAsked} ${answer.daysAsked === 1 ? 'day' : 'days'}`,
+    );
+  }
   if (answer.readAt) {
     lines.push(
       answer.readAt.newest === answer.readAt.oldest
@@ -172,6 +196,11 @@ export function answerText(answer: MetricAnswer, productName: string): string {
       `By day: ${answer.byDay.map(day => `${day.date} ${day.value === null ? 'no reading' : amount(day.value)}`).join('; ')}`,
     );
   }
+  if (answer.unfinished.length) {
+    lines.push(
+      `Not final: ${spans(answer.unfinished)} ${answer.unfinished.length === 1 ? 'was' : 'were'} read before the day was over, so ${answer.unfinished.length === 1 ? 'its number is' : 'their numbers are'} the count so far.`,
+    );
+  }
   if (missing.length) {
     const groups = new Map<string, string[]>();
     for (const day of missing) {
@@ -179,7 +208,7 @@ export function answerText(answer: MetricAnswer, productName: string): string {
       groups.set(why, [...(groups.get(why) ?? []), day.date]);
     }
     for (const [why, dates] of groups) lines.push(`No reading for ${spans(dates)}: ${why}`);
-    lines.push('A day with no reading is not a zero: the total above leaves those days out.');
+    lines.push('A day with no reading is not a zero: the number above leaves those days out.');
   }
   return lines.join('\n');
 }

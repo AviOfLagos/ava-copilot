@@ -47,7 +47,7 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   Product facts come from there only; an empty field reads "not set" and is never filled with a guess.
 - Growth numbers: `src/storage/lib/growth` (Dexie v8) and `src/background/growth` (the product collector for the
   Suture agent API, `metrics_query`, `make_link`). Plain code, no model. A number that could not be read is "no
-  reading" with a reason, never 0; the product API token lives in the vault under `product-api:<workspaceId>`.
+  reading" with a reason, never 0; the product API token lives in the vault under `product-api:<workspaceId>@<host>`.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

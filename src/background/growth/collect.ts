@@ -61,6 +61,17 @@ export interface CollectDeps {
 
 const failure = (reason: NoReadingReason, detail: string): ReadFailure => ({ ok: false, reason, detail });
 
+/** Records that the user was told about a source's problem, so the same one is not told twice. */
+export async function markNoticed(
+  productId: string,
+  source: GrowthSource,
+  reason: NoReadingReason,
+  store: GrowthStore = growthStore,
+): Promise<void> {
+  const state = await store.sourceState(productId, source);
+  if (state) await store.setSourceState({ ...state, noticed: reason });
+}
+
 /**
  * Reads one product's numbers for yesterday and today (UTC) and records them.
  *
@@ -72,7 +83,10 @@ export async function collectProduct(profile: ProductProfile, deps: CollectDeps 
   const now = deps.now?.() ?? Date.now();
   const productId = profile.workspaceId;
   const today = utcDay(now);
-  const days = [shiftDay(today, -1), today];
+  // Yesterday and today, and up to two older days of the last week that were read before they were over or
+  // could not be read: a day the browser slept through is read again, not left at what it was at noon
+  const older = (await store.unsettledDays(productId, 'signups', shiftDay(today, -7), shiftDay(today, -2))).slice(-2);
+  const days = [...older, shiftDay(today, -1), today];
   const outcome: CollectOutcome = {
     productId,
     source: 'product',
@@ -109,9 +123,9 @@ export async function collectProduct(profile: ProductProfile, deps: CollectDeps 
   });
 
   // 1. Can it be reached at all?
-  const token = await (deps.token ?? (item => getSecret(productApiTokenRef(item.workspaceId))))(profile).catch(
-    () => null,
-  );
+  const savedToken = (item: ProductProfile) =>
+    getSecret(productApiTokenRef(item.workspaceId, item.agentApi?.baseUrl ?? ''));
+  const token = await (deps.token ?? savedToken)(profile).catch(() => null);
   let down: ReadFailure | null = null;
   let client: SutureClient | null = null;
   if (!token) {
@@ -138,6 +152,18 @@ export async function collectProduct(profile: ProductProfile, deps: CollectDeps 
       const spend = await client.spend(date);
       await record('spend_usd', date, spend.ok ? total(spend.value.totalUsd, spend.value.partial) : spend);
       const payments = await client.payments(date);
+      // Orgs on a paid plan now, by the product's own count
+      if (date === today) {
+        await record(
+          'paid_orgs',
+          today,
+          !payments.ok
+            ? payments
+            : payments.value.paidOrgs !== null
+              ? total(payments.value.paidOrgs)
+              : failure('not_available', 'The product did not say how many orgs are on a paid plan.'),
+        );
+      }
       await record(
         'payments',
         date,
@@ -154,14 +180,13 @@ export async function collectProduct(profile: ProductProfile, deps: CollectDeps 
     const orgs = await client.orgs();
     await record('orgs', today, orgs.ok ? total(orgs.value.total, orgs.value.partial) : orgs);
     await record('active_orgs', today, orgs.ok ? total(orgs.value.active7d, orgs.value.partial) : orgs);
-    await record('paid_orgs', today, orgs.ok ? total(orgs.value.paid, orgs.value.partial) : orgs);
     outcome.connected = true;
   }
 
   // 3. The source's state, and whether the user should hear about it now. A product that answers but with one
   // read in a shape the collector does not know is a problem too: that number is "no reading" until it is fixed.
-  // What the product itself cannot report (payments) is expected, and is no problem.
-  const odd = outcome.missed.find(miss => miss.reason !== 'not_available');
+  // Payments are the one thing this product never records: that is expected, and is no problem.
+  const odd = outcome.missed.find(miss => !(miss.metric === 'payments' && miss.reason === 'not_available'));
   const problem = outcome.connected
     ? odd
       ? { reason: odd.reason, detail: `${odd.metric}: ${odd.detail}` }
@@ -177,8 +202,9 @@ export async function collectProduct(profile: ProductProfile, deps: CollectDeps 
     detail: problem?.detail ?? null,
     checkedAt: now,
     lastOkAt: outcome.connected ? now : (before?.lastOkAt ?? null),
-    // Working again clears it, so the next failure is told
-    noticed: problem?.reason ?? null,
+    // Working again clears it, so the next failure is told. A notice still to be made is not marked as made:
+    // `markNoticed` does that once the user really has it, so a notice that failed to go out is tried again.
+    noticed: problem ? (outcome.notice ? (before?.noticed ?? null) : problem.reason) : null,
   });
   logger.info(
     `Collected ${productId}: ${outcome.connected ? `${outcome.read.length} metrics read` : `not connected (${outcome.reason})`}`,

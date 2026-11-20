@@ -69,7 +69,7 @@ const spendSchema = z
 
 const rootSchema = z.object({ name: z.string(), version: z.number(), read_at: z.string() }).passthrough();
 
-const errorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+const errorSchema = z.object({ error: z.object({ code: z.string(), message: z.string().optional() }) });
 
 export interface ReadFailure {
   ok: false;
@@ -98,8 +98,8 @@ export interface SutureClient {
   feedback(day: string): Promise<Read<Count>>;
   /** Suture's own spend on models for the day, in US dollars. */
   spend(day: string): Promise<Read<{ totalUsd: number; partial: boolean }>>;
-  /** Orgs as they are now: all of them, those active in the last 7 days, and those on a paid plan. */
-  orgs(): Promise<Read<{ total: number; active7d: number; paid: number; partial: boolean }>>;
+  /** Orgs as they are now: all of them, and those active in the last 7 days. */
+  orgs(): Promise<Read<{ total: number; active7d: number; partial: boolean }>>;
   /** Always "no reading" today: the reason the API gives, and the paid-org count it offers instead. */
   payments(day: string): Promise<Read<{ total: number | null; reason: string; paidOrgs: number | null }>>;
 }
@@ -113,6 +113,9 @@ export function safeApiBase(baseUrl: string): URL | null {
     const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.localhost');
     if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) return null;
     if (url.username || url.password) return null;
+    // An address is a place, not a question: nothing after "?" or "#" is kept
+    url.search = '';
+    url.hash = '';
     return url;
   } catch {
     return null;
@@ -130,7 +133,8 @@ function countBy(values: (string | undefined)[], key: 'channel' | 'campaign') {
 function failureFor(status: number, body: unknown): ReadFailure {
   const parsed = errorSchema.safeParse(body);
   const code = parsed.success ? parsed.data.error.code : '';
-  if (status === 503 && (code === 'agent_api_off' || !code)) {
+  // Only the API's own word for it: a 503 page from the host is a failure, not a missing token
+  if (status === 503 && code === 'agent_api_off') {
     return {
       ok: false,
       reason: 'agent_api_off',
@@ -157,6 +161,9 @@ function failureFor(status: number, body: unknown): ReadFailure {
 export function createSutureClient(baseUrl: string, token: string, fetcher: typeof fetch = fetch): SutureClient {
   const base = safeApiBase(baseUrl);
 
+  // A token is letters, digits and a few marks: anything else (a line break from a careless paste) cannot be sent
+  const sendable = /^[\x21-\x7e]+$/.test(token);
+
   async function get<S extends z.ZodType>(
     path: string,
     schema: S,
@@ -167,6 +174,13 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
         ok: false,
         reason: 'not_set',
         detail: 'The product API address is missing, or is not an https address.',
+      };
+    }
+    if (!sendable) {
+      return {
+        ok: false,
+        reason: 'unauthorized',
+        detail: 'The saved token has a space or a line break in it: paste it again.',
       };
     }
     const url = new URL(base.href.replace(/\/+$/, '') + path);
@@ -192,7 +206,11 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
     let body: unknown;
     try {
       body = await response.json();
-    } catch {
+    } catch (error) {
+      // Cut off while the answer was still arriving: that is no answer, not an odd one
+      if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+        return { ok: false, reason: 'unreachable', detail: `${base.host} stopped answering part of the way through.` };
+      }
       body = null;
     }
     if (!response.ok) return failureFor(response.status, body);
@@ -268,9 +286,8 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
     async orgs() {
       const read = await get('/orgs', orgsSchema);
       if (!read.ok) return read;
-      const { total, active_7d: active7d, by_plan: plans, truncated } = read.value;
-      const paid = plans.filter(row => row.plan !== 'free').reduce((sum, row) => sum + row.count, 0);
-      return { ok: true, value: { total, active7d, paid, partial: truncated } };
+      const { total, active_7d: active7d, truncated } = read.value;
+      return { ok: true, value: { total, active7d, partial: truncated } };
     },
 
     async payments(day) {

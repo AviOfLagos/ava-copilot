@@ -1,6 +1,6 @@
 import { db as defaultDb } from '../threads/db';
 import type { AviCopilotDb } from '../threads/db';
-import { metricId, readingId, sourceStateId } from './types';
+import { dayEnd, metricId, readingId, sourceStateId } from './types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSource, GrowthSourceState } from './types';
 
 /** One metric's day, as a collector hands it over: a number that was read, or why there is none. */
@@ -63,14 +63,20 @@ export function createGrowthStore(db: AviCopilotDb = defaultDb) {
           });
           return;
         }
+        // A list cut at the product's row limit never replaces a whole one read earlier
+        const before = await db.growthReadings.get(readingId(key));
+        if (reading.partial && before?.status === 'ok' && !before.partial) return;
         await rowsOf(key.productId, key.source, key.metric, key.date).delete();
         const base = { ...key, readAt: reading.readAt };
         const rows: GrowthMetric[] = [{ ...base, id: metricId(base), value: reading.total }];
         for (const part of reading.byChannel ?? []) {
+          // A part with no name would be taken for the day's total
+          if (!part.channel) continue;
           const row = { ...base, channel: part.channel };
           rows.push({ ...row, id: metricId(row), value: part.value });
         }
         for (const part of reading.byCampaign ?? []) {
+          if (!part.campaign) continue;
           const row = { ...base, campaign: part.campaign };
           rows.push({ ...row, id: metricId(row), value: part.value });
         }
@@ -100,6 +106,21 @@ export function createGrowthStore(db: AviCopilotDb = defaultDb) {
         .where('[productId+metric+date]')
         .between([productId, metric, from], [productId, metric, to], true, true)
         .toArray();
+    },
+
+    /**
+     * The days between two UTC days that should be read again: read before the day was over, or not read at
+     * all the last time. A day nobody ever tried is not in the list.
+     */
+    async unsettledDays(productId: string, metric: string, from: string, to: string): Promise<string[]> {
+      const readings = await db.growthReadings
+        .where('[productId+metric+date]')
+        .between([productId, metric, from], [productId, metric, to], true, true)
+        .toArray();
+      return readings
+        .filter(reading => reading.status === 'none' || reading.readAt < dayEnd(reading.date))
+        .map(reading => reading.date)
+        .sort();
     },
 
     /** The metrics a product has any reading of, with the source each comes from. */
