@@ -78,7 +78,9 @@ export const readFocus = (): FocusReading => {
   const inGrid =
     el.closest('[role="grid"], [role="treegrid"], [role="gridcell"]') !== null ||
     /(^|\s)(cell-input|waffle-rich-text-editor)(\s|$)/.test(ancestry.join(' ')) ||
-    (location.hostname === 'docs.google.com' && location.pathname.startsWith('/spreadsheets/'));
+    (location.hostname === 'docs.google.com' &&
+      location.pathname.startsWith('/spreadsheets/') &&
+      el.closest('[role="dialog"], [role="alertdialog"], dialog, [class*="docos"]') === null);
   return {
     where: 'element',
     element: {

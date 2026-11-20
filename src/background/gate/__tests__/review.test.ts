@@ -425,4 +425,19 @@ describe('allow every time on a page', () => {
     expect(retry.requests[0].always).toBeUndefined();
     expect(await permissionRulesStore.list()).toHaveLength(1);
   });
+
+  it('neither offers nor uses a rule when the focus could not be read (an iframe)', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    await permissionRulesStore.allow({ kind: 'submit', scope: 'mail.example/compose', label: 'x' });
+    const framed = {
+      ...page,
+      evaluateInPage: async (fn: unknown, arg: unknown) =>
+        fn === readFocus ? { where: 'frame', element: null } : page.evaluateInPage(fn as never, arg as never),
+    } as unknown as Page;
+    const run = answering(await runningThread(), true);
+    await act(run.context, framed, state, pressEnter);
+    expect(run.requests).toHaveLength(1);
+    expect(run.requests[0].always).toBeUndefined();
+    expect(await permissionRulesStore.list()).toHaveLength(1);
+  });
 });

@@ -18,12 +18,23 @@ const { canAllowAlways, pageScope, permissionRulesStore, toolScope } = await imp
 
 describe('pageScope', () => {
   it('is the host and the first path segment', () => {
-    expect(pageScope('https://docs.google.com/spreadsheets/d/abc/edit#gid=0')).toBe('docs.google.com/spreadsheets');
-    expect(pageScope('https://mail.google.com/mail/u/0/#inbox')).toBe('mail.google.com/mail');
+    expect(pageScope('https://app.example.com/crm/leads/42')).toBe('app.example.com/crm');
     expect(pageScope('https://Example.com/')).toBe('example.com');
   });
 
+  it('is one document or account on hosts of shared documents', () => {
+    expect(pageScope('https://docs.google.com/spreadsheets/d/abc/edit#gid=0')).toBe(
+      'docs.google.com/spreadsheets/d/abc',
+    );
+    expect(pageScope('https://docs.google.com/forms/d/xyz/viewform')).toBe('docs.google.com/forms/d/xyz');
+    expect(pageScope('https://mail.google.com/mail/u/0/#inbox')).toBe('mail.google.com/mail/u/0');
+    expect(pageScope('https://mail.google.com/mail/u/1/#inbox')).not.toBe(
+      pageScope('https://mail.google.com/mail/u/0/'),
+    );
+  });
+
   it('is empty for addresses a rule cannot name', () => {
+    expect(pageScope('http://example.com/app')).toBe('');
     expect(pageScope('chrome://settings')).toBe('');
     expect(pageScope('not a url')).toBe('');
   });
@@ -53,6 +64,13 @@ describe('permissionRulesStore', () => {
     await permissionRulesStore.used(rule!.id, 42);
     expect((await permissionRulesStore.list())[0]).toMatchObject({ uses: 1, lastUsedAt: 42 });
     await permissionRulesStore.remove(rule!.id);
+    expect(await permissionRulesStore.list()).toHaveLength(0);
+  });
+
+  it('does not bring a removed rule back when a use is counted after it', async () => {
+    const rule = await permissionRulesStore.allow({ kind: 'send', scope: 'b.example', label: 'b' });
+    await permissionRulesStore.remove(rule!.id);
+    await permissionRulesStore.used(rule!.id);
     expect(await permissionRulesStore.list()).toHaveLength(0);
   });
 

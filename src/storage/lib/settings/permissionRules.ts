@@ -52,22 +52,35 @@ export type PermissionRulesStorage = BaseStorage<PermissionRulesState> & {
 export const canAllowAlways = (kind: string): kind is RuleKind =>
   kind === 'tool' || (['send', 'publish', 'submit'] as string[]).includes(kind);
 
+// Hosts that serve other people's documents under one name: a rule there covers one document or account
+// ("docs.google.com/forms/d/<id>", "mail.google.com/mail/u/0"), never every form anyone made
+const DEEP_SCOPE_HOSTS: Record<string, number> = {
+  'docs.google.com': 3,
+  'mail.google.com': 3,
+  'drive.google.com': 3,
+  'forms.office.com': 3,
+};
+
 /**
- * The place a page action belongs to: its host and first path segment ("docs.google.com/spreadsheets"),
- * so a rule for Google Sheets does not cover Gmail on the same host. Empty when the address cannot be read.
+ * The place a page action belongs to: its host and first path segment ("example.com/app"), or deeper on hosts
+ * of shared documents. Only https pages get rules: the address must say where it really is. Empty when the
+ * address cannot be read.
  */
 export function pageScope(url: string): string {
   try {
     const { protocol, host, pathname } = new URL(url);
-    if (protocol !== 'https:' && protocol !== 'http:') return '';
-    const first = pathname.split('/').filter(Boolean)[0] ?? '';
-    return first ? `${host.toLowerCase()}/${first}` : host.toLowerCase();
+    if (protocol !== 'https:') return '';
+    const name = host.toLowerCase();
+    const segments = pathname
+      .split('/')
+      .filter(Boolean)
+      .slice(0, DEEP_SCOPE_HOSTS[name] ?? 1);
+    return [name, ...segments].join('/');
   } catch {
     return '';
   }
 }
 
-// A tool whose name, description or inputs change (a new hash) is a different tool, and is asked about again
 export const toolScope = (connectorId: string, tool: string, hash: string): string =>
   `tool:${connectorId}/${tool}@${hash.slice(0, 16)}`;
 
@@ -77,10 +90,21 @@ const storage = createStorage<PermissionRulesState>(
   { storageEnum: StorageEnum.Local, liveUpdate: true },
 );
 
+// Use counts live apart from the rules: the background counts while Settings may remove a rule, and a count
+// written back with the whole list could bring a removed rule back
+type UseCounts = Record<string, { uses: number; lastUsedAt: number }>;
+const useStorage = createStorage<UseCounts>(
+  'permission-rule-uses',
+  {},
+  { storageEnum: StorageEnum.Local, liveUpdate: true },
+);
+
 export const permissionRulesStore: PermissionRulesStorage = {
   ...storage,
   async list() {
-    return (await storage.get())?.rules ?? [];
+    const rules = (await storage.get())?.rules ?? [];
+    const counts = (await useStorage.get()) ?? {};
+    return rules.map(rule => (counts[rule.id] ? { ...rule, ...counts[rule.id] } : rule));
   },
   async find(kind, scope) {
     if (!scope || !canAllowAlways(kind)) return null;
@@ -89,7 +113,7 @@ export const permissionRulesStore: PermissionRulesStorage = {
   async allow(candidate, now = Date.now()) {
     // A kind that is always asked never gets a rule, whatever a caller sends
     if (!candidate.scope || !canAllowAlways(candidate.kind)) return null;
-    const rules = await permissionRulesStore.list();
+    const rules = (await storage.get())?.rules ?? [];
     const existing = rules.find(rule => rule.kind === candidate.kind && rule.scope === candidate.scope);
     if (existing) return existing;
     const rule: PermissionRule = {
@@ -105,13 +129,14 @@ export const permissionRulesStore: PermissionRulesStorage = {
     return rule;
   },
   async used(id, now = Date.now()) {
-    const rules = await permissionRulesStore.list();
-    await storage.set({
-      rules: rules.map(rule => (rule.id === id ? { ...rule, uses: rule.uses + 1, lastUsedAt: now } : rule)),
-    });
+    const counts = (await useStorage.get()) ?? {};
+    await useStorage.set({ ...counts, [id]: { uses: (counts[id]?.uses ?? 0) + 1, lastUsedAt: now } });
   },
   async remove(id) {
-    const rules = await permissionRulesStore.list();
+    const rules = (await storage.get())?.rules ?? [];
     await storage.set({ rules: rules.filter(rule => rule.id !== id) });
+    const counts = { ...((await useStorage.get()) ?? {}) };
+    delete counts[id];
+    await useStorage.set(counts);
   },
 };

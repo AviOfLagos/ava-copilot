@@ -44,11 +44,14 @@ export const EMPTY_TARGET: GateTarget = {
   inGrid: false,
 };
 
+// The cell itself, as opposed to a control inside it
+const GRID_CELL_ROLES = ['gridcell', 'cell', 'row', 'rowheader', 'columnheader'];
+
 // Checked in order, so the more damaging kind wins when a label matches several
 const COMMIT_PATTERNS: [CommitKind, RegExp][] = [
   [
     'purchase',
-    /\b(buy|purchase|pay|checkout|check out|donate|subscribe|book now|upgrade|(place|complete|confirm)( your| the| my)? (order|purchase|payment|booking))\b/i,
+    /\b(buy|purchase|pay|checkout|check out|donate|subscribe|book now|upgrade|(place|complete|confirm)( your| the| my)? (order|purchase|payment|booking)|(send|make|submit|confirm|authori[sz]e) (a |the )?payments?|send money|transfer (funds|money)|refunds?|payouts?|withdraw(al)?)\b/i,
   ],
   [
     'delete',
@@ -114,9 +117,9 @@ function isSubmitControl(target: GateTarget): boolean {
  */
 export function classifyClick(target: GateTarget): CommitKind | null {
   const isPlainLink = target.tagName === 'a' && /^https?:|^\//i.test(target.href) && target.role !== 'button';
-  const isGridButton = target.tagName === 'button' || target.role === 'button' || target.tagName === 'a';
-  if (target.inGrid && !isGridButton) {
-    // Clicking a cell selects it; its text ("Send", "Delete") is data, not a control
+  if (target.inGrid && GRID_CELL_ROLES.includes(target.role)) {
+    // Clicking a cell selects it; its text ("Send", "Delete") is data, not a control. A button, link or
+    // icon inside the cell is still read as the control it is.
     return null;
   }
   const kind = classifyLabel(target.label) ?? classifyLabel(target.hints);
@@ -172,8 +175,9 @@ export function classifyKeys(keys: string, focus: GateTarget | null): CommitKind
   const isTextArea = focus.tagName === 'textarea' || focus.editable;
   const isButton = focus.tagName === 'button' || focus.role === 'button' || (focus.tagName === 'input' && !isTextInput);
 
-  if (focus.inGrid && !isButton && !modifiers.includes('control') && !modifiers.includes('meta')) {
-    // In a spreadsheet Enter confirms a cell and moves on, and Delete clears cells: editing, not committing
+  if (focus.inGrid && isEnter && (isTextInput || isTextArea) && modifiers.length === 0) {
+    // In a spreadsheet's cell editor Enter confirms the cell and moves on: editing, not sending. Delete on a
+    // selected row (not a text box) still counts as deleting it.
     return null;
   }
 
