@@ -2812,19 +2812,6 @@
   "brief_ready": {
     "message": "Your morning brief is ready"
   },
-  "brief_counts": {
-    "message": "$MEETINGS$ on the calendar today, $WAITING$ waiting on you.",
-    "placeholders": {
-      "meetings": {
-        "content": "$1",
-        "example": "3"
-      },
-      "waiting": {
-        "content": "$2",
-        "example": "1"
-      }
-    }
-  },
   "brief_open": {
     "message": "Today’s brief"
   },
@@ -10308,5 +10295,65 @@
   },
   "threads_tabReopened": {
     "message": "The tab was closed, so it was opened again at $1 and the task carries on. Press Stop to end it."
+  },
+  "brief_source_calendar": {
+    "message": "Calendar"
+  },
+  "brief_source_chats": {
+    "message": "chats"
+  },
+  "brief_source_inbox": {
+    "message": "Inbox"
+  },
+  "brief_source_agents": {
+    "message": "agents"
+  },
+  "brief_source_knowledge": {
+    "message": "notes and meetings"
+  },
+  "brief_source_notConnected": {
+    "message": "$1: not connected."
+  },
+  "brief_source_failed": {
+    "message": "$1: could not be read."
+  },
+  "brief_sources_read": {
+    "message": "Read: $1."
+  },
+  "brief_calendar_notConnected": {
+    "message": "Calendar: not connected. Connect it in Settings, under Connections, so meetings show here."
+  },
+  "brief_calendar_failed": {
+    "message": "Calendar: could not be read this morning, so meetings may be missing. Check Calendar in Settings, under Connections."
+  },
+  "brief_calendar_failedAsOf": {
+    "message": "Calendar: could not be read this morning. This is what it showed at $1; newer changes are missing."
+  },
+  "brief_line_noMeetings": {
+    "message": "No meetings today."
+  },
+  "brief_line_meeting": {
+    "message": "1 meeting, at $1."
+  },
+  "brief_line_meetings": {
+    "message": "$1 meetings, first at $2."
+  },
+  "brief_line_noWaiting": {
+    "message": "Nothing waiting on you."
+  },
+  "brief_line_waiting": {
+    "message": "$1 waiting on you: $2."
+  },
+  "brief_line_waitingMore": {
+    "message": "$1 waiting on you: $2, and $3 more."
+  },
+  "brief_item_approve": {
+    "message": "approve $1"
+  },
+  "brief_item_needsYou": {
+    "message": "$1 needs a sign-in or a code"
+  },
+  "brief_item_failed": {
+    "message": "$1 stopped"
   }
 }

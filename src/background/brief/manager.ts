@@ -11,8 +11,18 @@ import { isOverDailyBudget } from '../usage/budget';
 import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
 import { rollupMarkdown, workspaceSummaries } from '../history/summaries';
-import { briefDue, briefMarkdown, localDate, PRIORITIES_INSTRUCTIONS, priorityLines, todaysEvents } from './brief';
-import type { BriefData } from './brief';
+import {
+  briefDue,
+  briefLine,
+  briefMarkdown,
+  localDate,
+  PRIORITIES_INSTRUCTIONS,
+  priorityLines,
+  sourcesLine,
+  stoppedThreads,
+} from './brief';
+import type { BriefData, BriefSource, SourceState, WaitingRun } from './brief';
+import type { AgentTaskState, InboxItem } from '@extension/storage';
 import { toneLine } from '../personalities/prompt';
 import { loadIdentityContext } from '../identity/context';
 import { briefContext, goalLines } from '../identity/prompt';
@@ -101,19 +111,57 @@ export class MorningBrief {
 
   private async build(notify: boolean): Promise<string> {
     const now = Date.now();
-    const nodes = await graphStore.nodes();
+    // Every source is read on its own, and one that cannot be read is named in the brief: a failed read never
+    // turns into "nothing" (docs/growth-team.md, Part 5a)
+    const sources: BriefSource[] = [];
+    const read = async <T>(name: string, load: () => Promise<T>, empty: T): Promise<T> => {
+      try {
+        const value = await load();
+        sources.push({ name, state: 'read' });
+        return value;
+      } catch (error) {
+        logger.warning(`The brief could not read ${name}`, error);
+        sources.push({ name, state: 'failed' });
+        return empty;
+      }
+    };
+
+    // The calendar says itself whether it is connected and whether its last read worked
+    const calendarName = t('brief_source_calendar');
+    const calendar = await this.calendar
+      .reading(24)
+      .catch(error => ({ state: 'failed' as const, events: [], error: String(error), asOf: null }));
+    sources.push({ name: calendarName, state: calendar.state });
+    const calendarNote =
+      calendar.state === 'not_connected'
+        ? t('brief_calendar_notConnected')
+        : calendar.state === 'failed'
+          ? calendar.asOf
+            ? t('brief_calendar_failedAsOf', [
+                new Date(calendar.asOf).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+              ])
+            : t('brief_calendar_failed')
+          : undefined;
+
+    const threads = await read(t('brief_source_chats'), () => db.threads.toArray(), []);
+    const inbox = await read(t('brief_source_inbox'), () => inboxDecisions(), []);
+    const agents = await read(t('brief_source_agents'), () => db.agents.toArray(), []);
+    const runs = await waitingRuns().catch(() => []);
+    const nodes = await read(t('brief_source_knowledge'), () => graphStore.nodes(), []);
     // Who the brief is for and what they are working towards (all workspaces: the brief covers every one)
     const identity = await loadIdentityContext(null);
-    const threads = await db.threads.toArray();
     const data: BriefData = {
       now,
-      events: await this.calendar.upcoming(24).catch(() => []),
+      events: calendar.events,
+      calendarNote,
       actions: nodes.filter(node => node.type === 'action'),
       decisions: nodes.filter(node => node.type === 'decision'),
       waiting: threads.filter(thread => thread.status === 'waiting_confirm'),
-      stopped: threads.filter(
-        thread => thread.status === 'error' && !thread.archived && now - thread.updatedAt < 86_400_000,
-      ),
+      stopped: stoppedThreads(threads, now),
+      inbox,
+      runs,
+      agentNames: Object.fromEntries(agents.map(agent => [agent.id, agent.name])),
+      sourcesLine: sourcesLine(sources, t),
       workspaces: await workspaceStore.list(),
       // What workflows gathered for the brief today
       sections: await todaysBriefSections(db, now).catch(() => []),
@@ -158,16 +206,16 @@ export class MorningBrief {
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });
 
     if (notify) {
-      // Counts only: invite titles are written by whoever sent them
-      const meetings = todaysEvents(data.events, now).length;
-      const counts = t('brief_counts', [String(meetings), String(data.waiting.length + data.stopped.length)]);
-      emitNotice({ kind: 'brief', title: t('brief_ready'), body: counts, key: `brief:${thread.id}` });
+      // The counts and the top item by name; a meeting only by its time: invite titles are written by whoever
+      // sent them. Whatever goes to WhatsApp is cut to one plain line with no links (whatsapp-remote/bridge.ts).
+      const line = briefLine(data, { name: calendarName, state: calendar.state as SourceState }, t);
+      emitNotice({ kind: 'brief', title: t('brief_ready'), body: line, key: `brief:${thread.id}` });
       await chrome.notifications
         .create(NOTIFICATION_ID, {
           type: 'basic',
           iconUrl: chrome.runtime.getURL('icon-128.png'),
           title: t('brief_ready'),
-          message: t('brief_counts', [String(meetings), String(data.waiting.length + data.stopped.length)]),
+          message: line,
           priority: 1,
         })
         .catch(() => {});
@@ -187,4 +235,33 @@ export class MorningBrief {
   private async overCap(): Promise<boolean> {
     return isOverDailyBudget();
   }
+}
+
+/**
+ * Inbox items that need a decision: approvals not answered yet, and tasks reported stuck that the user has not
+ * opened (src/background/retry). A snoozed item is not waiting now.
+ */
+export async function inboxDecisions(): Promise<InboxItem[]> {
+  return (await db.inbox.toArray()).filter(
+    item =>
+      (item.kind === 'approval' && (item.status === 'unread' || item.status === 'read')) ||
+      (item.kind === 'alert' && item.status === 'unread' && item.externalId.startsWith('stuck:')),
+  );
+}
+
+/** Agent and routine runs that wait for the user's click, by the name the user knows them by. */
+export async function waitingRuns(): Promise<WaitingRun[]> {
+  const runs = await db.runs.where('status').equals('waiting_user').toArray();
+  return Promise.all(
+    runs.map(async run => {
+      const task = await db.runSteps.where('runId').equals(run.id).toArray();
+      const state = task.find(step => step.nodeId === 'task')?.state as AgentTaskState | null | undefined;
+      const owner = run.agentId
+        ? (await db.agents.get(run.agentId))?.name
+        : run.workflowId
+          ? (await db.workflows.get(run.workflowId))?.name
+          : undefined;
+      return { runId: run.id, name: owner || 'A run', threadId: state?.threadId ?? null };
+    }),
+  );
 }

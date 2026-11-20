@@ -2812,19 +2812,6 @@
   "brief_ready": {
     "message": "Seu resumo da manhã está pronto"
   },
-  "brief_counts": {
-    "message": "$MEETINGS$ na agenda hoje, $WAITING$ esperando por você.",
-    "placeholders": {
-      "meetings": {
-        "content": "$1",
-        "example": "3"
-      },
-      "waiting": {
-        "content": "$2",
-        "example": "1"
-      }
-    }
-  },
   "brief_open": {
     "message": "Resumo de hoje"
   },
@@ -10308,5 +10295,65 @@
   },
   "threads_tabReopened": {
     "message": "A aba foi fechada, então foi aberta de novo em $1 e a tarefa continua. Pressione Parar para encerrá-la."
+  },
+  "brief_source_calendar": {
+    "message": "Agenda"
+  },
+  "brief_source_chats": {
+    "message": "conversas"
+  },
+  "brief_source_inbox": {
+    "message": "Caixa de entrada"
+  },
+  "brief_source_agents": {
+    "message": "agentes"
+  },
+  "brief_source_knowledge": {
+    "message": "notas e reuniões"
+  },
+  "brief_source_notConnected": {
+    "message": "$1: não conectada."
+  },
+  "brief_source_failed": {
+    "message": "$1: não foi possível ler."
+  },
+  "brief_sources_read": {
+    "message": "Lido: $1."
+  },
+  "brief_calendar_notConnected": {
+    "message": "Agenda: não conectada. Conecte-a em Configurações, em Conexões, para as reuniões aparecerem aqui."
+  },
+  "brief_calendar_failed": {
+    "message": "Agenda: não foi possível ler esta manhã, então podem faltar reuniões. Verifique a Agenda em Configurações, em Conexões."
+  },
+  "brief_calendar_failedAsOf": {
+    "message": "Agenda: não foi possível ler esta manhã. Isto é o que ela mostrava às $1; mudanças mais recentes estão faltando."
+  },
+  "brief_line_noMeetings": {
+    "message": "Nenhuma reunião hoje."
+  },
+  "brief_line_meeting": {
+    "message": "1 reunião, às $1."
+  },
+  "brief_line_meetings": {
+    "message": "$1 reuniões, a primeira às $2."
+  },
+  "brief_line_noWaiting": {
+    "message": "Nada esperando por você."
+  },
+  "brief_line_waiting": {
+    "message": "$1 esperando por você: $2."
+  },
+  "brief_line_waitingMore": {
+    "message": "$1 esperando por você: $2, e mais $3."
+  },
+  "brief_item_approve": {
+    "message": "aprovar $1"
+  },
+  "brief_item_needsYou": {
+    "message": "$1 precisa de login ou de um código"
+  },
+  "brief_item_failed": {
+    "message": "$1 parou"
   }
 }
