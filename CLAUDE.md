@@ -48,6 +48,9 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Growth numbers: `src/storage/lib/growth` (Dexie v8) and `src/background/growth` (the product collector for the
   Suture agent API, `metrics_query`, `make_link`). Plain code, no model. A number that could not be read is "no
   reading" with a reason, never 0; the product API token lives in the vault under `product-api:<workspaceId>@<host>`.
+- Rounds and check-ins: `src/background/rounds` (`plan.ts` holds the clock rules and the "what changed"
+  arithmetic; the tick does one round or one offer). Rounds only read; an offer starts nothing until the user
+  approves it in the Inbox. The state is `roundsStore` (`storage.local`).
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

@@ -2661,6 +2661,35 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   scheduled once, not on every start of the background.
 - Tests: `background/growth/__tests__`, `e2e/growth.e2e.mjs` with `e2e/mock-suture.mjs`.
 
+### Rounds and check-ins (2026-11-20, #71, docs/growth-team.md Part 4)
+
+- `src/background/rounds`: a job ticks every five minutes and does at most one thing, the one round that is due
+  or else one offer. Times are local: product pulse 08:30 and 16:00, mail 09:00 and 14:00, stuck work 12:00
+  (`plan.ts`, pure and tested with a fake clock). A slot is marked before its round runs. A round missed while
+  the browser was closed runs once when it opens that day: only its latest slot, the earlier ones are marked
+  missed. State is in `storage.local` (`rounds`), a new day starts clean.
+- Product pulse (plain code): collects each product's numbers, then per metric "today so far, yesterday, usually".
+  "What changed" is arithmetic (`whatChanged`): at least 50% and at least 5. **A choice beyond the spec:** a whole
+  day (yesterday) is compared with the seven before it and flagged up or down; today so far is flagged only when
+  it is already up, because a day that is not over always looks down. Slack notifications are counted by the
+  kind in square brackets, through the Slack connector's read tool when the user set it to run without asking;
+  otherwise the pulse says why they were not read. Counts are kept as `slack_<kind>` numbers.
+- Stuck work (plain code): the brief's own `waitingItems`, so the two never disagree.
+- Mail: asks the Mail agent (`team_mail`) for a run in the agents' own window, unattended, one per slot; its answer
+  in the Inbox is the digest. With no Mail agent the round says so once a day.
+- Each round is one Inbox item. A flagged change also goes to WhatsApp when the product's notify channel says so;
+  never to Slack, which would be a post.
+- Check-ins: after three quiet hours between 09:00 and 18:00 (from the user's last task, the browser opening, or
+  the last offer), not in a meeting, at most two a day: one Inbox approval built from what the rounds found
+  ("Want me to sort your mail? 14 unread.", or failed tasks to try again). Approve starts it with the user
+  there; decline is "not today" and silences offers until tomorrow. Offers left unanswered are closed when the
+  day turns. With nothing useful to offer, none is made.
+- Settings › General › Rounds and check-ins: the switch, each round's times and what ran, "Run now".
+- **Not built here:** reading Slack in the browser tab when no connector is on (it needs an agent run with a
+  skill, not plain code); the Slack count has not been run against the live Slack connector, only against a
+  stand-in with the documented tool shape.
+- Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers), `e2e/rounds.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
