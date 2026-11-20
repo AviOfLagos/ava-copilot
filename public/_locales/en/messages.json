@@ -10400,5 +10400,143 @@
   },
   "settings_permissions_hint": {
     "message": "These steps run without a card, from any chat, agent or routine. Paying, deleting and giving access always ask."
+  },
+  "product_title": {
+    "message": "Product"
+  },
+  "product_add": {
+    "message": "Add the product this workspace sells"
+  },
+  "product_hint": {
+    "message": "The facts every agent takes about what this workspace sells. A field left empty reads “not set”, and agents say they do not know it."
+  },
+  "product_notSet": {
+    "message": "Not set"
+  },
+  "product_missing": {
+    "message": "Not set yet: $1"
+  },
+  "product_missing_audience": {
+    "message": "who it is for"
+  },
+  "product_missing_pricing": {
+    "message": "pricing"
+  },
+  "product_missing_email": {
+    "message": "outreach email"
+  },
+  "product_missing_postal": {
+    "message": "postal address"
+  },
+  "product_missing_betaRule": {
+    "message": "beta rule"
+  },
+  "product_missing_social": {
+    "message": "social accounts"
+  },
+  "product_missing_northStar": {
+    "message": "north star"
+  },
+  "product_missing_notify": {
+    "message": "where to tell you"
+  },
+  "product_group_facts": {
+    "message": "The product"
+  },
+  "product_group_places": {
+    "message": "Where it lives"
+  },
+  "product_group_outreach": {
+    "message": "Outreach"
+  },
+  "product_group_limits": {
+    "message": "Goals and limits"
+  },
+  "product_name": {
+    "message": "Product name"
+  },
+  "product_url": {
+    "message": "Site"
+  },
+  "product_oneLiner": {
+    "message": "In one line"
+  },
+  "product_stage": {
+    "message": "Stage"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "Live"
+  },
+  "product_audience": {
+    "message": "Who it is for (one per line, most valuable first)"
+  },
+  "product_problem": {
+    "message": "The problem it solves"
+  },
+  "product_alternatives": {
+    "message": "What people use instead (one per line)"
+  },
+  "product_differentiators": {
+    "message": "Why this one (one per line, each one provable)"
+  },
+  "product_pricing": {
+    "message": "Pricing, exactly as on the site"
+  },
+  "product_never": {
+    "message": "Never say or do (one per line)"
+  },
+  "product_repo": {
+    "message": "Repo (owner/name)"
+  },
+  "product_admin": {
+    "message": "Admin console address"
+  },
+  "product_adminAccount": {
+    "message": "Admin login"
+  },
+  "product_slack": {
+    "message": "Slack channels with its notifications (one per line: #name, then the channel id if you know it)"
+  },
+  "product_emailFrom": {
+    "message": "Outreach email comes from"
+  },
+  "product_replyTo": {
+    "message": "Replies go to"
+  },
+  "product_postal": {
+    "message": "Postal address for email footers"
+  },
+  "product_notify": {
+    "message": "Tell me on"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "Both"
+  },
+  "product_northStar": {
+    "message": "North star metric"
+  },
+  "product_weeklyTarget": {
+    "message": "Weekly target"
+  },
+  "product_budget": {
+    "message": "Marketing budget (USD)"
+  },
+  "product_betaTesters": {
+    "message": "Beta testers a week"
+  },
+  "product_betaPlan": {
+    "message": "Beta plan"
+  },
+  "product_betaDays": {
+    "message": "Beta length (days)"
   }
 }

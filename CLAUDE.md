@@ -42,6 +42,9 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Open tabs: `src/background/browser/tabRegistry.ts` (ages and last use, in session storage) and `src/background/tabs`
   (the site a task names, `find_tab`, the state message's list by site). A person's task may start on, or move to, a
   free tab in any ordinary window; an agent's run stays in the windows it already uses (`TabBinding.anyWindow`).
+- Product profile: `src/storage/lib/products` (one per workspace; the owner's Suture seed only under
+  `VITE_SEED_PROFILE=avi`) and `src/background/products` (the state-message section, `update_product_profile`).
+  Product facts come from there only; an empty field reads "not set" and is never filled with a guess.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

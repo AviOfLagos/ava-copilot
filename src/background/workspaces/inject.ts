@@ -1,7 +1,8 @@
-import { threadStore, workspaceStore } from '@extension/storage';
+import { productStore, threadStore, workspaceStore } from '@extension/storage';
 import type { Workspace } from '@extension/storage';
 import type { AgentContext } from '../agent/types';
 import { createLogger } from '../log';
+import { productSection } from '../products/section';
 
 const logger = createLogger('Workspaces');
 
@@ -38,7 +39,10 @@ export async function workspaceSectionFor(context: AgentContext): Promise<string
   try {
     const thread = await threadStore.get(context.taskId);
     const workspace = await workspaceStore.get(thread?.workspaceId);
-    return workspace ? `\n${workspaceSection(workspace)}\n` : '';
+    if (!workspace) return '';
+    // The product this workspace sells, when it has one: the only source of product facts
+    const product = await productStore.forWorkspace(workspace.id).catch(() => undefined);
+    return `\n${workspaceSection(workspace)}\n${product ? `${productSection(product)}\n` : ''}`;
   } catch (error) {
     logger.error('Could not load the workspace', error);
     return '';

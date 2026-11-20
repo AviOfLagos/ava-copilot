@@ -2598,6 +2598,26 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `browser/__tests__/tabRegistry.test.ts`, `tabs/__tests__`, the "#68" block in
   `threads/__tests__/manager.test.ts`, and `e2e/tabs.e2e.mjs` (a second window, real tabs).
 
+### Product profile per workspace, and the Suture workspace (2026-11-20, #69, docs/growth-team.md Part 6)
+
+- `src/storage/lib/products`: `ProductProfile` (one per workspace, storage key `products`) and `productStore`.
+  `cleanProductProfile` is the one shape that is kept: a half-filled part (a beta rule with no numbers, a north
+  star with no target, a sender with no address) goes back to "not set" instead of being stored with a 0.
+- Agents read it in the state message, right after the workspace section (`background/products/section.ts`,
+  called from `workspaces/inject.ts`): "These are the only facts about this product you may state", then one line
+  per fact, and "not set" for every gap.
+- Edited in the workspace screen (`side-panel/workspaces/ProductFields.tsx`): a line under the heading names what
+  is not set yet. Ava changes it with `update_product_profile`, which shows every changed field with what it says
+  now and saves only after the user's click. That tool reaches the product's facts only: the budget, the beta
+  rule, the sender, the postal address, the accounts and the admin console are set by the user in the screen.
+- Seed (`products/seed.ts`): only when `VITE_SEED_PROFILE=avi`, once, and on an install that already had its
+  workspaces. Suture's facts come from the owner's brief and from trysuture.com as it read on 2026-11-20. Not
+  given yet, so empty: the outreach address, the postal address, the beta rule, the social accounts, the north
+  star, where to tell the owner, and the admin login.
+- **Differences from the spec's shape:** `slackChannels` holds a name and an id (the Slack connector reads by
+  id); `postalAddress` is a field of its own; `northStar`, `budget`, `notify` can be null (not set).
+- Tests: `storage/lib/products/__tests__`, `background/products/__tests__`, `e2e/products.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -1,10 +1,18 @@
-import { useState } from 'react';
-import { ChevronRight, Plus, Star, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronRight, Package, Plus, Star, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { ACCOUNT_PLATFORMS, workspaceId, workspaceStore } from '@extension/storage';
-import type { AccountPlatform, Workspace } from '@extension/storage';
+import {
+  ACCOUNT_PLATFORMS,
+  emptyProductProfile,
+  isEmptyProfile,
+  productStore,
+  workspaceId,
+  workspaceStore,
+} from '@extension/storage';
+import type { AccountPlatform, ProductProfile, Workspace } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { Button } from '../components/ui/button';
+import ProductFields from './ProductFields';
 import { useDefaultWorkspaceId, useWorkspaces } from './WorkspacePicker';
 
 const PLATFORM_LABELS: Record<AccountPlatform, { label: string; placeholder: string }> = {
@@ -34,6 +42,20 @@ function Editor({
   const [draft, setDraft] = useState(initial);
   const [keywords, setKeywords] = useState(initial.keywords.join(', '));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The product this workspace sells, if any; null until the user adds one
+  const [product, setProduct] = useState<ProductProfile | null>(null);
+  const [hadProduct, setHadProduct] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void productStore.forWorkspace(initial.id).then(found => {
+      if (!live || !found) return;
+      setProduct(found);
+      setHadProduct(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [initial.id]);
   const isNew = !initial.name;
   const taken = others.map(item => item.id);
   // Two workspaces of one name could not be told apart, by the user or by routing a chat's words
@@ -43,6 +65,12 @@ function Editor({
     if (!draft.name.trim() || clash) return;
     const id = isNew ? workspaceId(draft.name, taken) : draft.id;
     await workspaceStore.save({ ...draft, id, keywords: keywords.split(',') });
+    // A product with nothing in it is no product
+    if (product && !isEmptyProfile({ ...product, name: '' })) {
+      await productStore.save({ ...product, workspaceId: id, name: product.name.trim() || draft.name.trim() });
+    } else if (hadProduct) {
+      await productStore.remove(id);
+    }
     onDone();
   };
 
@@ -93,6 +121,17 @@ function Editor({
           </label>
         ))}
       </fieldset>
+      {product ? (
+        <ProductFields value={product} onChange={setProduct} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setProduct(emptyProductProfile({ id: draft.id, name: draft.name }))}
+          className="text-primary hover:bg-accent/50 flex items-center gap-2 rounded-xl px-1 py-1.5 text-left text-[12.5px]">
+          <Package className="size-3.5" />
+          {t('product_add')}
+        </button>
+      )}
       <div className="mt-1 flex items-center gap-2">
         {!isNew &&
           (confirmDelete ? (
@@ -101,6 +140,7 @@ function Editor({
               size="sm"
               onClick={async () => {
                 await workspaceStore.remove(draft.id);
+                await productStore.remove(draft.id);
                 onDone();
               }}>
               {t('workspace_delete')}

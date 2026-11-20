@@ -10400,5 +10400,143 @@
   },
   "settings_permissions_hint": {
     "message": "Estes passos rodam sem cartão, em qualquer chat, agente ou rotina. Pagar, excluir e dar acesso sempre perguntam."
+  },
+  "product_title": {
+    "message": "Produto"
+  },
+  "product_add": {
+    "message": "Adicionar o produto que este espaço vende"
+  },
+  "product_hint": {
+    "message": "Os fatos que todo agente usa sobre o que este espaço vende. Um campo vazio aparece como “não definido”, e os agentes dizem que não sabem."
+  },
+  "product_notSet": {
+    "message": "Não definido"
+  },
+  "product_missing": {
+    "message": "Ainda não definido: $1"
+  },
+  "product_missing_audience": {
+    "message": "para quem é"
+  },
+  "product_missing_pricing": {
+    "message": "preço"
+  },
+  "product_missing_email": {
+    "message": "e-mail de contato"
+  },
+  "product_missing_postal": {
+    "message": "endereço postal"
+  },
+  "product_missing_betaRule": {
+    "message": "regra do beta"
+  },
+  "product_missing_social": {
+    "message": "contas sociais"
+  },
+  "product_missing_northStar": {
+    "message": "métrica principal"
+  },
+  "product_missing_notify": {
+    "message": "onde avisar você"
+  },
+  "product_group_facts": {
+    "message": "O produto"
+  },
+  "product_group_places": {
+    "message": "Onde ele fica"
+  },
+  "product_group_outreach": {
+    "message": "Contato"
+  },
+  "product_group_limits": {
+    "message": "Metas e limites"
+  },
+  "product_name": {
+    "message": "Nome do produto"
+  },
+  "product_url": {
+    "message": "Site"
+  },
+  "product_oneLiner": {
+    "message": "Em uma linha"
+  },
+  "product_stage": {
+    "message": "Estágio"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "No ar"
+  },
+  "product_audience": {
+    "message": "Para quem é (um por linha, o mais valioso primeiro)"
+  },
+  "product_problem": {
+    "message": "O problema que resolve"
+  },
+  "product_alternatives": {
+    "message": "O que as pessoas usam no lugar (um por linha)"
+  },
+  "product_differentiators": {
+    "message": "Por que este (um por linha, cada um comprovável)"
+  },
+  "product_pricing": {
+    "message": "Preço, exatamente como no site"
+  },
+  "product_never": {
+    "message": "Nunca dizer ou fazer (um por linha)"
+  },
+  "product_repo": {
+    "message": "Repositório (dono/nome)"
+  },
+  "product_admin": {
+    "message": "Endereço do console de administração"
+  },
+  "product_adminAccount": {
+    "message": "Login de administração"
+  },
+  "product_slack": {
+    "message": "Canais do Slack com as notificações (um por linha: #nome e depois o id do canal, se souber)"
+  },
+  "product_emailFrom": {
+    "message": "O e-mail de contato sai de"
+  },
+  "product_replyTo": {
+    "message": "As respostas vão para"
+  },
+  "product_postal": {
+    "message": "Endereço postal para o rodapé dos e-mails"
+  },
+  "product_notify": {
+    "message": "Avise-me por"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "Ambos"
+  },
+  "product_northStar": {
+    "message": "Métrica principal"
+  },
+  "product_weeklyTarget": {
+    "message": "Meta semanal"
+  },
+  "product_budget": {
+    "message": "Orçamento de marketing (USD)"
+  },
+  "product_betaTesters": {
+    "message": "Testadores beta por semana"
+  },
+  "product_betaPlan": {
+    "message": "Plano do beta"
+  },
+  "product_betaDays": {
+    "message": "Duração do beta (dias)"
   }
 }

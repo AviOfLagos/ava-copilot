@@ -10400,5 +10400,143 @@
   },
   "settings_permissions_hint": {
     "message": "這些步驟在任何聊天、代理或例行工作中都不再顯示確認卡。付款、刪除和授予存取權一律會詢問。"
+  },
+  "product_title": {
+    "message": "產品"
+  },
+  "product_add": {
+    "message": "新增此工作區銷售的產品"
+  },
+  "product_hint": {
+    "message": "每個代理對此工作區所售產品所依據的事實。留空的欄位會顯示為「未設定」，代理會說不知道。"
+  },
+  "product_notSet": {
+    "message": "未設定"
+  },
+  "product_missing": {
+    "message": "尚未設定：$1"
+  },
+  "product_missing_audience": {
+    "message": "目標對象"
+  },
+  "product_missing_pricing": {
+    "message": "定價"
+  },
+  "product_missing_email": {
+    "message": "聯絡用電子郵件"
+  },
+  "product_missing_postal": {
+    "message": "郵寄地址"
+  },
+  "product_missing_betaRule": {
+    "message": "Beta 規則"
+  },
+  "product_missing_social": {
+    "message": "社群帳號"
+  },
+  "product_missing_northStar": {
+    "message": "北極星指標"
+  },
+  "product_missing_notify": {
+    "message": "通知方式"
+  },
+  "product_group_facts": {
+    "message": "產品"
+  },
+  "product_group_places": {
+    "message": "所在位置"
+  },
+  "product_group_outreach": {
+    "message": "對外聯絡"
+  },
+  "product_group_limits": {
+    "message": "目標與限制"
+  },
+  "product_name": {
+    "message": "產品名稱"
+  },
+  "product_url": {
+    "message": "網站"
+  },
+  "product_oneLiner": {
+    "message": "一句話介紹"
+  },
+  "product_stage": {
+    "message": "階段"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "已上線"
+  },
+  "product_audience": {
+    "message": "目標對象（每行一項，最重要的在前）"
+  },
+  "product_problem": {
+    "message": "解決的問題"
+  },
+  "product_alternatives": {
+    "message": "大家改用什麼（每行一項）"
+  },
+  "product_differentiators": {
+    "message": "為什麼選這個（每行一項，皆可佐證）"
+  },
+  "product_pricing": {
+    "message": "定價，與網站完全一致"
+  },
+  "product_never": {
+    "message": "絕不說或做的事（每行一項）"
+  },
+  "product_repo": {
+    "message": "儲存庫（擁有者/名稱）"
+  },
+  "product_admin": {
+    "message": "管理主控台網址"
+  },
+  "product_adminAccount": {
+    "message": "管理員登入帳號"
+  },
+  "product_slack": {
+    "message": "接收其通知的 Slack 頻道（每行一個：#名稱，若知道再加上頻道 ID）"
+  },
+  "product_emailFrom": {
+    "message": "對外郵件寄件地址"
+  },
+  "product_replyTo": {
+    "message": "回覆寄往"
+  },
+  "product_postal": {
+    "message": "郵件頁尾的郵寄地址"
+  },
+  "product_notify": {
+    "message": "通知我的方式"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "兩者皆是"
+  },
+  "product_northStar": {
+    "message": "北極星指標"
+  },
+  "product_weeklyTarget": {
+    "message": "每週目標"
+  },
+  "product_budget": {
+    "message": "行銷預算（美元）"
+  },
+  "product_betaTesters": {
+    "message": "每週 Beta 測試者人數"
+  },
+  "product_betaPlan": {
+    "message": "Beta 方案"
+  },
+  "product_betaDays": {
+    "message": "Beta 期間（天）"
   }
 }
