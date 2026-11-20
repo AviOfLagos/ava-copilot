@@ -762,6 +762,21 @@ describe('ThreadManager', () => {
       expect((await store.get(second))?.boundTabIds).toEqual([front]);
     });
 
+    it('never takes a tab in a private window', async () => {
+      const front = browser.open('https://news.example/today');
+      const secret = elsewhere('https://www.facebook.com/messages');
+      Object.assign(browser.tabs.get(secret)!, { incognito: true });
+      const threadId = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+
+    it('never takes another product of the same company for the one named', async () => {
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://mail.google.com/mail/u/0/');
+      const threadId = await manager.send({ text: 'Search Google for pizza places', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+
     it('never takes a tab the firewall blocks', async () => {
       Object.assign(firewall, { enabled: true, denyList: ['facebook.com'] });
       const front = browser.open('https://news.example/today');

@@ -1,5 +1,5 @@
 import { firewallStore } from '@extension/storage';
-import { onSite, tabRegistry } from '../browser/tabRegistry';
+import { tabRegistry } from '../browser/tabRegistry';
 import { isUrlAllowed } from '../browser/util';
 import { createLogger } from '../log';
 import type { SiteHint } from '../threads/binding';
@@ -29,7 +29,8 @@ export async function siteHintFor(text: string, isFree: (tabId: number) => boole
       usable.map(tab => tab.host),
     );
     if (!site) return undefined;
-    const ids = new Set(usable.filter(tab => onSite(tab.host, site)).map(tab => tab.id));
+    // Exactly that address: a hint for "slack.com" never reaches a tab on another part of the same domain
+    const ids = new Set(usable.filter(tab => tab.host === site).map(tab => tab.id));
     return { site, usable: tab => tab.id !== undefined && ids.has(tab.id) };
   } catch (error) {
     logger.warning('Could not look for an open tab to reuse', error);

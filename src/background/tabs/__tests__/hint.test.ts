@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { siteLabel, siteNamed, siteOf } from '../hint';
+import { isFrontDoor, siteLabel, siteNamed, siteOf } from '../hint';
 
 describe('siteOf and siteLabel', () => {
   it('gives the site a host belongs to', () => {
@@ -22,7 +22,7 @@ describe('siteNamed', () => {
 
   it('finds the site a task names after a word that points at a place', () => {
     expect(siteNamed('Go to Facebook and reply to Ada', open)).toBe('facebook.com');
-    expect(siteNamed('reply in Slack to the launch thread', open)).toBe('slack.com');
+    expect(siteNamed('reply in Slack to the launch thread', open)).toBe('app.slack.com');
     expect(siteNamed('Open my Linear and list the bugs', open)).toBe('linear.app');
   });
 
@@ -48,7 +48,35 @@ describe('siteNamed', () => {
   });
 
   it('takes the site named first when there are several', () => {
-    expect(siteNamed('copy the note from Slack to Linear', open)).toBe('slack.com');
+    expect(siteNamed('copy the note from Slack to Linear', open)).toBe('app.slack.com');
+  });
+
+  it('never takes another product of the same company for the one named', () => {
+    const google = ['mail.google.com', 'docs.google.com'];
+    expect(siteNamed('search Google for pizza places', google)).toBeNull();
+    expect(siteNamed('write it up in Google Docs', google)).toBeNull();
+    expect(siteNamed('go to google.com and search for pizza', google)).toBeNull();
+    // The exact address written out is that tab, and only that tab
+    expect(siteNamed('open mail.google.com and read the newest mail', google)).toBe('mail.google.com');
+    expect(siteNamed('search Google for pizza places', ['google.com', ...google])).toBe('google.com');
+  });
+
+  it("never takes somebody's page on a shared host for the host's own name", () => {
+    const open = ['someone.github.io', 'my-demo.vercel.app', 'shop.netlify.app'];
+    expect(siteNamed('open a pull request on GitHub', open)).toBeNull();
+    expect(siteNamed('deploy it to Vercel', open)).toBeNull();
+    expect(siteNamed('check netlify for the build', open)).toBeNull();
+    expect(siteOf('someone.github.io')).toBe('someone.github.io');
+    expect(siteLabel('github.io')).toBe('');
+  });
+
+  it("takes a site's app for the site's name or its written address", () => {
+    expect(siteNamed('check slack.com for the thread', ['app.slack.com'])).toBe('app.slack.com');
+    expect(siteNamed('reply on Facebook', ['m.facebook.com'])).toBe('m.facebook.com');
+    expect(siteNamed('check slack.com for the thread', ['api.slack.com'])).toBeNull();
+    expect(isFrontDoor('www.facebook.com')).toBe(true);
+    expect(isFrontDoor('web.whatsapp.com')).toBe(true);
+    expect(isFrontDoor('mail.google.com')).toBe(false);
   });
 
   it('ignores file names and one or two letter names', () => {

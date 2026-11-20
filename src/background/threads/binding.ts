@@ -59,7 +59,7 @@ export class TabNotBoundError extends Error {
 
 /** The site a task names, and which of the open tabs on it may be taken (free, allowed, not private). */
 export interface SiteHint {
-  // "facebook.com": the site itself and its parts ("m.facebook.com")
+  // The exact address of the open tab the task names ("facebook.com", "app.slack.com"), without "www."
   site: string;
   usable: (tab: chrome.tabs.Tab) => boolean;
 }
@@ -69,7 +69,7 @@ async function openTabOn(hint: SiteHint): Promise<chrome.tabs.Tab | null> {
   const tabs = await chrome.tabs.query({ windowType: 'normal' });
   const lastUsed = (tab: chrome.tabs.Tab) => (tab as { lastAccessed?: number }).lastAccessed ?? 0;
   const matches = tabs
-    .filter(tab => tab.id !== undefined && !tab.incognito && onSite(hostOf(tab.url), hint.site) && hint.usable(tab))
+    .filter(tab => tab.id !== undefined && !tab.incognito && hostOf(tab.url) === hint.site && hint.usable(tab))
     .sort((a, b) => Number(b.active) - Number(a.active) || lastUsed(b) - lastUsed(a));
   return matches[0] ?? null;
 }
