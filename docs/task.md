@@ -2484,7 +2484,8 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   cut-off step holds back every other commit on the same site or tool in its chat (also after "continue", which is a
   new task) until the user has seen a card about it; and in a retried or resumed run, a commit where an earlier run
   of the task already finished one goes to the user with a note, whatever the confirm settings say.
-- A commit the page shows no sign of (`gate_verify_unknown`) stays "started", never "done". A click that commits is
+- A commit the page shows no sign of (`gate_verify_unknown`) is never called "done", and it is not treated as cut
+  off either: it holds back only itself (`onceStore.unsure`), and a later run that sends there again is shown it. A click that commits is
   tried one way only (`Page.clickElementNode({ once })`): the fallback click could send twice.
 - If the records cannot be read, the step is refused.
 - The task id is `ThreadRecord.taskRunId`: new for every request (`ThreadManager.send`), kept through resume and

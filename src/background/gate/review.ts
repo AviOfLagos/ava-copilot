@@ -378,9 +378,15 @@ export async function verifyCommit(context: AgentContext, page: Page, commit: Ap
     logger.warning('Could not read the page after the commit', error);
   }
 
-  // The page shows it went through: the step is done. When the page shows nothing (a validation error, an
-  // overlay, a slow site), the step stays at "started": saying "already done" then could drop a send for good.
+  // The page shows it went through: the step is done. When the page shows nothing new (a short message, a form
+  // that keeps its values, a validation error), the step is neither called done, which could drop a send for
+  // good, nor left as cut off, which would hold up the next, different send: it holds back only itself.
   if (outcome) await settleCommit(commit, outcome);
+  else if (commit.onceKey) {
+    await onceStore
+      .unsure(commit.onceKey, 'the page showed no sign either way')
+      .catch(error => logger.warning('Could not record a result', error));
+  }
   await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_VERIFY, message);
   return message;
 }

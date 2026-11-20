@@ -153,7 +153,9 @@ describe('do once on a page', () => {
     expect(state.sends).toBe(1);
     // No card: the model is told to look for evidence first
     expect(retry.requests).toHaveLength(0);
-    expect(again.proceed ? '' : again.result.error).toMatch(/cut off before its result was recorded/);
+    expect(again.proceed ? '' : again.result.error).toMatch(
+      /not known whether it went through|cut off before its result was recorded/,
+    );
 
     // It tries once more in the same run: only the user's click can run it, and the card says why
     const third = await act(retry.context, page, state, clickSend());
@@ -239,26 +241,52 @@ describe('do once on a page', () => {
     }
   });
 
-  it('leaves a step at "started" when the page shows no sign it went through, so it is never called done', async () => {
+  it('neither calls a send done nor holds up the next one when the page shows no sign either way', async () => {
     const threadId = await runningThread();
     const first = fakeContext(threadId);
-    const review = await reviewAction(first.context, page, pressEnter);
-    // The click ran but the page shows nothing new (a validation error, an overlay): state.sends stays 0
-    state.fields = [{ label: 'Message', value: 'See you at 10.' }];
-    const stuck = fakePage({ ...state, sends: 0 });
-    Object.assign(stuck, {
-      evaluateInPage: async (fn: unknown, arg: unknown) =>
-        fn === readCommitEffect
-          ? { url: state.url, visible: (arg as string[]).map(() => 0), pending: (arg as string[]).map(() => true) }
-          : (page as unknown as { evaluateInPage: (f: unknown, a: unknown) => unknown }).evaluateInPage(fn, arg),
+    // A short "Ok": the page gives nothing to check it by, though it went out fine
+    state.fields = [{ label: 'Message', value: 'Ok' }];
+    const toAda = {
+      ...pressEnter,
+      once: { what: 'whatsapp.send', scope: 'web.whatsapp.com', label: 'send on WhatsApp', parts: ['ada', 'Ok'] },
+    };
+    const toTomi = { ...toAda, once: { ...toAda.once, parts: ['tomi', 'Ok'] } };
+    const sent = await act(first.context, page, state, toAda);
+    state.sends = 0;
+    expect(await verifyCommit(first.context, page, sent.proceed ? sent.commit : null)).toBe('gate_verify_unknown');
+    const key = sent.proceed ? sent.commit?.onceKey : null;
+    expect(await onceStore.get(key!)).toMatchObject({
+      status: 'started',
+      result: 'the page showed no sign either way',
     });
-    expect(await verifyCommit(first.context, stuck, review.proceed ? review.commit : null)).toBe('gate_verify_unknown');
-    const key = review.proceed ? review.commit?.onceKey : null;
-    expect((await onceStore.get(key!))?.status).toBe('started');
 
-    // The next try is told it may have gone through and to look, not that it is done
-    const again = await reviewAction(first.context, page, pressEnter);
-    expect(again.proceed ? '' : again.result.error).toMatch(/cut off before its result was recorded/);
+    // The next, different send is not held up and nobody is told to skip it
+    const next = await act(first.context, page, state, toTomi);
+    expect(next.proceed).toBe(true);
+    expect(first.requests[1].repeat).toBeUndefined();
+    await settleCommit(next.proceed ? next.commit : null, 'the page showed it');
+
+    // The same send again is not called done: the model is told to look first
+    const again = await act(first.context, page, state, toAda);
+    expect(again.proceed ? '' : again.result.error).toMatch(/not known whether it went through/);
+
+    // A retried run that sends there again is shown it on the card
+    await tick();
+    await restart(threadId);
+    const retry = fakeContext(threadId);
+    await act(retry.context, page, state, { ...toAda, once: { ...toAda.once, parts: ['ada', 'Okay'] } });
+    expect(retry.requests[0].repeat?.status).toBe('earlier');
+  });
+
+  it('never tells the model to skip a different step that a cut-off one holds back', async () => {
+    const threadId = await runningThread();
+    await act(fakeContext(threadId).context, page, state, pressEnter);
+    state.fields = [{ label: 'Message', value: 'A message to someone else.' }];
+    const held = await act(fakeContext(threadId).context, page, state, pressEnter);
+    const told = held.proceed ? '' : (held.result.error ?? '');
+    expect(told).toMatch(/Not run yet/);
+    expect(told).toMatch(/Do not drop a different step/);
+    expect(told).not.toMatch(/skip this step and carry on/);
   });
 
   it('starts clean for a new request in the same chat', async () => {

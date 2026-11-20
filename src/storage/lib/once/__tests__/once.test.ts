@@ -118,6 +118,18 @@ describe('do-once records', () => {
     expect(await once.blocking(step({ target: 'hash-c' }))).toBeNull();
   });
 
+  it('lets a step with no sign either way hold back only itself, and shows it to a later run', async () => {
+    const { record } = await once.begin(step());
+    await once.unsure(record.key, 'the page showed no sign either way');
+    // Not cut off: another step there goes ahead in the same run
+    expect(await once.blocking(step({ target: 'hash-b' }), record.startedAt - 1)).toBeNull();
+    expect(await once.cutOff('thread-1')).toEqual([]);
+    // Not done: the step itself is never started again by itself
+    expect(await once.begin(step())).toMatchObject({ fresh: false, why: 'same', record: { status: 'started' } });
+    // A later run of the task that sends there again is shown it
+    expect(await once.blocking(step({ target: 'hash-b' }), record.startedAt + 1)).toMatchObject({ why: 'earlier' });
+  });
+
   it('counts the runs the user asked for again', async () => {
     const first = await once.begin(step());
     const again = await once.begin(step(), { again: true });

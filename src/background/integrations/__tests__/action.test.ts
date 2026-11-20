@@ -281,7 +281,7 @@ describe('do once', () => {
     const again = await callToolAction(service, retry.context, input('send_message', hello));
     expect(sends()).toBe(1);
     expect(retry.requests).toHaveLength(0);
-    expect(again.error).toMatch(/cut off before its result was recorded/);
+    expect(again.error).toMatch(/not known whether it went through/);
 
     // The same send in other words is held back too: it goes to the user, on a card that says why, and only
     // that click sends it

@@ -70,8 +70,15 @@ export function createOnceStore(db: AviCopilotDb = defaultDb) {
       if (stands(same)) return { record: same, why: 'same' };
       const cutOff = (await store.cutOff(step.threadId)).find(record => record.scope === step.scope);
       if (cutOff) return { record: cutOff, why: 'cut_off' };
+      // Done, or started and since set aside (the user approved another step past it, or the act returned with
+      // no sign either way): an earlier run did, or may have done, something there
       const earlier = (await store.forTask(step.taskId))
-        .filter(record => record.status === 'done' && record.scope === step.scope && record.startedAt < since)
+        .filter(
+          record =>
+            (record.status === 'done' || (record.status === 'started' && record.ackAt !== null)) &&
+            record.scope === step.scope &&
+            record.startedAt < since,
+        )
         .at(-1);
       return earlier ? { record: earlier, why: 'earlier' } : null;
     },
@@ -125,6 +132,19 @@ export function createOnceStore(db: AviCopilotDb = defaultDb) {
         .equals(key)
         .and(record => record.status === 'started')
         .modify({ status: 'done', finishedAt: Date.now(), result });
+    },
+
+    /**
+     * Records that a started step's act returned with no sign either way (the page showed nothing new). It was
+     * not cut off, so it does not hold back other steps; it is not known to be done, so it still holds back
+     * itself, and a later run that sends there again is shown it.
+     */
+    async unsure(key: string, result: string): Promise<void> {
+      await db.doOnce
+        .where('key')
+        .equals(key)
+        .and(record => record.status === 'started')
+        .modify({ ackAt: Date.now(), result });
     },
 
     /** Records that a started step certainly did not happen, so it may be tried again. */

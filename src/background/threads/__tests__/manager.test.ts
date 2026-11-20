@@ -342,7 +342,7 @@ describe('ThreadManager', () => {
 
     const context = lastExecutor().options.messageContext ?? '';
     expect(context).toContain('Already done in this task, do not do these again:\n- Nex Mail › send_email');
-    expect(context).toMatch(/Cut off before the result was recorded[^\n]*\n- send on mail\.example/);
+    expect(context).toMatch(/Started, with no record that they went through[^\n]*\n- send on mail\.example/);
     await onceStore.db.doOnce.where('taskId').equals(thread.taskRunId!).delete();
   });
 

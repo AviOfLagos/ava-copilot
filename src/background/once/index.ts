@@ -1,6 +1,6 @@
 import { t } from '@extension/i18n';
 import { onceStore, threadStore } from '@extension/storage';
-import type { ConfirmRequest, OnceRecord, OnceStep, ThreadRecord } from '@extension/storage';
+import type { ConfirmRequest, OnceRecord, OnceStep, OnceWhy, ThreadRecord } from '@extension/storage';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -100,21 +100,29 @@ export async function stepFor(context: Pick<AgentContext, 'taskId'>, input: Once
 
 const timeOf = (at: number): string => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-function toldMessage(record: OnceRecord): string {
+/**
+ * What the model is told when a record stands in the way. The wording follows why: only a step that is itself
+ * done or started may be skipped; a different step held back by a cut-off one is never told to skip.
+ */
+function toldMessage(record: OnceRecord, why: OnceWhy): string {
   const when = timeOf(record.startedAt);
-  if (record.status === 'done') {
-    return `Already done in this task: ${record.label}, at ${when}${record.result ? ` (${record.result})` : ''}. It was NOT run again, so nothing went out twice. Carry on with the next step. Only if this really is a different step (another recipient, another item), run the action again: the user will be asked first.`;
+  const outcome = record.result ? ` (${record.result})` : '';
+  if (why !== 'same') {
+    return `Not run yet. An earlier step in this chat, ${record.label} at ${when}, was cut off before its result was recorded, so it may already have gone through. First look for evidence of that earlier step: the sent items, the thread, the page it would have changed. If this step is that same one again and it went through, skip it. If this is a different step, or the earlier one did not go through, run the action again: the user will be asked first. Do not drop a different step.`;
   }
-  return `An earlier step in this chat, ${record.label} at ${when}, was cut off before its result was recorded, so it may already have gone through. Nothing was done now. First look for evidence: the sent items, the thread, the page it would have changed. If it went through, skip this step and carry on. If you are sure it did not, run the action again: the user will be asked first.`;
+  if (record.status === 'done') {
+    return `Already done in this task: ${record.label}, at ${when}${outcome}. It was NOT run again, so nothing went out twice. Carry on with the next step. Only if this really is a different step (another recipient, another item), run the action again: the user will be asked first.`;
+  }
+  return `This step was already started in this task (${record.label}, at ${when}${outcome}) and it is not known whether it went through. Nothing was done now. First look for evidence: the sent items, the thread, the page it would have changed. If it went through, skip this step and carry on. If you are sure it did not, run the action again: the user will be asked first.`;
 }
 
-function refused(context: Context, record: OnceRecord): ActionResult {
+function refused(context: Context, record: OnceRecord, why: OnceWhy): ActionResult {
   void context.emitEvent(
     Actors.NAVIGATOR,
     ExecutionState.ACT_FAIL,
-    t(record.status === 'done' ? 'gate_once_done' : 'gate_once_cutOff', [record.label]),
+    t(why === 'same' && record.status === 'done' ? 'gate_once_done' : 'gate_once_cutOff', [record.label]),
   );
-  return new ActionResult({ error: toldMessage(record), includeInMemory: true });
+  return new ActionResult({ error: toldMessage(record, why), includeInMemory: true });
 }
 
 /**
@@ -139,7 +147,7 @@ export async function checkOnce(context: Context, step: OnceStep): Promise<OnceC
   }
   await onceStore.told(record.key);
   logger.info(`Not repeated (${record.status}): ${record.label}`);
-  return { state: 'told', result: refused(context, record) };
+  return { state: 'told', result: refused(context, record, why) };
 }
 
 /**
@@ -160,7 +168,7 @@ export async function beginOnce(
   const claim = await onceStore.begin(step, { again: asked !== null, ack: asked?.blockKey, since });
   if (claim.fresh) return { record: claim.record };
   await onceStore.told(claim.record.key);
-  return { result: refused(context, claim.record) };
+  return { result: refused(context, claim.record, claim.why) };
 }
 
 /**
@@ -176,16 +184,19 @@ export async function idempotencyKeyOf(record: OnceRecord): Promise<string> {
  * Empty when there is nothing of either.
  */
 export async function onceNote(thread: Pick<ThreadRecord, 'id' | 'taskRunId'>): Promise<string> {
-  const done = thread.taskRunId
-    ? (await onceStore.forTask(thread.taskRunId)).filter(record => record.status === 'done')
-    : [];
+  const ofTask = thread.taskRunId ? await onceStore.forTask(thread.taskRunId) : [];
+  const done = ofTask.filter(record => record.status === 'done');
+  // Cut off anywhere in this chat, or started in this task with no sign either way
   const cutOff = await onceStore.cutOff(thread.id);
+  for (const record of ofTask) {
+    if (record.status === 'started' && !cutOff.some(other => other.key === record.key)) cutOff.push(record);
+  }
   if (done.length + cutOff.length === 0) return '';
   const line = (record: OnceRecord) => `- ${record.label}, at ${timeOf(record.startedAt)}`;
   return [
     done.length ? `Already done in this task, do not do these again:\n${done.map(line).join('\n')}` : '',
     cutOff.length
-      ? `Cut off before the result was recorded, so they may have gone through. Check for evidence before anything else, and never repeat one without the user's click:\n${cutOff.map(line).join('\n')}`
+      ? `Started, with no record that they went through, so they may have. Check for evidence before anything else, and never repeat one without the user's click:\n${cutOff.map(line).join('\n')}`
       : '',
   ]
     .filter(Boolean)
