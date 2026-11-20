@@ -42,7 +42,7 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
         'Runs one command (argv, no shell) with the secrets of a vault project/env in its environment. Avi approves every call with ' +
         'Touch ID; the prompt shows your name, the purpose, the project/env and the exact command. Output comes back with every ' +
         'secret value replaced by «NAME». You never receive a value. Keep purpose and command short: offboard refuses an approval ' +
-        'prompt over 200 characters. Use a script file for anything long. Reference secrets inside the command by reading them ' +
+        'prompt over 200 characters, so keep arguments short too. Reference secrets inside the command by reading them ' +
         'from the environment in your program, not by passing them as arguments.',
       inputSchema: {
         project: z.string().min(1).max(40).describe('Vault project, e.g. go-solar-me'),
@@ -51,7 +51,7 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
         command: z.string().min(1).describe('Program name on PATH or absolute path, e.g. pnpm or /usr/bin/printenv'),
         args: z.array(z.string()).max(20).optional().describe('Arguments, one per item'),
         cwd: z.string().optional().describe('Absolute folder to run in (default: home)'),
-        purpose: z.string().min(3).max(48).describe('Why, in a few words. Shown to Avi in the Touch ID prompt.'),
+        purpose: z.string().min(3).max(48).describe('Why, in a few words, plain characters (no quotes or backslashes). Shown to Avi in the Touch ID prompt.'),
         timeout_seconds: z.number().int().min(10).max(1800).optional().describe('Includes the time Avi takes to approve (default 600)'),
       },
     },

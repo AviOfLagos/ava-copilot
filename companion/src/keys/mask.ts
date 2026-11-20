@@ -9,11 +9,13 @@
  * Built to dist/ava-keys-mask.mjs and installed as ~/.ava-keys/mask (see ./install.ts).
  */
 import { spawn } from 'node:child_process';
+import { writeSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import { applyMask, MASK_MARKER, type MaskReport, planMask, secretEntries } from './mask-core';
 
 const MAX_OUTPUT = 400_000;
-const MAX_RUN_MS = 15 * 60_000;
+// Longer than Ava Brain's own limit (30 min, approval included), which stops us first through the parent watch
+const MAX_RUN_MS = 31 * 60_000;
 
 /**
  * The text of a stream. When output was cut, a value may be cut with it, and a partial value is not masked; so the
@@ -25,11 +27,14 @@ function captured(chunks: Buffer[], truncated: boolean, longest: number): string
 }
 
 function emit(report: MaskReport): void {
-  process.stdout.write(`${JSON.stringify(report)}\n`);
+  // Synchronous: stdout is a pipe (asynchronous on macOS) and the process exits right after
+  writeSync(1, `${JSON.stringify(report)}\n`);
 }
 
 async function main(): Promise<void> {
   const [, , , command, ...args] = process.argv;
+  // First line: proof the command is about to start, so Ava Brain never reports "nothing ran" when something did
+  writeSync(1, `${JSON.stringify({ marker: MASK_MARKER, started: true })}\n`);
   const plan = planMask(secretEntries(process.env));
   const masked: Record<string, number> = {};
   const base: MaskReport = {
@@ -68,25 +73,54 @@ async function main(): Promise<void> {
     size += part.length;
     into.push(part);
   };
-  const child = spawn(command, args, { env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  // Its own process group, so a timeout or Ava Brain giving up stops grandchildren (which hold the secrets) too
+  const child = spawn(command, args, { env, shell: false, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
   child.stdout.on('data', keep(out));
   child.stderr.on('data', keep(err));
+  const stopGroup = () => {
+    if (!child.pid) return;
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      return; // already gone
+    }
+    setTimeout(() => {
+      try {
+        process.kill(-child.pid!, 'SIGKILL');
+      } catch {
+        // gone
+      }
+    }, 3000).unref();
+  };
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
-    child.kill('SIGTERM');
+    stopGroup();
   }, MAX_RUN_MS);
   // If Ava Brain gave up (its time limit), offboard-vault is gone and we are orphaned: stop the command too
   const parent = process.ppid;
   const watch = setInterval(() => {
-    if (process.ppid !== parent) child.kill('SIGTERM');
+    if (process.ppid !== parent) stopGroup();
   }, 1000);
   const result = await new Promise<{ code: number; signal: string | null; error?: string }>(resolve => {
     child.on('error', error => resolve({ code: 127, signal: null, error: `cannot start the command (${(error as NodeJS.ErrnoException).code ?? 'error'})` }));
-    child.on('close', (code, signal) => resolve({ code: code ?? 128, signal }));
+    // On exit, not close: a daemon the command left behind may hold the pipes open forever. Give the pipes a moment
+    // to drain, then go on.
+    child.on('exit', (code, signal) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve({ code: code ?? 128, signal });
+      };
+      child.on('close', finish);
+      setTimeout(finish, 2000).unref();
+    });
   });
   clearTimeout(timer);
   clearInterval(watch);
+  // Nothing the command started may outlive it with the secrets in its environment
+  stopGroup();
   emit({
     ...base,
     exitCode: result.code,
@@ -100,4 +134,10 @@ async function main(): Promise<void> {
   process.exitCode = result.code;
 }
 
-void main();
+// Never throw raw: node's own error text can quote environment values. Exit as soon as the report is written.
+main()
+  .catch(() => {
+    emit({ marker: MASK_MARKER, exitCode: 70, signal: null, stdout: '', stderr: '', masked: {}, unmasked: [], truncated: false, timedOut: false, error: 'the masker failed (details withheld: they may contain values)' });
+    process.exitCode = 70;
+  })
+  .finally(() => process.exit());

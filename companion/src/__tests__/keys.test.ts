@@ -35,9 +35,27 @@ const report = (over: Partial<MaskReport> = {}): string =>
   });
 
 describe('masking', () => {
-  it('treats only what offboard-vault adds as secrets', () => {
-    const names = secretEntries({ HOME: '/Users/x', PATH: '/bin', LANG: 'en_US.UTF-8', TERM: 'dumb', API_KEY: SECRET, EMPTY: '' }).map(e => e.name);
-    expect(names).toEqual(['API_KEY']);
+  it('treats everything as a secret except what offboard fixes and what Ava Brain sent', () => {
+    const env = { HOME: '/Users/x', PATH: '/bin', __CF_USER_TEXT_ENCODING: '0x1F5', LANG: 'en_US.UTF-8', TERM: 'dumb', PWD: '/work', API_KEY: SECRET, EMPTY: '' };
+    expect(secretEntries(env, '/work').map(e => e.name)).toEqual(['API_KEY']);
+    // a vault secret may carry a pass-through name (offboard applies secrets after its allow-list)
+    expect(secretEntries({ CI: 'secret-ci-token', TERM: 'xterm-256color', PWD: '/other' }, '/work').map(e => e.name)).toEqual(['CI', 'TERM', 'PWD']);
+  });
+
+  it('masks a value inside a longer base64 stream, as in an Authorization: Basic header', () => {
+    const plan = planMask([{ name: 'PASS', value: SECRET }]);
+    for (const user of ['a', 'ab', 'admin', 'admin:']) {
+      const header = Buffer.from(`${user}:${SECRET}@tail`).toString('base64');
+      const out = applyMask(`Authorization: Basic ${header}`, plan);
+      expect(out).toContain('«PASS»');
+      // what is left is only the few characters shared with the user name and the tail
+      expect(out.replace(/«PASS»/, '').length).toBeLessThan(`Authorization: Basic ${header}`.length - 20);
+    }
+  });
+
+  it('masks a value stored with a trailing newline when it is printed trimmed', () => {
+    const plan = planMask([{ name: 'TOKEN', value: `${SECRET}\r\n` }]);
+    expect(applyMask(`got ${SECRET}.`, plan)).toBe('got «TOKEN».');
   });
 
   it('masks the raw value and its common encodings', () => {
@@ -82,24 +100,43 @@ describe('the masker process', () => {
     return { raw: r.stdout + r.stderr, report: parseReport(r.stdout), status: r.status };
   };
 
-  it('runs the command and returns no value, in any common form, on either stream', () => {
-    const r = runMasker('echo "token=$API_KEY"; printf %s "$API_KEY" | base64; echo "$API_KEY" >&2; echo "short=$PIN"; exit 3', { API_KEY: SECRET, PIN: '7' });
+  it('runs the command and returns no value, in any common form, on either stream', { timeout: 30_000 }, () => {
+    const r = runMasker('echo "token=$API_KEY"; printf %s "$API_KEY" | base64; echo "$API_KEY" >&2; echo "short=$PIN"; printf "u:%s" "$API_KEY" | base64; exit 3', { API_KEY: SECRET, PIN: '7' });
     expect(r.raw).not.toContain(SECRET);
     expect(r.raw).not.toContain(Buffer.from(SECRET).toString('base64'));
     expect(r.report?.stdout).toContain('token=«API_KEY»');
     expect(r.report?.stderr).toContain('«API_KEY»');
     expect(r.report?.exitCode).toBe(3);
-    expect(r.report?.masked.API_KEY).toBe(3);
+    expect(r.report?.masked.API_KEY).toBe(4);
     expect(r.report?.unmasked).toEqual(['PIN']);
     expect(r.status).toBe(3);
   });
 
-  it('never returns part of a value cut off at the output limit', () => {
+  it('never returns part of a value cut off at the output limit', { timeout: 30_000 }, () => {
     // 400 000 bytes is the masker's cap: put the value across it
     const r = runMasker('head -c 399990 /dev/zero | tr "\\0" x; printf %s "$API_KEY"; head -c 1000 /dev/zero | tr "\\0" y', { API_KEY: SECRET });
     expect(r.report?.truncated).toBe(true);
     expect(r.raw).not.toContain(SECRET.slice(0, 6));
   });
+
+  it('does not hang on a daemon that keeps the output open, and stops it', () => {
+    const started = Date.now();
+    const r = runMasker('sleep 60 & echo "bg=$!"; echo done', { API_KEY: SECRET });
+    expect(Date.now() - started).toBeLessThan(15_000);
+    expect(r.report?.stdout).toContain('done');
+    const pid = Number(/bg=(\d+)/.exec(r.report?.stdout ?? '')?.[1]);
+    expect(pid).toBeGreaterThan(0);
+    let alive = true;
+    for (let i = 0; i < 50 && alive; i++) {
+      try {
+        process.kill(pid, 0);
+        spawnSync('/bin/sleep', ['0.1']);
+      } catch {
+        alive = false;
+      }
+    }
+    expect(alive).toBe(false);
+  }, 30_000);
 
   it('refuses a relative command', () => {
     const r = spawnSync(process.execPath, [masker, 'x: y', 'sh', '-c', 'true'], { encoding: 'utf8', env: { PATH: '/bin' } });
@@ -136,6 +173,29 @@ describe('run_with_secrets', () => {
     // offboard's helper refuses NODE_* and friends; nothing of this process's environment goes along
     expect(Object.keys(run.options.env).sort()).toEqual(Object.keys(vaultEnv(dir.path, dir.path)).sort());
     expect(run.options.cwd).toBe(dir.path);
+  });
+
+  it('never says nothing ran once the command started, even when the result is lost', async () => {
+    const started = JSON.stringify({ marker: MASK_MARKER, started: true });
+    const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : { stdout: `${started}\n{"marker":"ava-ke`, timedOut: true, code: 143 }));
+    const result = await runWithSecrets(req, deps(runner));
+    expect(result).toMatchObject({ approved: true, ran: true, timedOut: true });
+    expect(result.message).toMatch(/result was lost/);
+  });
+
+  it('passes on only offboard\'s own lines when nothing ran', async () => {
+    const runner = fakeRunner(call =>
+      call.args[0] === 'list' ? { stdout: LIST } : { code: 1, stderr: `node: something quoting ${SECRET}\nvault: refused: parent has NODE_X set\n` },
+    );
+    const result = await runWithSecrets(req, deps(runner));
+    expect(result.message).toContain('vault: refused');
+    expect(JSON.stringify(result)).not.toContain(SECRET);
+  });
+
+  it('refuses a purpose with quotes that could fake extra prompt arguments', async () => {
+    const runner = fakeRunner(() => new Error('must not run'));
+    expect((await runWithSecrets({ ...req, purpose: 'x" "/usr/bin/true' }, deps(runner))).message).toMatch(/purpose may use/);
+    expect(runner.calls).toHaveLength(0);
   });
 
   it('says nothing ran when Avi denies the prompt', async () => {

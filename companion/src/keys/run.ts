@@ -15,6 +15,10 @@ export const VAULT_BIN = '/usr/local/bin/offboard-vault';
 export const MAX_REASON = 200;
 export const MAX_CMD = 150;
 const UNSAFE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+// A purpose is shown inside a quoted prompt argument: no quotes or backslashes that could make it read as more arguments
+export const PURPOSE = /^[\p{L}\p{N} .,:;!?'()\/+&@#%_-]+$/u;
+// The masker caps output at 400 KB; JSON escaping can grow that up to 6 times
+const MAX_VAULT_OUTPUT = 3_000_000;
 
 export interface RunRequest {
   project: string;
@@ -128,6 +132,7 @@ export async function runWithSecrets(req: RunRequest, deps: RunDeps): Promise<Ru
   const vault = deps.vaultBin ?? VAULT_BIN;
   const home = deps.home ?? process.env.HOME ?? '/';
   const cwd = req.cwd ?? home;
+  if (!PURPOSE.test(req.purpose)) return refuse('purpose may use letters, digits, spaces and . , : ; ! ? \' ( ) / + & @ # % _ - only');
   if (!isAbsolute(cwd)) return refuse('cwd must be an absolute path');
   try {
     if (!statSync(cwd).isDirectory()) return refuse(`cwd is not a folder: ${cwd}`);
@@ -167,18 +172,37 @@ export async function runWithSecrets(req: RunRequest, deps: RunDeps): Promise<Ru
   if (line.length > MAX_CMD || reason.length > MAX_REASON) {
     return refuse(
       `the approval prompt would be too long (command part ${line.length}/${MAX_CMD}, whole ${reason.length}/${MAX_REASON}). ` +
-        'Shorten the purpose, or put the command in a script and run the script.',
+        'Shorten the purpose or the arguments; Avi has to be able to read the whole command.',
     );
   }
 
   const argv = ['run', '--project', req.project, '--env', req.env, ...(only ? ['--only', only.join(',')] : []), '--', deps.maskPath, label, exe, ...(req.args ?? [])];
   const timeoutMs = Math.min(Math.max(req.timeoutSeconds ?? 600, 10), 1800) * 1000;
-  const result = await deps.runner(vault, argv, { env: vaultEnv(home, cwd), timeoutMs, cwd, maxOutputBytes: 2_000_000 });
+  const result = await deps.runner(vault, argv, { env: vaultEnv(home, cwd), timeoutMs, cwd, maxOutputBytes: MAX_VAULT_OUTPUT });
 
   const report = parseReport(result.stdout);
+  if (!report && hasStarted(result.stdout)) {
+    // Approved and started, but the report was lost (time limit or output cap). Never say "nothing ran" here: the
+    // agent might run it again (a second deploy).
+    return {
+      ...refuse(`approved and started, but the result was lost (${result.timedOut ? 'time limit reached; the command was stopped' : 'too much output'}). Check its effect before running it again.`),
+      approved: true,
+      ran: true,
+      timedOut: result.timedOut,
+      truncated: result.truncated,
+    };
+  }
   if (!report) {
-    // The masker never ran: denied, cancelled, or offboard refused. offboard prints names only.
-    const why = result.stderr.trim().split('\n').filter(Boolean).slice(-3).join(' ').slice(0, 400);
+    // The masker never ran: denied, cancelled, or offboard refused. Only offboard's own "vault:" lines are passed on,
+    // and those through the secret scan too.
+    const why = redactSecrets(
+      result.stderr
+        .split('\n')
+        .filter(line => line.startsWith('vault:'))
+        .slice(-3)
+        .join(' ')
+        .slice(0, 400),
+    ).text;
     const denied = /denied|cancel|not approved/i.test(why);
     return {
       ...refuse(result.timedOut ? 'no answer to the Touch ID prompt in time; nothing ran' : denied ? `Avi did not approve; nothing ran (${why})` : `nothing ran: ${why || `offboard-vault exit ${result.code}`}`),
@@ -209,10 +233,15 @@ export function parseReport(stdout: string): MaskReport | null {
     if (!line.startsWith('{')) continue;
     try {
       const value = JSON.parse(line) as MaskReport;
-      if (value.marker === MASK_MARKER) return value;
+      if (value.marker === MASK_MARKER && !value.started) return value;
     } catch {
       // not ours
     }
   }
   return null;
+}
+
+/** Did the masker get as far as starting the command? (its first line) */
+export function hasStarted(stdout: string): boolean {
+  return stdout.split('\n').some(line => line.startsWith('{') && line.includes(MASK_MARKER) && line.includes('"started":true'));
 }
