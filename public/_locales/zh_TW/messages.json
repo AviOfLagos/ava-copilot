@@ -2812,19 +2812,6 @@
   "brief_ready": {
     "message": "你的晨間簡報已準備好"
   },
-  "brief_counts": {
-    "message": "今天行事曆上有 $MEETINGS$ 項，$WAITING$ 項等你處理。",
-    "placeholders": {
-      "meetings": {
-        "content": "$1",
-        "example": "3"
-      },
-      "waiting": {
-        "content": "$2",
-        "example": "1"
-      }
-    }
-  },
   "brief_open": {
     "message": "今日簡報"
   },
@@ -10308,5 +10295,68 @@
   },
   "threads_tabReopened": {
     "message": "分頁已關閉，所以已在 $1 重新開啟，工作繼續進行。按「停止」可結束。"
+  },
+  "brief_source_calendar": {
+    "message": "行事曆"
+  },
+  "brief_source_chats": {
+    "message": "對話"
+  },
+  "brief_source_inbox": {
+    "message": "收件匣"
+  },
+  "brief_source_agents": {
+    "message": "代理"
+  },
+  "brief_source_knowledge": {
+    "message": "筆記與會議"
+  },
+  "brief_source_notConnected": {
+    "message": "$1：尚未連接。"
+  },
+  "brief_source_failed": {
+    "message": "$1：無法讀取。"
+  },
+  "brief_sources_read": {
+    "message": "已讀取：$1。"
+  },
+  "brief_calendar_notConnected": {
+    "message": "行事曆：尚未連接。請到設定的「連線」連接，會議才會顯示在這裡。"
+  },
+  "brief_calendar_failed": {
+    "message": "行事曆：今天早上無法讀取，可能缺少會議。請到設定的「連線」檢查行事曆。"
+  },
+  "brief_calendar_failedAsOf": {
+    "message": "行事曆：今天早上無法讀取。以下是 $1 時的內容，之後的變更沒有包含。"
+  },
+  "brief_line_noMeetings": {
+    "message": "今天沒有會議。"
+  },
+  "brief_line_meeting": {
+    "message": "1 場會議，$1 開始。"
+  },
+  "brief_line_meetings": {
+    "message": "$1 場會議，第一場 $2 開始。"
+  },
+  "brief_line_noWaiting": {
+    "message": "沒有事情在等你。"
+  },
+  "brief_line_waiting": {
+    "message": "$1 件事在等你：$2。"
+  },
+  "brief_line_waitingMore": {
+    "message": "$1 件事在等你：$2，另外還有 $3 件。"
+  },
+  "brief_item_approve": {
+    "message": "核准 $1"
+  },
+  "brief_item_needsYou": {
+    "message": "$1 需要登入或驗證碼"
+  },
+  "brief_item_cap": {
+    "message": "$1 已達花費上限"
+  },
+  "brief_item_failed": {
+    "message": "$1 已停止"
   }
 }

@@ -1,5 +1,5 @@
 import { calendarSettingsStore, upcomingEventsStore } from '@extension/storage';
-import type { CalendarSettingsConfig, CalendarSourceName } from '@extension/storage';
+import type { CalendarSettingsConfig, CalendarSourceName, UpcomingEvent } from '@extension/storage';
 import { companionClient } from '../companion/client';
 import { brainSettingsStore } from '../companion/state';
 import { createLogger } from '../log';
@@ -29,6 +29,29 @@ export function quoteTitle(title: string): string {
     .slice(0, 80);
 }
 
+/**
+ * What was read from the calendar and how far it can be trusted. 'not_connected': no calendar is set up, so
+ * no events means nothing. 'failed': the last read did not work; the events are the ones from the last read
+ * that did (`asOf`), if there was one.
+ */
+export interface CalendarReading {
+  state: 'read' | 'not_connected' | 'failed';
+  events: CalendarEvent[];
+  error: string | null;
+  asOf: number | null;
+}
+
+const toStored = (events: CalendarEvent[]): UpcomingEvent[] =>
+  events.map(({ id, title, start, end, joinUrl, allDay, location }) => ({
+    id,
+    title,
+    start,
+    end,
+    joinUrl,
+    allDay,
+    location,
+  }));
+
 export interface Reminder {
   event: CalendarEvent;
   minutes: number;
@@ -42,6 +65,25 @@ export interface Reminder {
 export class CalendarWatcher {
   private events: CalendarEvent[] = [];
   private readAt = 0;
+  // When the events were last read without an error, across restarts
+  private okAt: number | null = null;
+  private hydrating: Promise<void> | null = null;
+
+  /**
+   * Starts from what was stored: a background that restarted (it does, every few minutes when idle) knows the
+   * day it last read, instead of an empty one that a failed read would then write over the stored events.
+   */
+  private hydrate(): Promise<void> {
+    this.hydrating ??= (async () => {
+      const stored = await upcomingEventsStore.get().catch(() => null);
+      if (!stored || this.readAt > 0) return;
+      this.events = (stored.events ?? []).map(event => ({ allDay: false, location: '', ...event }));
+      this.source = stored.source ?? null;
+      // Only a read that came from a calendar counts: with none connected, "no error" was stored too
+      this.okAt = stored.okAt ?? (stored.error === null && stored.readAt > 0 && stored.source ? stored.readAt : null);
+    })();
+    return this.hydrating;
+  }
   private readonly listeners = new Set<(reminder: Reminder) => void>();
 
   /** Called with each reminder, e.g. so voice can say it. */
@@ -72,12 +114,14 @@ export class CalendarWatcher {
 
   /** Reads the calendar now, whatever its schedule; returns an error message or null. */
   async refresh(): Promise<string | null> {
+    await this.hydrate();
     const settings = await calendarSettingsStore.getSettings();
     const sources = await this.sources(settings);
     const now = Date.now();
     if (!sources.length) {
       this.events = [];
       this.source = null;
+      this.okAt = null;
       await upcomingEventsStore.set({ events: [], readAt: now, error: null, source: null });
       return null;
     }
@@ -86,27 +130,56 @@ export class CalendarWatcher {
     if (read.error !== null) {
       // Kept as they were: one failed read does not empty the day
       await upcomingEventsStore.set({
-        events: this.events.map(({ id, title, start, end, joinUrl }) => ({ id, title, start, end, joinUrl })),
+        events: toStored(this.events),
         readAt: now,
         error: read.error,
         source: this.source,
+        ...(this.okAt !== null ? { okAt: this.okAt } : {}),
       });
       return read.error;
     }
     this.events = read.events;
     this.source = read.source;
     this.readAt = now;
+    this.okAt = now;
     await upcomingEventsStore.set({
-      events: this.events.map(({ id, title, start, end, joinUrl }) => ({ id, title, start, end, joinUrl })),
+      events: toStored(this.events),
       readAt: now,
       error: null,
       source: read.source,
+      okAt: now,
     });
     return null;
   }
 
+  /**
+   * The coming events with how far they can be trusted, for the morning brief: a calendar that is not connected
+   * or could not be read is said, never shown as "nothing on today".
+   */
+  async reading(hours = 24): Promise<CalendarReading> {
+    const settings = await calendarSettingsStore.getSettings();
+    const paired = (await brainSettingsStore.getSettings().catch(() => ({ paired: false }))).paired;
+    // The Mac's Calendar with no calendar ticked reads as empty without an error: that is not a connected calendar
+    const usable = planSources({ paired, settings }).filter(
+      name => !(name === 'mac' && settings.macCalendarIds?.length === 0),
+    );
+    if (!usable.length) {
+      return { state: 'not_connected', events: [], error: null, asOf: null };
+    }
+    await this.hydrate();
+    const error = Date.now() - this.readAt > REFRESH_MS ? await this.refresh() : null;
+    const now = Date.now();
+    return {
+      state: error === null ? 'read' : 'failed',
+      events: this.events.filter(event => event.end > now && event.start < now + hours * HOUR),
+      error,
+      asOf: this.okAt,
+    };
+  }
+
   /** Events from now on, soonest first. */
   async upcoming(hours = 24): Promise<CalendarEvent[]> {
+    await this.hydrate();
     if (Date.now() - this.readAt > REFRESH_MS) await this.refresh();
     const now = Date.now();
     return this.events.filter(event => event.end > now && event.start < now + hours * HOUR);
@@ -115,6 +188,7 @@ export class CalendarWatcher {
   private async tick(): Promise<void> {
     const settings = await calendarSettingsStore.getSettings();
     if (!(await this.sources(settings)).length) return;
+    await this.hydrate();
     if (Date.now() - this.readAt > REFRESH_MS) await this.refresh();
     if (!settings.reminders) return;
 
@@ -182,6 +256,7 @@ export class CalendarWatcher {
       return void (await this.allowAccess().catch(error => logger.warning('Allowing Calendar', error)));
     }
     if (!notificationId.startsWith('calendar:') || button !== 0) return;
+    await this.hydrate();
     const event = this.events.find(item => `calendar:${item.id}` === notificationId);
     if (event?.joinUrl) await chrome.tabs.create({ url: event.joinUrl, active: true });
     await chrome.notifications.clear(notificationId);

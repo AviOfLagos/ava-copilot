@@ -1,6 +1,38 @@
-import type { GraphNode, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
+import type { GraphNode, InboxItem, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
 import { sectionMarkdown } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
+
+// Whether a source could be read. 'not_connected' and 'failed' are said by name, never shown as "0" or "nothing".
+export type SourceState = 'read' | 'not_connected' | 'failed';
+
+/** One place the brief reads from, by its name in the user's language. */
+export interface BriefSource {
+  name: string;
+  state: SourceState;
+}
+
+/** A run of an agent or a routine that waits for the user's click. */
+export interface WaitingRun {
+  runId: string;
+  // What the brief calls it: the agent's or the routine's name
+  name: string;
+  // The chat it waits in, when it has one
+  threadId: string | null;
+  // The runs it waits on in turn (a routine whose step is an agent's run): the same wait
+  innerRunIds?: string[];
+}
+
+/** One thing that waits on the user. */
+export interface WaitingItem {
+  // What it is about, for telling the same thing apart when it shows up in two places
+  key: string;
+  kind: 'approval' | 'needs_user' | 'decision' | 'failed';
+  // For 'needs_user': the chat is held at the spending limit, not at a sign-in
+  cap?: boolean;
+  title: string;
+  // For a failed task: why it stopped
+  detail?: string;
+}
 
 /** What a morning brief is made from. */
 export interface BriefData {
@@ -10,9 +42,19 @@ export interface BriefData {
   // Recent actions and decisions from the knowledge graph
   actions: GraphNode[];
   decisions: GraphNode[];
+  // The calendar could not be trusted to be complete: said in its place (already in the user's language)
+  calendarNote?: string;
   // Chats that wait for the user's click, and chats that stopped with an error
   waiting: ThreadRecord[];
   stopped: ThreadRecord[];
+  // Inbox items that need a decision: approvals not yet answered, and tasks reported stuck
+  inbox?: InboxItem[];
+  // Agent and routine runs that wait for a click
+  runs?: WaitingRun[];
+  // What an agent's chat is called: its agent's name, by agent id
+  agentNames?: Record<string, string>;
+  // The sources this brief read, so "nothing" can be trusted (already a line in the user's language)
+  sourcesLine?: string;
   workspaces: Workspace[];
   // Sections that workflows made today for the brief (e.g. "Tech news")
   sections?: WorkflowBriefSection[];
@@ -56,6 +98,156 @@ function clock(at: number): string {
   return new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+/**
+ * The chats that count as failed tasks this morning: stopped with an error in the last day and not archived. One
+ * that is queued to try again by itself (src/background/retry) does not wait on the user.
+ */
+export function stoppedThreads(threads: ThreadRecord[], now: number): ThreadRecord[] {
+  return threads.filter(
+    thread => thread.status === 'error' && !thread.archived && !thread.failure?.retryAt && now - thread.updatedAt < DAY,
+  );
+}
+
+const threadOf = (item: InboxItem): string | null =>
+  item.approval?.action === 'open_thread' && item.approval.requestId.startsWith('thread:')
+    ? item.approval.requestId.slice('thread:'.length)
+    : null;
+
+/**
+ * Everything that waits on the user, each thing once: chats paused on an approval or on a step only the user
+ * can do, agent and routine runs waiting for a click, Inbox items needing a decision, and failed tasks. The same
+ * thing often shows up twice (a waiting chat and its Inbox item), so each is keyed by its chat or its run.
+ * The order is the order of urgency: what is paused first, then decisions, then what failed.
+ */
+export function waitingItems(data: BriefData): WaitingItem[] {
+  const items: WaitingItem[] = [];
+  const seen = new Set<string>();
+  const add = (item: WaitingItem, ...also: (string | null | undefined)[]) => {
+    if (seen.has(item.key)) return;
+    seen.add(item.key);
+    for (const key of also) if (key) seen.add(key);
+    items.push(item);
+  };
+  const nameOf = (thread: ThreadRecord) =>
+    (thread.agentId && data.agentNames?.[thread.agentId]) || thread.title || 'Untitled';
+
+  for (const thread of data.waiting) {
+    const needsUser = thread.pendingRequest?.mode === 'needs_user';
+    add({
+      key: `thread:${thread.id}`,
+      kind: needsUser ? 'needs_user' : 'approval',
+      ...(needsUser && thread.pendingRequest?.kind === 'cap' ? { cap: true } : {}),
+      title: nameOf(thread),
+    });
+  }
+  // A run waits in a chat, or on another run (a routine whose step is an agent's run): each chain is one wait.
+  // Inner runs first, so the outer one is recognised as the same thing.
+  const runs = [...(data.runs ?? [])].sort((a, b) => (a.innerRunIds?.length ?? 0) - (b.innerRunIds?.length ?? 0));
+  for (const run of runs) {
+    const own = `run:${run.runId}`;
+    const sameWait =
+      (run.threadId !== null && seen.has(`thread:${run.threadId}`)) ||
+      (run.innerRunIds ?? []).some(inner => seen.has(`run:${inner}`));
+    if (!sameWait) {
+      add({ key: run.threadId ? `thread:${run.threadId}` : own, kind: 'approval', title: run.name });
+    }
+    // The run's own Inbox item is the same wait
+    seen.add(own);
+  }
+  const failed = data.stopped.map(thread => ({
+    key: `thread:${thread.id}`,
+    kind: 'failed' as const,
+    title: nameOf(thread),
+    detail: thread.error?.message ?? '',
+  }));
+  // A failed task and the Inbox item that reported it are one thing: the task's line says more
+  const failedKeys = new Set(failed.map(item => item.key));
+  for (const item of data.inbox ?? []) {
+    const thread = threadOf(item);
+    const key = thread ? `thread:${thread}` : item.runId ? `run:${item.runId}` : `inbox:${item.id}`;
+    if (failedKeys.has(key)) continue;
+    add({ key, kind: item.kind === 'approval' ? 'decision' : 'failed', title: item.title });
+  }
+  for (const item of failed) add(item);
+  return items;
+}
+
+/**
+ * The line that goes to WhatsApp and the desktop notification: the counts, and the top item by name. A source
+ * that is not connected or could not be read is said, never counted as 0.
+ *
+ * @param say - Looks a string up in the user's language (the i18n `t`); passed in so this stays pure
+ */
+export function briefLine(
+  data: BriefData,
+  calendar: { name: string; state: SourceState },
+  say: (key: BriefLineKey, substitutions?: string[]) => string,
+): string {
+  // Meetings have a time: an all-day entry (a holiday, a birthday) is not one, and "at 12:00 AM" would be wrong
+  const events = todaysEvents(data.events, data.now).filter(event => !event.allDay);
+  const first = events[0];
+  const meetings =
+    calendar.state === 'not_connected'
+      ? say('brief_source_notConnected', [calendar.name])
+      : calendar.state === 'failed'
+        ? say('brief_source_failed', [calendar.name])
+        : events.length === 0
+          ? say('brief_line_noMeetings')
+          : events.length === 1
+            ? say('brief_line_meeting', [clock(first.start)])
+            : say('brief_line_meetings', [String(events.length), clock(first.start)]);
+
+  const waiting = waitingItems(data);
+  const top = waiting[0];
+  const label = top
+    ? top.kind === 'approval'
+      ? say('brief_item_approve', [plain(top.title, 60)])
+      : top.kind === 'needs_user'
+        ? say(top.cap ? 'brief_item_cap' : 'brief_item_needsYou', [plain(top.title, 60)])
+        : top.kind === 'failed'
+          ? say('brief_item_failed', [plain(top.title, 60)])
+          : plain(top.title, 60)
+    : '';
+  const waits =
+    waiting.length === 0
+      ? say('brief_line_noWaiting')
+      : waiting.length === 1
+        ? say('brief_line_waiting', ['1', label])
+        : say('brief_line_waitingMore', [String(waiting.length), label, String(waiting.length - 1)]);
+  return `${meetings} ${waits}`;
+}
+
+export type BriefLineKey =
+  | 'brief_source_notConnected'
+  | 'brief_source_failed'
+  | 'brief_line_noMeetings'
+  | 'brief_line_meeting'
+  | 'brief_line_meetings'
+  | 'brief_line_noWaiting'
+  | 'brief_line_waiting'
+  | 'brief_line_waitingMore'
+  | 'brief_item_approve'
+  | 'brief_item_needsYou'
+  | 'brief_item_cap'
+  | 'brief_item_failed';
+
+/** The sources a brief read and the ones it could not, as one line. */
+export function sourcesLine(
+  sources: BriefSource[],
+  say: (key: 'brief_sources_read' | 'brief_source_notConnected' | 'brief_source_failed', subs?: string[]) => string,
+): string {
+  const read = sources.filter(source => source.state === 'read').map(source => source.name);
+  return [
+    read.length ? say('brief_sources_read', [read.join(', ')]) : '',
+    ...sources
+      .filter(source => source.state === 'not_connected')
+      .map(source => say('brief_source_notConnected', [source.name])),
+    ...sources.filter(source => source.state === 'failed').map(source => say('brief_source_failed', [source.name])),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /** Today's calendar events, in order: those not over yet and starting before midnight. */
 export function todaysEvents(events: UpcomingEvent[], now: number): UpcomingEvent[] {
   const midnight = new Date(now);
@@ -75,23 +267,34 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
   if (data.goals?.length) sections.push(`**Your goals**\n${data.goals.join('\n')}`);
 
   const events = todaysEvents(data.events, data.now);
-  sections.push(
-    events.length
-      ? `**Today's calendar**\n${events
-          .map(
-            event => `- ${clock(event.start)}: ${plain(event.title, 80)}${event.joinUrl ? ' (has a call link)' : ''}`,
-          )
-          .join('\n')}`
-      : "**Today's calendar**\nNothing on the calendar today.",
-  );
+  const eventLines = events
+    .map(
+      event =>
+        `- ${event.allDay ? 'All day' : clock(event.start)}: ${plain(event.title, 80)}${event.joinUrl ? ' (has a call link)' : ''}`,
+    )
+    .join('\n');
+  // A calendar that is not connected, or could not be read, is said: an empty list would read as a free day
+  const calendar = data.calendarNote
+    ? [plain(data.calendarNote, 240), eventLines].filter(Boolean).join('\n')
+    : eventLines || 'Nothing on the calendar today.';
+  sections.push(`**Today's calendar**\n${calendar}`);
 
-  const waiting = [
-    ...data.waiting.map(thread => `- "${plain(thread.title || 'Untitled', 80)}" waits for your click`),
-    ...data.stopped.map(
-      thread => `- "${plain(thread.title || 'Untitled', 80)}" stopped: ${plain(thread.error?.message ?? '', 80)}`,
-    ),
-  ];
-  if (waiting.length) sections.push(`**Waiting on you**\n${waiting.join('\n')}`);
+  const waiting = waitingItems(data).map(item => {
+    const title = plain(item.title, 80);
+    switch (item.kind) {
+      case 'approval':
+        return `- "${title}" waits for your click`;
+      case 'needs_user':
+        return item.cap
+          ? `- "${title}" is held at the spending limit`
+          : `- "${title}" needs a step only you can do (a sign-in, a CAPTCHA or a code)`;
+      case 'decision':
+        return `- ${title} (in your Inbox)`;
+      default:
+        return `- "${title}" stopped${item.detail ? `: ${plain(item.detail, 80)}` : ''}`;
+    }
+  });
+  if (waiting.length) sections.push(`**Waiting on you (${waiting.length})**\n${waiting.join('\n')}`);
 
   // What the user's workflows gathered for the brief, e.g. the morning's tech news
   for (const section of data.sections ?? []) sections.push(sectionMarkdown(section));
@@ -122,6 +325,8 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
     if (decisions.length) parts.push(`Decided lately:\n${decisions.join('\n')}`);
     sections.push(parts.join('\n'));
   }
+  // Which sources were read: with nothing above, this is what makes "nothing" true
+  if (data.sourcesLine) sections.push(`_${plain(data.sourcesLine, 300)}_`);
   return sections.join('\n\n');
 }
 

@@ -2551,6 +2551,29 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - The unused `retryDelay` agent option is removed.
 - E2E: `threads.e2e.mjs` "a task that fails for a passing reason is tried again by itself a minute later…".
 
+### The morning brief tells the truth (2026-11-20, #67, docs/growth-team.md Part 5a)
+
+- A source that is not connected, or could not be read, is named ("Calendar: not connected."), never shown as 0 or
+  as a free day. Every source the brief reads is read on its own (`MorningBrief.build`), and the brief ends with the
+  line of what it read and what it could not, so an empty brief can be trusted. The strings are in the locale files
+  (`brief_source_*`, `brief_calendar_*`, `brief_line_*`).
+- The calendar says how far it can be trusted: `CalendarWatcher.reading()` returns `read`, `not_connected` or
+  `failed` with the events of the last read that worked (`asOf`). Events are kept in `upcomingEventsStore` with
+  `okAt`, and a new watcher starts from them (`hydrate`), so a restarted background no longer empties the day or
+  writes an empty day over the stored one after a failed read.
+- "Waiting on you" counts each thing once (`waitingItems` in `brief/brief.ts`): chats paused on an approval or on a
+  step only the user can do, agent and routine runs waiting for a click, Inbox items needing a decision, and failed
+  tasks. A task queued to try again by itself (#66) is not counted.
+- The WhatsApp line and the desktop notification name the first meeting by its time and the top waiting item by
+  name (`briefLine`): "2 meetings, first at 10:00. 3 waiting on you: approve Suture post, and 2 more." A meeting's
+  title is never in it. `brief_counts` is gone.
+- After review: a routine waiting on a click is one thing, whether it waits in a chat of its own or on an agent's
+  run (`waitingRuns` follows the chain); an all-day entry is not a meeting and has no time; "this is what it showed
+  at …" names the day and is only said with events to show; the Mac's Calendar with no calendar ticked counts as
+  not connected; an Inbox item whose chat was deleted and an archived chat are not counted.
+- Not built here: the Team section (#78). From #32, still open: asking for the Mac's Calendar permission again while
+  it is lost, and showing it on the setup checklist.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
