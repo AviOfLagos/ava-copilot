@@ -21,7 +21,10 @@ vi.mock('@extension/storage', async original => ({
     },
   },
 }));
-vi.stubGlobal('chrome', { i18n: { getMessage: (key: string) => key } });
+// The card's own words come from the locale files: here each key answers with itself and what it was given
+vi.stubGlobal('chrome', {
+  i18n: { getMessage: (key: string, subs?: string | string[]) => [key, ...[subs ?? []].flat()].join(':') },
+});
 
 const { productSection } = await import('../section');
 const { profileChanges, updateProductProfileAction } = await import('../action');
@@ -55,6 +58,7 @@ function contextWith(answer: 'approved' | 'declined' | 'cancelled') {
 
 beforeEach(() => {
   state.thread = { workspaceId: 'acme' };
+  state.workspaces = [{ id: 'acme', name: 'Acme', about: 'Invoices.', keywords: [], accounts: {}, createdAt: 0 }];
   state.products = { acme: acme() };
 });
 
@@ -64,7 +68,14 @@ describe('productSection', () => {
     expect(section).toContain('[Product: Acme]');
     expect(section).toContain('Who it is for (most valuable first): Freelancers who bill by the hour; Small agencies');
     expect(section).toContain('Pricing: $9 a month, first invoice free');
-    expect(section).toContain('Marketing budget: $100 in total, $0 spent');
+    // Nothing has been spent that anything recorded: no "spent" figure is stated
+    expect(section).toContain('Marketing budget: $100 in total');
+    expect(section).not.toContain('spent');
+    expect(productSection({ ...acme(), budget: { totalUsd: 100, spentUsd: 12.5 } })).toContain(
+      'Marketing budget: $100 in total, $12.50 spent',
+    );
+    // No stage was given, so none is stated
+    expect(section).toContain('Stage: not set');
     expect(section).toContain('Slack channels with its notifications: #acme-alerts');
   });
 
@@ -104,8 +115,8 @@ describe('update_product_profile', () => {
       never: ['Never promise a refund'],
     });
     expect(changes).toEqual([
-      { label: 'Pricing', before: '$9 a month, first invoice free', after: '$12 a month' },
-      { label: 'Never say or do', before: 'not set', after: 'Never promise a refund' },
+      { key: 'pricing', label: 'Pricing', before: '$9 a month, first invoice free', after: '$12 a month' },
+      { key: 'never', label: 'Never say or do', before: 'not set', after: 'Never promise a refund' },
     ]);
     expect(next.pricing).toBe('$12 a month');
   });
@@ -114,9 +125,9 @@ describe('update_product_profile', () => {
     const { context, asked } = contextWith('approved');
     const result = await updateProductProfileAction(context, { intent: 'New price', pricing: '$12 a month' });
     expect(asked).toHaveLength(1);
-    expect(asked[0]).toMatchObject({ mode: 'commit', target: 'Product profile › Acme' });
+    expect(asked[0]).toMatchObject({ mode: 'commit', target: 'product_title › Acme' });
     expect(asked[0]!.fields).toEqual([
-      { label: 'Pricing', value: '$12 a month\n(now: $9 a month, first invoice free)' },
+      { label: 'product_pricing', value: '$12 a month\n(product_card_now:$9 a month, first invoice free)' },
     ]);
     expect(state.products.acme!.pricing).toBe('$12 a month');
     expect(result.extractedContent).toContain('Saved to the product profile of Acme: Pricing');
@@ -128,6 +139,31 @@ describe('update_product_profile', () => {
     expect(state.products.acme!.pricing).toBe('$9 a month, first invoice free');
     expect(result.error).toBeTruthy();
     expect(context.stop).toHaveBeenCalled();
+  });
+
+  it('applies the change to the profile as it is when the user confirms, not as it was when the card opened', async () => {
+    const { context } = contextWith('approved');
+    const ask = context.confirmGate.ask;
+    context.confirmGate.ask = (async (...args: Parameters<typeof ask>) => {
+      // While the card waits, the user fixes the audience in the workspace screen
+      state.products.acme = { ...state.products.acme!, audience: ['Edited meanwhile'] };
+      return ask(...args);
+    }) as typeof ask;
+    await updateProductProfileAction(context, { intent: '', pricing: '$12 a month' });
+    expect(state.products.acme).toMatchObject({ pricing: '$12 a month', audience: ['Edited meanwhile'] });
+  });
+
+  it('saves nothing for a workspace that was deleted while the card waited', async () => {
+    const { context } = contextWith('approved');
+    const ask = context.confirmGate.ask;
+    context.confirmGate.ask = (async (...args: Parameters<typeof ask>) => {
+      state.workspaces = [];
+      state.products = {};
+      return ask(...args);
+    }) as typeof ask;
+    const result = await updateProductProfileAction(context, { intent: '', pricing: '$12 a month' });
+    expect(result.error).toMatch(/no longer exists/);
+    expect(state.products).toEqual({});
   });
 
   it('asks nothing when the profile already says so', async () => {

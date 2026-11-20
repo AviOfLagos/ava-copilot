@@ -10538,5 +10538,8 @@
   },
   "product_betaDays": {
     "message": "Beta length (days)"
+  },
+  "product_card_now": {
+    "message": "now: $1"
   }
 }

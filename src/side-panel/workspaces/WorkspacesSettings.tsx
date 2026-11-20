@@ -45,12 +45,17 @@ function Editor({
   // The product this workspace sells, if any; null until the user adds one
   const [product, setProduct] = useState<ProductProfile | null>(null);
   const [hadProduct, setHadProduct] = useState(false);
+  // Until the stored product is read, there is nothing to add to: a product typed meanwhile would be replaced
+  const [productRead, setProductRead] = useState(false);
   useEffect(() => {
     let live = true;
     void productStore.forWorkspace(initial.id).then(found => {
-      if (!live || !found) return;
-      setProduct(found);
-      setHadProduct(true);
+      if (!live) return;
+      if (found) {
+        setProduct(found);
+        setHadProduct(true);
+      }
+      setProductRead(true);
     });
     return () => {
       live = false;
@@ -123,7 +128,7 @@ function Editor({
       </fieldset>
       {product ? (
         <ProductFields value={product} onChange={setProduct} />
-      ) : (
+      ) : !productRead ? null : (
         <button
           type="button"
           onClick={() => setProduct(emptyProductProfile({ id: draft.id, name: draft.name }))}
@@ -139,8 +144,9 @@ function Editor({
               variant="destructive"
               size="sm"
               onClick={async () => {
-                await workspaceStore.remove(draft.id);
+                // The product first: a workspace gone with its product left behind would leave an orphan
                 await productStore.remove(draft.id);
+                await workspaceStore.remove(draft.id);
                 onDone();
               }}>
               {t('workspace_delete')}

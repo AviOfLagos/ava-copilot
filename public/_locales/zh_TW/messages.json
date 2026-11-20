@@ -10538,5 +10538,8 @@
   },
   "product_betaDays": {
     "message": "Beta 期間（天）"
+  },
+  "product_card_now": {
+    "message": "目前：$1"
   }
 }

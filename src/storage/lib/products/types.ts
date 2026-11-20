@@ -35,7 +35,8 @@ export interface ProductProfile {
   differentiators: string[];
   // Exactly as on the site, or "free during beta"
   pricing: string;
-  stage: ProductStage;
+  // null until the user says which
+  stage: ProductStage | null;
   // owner/name, where issues go
   repo: string;
   // The admin console, and the login that may use it
@@ -70,7 +71,7 @@ export function emptyProductProfile(workspace: Pick<Workspace, 'id' | 'name'>): 
     alternatives: [],
     differentiators: [],
     pricing: '',
-    stage: 'beta',
+    stage: null,
     repo: '',
     superAdmin: null,
     slackChannels: [],
@@ -90,7 +91,15 @@ const TEXT = 600;
 const LINE = 200;
 const LIST = 12;
 
-const text = (value: unknown, max = TEXT): string => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+// One line each: a value with line breaks could pass itself off as more lines of the profile ("Pricing: free")
+// in what agents are told
+const text = (value: unknown, max = TEXT): string =>
+  typeof value === 'string'
+    ? value
+        .replace(/\s*[\r\n]+\s*/g, ' ')
+        .trim()
+        .slice(0, max)
+    : '';
 const list = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.map(item => text(item, LINE)).filter(Boolean))].slice(0, LIST) : [];
 const amount = (value: unknown): number | null =>
@@ -125,7 +134,7 @@ export function cleanProductProfile(profile: ProductProfile): ProductProfile {
     alternatives: list(profile.alternatives),
     differentiators: list(profile.differentiators),
     pricing: text(profile.pricing),
-    stage: profile.stage === 'live' ? 'live' : 'beta',
+    stage: profile.stage === 'live' || profile.stage === 'beta' ? profile.stage : null,
     repo: text(profile.repo, 120),
     superAdmin: superAdminUrl ? { url: superAdminUrl, account: text(profile.superAdmin?.account, LINE) } : null,
     slackChannels: (Array.isArray(profile.slackChannels) ? profile.slackChannels : [])

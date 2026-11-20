@@ -134,8 +134,30 @@ test('a workspace gets a product, and what is left empty reads "Not set"', async
   await until(async () => !/pricing/.test(await missingLine()), 'the pricing gap to close');
   assert.match(await missingLine(), /^Not set yet: outreach email, postal address, beta rule, social accounts/);
 
+  // Numbers and channel rows can be typed a key at a time: "12.5" is not cut to 125, and a row keeps its id
+  await session.panel.evaluate(() => document.querySelectorAll('details').forEach(group => (group.open = true)));
+  for (const [label, keys] of [
+    ['Marketing budget', '12.5'],
+    ['Slack channels', '#rocket-alerts C0123456789\n#rocket-sales'],
+  ]) {
+    await session.panel.evaluate(label => {
+      [...document.querySelectorAll('label')]
+        .find(el => el.innerText.trim().startsWith(label))
+        .querySelector('input, textarea')
+        .focus();
+    }, label);
+    for (const key of keys) await session.panel.keyboard.press(key === '\n' ? 'Enter' : key);
+  }
+  assert.equal(await fieldValue('Marketing budget'), '12.5');
+
   assert.ok(await clickByName('Save'));
   const saved = await until(async () => (await products())['rocket-shop'], 'the product to be saved');
+  assert.deepEqual(saved.budget, { totalUsd: 12.5, spentUsd: 0 });
+  assert.deepEqual(saved.slackChannels, [
+    { name: '#rocket-alerts', id: 'C0123456789' },
+    { name: '#rocket-sales', id: '' },
+  ]);
+  assert.equal(saved.stage, null, 'no stage was picked, so none is stored');
   assert.equal(saved.name, 'Rocket Shop');
   assert.deepEqual(saved.audience, ['Hobby rocketeers', 'School science clubs']);
   assert.equal(saved.pricing, '$9 a month');
@@ -173,7 +195,7 @@ test('an agent in that workspace is told the audience and the pricing, and that 
 test('Ava changes the profile only after the user confirms, and a refusal changes nothing', async () => {
   await newChatSaying('Rocket Shop price change. Run the scripted scenario change-price.', 'change-price');
   const card = await session.waitForCard();
-  assert.match(card, /Product profile › Rocket Shop/);
+  assert.match(card, /Product › Rocket Shop/);
   assert.match(card, /\$12 a month/);
   assert.match(card, /now: \$9 a month/);
   assert.equal((await products())['rocket-shop'].pricing, '$9 a month', 'nothing is saved while the card waits');

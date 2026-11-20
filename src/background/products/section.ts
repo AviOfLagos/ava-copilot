@@ -22,11 +22,16 @@ export function productLines(profile: ProductProfile): [label: string, value: st
     ? profile.superAdmin.url + (profile.superAdmin.account ? ` (as ${profile.superAdmin.account})` : '')
     : NOT_SET;
   const channels = profile.slackChannels.map(channel => channel.name || channel.id);
+  // What was spent is said only once something has been: until a ledger keeps it, 0 is not a known fact
+  const budget = profile.budget
+    ? `${usd(profile.budget.totalUsd)} in total` +
+      (profile.budget.spentUsd > 0 ? `, ${usd(profile.budget.spentUsd)} spent` : '')
+    : NOT_SET;
   return [
     ['Name', or(profile.name)],
     ['Site', or(profile.url)],
     ['In one line', or(profile.oneLiner)],
-    ['Stage', profile.stage],
+    ['Stage', profile.stage ?? NOT_SET],
     ['Who it is for (most valuable first)', many(profile.audience)],
     ['The problem it solves', or(profile.problem)],
     ['What people use instead', many(profile.alternatives)],
@@ -43,10 +48,7 @@ export function productLines(profile: ProductProfile): [label: string, value: st
       'North star',
       profile.northStar ? `${profile.northStar.metric}, ${profile.northStar.weeklyTarget} a week` : NOT_SET,
     ],
-    [
-      'Marketing budget',
-      profile.budget ? `${usd(profile.budget.totalUsd)} in total, ${usd(profile.budget.spentUsd)} spent` : NOT_SET,
-    ],
+    ['Marketing budget', budget],
     [
       'Beta rule',
       profile.betaRule

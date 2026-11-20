@@ -2616,6 +2616,13 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   star, where to tell the owner, and the admin login.
 - **Differences from the spec's shape:** `slackChannels` holds a name and an id (the Slack connector reads by
   id); `postalAddress` is a field of its own; `northStar`, `budget`, `notify` can be null (not set).
+- After review: number fields and the Slack rows keep what is typed (so "12.5" and a second row can be typed);
+  the stage is "not set" until picked; "spent" is only stated once something was spent; every text is kept on one
+  line, so a value cannot pass itself off as another line of the profile; Ava's change is applied to the profile
+  as it is when the user confirms, and nothing is saved for a workspace deleted meanwhile.
+- Known and left: the seed's text is in the public source and in every bundle (as the owner's other workspaces
+  already are); it only runs in the owner's build. Two extension pages saving two workspaces' products in the
+  same instant can lose one of the saves.
 - Tests: `storage/lib/products/__tests__`, `background/products/__tests__`, `e2e/products.e2e.mjs`.
 
 ## 5. Risks, in order

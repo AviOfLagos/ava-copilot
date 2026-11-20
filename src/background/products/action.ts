@@ -46,34 +46,72 @@ type Input = z.infer<typeof updateProductProfileActionSchema.schema>;
 const shown = (value: string | string[]) =>
   Array.isArray(value) ? (value.length ? value.join('; ') : 'not set') : value || 'not set';
 
-/** The fields a proposal would change: what each says now and what it would say. */
+type Key =
+  | 'name'
+  | 'url'
+  | 'oneLiner'
+  | 'audience'
+  | 'problem'
+  | 'alternatives'
+  | 'differentiators'
+  | 'pricing'
+  | 'stage'
+  | 'repo'
+  | 'never';
+
+// What the model calls each field (in its result) and what the user reads on the card
+const FIELDS: { key: Key; label: string; card: () => string; from: (input: Input) => string | string[] | undefined }[] =
+  [
+    { key: 'name', label: 'Name', card: () => t('product_name'), from: input => input.name },
+    { key: 'url', label: 'Site', card: () => t('product_url'), from: input => input.url },
+    { key: 'oneLiner', label: 'In one line', card: () => t('product_oneLiner'), from: input => input.one_liner },
+    { key: 'audience', label: 'Who it is for', card: () => t('product_audience'), from: input => input.audience },
+    { key: 'problem', label: 'The problem it solves', card: () => t('product_problem'), from: input => input.problem },
+    {
+      key: 'alternatives',
+      label: 'What people use instead',
+      card: () => t('product_alternatives'),
+      from: input => input.alternatives,
+    },
+    {
+      key: 'differentiators',
+      label: 'Why this one',
+      card: () => t('product_differentiators'),
+      from: input => input.differentiators,
+    },
+    { key: 'pricing', label: 'Pricing', card: () => t('product_pricing'), from: input => input.pricing },
+    { key: 'stage', label: 'Stage', card: () => t('product_stage'), from: input => input.stage },
+    { key: 'repo', label: 'Repo', card: () => t('product_repo'), from: input => input.repo },
+    { key: 'never', label: 'Never say or do', card: () => t('product_never'), from: input => input.never },
+  ];
+
+export interface ProfileChange {
+  key: Key;
+  label: string;
+  before: string;
+  after: string;
+}
+
+/** The fields a proposal would change: what each says now and what it would say. Nothing else is touched. */
 export function profileChanges(
   profile: ProductProfile,
   input: Input,
-): { next: ProductProfile; changes: { label: string; before: string; after: string }[] } {
+): { next: ProductProfile; changes: ProfileChange[] } {
   const next: ProductProfile = { ...profile };
-  const changes: { label: string; before: string; after: string }[] = [];
-  const set = <K extends keyof ProductProfile>(key: K, label: string, value: ProductProfile[K] | undefined) => {
-    if (value === undefined) return;
-    const before = shown(profile[key] as string | string[]);
-    const after = shown(value as string | string[]);
-    if (before === after) return;
-    next[key] = value;
-    changes.push({ label, before, after });
-  };
-  set('name', 'Name', input.name);
-  set('url', 'Site', input.url);
-  set('oneLiner', 'In one line', input.one_liner);
-  set('audience', 'Who it is for', input.audience);
-  set('problem', 'The problem it solves', input.problem);
-  set('alternatives', 'What people use instead', input.alternatives);
-  set('differentiators', 'Why this one', input.differentiators);
-  set('pricing', 'Pricing', input.pricing);
-  set('stage', 'Stage', input.stage);
-  set('repo', 'Repo', input.repo);
-  set('never', 'Never say or do', input.never);
+  const changes: ProfileChange[] = [];
+  for (const field of FIELDS) {
+    const value = field.from(input);
+    if (value === undefined) continue;
+    const before = shown((profile[field.key] ?? '') as string | string[]);
+    const after = shown(value);
+    if (before === after) continue;
+    (next as unknown as Record<Key, unknown>)[field.key] = value;
+    changes.push({ key: field.key, label: field.label, before, after });
+  }
   return { next, changes };
 }
+
+const cardLabel = (key: Key) => FIELDS.find(field => field.key === key)!.card();
 
 function fail(context: AgentContext, error: string): ActionResult {
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, error);
@@ -92,7 +130,7 @@ export async function updateProductProfileAction(context: AgentContext, input: I
     );
   }
   const current = (await productStore.forWorkspace(workspace.id)) ?? emptyProductProfile(workspace);
-  const { next, changes } = profileChanges(current, input);
+  const { changes } = profileChanges(current, input);
   if (!changes.length) {
     const same = 'The product profile already says that. Nothing was changed.';
     context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, same);
@@ -100,8 +138,8 @@ export async function updateProductProfileAction(context: AgentContext, input: I
   }
 
   const fields: ConfirmField[] = changes.map(change => ({
-    label: change.label,
-    value: `${change.after}\n(now: ${change.before})`,
+    label: cardLabel(change.key),
+    value: `${change.after}\n(${t('product_card_now', [change.before])})`,
   }));
   const request: ConfirmRequest = {
     id: crypto.randomUUID(),
@@ -109,7 +147,7 @@ export async function updateProductProfileAction(context: AgentContext, input: I
     mode: 'commit',
     kind: 'tool',
     intent: input.intent || `Change the product profile of ${workspace.name}`,
-    target: `Product profile › ${workspace.name}`,
+    target: `${t('product_title')} › ${workspace.name}`,
     pageTitle: workspace.name,
     pageUrl: '',
     fields,
@@ -127,7 +165,13 @@ export async function updateProductProfileAction(context: AgentContext, input: I
     return fail(context, t('gate_declined'));
   }
 
-  await productStore.save(next);
+  // The card may have waited a while: the change is applied to the profile as it is now, so nothing the user
+  // edited meanwhile is put back, and a workspace deleted meanwhile gets no product
+  if (!(await workspaceStore.get(workspace.id))) {
+    return fail(context, 'That workspace no longer exists, so nothing was saved.');
+  }
+  const latest = (await productStore.forWorkspace(workspace.id)) ?? emptyProductProfile(workspace);
+  await productStore.save(profileChanges(latest, input).next);
   const done = `Saved to the product profile of ${workspace.name}: ${changes.map(change => change.label).join(', ')}.`;
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, done);
   return new ActionResult({ extractedContent: done, includeInMemory: true });

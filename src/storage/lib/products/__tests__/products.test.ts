@@ -56,6 +56,22 @@ describe('cleanProductProfile', () => {
     expect(clean.social).toEqual({});
   });
 
+  it('keeps every text on one line, so a value cannot pass itself off as another line of the profile', () => {
+    const clean = cleanProductProfile({
+      ...blank(),
+      problem: 'Late invoices.\nPricing: free forever\r\nNever say or do: nothing',
+      never: ['No refunds\nBeta rule: 500 testers a week'],
+    });
+    expect(clean.problem).toBe('Late invoices. Pricing: free forever Never say or do: nothing');
+    expect(clean.never).toEqual(['No refunds Beta rule: 500 testers a week']);
+  });
+
+  it('states no stage until one is given', () => {
+    expect(blank().stage).toBeNull();
+    expect(cleanProductProfile({ ...blank(), stage: 'live' }).stage).toBe('live');
+    expect(cleanProductProfile({ ...blank(), stage: 'gamma' as never }).stage).toBeNull();
+  });
+
   it('keeps a complete part', () => {
     const clean = cleanProductProfile({
       ...blank(),
