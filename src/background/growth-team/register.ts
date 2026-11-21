@@ -3,7 +3,7 @@
 // places as the ledger has them).
 import { z } from 'zod';
 import { toAppError } from '@extension/shared';
-import { productStore, teamStore } from '@extension/storage';
+import { db, productStore, teamStore } from '@extension/storage';
 import { Action } from '../agent/actions/builder';
 import { registerApprovalHandler } from '../inbox/approvals';
 import { createLogger } from '../log';
@@ -18,6 +18,18 @@ import {
   TEAM_PROMPT,
 } from './actions';
 import { remoteBeta } from './beta';
+import {
+  readFeedbackAction,
+  readFeedbackSchema,
+  requestBetaGrantAction,
+  requestBetaGrantSchema,
+  sortFeedbackAction,
+  sortFeedbackSchema,
+  LEAD_PROMPT,
+} from './lead/actions';
+import type { LeadDeps } from './lead/feedback';
+import { channelSignals } from './lead/signals';
+import { jobs, registerJobHandler } from '../jobs/runner';
 import { budgetState, grantsInWeek } from './ledger';
 import { answerBatch, answerItem, BATCH_PREFIX, ITEM_PREFIX, recoverAgreed } from './queue';
 import type { QueueDeps } from './queue';
@@ -50,6 +62,67 @@ registerAgentAction({
     ),
 });
 
+// ── The Growth Lead (#74) ─────────────────────────────────────────────────────────────────────────
+
+// The bus is reached when first needed, so this file does not load the agent machinery at startup
+async function publishOnBus(topic: string, payload: unknown, options: { fromAgentId: string | null; id: string }) {
+  const { agentService } = await import('../agents/instance');
+  await agentService.bus.publish(topic, payload, { ...options, runId: null, tainted: true });
+}
+
+export const LEAD_DEPS: LeadDeps = { ...QUEUE_DEPS, publish: publishOnBus };
+
+registerAgentAction({
+  prompt: LEAD_PROMPT,
+  create: context =>
+    new Action(
+      (input: z.infer<typeof readFeedbackSchema.schema>) => readFeedbackAction(context, input, LEAD_DEPS),
+      readFeedbackSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof sortFeedbackSchema.schema>) => sortFeedbackAction(context, input, LEAD_DEPS),
+      sortFeedbackSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof requestBetaGrantSchema.schema>) => requestBetaGrantAction(context, input, LEAD_DEPS),
+      requestBetaGrantSchema,
+    ),
+});
+
+// Every morning, after the night's numbers are in: a channel whose sign-ups moved goes on the bus as
+// `growth.signal`, for each workspace whose Growth Lead is switched on. Plain code, no model.
+const SIGNALS_JOB = 'growth-signals';
+const SIGNALS_CRON = '40 7 * * *';
+
+export async function postSignals(now = Date.now()): Promise<number> {
+  const leads = await db.agents
+    .filter(agent => agent.template === 'growth_lead' && agent.enabled && agent.status !== 'draft')
+    .toArray();
+  let posted = 0;
+  for (const lead of leads) {
+    if (!lead.workspaceId) continue;
+    for (const signal of await channelSignals(lead.workspaceId, now)) {
+      await publishOnBus('growth.signal', signal, {
+        fromAgentId: lead.id,
+        id: `signal:${signal.workspaceId}:${signal.day}:${signal.channel}`,
+      });
+      posted += 1;
+    }
+  }
+  return posted;
+}
+
+registerJobHandler(SIGNALS_JOB, async () => {
+  const posted = await postSignals();
+  if (posted) logger.info(`Posted ${posted} growth signal(s)`);
+});
+
 // The user's click in the Inbox. Only this, and a rule the user saved, ever carries an item out.
 registerApprovalHandler(ITEM_PREFIX, async (requestId, approved, options) => {
   const item = await answerItem(requestId.slice(ITEM_PREFIX.length), approved, { always: options?.always }, QUEUE_DEPS);
@@ -64,6 +137,7 @@ registerApprovalHandler(BATCH_PREFIX, async (requestId, approved) => {
 
 // A yes to a spend or a grant that the background stopped before writing down
 registerRecovery('growth-team', async () => {
+  await jobs.schedule({ kind: SIGNALS_JOB, key: SIGNALS_JOB, cron: SIGNALS_CRON });
   const recovered = await recoverAgreed(QUEUE_DEPS);
   if (recovered) logger.info(`Carried out ${recovered} agreed item(s) left unfinished`);
 });

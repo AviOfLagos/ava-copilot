@@ -35,7 +35,8 @@ import {
   userTimezone,
   validateProfile,
 } from './profile';
-import { agentTemplate, SOCIAL_TEMPLATE_IDS } from './templates';
+import { checkGrowthWorkspace, setGrowthModels } from '../growth-team/setup';
+import { agentTemplate, isGrowthTemplate, SOCIAL_TEMPLATE_IDS } from './templates';
 import type { AgentTemplateId } from './templates';
 import {
   agentsForInboxItem,
@@ -337,13 +338,17 @@ export class AgentService {
   }
 
   async fromTemplate(template: AgentTemplateId, workspaceId: string | null = null): Promise<AgentProfile> {
+    // A growth agent works for one product: its workspace's
+    if (isGrowthTemplate(template)) await checkGrowthWorkspace(workspaceId);
     const profile = { ...agentTemplate(template, userTimezone()), workspaceId };
     // A social agent gets the user's SI-SDK connectors, so it can read and act on their accounts
     if (SOCIAL_TEMPLATE_IDS.includes(template)) {
       const social = await this.db.connectors.filter(connector => connector.catalogId === 'si_sdk').toArray();
       profile.connectors = social.map(connector => connector.id).slice(0, 20);
     }
-    return this.saveDraft({ profile, request: profile.instructions, template });
+    const agent = await this.saveDraft({ profile, request: profile.instructions, template });
+    if (isGrowthTemplate(template)) await setGrowthModels(agent.id).catch(() => 'fallback');
+    return agent;
   }
 
   /** "Set up my team": a draft for each template the user ticked. Nothing runs until each is created. */

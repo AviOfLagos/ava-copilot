@@ -3,8 +3,8 @@ import { ChevronRight, Users } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { db } from '@extension/storage';
 import type { AgentProfile, RunRecord, RunStep } from '@extension/storage';
-import { agentTemplate, TEAM_TEMPLATE_IDS } from '@src/background/agents/templates';
-import type { TeamTemplateId } from '@src/background/agents/templates';
+import { agentTemplate, GROWTH_TEMPLATE_IDS, TEAM_TEMPLATE_IDS } from '@src/background/agents/templates';
+import type { GrowthTemplateId, TeamTemplateId } from '@src/background/agents/templates';
 import { ownershipClash, userTimezone } from '@src/background/agents/profile';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -27,6 +27,14 @@ export const TEAM_META: Record<TeamTemplateId, { name: MessageKey; hint: Message
   team_meetings: { name: 'agents_team_meetings', hint: 'agents_team_meetings_hint' },
   team_calendar: { name: 'agents_team_calendar', hint: 'agents_team_calendar_hint' },
 };
+
+// The growth team: agents that work for the product of the workspace picked below
+export const GROWTH_META: Record<GrowthTemplateId, { name: MessageKey; hint: MessageKey }> = {
+  growth_lead: { name: 'agents_growth_lead', hint: 'agents_growth_lead_hint' },
+};
+
+type SetupTemplateId = TeamTemplateId | GrowthTemplateId;
+const META: Record<SetupTemplateId, { name: MessageKey; hint: MessageKey }> = { ...TEAM_META, ...GROWTH_META };
 
 function firstLine(text: string, max = 140): string {
   const line =
@@ -131,18 +139,18 @@ export function TeamList({
 export function TeamSetup({ api, agents }: { api: PanelApi; agents: AgentProfile[] }) {
   const workspaces = useWorkspaces();
   const [open, setOpen] = useState(false);
-  const [picked, setPicked] = useState<TeamTemplateId[]>([]);
+  const [picked, setPicked] = useState<SetupTemplateId[]>([]);
   const [workspaceId, setWorkspaceId] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ error: boolean; text: string } | null>(null);
   const timezone = userTimezone();
 
   // A starter whose area a switched-on agent the chat could see already owns is shown as taken
-  const takenBy = (template: TeamTemplateId) =>
+  const takenBy = (template: SetupTemplateId) =>
     ownershipClash({ ...agentTemplate(template, timezone), workspaceId: workspaceId || null }, null, agents)?.owner ??
     null;
 
-  const toggle = (template: TeamTemplateId) =>
+  const toggle = (template: SetupTemplateId) =>
     setPicked(current =>
       current.includes(template) ? current.filter(item => item !== template) : [...current, template],
     );
@@ -166,6 +174,37 @@ export function TeamSetup({ api, agents }: { api: PanelApi; agents: AgentProfile
     } finally {
       setBusy(false);
     }
+  };
+
+  const option = (template: SetupTemplateId) => {
+    const profile = agentTemplate(template, timezone);
+    const owner = takenBy(template);
+    const id = `team-${template}`;
+    return (
+      <label
+        key={template}
+        htmlFor={id}
+        className={`flex items-start gap-2.5 rounded-lg px-2 py-1.5 ${owner ? 'opacity-60' : 'hover:bg-accent cursor-pointer'}`}>
+        <input
+          id={id}
+          type="checkbox"
+          data-team-template={template}
+          className="mt-1 accent-[var(--color-primary)]"
+          checked={picked.includes(template) && !owner}
+          disabled={Boolean(owner) || busy}
+          onChange={() => toggle(template)}
+        />
+        <span aria-hidden className="text-[15px] leading-6">
+          {profile.avatar}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-medium">{t(META[template].name)}</span>
+          <span className="text-muted-foreground block text-[11.5px] leading-relaxed">
+            {owner ? t('agents_setup_owned', [owner.name]) : t(META[template].hint)}
+          </span>
+        </span>
+      </label>
+    );
   };
 
   return (
@@ -196,36 +235,12 @@ export function TeamSetup({ api, agents }: { api: PanelApi; agents: AgentProfile
           <p className="text-muted-foreground text-[12px] leading-relaxed">{t('agents_setup_intro')}</p>
           <fieldset className="flex flex-col gap-1">
             <legend className="sr-only">{t('agents_setup_title')}</legend>
-            {TEAM_TEMPLATE_IDS.map(template => {
-              const profile = agentTemplate(template, timezone);
-              const owner = takenBy(template);
-              const id = `team-${template}`;
-              return (
-                <label
-                  key={template}
-                  htmlFor={id}
-                  className={`flex items-start gap-2.5 rounded-lg px-2 py-1.5 ${owner ? 'opacity-60' : 'hover:bg-accent cursor-pointer'}`}>
-                  <input
-                    id={id}
-                    type="checkbox"
-                    data-team-template={template}
-                    className="mt-1 accent-[var(--color-primary)]"
-                    checked={picked.includes(template) && !owner}
-                    disabled={Boolean(owner) || busy}
-                    onChange={() => toggle(template)}
-                  />
-                  <span aria-hidden className="text-[15px] leading-6">
-                    {profile.avatar}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12.5px] font-medium">{t(TEAM_META[template].name)}</span>
-                    <span className="text-muted-foreground block text-[11.5px] leading-relaxed">
-                      {owner ? t('agents_setup_owned', [owner.name]) : t(TEAM_META[template].hint)}
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
+            {TEAM_TEMPLATE_IDS.map(option)}
+          </fieldset>
+          <fieldset className="flex flex-col gap-1" data-growth-team>
+            <legend className="label-mono px-2 pt-1">{t('agents_growth_title')}</legend>
+            <p className="text-muted-foreground px-2 text-[11.5px] leading-relaxed">{t('agents_growth_intro')}</p>
+            {GROWTH_TEMPLATE_IDS.map(option)}
           </fieldset>
           {workspaces.length > 0 && (
             <label className="flex items-center gap-2 text-[12px]">

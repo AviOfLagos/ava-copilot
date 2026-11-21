@@ -1,6 +1,7 @@
 import { db as defaultDb } from '../threads/db';
 import type { AviCopilotDb } from '../threads/db';
-import type { LedgerEntry, TeamItem, TeamItemStatus } from './types';
+import { feedbackRecordId } from './types';
+import type { FeedbackRecord, LedgerEntry, TeamItem, TeamItemStatus } from './types';
 
 /**
  * The growth team's items and ledger, over a database that defaults to the extension's own. Tests pass their
@@ -83,6 +84,38 @@ export function createTeamStore(db: AviCopilotDb = defaultDb) {
     },
 
     ledger: (workspaceId: string) => db.teamLedger.where('workspaceId').equals(workspaceId).toArray(),
+
+    /** The feedback ids of a workspace already sorted, out of `ids`. */
+    async sortedFeedback(workspaceId: string, ids: readonly string[]): Promise<Set<string>> {
+      const found = await db.teamFeedback.bulkGet(ids.map(id => feedbackRecordId(workspaceId, id)));
+      return new Set(found.filter(Boolean).map(record => record!.feedbackId));
+    },
+
+    /**
+     * Writes how a feedback item was sorted, once: the first sort stands, and the count of feature requests on the
+     * same topic (this one included) comes back from the same transaction, so two sorts landing together count
+     * right.
+     */
+    async sortFeedback(
+      record: FeedbackRecord,
+    ): Promise<{ record: FeedbackRecord; added: boolean; topicCount: number }> {
+      return db.transaction('rw', db.teamFeedback, async () => {
+        const existing = await db.teamFeedback.get(record.id);
+        const kept = existing ?? record;
+        if (!existing) await db.teamFeedback.add(record);
+        const topicCount = kept.topic
+          ? await db.teamFeedback
+              .where('topic')
+              .equals(kept.topic)
+              .filter(row => row.workspaceId === kept.workspaceId && row.sort === 'feature')
+              .count()
+          : 0;
+        return { record: kept, added: !existing, topicCount };
+      });
+    },
+
+    linkFeedback: (id: string, itemId: string) => db.teamFeedback.update(id, { itemId }),
+    forgetFeedback: (id: string) => db.teamFeedback.delete(id),
   };
 }
 

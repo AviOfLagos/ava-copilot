@@ -2738,6 +2738,26 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   now says every voice is used before one is shared.
 - Eval kind `draft` (`evals/runner/draft.ts`): four cases, three refused drafts and one clean one.
 
+### The Growth Lead (2026-11-21, #74, docs/growth-team.md Part 8)
+
+- Template `growth_lead` in a new "Growth team" group of the team setup, off until turned on, `executor:
+  'browser'`, personality `growth`. It needs a workspace with a product (`growth-team/setup.ts`); with a Claude key
+  it gets Sonnet 5.5 for `smart` and Haiku 5.5 for `fast`, without one the Inbox says once that it uses the user's
+  own roles. The Monday plan's Opus comes with #77.
+- Feedback: `read_feedback` reads the product's `GET /feedback` for yesterday and today, drops what was sorted
+  (Dexie v10 `teamFeedback`), and fences the customers' text as data. `sort_feedback` takes the model's sort and
+  the facts of what broke; code does the rest (`lead/feedback.ts`): the priority from the rule (`lead/priority.ts`),
+  one `customer_issue` per feedback through the approval queue, labelled `from-customer` with the super admin link,
+  feature requests counted by topic until the third ask opens one issue, praise put on the bus as `growth.praise`
+  with no name. A summary that holds an email or phone is refused, and a refused issue unsorts the feedback.
+- `request_beta_grant` proposes a `beta_grant` on the product's rule; the limits are #72's code.
+- Signals: a 07:40 job (`growth-signals`) puts `growth.signal` on the bus for each channel whose sign-ups moved
+  yesterday against the 7 days before (`lead/signals.ts`), only on days that were read.
+- Not in this phase: filing the approved issue on GitHub, granting the beta place, and the Slack line for each
+  filed issue. Approved items stay held with their text ready until an executor lands (after #43).
+- Eval kind `lead` (`evals/runner/lead.ts`): recorded tool calls through this code, five cases (priority by rule,
+  duplicates, customer details blocked, a grant past the rule, a grant inside it).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

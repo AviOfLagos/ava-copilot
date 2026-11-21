@@ -10904,5 +10904,26 @@
   },
   "persona_builtin_buildInPublic_description": {
     "message": "Inspired by Arvid Kahl’s public work on building in public: find where people already talk, help first, show real work."
+  },
+  "agents_growth_title": {
+    "message": "Growth team"
+  },
+  "agents_growth_intro": {
+    "message": "Works for the product of the workspace you pick below. Drafts and plans; nothing is posted, sent, granted or spent without your click."
+  },
+  "agents_growth_lead": {
+    "message": "Growth Lead"
+  },
+  "agents_growth_lead_hint": {
+    "message": "Sorts customer feedback, proposes issues, watches the sign-ups by channel and keeps the weekly plan."
+  },
+  "growth_setup_needsProduct": {
+    "message": "The growth team works for one product: pick a workspace that has a product (Workspaces › the workspace › Add the product)."
+  },
+  "growth_models_fallback_title": {
+    "message": "The growth team uses your own models"
+  },
+  "growth_models_fallback_body": {
+    "message": "No Claude key is set in the model settings, so the growth agents use your \"smart\" and \"fast\" models. Add a Claude key to give them Sonnet for daily work, Haiku for sorting and Opus for the Monday plan."
   }
 }

@@ -5,7 +5,7 @@ import { createLogger } from '../log';
 import { registerCommand } from '../registry';
 import { AGENT_ROLES } from './profile';
 import type { AgentService } from './service';
-import { AGENT_TEMPLATE_IDS, TEAM_TEMPLATE_IDS } from './templates';
+import { AGENT_TEMPLATE_IDS, GROWTH_TEMPLATE_IDS, TEAM_TEMPLATE_IDS } from './templates';
 
 /** The panel's commands for agents. Each replies `agents_ok` with its result, or an error sentence. */
 
@@ -75,7 +75,10 @@ export function registerAgentCommands(service: AgentService): void {
   command(
     'agents_team_setup',
     z.object({
-      templates: z.array(z.enum(TEAM_TEMPLATE_IDS)).min(1).max(TEAM_TEMPLATE_IDS.length),
+      templates: z
+        .array(z.enum([...TEAM_TEMPLATE_IDS, ...GROWTH_TEMPLATE_IDS]))
+        .min(1)
+        .max(TEAM_TEMPLATE_IDS.length + GROWTH_TEMPLATE_IDS.length),
       workspaceId: z.string().max(100).nullable().optional(),
     }),
     async input => ({

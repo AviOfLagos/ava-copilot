@@ -89,6 +89,58 @@ export const draftCase = z.object({
   source: z.unknown().optional(),
 });
 
+const leadSort = z.object({
+  tool: z.literal('sort_feedback'),
+  feedback_id: z.string(),
+  sort: z.enum(['bug', 'confusion', 'feature', 'billing', 'praise']),
+  title: z.string(),
+  summary: z.string(),
+  topic: z.string().default(''),
+  facts: z
+    .object({
+      data_loss: z.boolean(),
+      security: z.boolean(),
+      cannot_sign_in: z.boolean(),
+      payment_broken: z.boolean(),
+      main_flow_broken: z.boolean(),
+      paying_customer: z.boolean(),
+      users_affected: z.number(),
+      has_workaround: z.boolean(),
+    })
+    .partial()
+    .default({}),
+});
+const leadGrant = z.object({ tool: z.literal('request_beta_grant'), request_id: z.string(), why: z.string() });
+
+/**
+ * The Growth Lead's recorded tool calls, replayed through the code behind them (src/background/growth-team/lead):
+ * what each call ends as, and what reached the approval queue.
+ */
+export const leadCase = z.object({
+  kind: z.literal('lead'),
+  name: z.string(),
+  // The product's beta rule, and what the product says is left this week (absent: the product was not asked)
+  beta: z
+    .object({
+      rule: z.object({ testersPerWeek: z.number(), days: z.number(), plan: z.string() }),
+      remaining: z.number().optional(),
+    })
+    .optional(),
+  replay: z.array(z.discriminatedUnion('tool', [leadSort, leadGrant])).min(1),
+  expect: z.object({
+    // One per replayed call: what it ended as, and patterns its text must match
+    steps: z.array(
+      z.object({
+        state: z.enum(['sorted', 'already', 'refused', 'queued']),
+        matches: z.array(z.string()).optional(),
+      }),
+    ),
+    // The titles waiting in the approval queue afterwards, in any order
+    queued: z.array(z.string()),
+  }),
+  source: z.unknown().optional(),
+});
+
 /**
  * What Suture writes for a failing trace (evals/suture/<issue>/<trace>.eval.json): the user's message, the answer
  * that failed, and the model's recorded replies when the trace has them. Replayed as a planner case: the user must
@@ -111,7 +163,8 @@ export type PlannerCase = z.infer<typeof plannerCase>;
 export type SkillsCase = z.infer<typeof skillsCase>;
 export type VoiceCase = z.infer<typeof voiceCase>;
 export type DraftCase = z.infer<typeof draftCase>;
-export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase;
+export type LeadCase = z.infer<typeof leadCase>;
+export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | LeadCase;
 export type VoiceStep = z.infer<typeof voiceStep>;
 
 const CHANNELS = new Set(plannerCase.shape.channel.unwrap().options as readonly string[]);
@@ -137,6 +190,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'skills') return skillsCase.parse(raw);
   if (kind === 'voice') return voiceCase.parse(raw);
   if (kind === 'draft') return draftCase.parse(raw);
+  if (kind === 'lead') return leadCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

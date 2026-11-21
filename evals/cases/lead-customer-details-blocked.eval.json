@@ -1,0 +1,39 @@
+{
+  "kind": "lead",
+  "name": "A sort that names the customer's email or phone never reaches an issue",
+  "source": { "found": "2026-11-21", "issue": "AviOfLagos/ava-copilot#74", "spec": "docs/growth-team.md, Part 8" },
+  "replay": [
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-301",
+      "sort": "bug",
+      "title": "Export empty for ada@acme.io",
+      "summary": "Export returns an empty file.",
+      "facts": { "main_flow_broken": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-301",
+      "sort": "billing",
+      "title": "Charged twice",
+      "summary": "Charged twice this month; call back on +44 7700 900123.",
+      "facts": { "payment_broken": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-301",
+      "sort": "billing",
+      "title": "Charged twice",
+      "summary": "A customer was charged twice this month.",
+      "facts": { "payment_broken": true }
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "refused", "matches": ["an email address", "without who it happened to"] },
+      { "state": "refused", "matches": ["phone"] },
+      { "state": "sorted", "matches": ["P0"] }
+    ],
+    "queued": ["[P0] Charged twice"]
+  }
+}

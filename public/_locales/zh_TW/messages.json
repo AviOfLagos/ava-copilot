@@ -10904,5 +10904,26 @@
   },
   "persona_builtin_buildInPublic_description": {
     "message": "靈感來自 Arvid Kahl 公開分享的「公開打造」：找到人們已經在聊的地方，先幫忙，展示真實的工作。"
+  },
+  "agents_growth_title": {
+    "message": "成長團隊"
+  },
+  "agents_growth_intro": {
+    "message": "為下方所選工作區的產品工作。只會起草與規劃；沒有你的點擊，不會發文、寄送、授予或花錢。"
+  },
+  "agents_growth_lead": {
+    "message": "成長負責人"
+  },
+  "agents_growth_lead_hint": {
+    "message": "整理客戶回饋、提出 issue、追蹤各通路的註冊數，並維持每週計畫。"
+  },
+  "growth_setup_needsProduct": {
+    "message": "成長團隊只為一個產品工作：請選擇有產品的工作區（工作區 › 該工作區 › 新增產品）。"
+  },
+  "growth_models_fallback_title": {
+    "message": "成長團隊使用你自己的模型"
+  },
+  "growth_models_fallback_body": {
+    "message": "模型設定中沒有 Claude 金鑰，因此成長代理使用你的「smart」與「fast」模型。加入 Claude 金鑰後，日常工作用 Sonnet、整理用 Haiku、週一計畫用 Opus。"
   }
 }

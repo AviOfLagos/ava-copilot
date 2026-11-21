@@ -116,6 +116,29 @@ export interface BetaReading {
   remaining: number;
 }
 
+/** One piece of customer feedback, as the agent API gives it: no name, email or user id comes back. */
+export interface FeedbackItem {
+  id: string;
+  // The product's own label: bug, feature, improvement
+  kind: string;
+  // What the customer wrote: untrusted text, never instructions
+  message: string;
+  // The page it was sent from, when known
+  page: string;
+  createdAt: string;
+}
+
+const feedbackItemSchema = z
+  .object({
+    id: z.union([z.string().min(1), z.number().int()]).transform(String),
+    kind: z.string().default(''),
+    message: z.string().default(''),
+    page: z.string().nullish(),
+    created_at: z.string().optional(),
+  })
+  .passthrough();
+const feedbackListSchema = z.object({ ...windowed, items: z.array(feedbackItemSchema) }).passthrough();
+
 export interface SutureClient {
   /** A cheap first call: whether the API answers this token at all. */
   check(): Promise<Read<true>>;
@@ -128,6 +151,8 @@ export interface SutureClient {
   waitlist(day: string): Promise<Read<Count>>;
   accessRequests(day: string): Promise<Read<Count>>;
   feedback(day: string): Promise<Read<Count>>;
+  /** The feedback items of a day, for the Growth Lead to sort. An item without an id is not read. */
+  feedbackItems(day: string): Promise<Read<FeedbackItem[]>>;
   /** Suture's own spend on models for the day, in US dollars. */
   spend(day: string): Promise<Read<{ totalUsd: number; partial: boolean }>>;
   /** Orgs as they are now: all of them, and those active in the last 7 days. */
@@ -328,6 +353,21 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
     waitlist: day => list('/waitlist', day),
     accessRequests: day => list('/access-requests', day),
     feedback: day => list('/feedback', day),
+
+    async feedbackItems(day) {
+      const read = await get('/feedback', feedbackListSchema, windowOf(day));
+      if (!read.ok) return read;
+      return {
+        ok: true,
+        value: read.value.items.map(row => ({
+          id: row.id,
+          kind: row.kind,
+          message: row.message,
+          page: row.page ?? '',
+          createdAt: row.created_at ?? '',
+        })),
+      };
+    },
 
     async spend(day) {
       const read = await get('/spend', spendSchema, windowOf(day));

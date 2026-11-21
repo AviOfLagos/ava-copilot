@@ -78,7 +78,7 @@ function fail(context: AgentContext, error: string): ActionResult {
 }
 
 /** Who is asking: the chat's workspace and, when an agent runs it, that agent. */
-async function whoAsks(
+export async function whoAsks(
   context: Pick<AgentContext, 'taskId'>,
 ): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'> | { error: string }> {
   const thread = await threadStore.get(context.taskId);

@@ -98,3 +98,24 @@ export interface LedgerEntry {
 }
 
 export const teamItemId = (workspaceId: string, onceKey: string): string => `${workspaceId}|${onceKey}`;
+
+/** How the Growth Lead sorted one piece of customer feedback (docs/growth-team.md, Part 8). */
+export const FEEDBACK_SORTS = ['bug', 'confusion', 'feature', 'billing', 'praise'] as const;
+export type FeedbackSort = (typeof FEEDBACK_SORTS)[number];
+
+export interface FeedbackRecord {
+  // `${workspaceId}|${feedbackId}`: one feedback item is sorted once
+  id: string;
+  workspaceId: string;
+  feedbackId: string;
+  sort: FeedbackSort;
+  // For a feature request: what is asked for, in a few plain words, so three asks for the same thing are counted
+  topic: string;
+  // P0–P3 for a bug, confusion or billing problem; '' otherwise
+  priority: string;
+  // The team item it became, if any (an issue waiting for approval)
+  itemId: string | null;
+  at: number;
+}
+
+export const feedbackRecordId = (workspaceId: string, feedbackId: string) => `${workspaceId}|${feedbackId}`;

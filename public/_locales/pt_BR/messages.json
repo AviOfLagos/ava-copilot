@@ -10904,5 +10904,26 @@
   },
   "persona_builtin_buildInPublic_description": {
     "message": "Inspirado no trabalho público de Arvid Kahl sobre construir em público: ache onde as pessoas já conversam, ajude primeiro, mostre o trabalho real."
+  },
+  "agents_growth_title": {
+    "message": "Time de crescimento"
+  },
+  "agents_growth_intro": {
+    "message": "Trabalha para o produto do workspace escolhido abaixo. Faz rascunhos e planos; nada é postado, enviado, concedido ou gasto sem o seu clique."
+  },
+  "agents_growth_lead": {
+    "message": "Líder de crescimento"
+  },
+  "agents_growth_lead_hint": {
+    "message": "Organiza o feedback dos clientes, propõe issues, acompanha os cadastros por canal e mantém o plano da semana."
+  },
+  "growth_setup_needsProduct": {
+    "message": "O time de crescimento trabalha para um produto: escolha um workspace que tenha um produto (Workspaces › o workspace › Adicionar o produto)."
+  },
+  "growth_models_fallback_title": {
+    "message": "O time de crescimento usa os seus modelos"
+  },
+  "growth_models_fallback_body": {
+    "message": "Nenhuma chave do Claude está nas configurações de modelos, então os agentes de crescimento usam seus modelos \"smart\" e \"fast\". Adicione uma chave do Claude para usarem Sonnet no dia a dia, Haiku para organizar e Opus no plano de segunda."
   }
 }
