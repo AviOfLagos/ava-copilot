@@ -362,6 +362,17 @@ describe('after review: what a number is, and is not', () => {
     expect(await createSutureClient(BASE, TOKEN, bare).check()).toMatchObject({ ok: false, reason: 'agent_api_off' });
   });
 
+  it('leaves out a malformed feedback row, not the whole day', async () => {
+    const feed = (async () =>
+      json(200, {
+        read_at: '2026-11-23T09:00:00Z',
+        items: [{ id: 'a', kind: 'bug', message: 'Export is empty', page: null }, { kind: 'bug' }, { id: 7 }],
+      })) as typeof fetch;
+    const read = await createSutureClient(BASE, TOKEN, feed).feedbackItems('2026-11-23');
+    expect(read).toMatchObject({ ok: true });
+    expect(read.ok && read.value.map(item => item.id)).toEqual(['a', '7']);
+  });
+
   it('refuses to send a token with a line break in it, and drops anything after "?" in the address', async () => {
     const outcome = await collectProduct(profile(), deps(`${TOKEN}\n`));
     expect(outcome).toMatchObject({ connected: false, reason: 'unauthorized' });

@@ -2757,6 +2757,15 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   filed issue. Approved items stay held with their text ready until an executor lands (after #43).
 - Eval kind `lead` (`evals/runner/lead.ts`): recorded tool calls through this code, five cases (priority by rule,
   duplicates, customer details blocked, a grant past the rule, a grant inside it).
+- After review: the signals job is scheduled once (a restart no longer pushes a due run to tomorrow); a proposal
+  or a praise hand-off that throws unsorts the feedback; every angle bracket in a customer's text is escaped and
+  the tag's attributes keep plain characters only; one malformed feedback row is left out instead of the day; a
+  team setup with a growth agent checks the product before making any draft. Left as they are, and why: a
+  sort of an id the model was never shown is not refused (a read id can be mis-sorted just the same; the user
+  approves every issue); a P0 that arrives after the day's 10 issues waits for tomorrow; feedback older than
+  yesterday is not read again; the 07:40 job reads the UTC day before.
+- E2E `e2e/growth-lead.e2e.mjs`: the Growth team group, the product check, and a sort that ends as "[P0] …"
+  waiting in the Inbox while a customer's email is sent back.
 
 ## 5. Risks, in order
 

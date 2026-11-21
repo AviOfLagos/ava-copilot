@@ -137,7 +137,11 @@ registerApprovalHandler(BATCH_PREFIX, async (requestId, approved) => {
 
 // A yes to a spend or a grant that the background stopped before writing down
 registerRecovery('growth-team', async () => {
-  await jobs.schedule({ kind: SIGNALS_JOB, key: SIGNALS_JOB, cron: SIGNALS_CRON });
+  // Scheduled once, as the collector is: scheduling on every start would push a due run to tomorrow
+  const existing = await db.jobs.where('key').equals(SIGNALS_JOB).first();
+  if (!existing || existing.cron !== SIGNALS_CRON || existing.status === 'failed') {
+    await jobs.schedule({ kind: SIGNALS_JOB, key: SIGNALS_JOB, cron: SIGNALS_CRON, catchUpMs: 2 * 60 * 60 * 1000 });
+  }
   const recovered = await recoverAgreed(QUEUE_DEPS);
   if (recovered) logger.info(`Carried out ${recovered} agreed item(s) left unfinished`);
 });

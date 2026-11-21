@@ -137,7 +137,8 @@ const feedbackItemSchema = z
     created_at: z.string().optional(),
   })
   .passthrough();
-const feedbackListSchema = z.object({ ...windowed, items: z.array(feedbackItemSchema) }).passthrough();
+// Rows are checked one by one: a malformed row is left out, not the whole day
+const feedbackListSchema = z.object({ ...windowed, items: z.array(z.unknown()) }).passthrough();
 
 export interface SutureClient {
   /** A cheap first call: whether the API answers this token at all. */
@@ -359,13 +360,18 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
       if (!read.ok) return read;
       return {
         ok: true,
-        value: read.value.items.map(row => ({
-          id: row.id,
-          kind: row.kind,
-          message: row.message,
-          page: row.page ?? '',
-          createdAt: row.created_at ?? '',
-        })),
+        value: read.value.items
+          .flatMap(raw => {
+            const parsed = feedbackItemSchema.safeParse(raw);
+            return parsed.success ? [parsed.data] : [];
+          })
+          .map(row => ({
+            id: row.id,
+            kind: row.kind,
+            message: row.message,
+            page: row.page ?? '',
+            createdAt: row.created_at ?? '',
+          })),
       };
     },
 

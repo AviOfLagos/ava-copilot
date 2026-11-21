@@ -354,6 +354,8 @@ export class AgentService {
   /** "Set up my team": a draft for each template the user ticked. Nothing runs until each is created. */
   async setUpTeam(templates: readonly AgentTemplateId[], workspaceId: string | null = null): Promise<AgentProfile[]> {
     const made: AgentProfile[] = [];
+    // A growth agent needs a product: checked first, so a refusal leaves no half-made team
+    if (templates.some(isGrowthTemplate)) await checkGrowthWorkspace(workspaceId);
     for (const template of [...new Set(templates)]) made.push(await this.fromTemplate(template, workspaceId));
     return made;
   }
