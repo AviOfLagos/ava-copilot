@@ -51,6 +51,8 @@ describe('database upgrade to version 5', () => {
     expect(db.verno).toBeGreaterThanOrEqual(11);
     expect(await db.vocabulary.count()).toBe(0);
     expect(await db.doOnce.count()).toBe(0);
+    // The task board (docs/pm-desk.md, Part 2)
+    expect(await db.tasks.count()).toBe(0);
     expect(await db.growthMetrics.count()).toBe(0);
     expect(await db.growthReadings.count()).toBe(0);
     expect(await db.growthSources.count()).toBe(0);

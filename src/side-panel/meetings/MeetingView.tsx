@@ -9,6 +9,7 @@ import { buttonClasses } from '../components/ui/button';
 import { useAssistantName } from '../hooks/useAssistant';
 import AvaInCall from '../meet-voice/AvaInCall';
 import { recordingStatus } from './status';
+import { TaskCheckbox } from '../tasks/TaskCheckbox';
 
 type MeetingTab = 'summary' | 'live' | 'transcript' | 'ask';
 
@@ -256,8 +257,15 @@ export default function MeetingView({
                     <ul className="space-y-1">
                       {note.actionItems.map(item => (
                         <li key={`${item.owner}-${item.task}`}>
-                          <span className="font-medium">{item.owner}</span>: {item.task}
-                          {item.due && <span className={muted}> ({t('meeting_note_due', [item.due])})</span>}
+                          {item.taskId ? (
+                            // On the task board: ticked here, ticked everywhere
+                            <TaskCheckbox taskId={item.taskId} fallback={`${item.owner}: ${item.task}`} />
+                          ) : (
+                            <>
+                              <span className="font-medium">{item.owner}</span>: {item.task}
+                              {item.due && <span className={muted}> ({t('meeting_note_due', [item.due])})</span>}
+                            </>
+                          )}
                         </li>
                       ))}
                     </ul>

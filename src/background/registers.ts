@@ -36,3 +36,4 @@ import './growth/register';
 import './rounds/register';
 import './growth-team/register';
 import './voice/vocabulary/register';
+import './tasks/register';

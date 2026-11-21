@@ -1,4 +1,5 @@
-import type { GraphNode, InboxItem, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
+import { byDueThenAge, stripTaskMarkers, taskLine } from '@extension/storage';
+import type { GraphNode, InboxItem, Task, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
 import { sectionMarkdown } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
 
@@ -39,8 +40,8 @@ export interface BriefData {
   now: number;
   // Today's calendar, from now on, and anything still running
   events: UpcomingEvent[];
-  // Recent actions and decisions from the knowledge graph
-  actions: GraphNode[];
+  // The open tasks on the board (src/storage/lib/tasks), and recent decisions from the knowledge graph
+  tasks: Task[];
   decisions: GraphNode[];
   // The calendar could not be trusted to be complete: said in its place (already in the user's language)
   calendarNote?: string;
@@ -66,8 +67,9 @@ export interface BriefData {
 
 const DAY = 24 * 60 * 60 * 1000;
 // Recent enough to still matter this morning
-export const ACTIONS_WITHIN = 7 * DAY;
 export const DECISIONS_WITHIN = 3 * DAY;
+// Open tasks a workspace shows in the brief; the rest are on the Tasks page
+export const TASKS_PER_WORKSPACE = 5;
 
 /** "2026-10-12" in local time. */
 export function localDate(at: number): string {
@@ -259,11 +261,12 @@ export function todaysEvents(events: UpcomingEvent[], now: number): UpcomingEven
 
 /**
  * The brief as Markdown, from the data alone: today's calendar, what waits on the user, and each
- * workspace's recent actions and decisions. The priorities, when a model wrote them, go first.
+ * workspace's open tasks and recent decisions. The priorities, when a model wrote them, go first.
  */
 export function briefMarkdown(data: BriefData, priorities: string[] = []): string {
-  const names = new Map(data.workspaces.map(workspace => [workspace.id, workspace.name]));
   const sections: string[] = [];
+  // Which of the sections are the code's own task lists
+  const taskSections = new Set<number>();
   if (priorities.length)
     sections.push(`**First, today**\n${priorities.map(line => `- ${plain(line, 200)}`).join('\n')}`);
   if (data.goals?.length) sections.push(`**Your goals**\n${data.goals.join('\n')}`);
@@ -303,33 +306,77 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
 
   if (data.rollup?.trim()) sections.push(data.rollup.trim());
 
-  const groups = new Map<string, { actions: string[]; decisions: string[] }>();
-  const group = (workspaceId: string | null) => {
-    const name = (workspaceId && names.get(workspaceId)) || 'No workspace';
-    if (!groups.has(name)) groups.set(name, { actions: [], decisions: [] });
-    return groups.get(name)!;
-  };
-  for (const action of data.actions
-    .filter(node => data.now - node.date <= ACTIONS_WITHIN)
-    .sort((a, b) => b.date - a.date)) {
-    const list = group(action.workspaceId).actions;
-    if (list.length < 5) list.push(`- [ ] ${plain(action.label)}`);
-  }
-  for (const decision of data.decisions
-    .filter(node => data.now - node.date <= DECISIONS_WITHIN)
-    .sort((a, b) => b.date - a.date)) {
-    const list = group(decision.workspaceId).decisions;
-    if (list.length < 3) list.push(`- ${plain(decision.label)}`);
-  }
-  for (const [name, { actions, decisions }] of groups) {
-    const parts = [`**${plain(name, 60)}**`];
-    if (actions.length) parts.push(`Open actions:\n${actions.join('\n')}`);
-    if (decisions.length) parts.push(`Decided lately:\n${decisions.join('\n')}`);
+  for (const group of briefGroups(data)) {
+    const parts = [`**${plain(group.name, 60)}**`];
+    if (group.tasks.length) {
+      const lines = group.tasks.map(task => taskLine(task, taskText(task)));
+      if (group.more > 0) lines.push(`- …and ${group.more} more on the Tasks page`);
+      parts.push(`Open tasks:\n${lines.join('\n')}`);
+    }
+    if (group.decisions.length) parts.push(`Decided lately:\n${group.decisions.map(text => `- ${text}`).join('\n')}`);
+    taskSections.add(sections.length);
     sections.push(parts.join('\n'));
   }
   // Which sources were read: with nothing above, this is what makes "nothing" true
   if (data.sourcesLine) sections.push(`_${plain(data.sourcesLine, 300)}_`);
-  return sections.join('\n\n');
+  // Only the task lines written above carry a marker: anything a model or a source wrote (the priorities, the
+  // roll-up, a workflow's section) is cleared of markers, so it can never be drawn as a working box
+  return sections.map((text, index) => (taskSections.has(index) ? text : stripTaskMarkers(text))).join('\n\n');
+}
+
+/** One workspace's part of the brief: up to five open tasks, oldest due first, then oldest, and recent decisions. */
+export interface BriefGroup {
+  workspaceId: string | null;
+  name: string;
+  tasks: Task[];
+  // Open tasks not shown
+  more: number;
+  decisions: string[];
+}
+
+/** A task's words in the brief: its title, then who and when, all plain. */
+function taskText(task: Task): string {
+  const details = [task.ownerName ? plain(task.ownerName, 40) : '', task.due ? `due ${task.due}` : '']
+    .filter(Boolean)
+    .join(', ');
+  return `${plain(stripTaskMarkers(task.title), 160)}${details ? ` (${details})` : ''}`;
+}
+
+/**
+ * The brief's one list per workspace, in the order of the workspace list, then "No workspace". A workspace with no
+ * open task and no recent decision is left out.
+ */
+export function briefGroups(data: Pick<BriefData, 'tasks' | 'decisions' | 'workspaces' | 'now'>): BriefGroup[] {
+  const known = new Set(data.workspaces.map(workspace => workspace.id));
+  // A task or decision of a workspace since deleted is in none
+  const keyOf = (workspaceId: string | null) => (workspaceId && known.has(workspaceId) ? workspaceId : null);
+  const groups = [
+    ...data.workspaces.map(workspace => ({ workspaceId: workspace.id as string | null, name: workspace.name })),
+    { workspaceId: null, name: 'No workspace' },
+  ];
+  return groups
+    .map(group => {
+      const open = data.tasks
+        .filter(task => task.status === 'open' && keyOf(task.workspaceId) === group.workspaceId)
+        .sort(byDueThenAge);
+      const decisions = data.decisions
+        .filter(node => keyOf(node.workspaceId) === group.workspaceId && data.now - node.date <= DECISIONS_WITHIN)
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 3)
+        .map(node => plain(node.label));
+      return {
+        ...group,
+        tasks: open.slice(0, TASKS_PER_WORKSPACE),
+        more: Math.max(0, open.length - TASKS_PER_WORKSPACE),
+        decisions,
+      };
+    })
+    .filter(group => group.tasks.length > 0 || group.decisions.length > 0);
+}
+
+/** The tasks the brief shows, which its message vouches for (ThreadMessage.taskIds). */
+export function briefTaskIds(data: Pick<BriefData, 'tasks' | 'decisions' | 'workspaces' | 'now'>): string[] {
+  return briefGroups(data).flatMap(group => group.tasks.map(task => task.id));
 }
 
 export const PRIORITIES_INSTRUCTIONS = `You help the user start their day. From the morning brief's data, pick at most three things they should do first today, most important first.

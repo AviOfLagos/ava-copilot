@@ -7,6 +7,12 @@ const { inQuietHours, mayNotify } = await import('../notices');
 const { DEFAULT_WHATSAPP_REMOTE_SETTINGS } = await import('../state');
 
 describe('WhatsApp text', () => {
+  it('strips task markers: WhatsApp gets the words of a task, never its marker', () => {
+    const text = toWhatsAppText('**Orchid**\nOpen tasks:\n- [ ] Send the login (Ada) ^tsk_abcdefghij');
+    expect(text).not.toContain('tsk_');
+    expect(text).toContain('Send the login (Ada)');
+  });
+
   it('turns markdown into WhatsApp’s own marks and drops tables and code fences', () => {
     const text = toWhatsAppText(
       [

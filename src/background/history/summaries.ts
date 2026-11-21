@@ -1,10 +1,10 @@
-import { GENERAL_SUMMARY_ID, historyStore, kbStore, workspaceStore } from '@extension/storage';
+import { GENERAL_SUMMARY_ID, historyStore, kbStore, taskStore, workspaceStore } from '@extension/storage';
 import type { KbStore, KnowledgeChunk, KnowledgeItem, Workspace, WorkspaceSummary } from '@extension/storage';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
 import { createLogger } from '../log';
-import { actionsOf, fingerprintOf, itemsOf, plainSummary, rollup } from './rollup';
+import { fingerprintOf, itemsOf, plainSummary, rollup } from './rollup';
 import { SUMMARY_INSTRUCTIONS, summaryInput } from './summary-prompt';
 import type { RollupEntry } from './rollup';
 import { resolveModels } from '../threads/factory';
@@ -122,7 +122,8 @@ export class WorkspaceSummaries {
     const summary: WorkspaceSummary = {
       workspaceId: group.id ?? GENERAL_SUMMARY_ID,
       text,
-      actions: plain ? [] : actionsOf(text),
+      // What is to be done lives on the task board (src/storage/lib/tasks), not in a summary's words
+      actions: [],
       sources: input.sources,
       latestAt: Math.max(0, ...input.items.map(item => item.sourceUpdatedAt)),
       fingerprint,
@@ -145,7 +146,14 @@ export class WorkspaceSummaries {
 
   /** The all-workspaces roll-up, from the stored summaries. */
   async rollup(now = Date.now()): Promise<RollupEntry[]> {
-    return rollup(await this.deps.workspaces(), await historyStore.summaries(), await this.deps.store.items(), now);
+    return rollup(
+      await this.deps.workspaces(),
+      await historyStore.summaries(),
+      await this.deps.store.items(),
+      now,
+      undefined,
+      await taskStore.list({ status: 'open' }).catch(() => []),
+    );
   }
 }
 

@@ -289,7 +289,7 @@ describe('the brief and workflows', () => {
     const markdown = briefMarkdown({
       now: Date.now(),
       events: [],
-      actions: [],
+      tasks: [],
       decisions: [],
       waiting: [],
       stopped: [],

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { GENERAL_SUMMARY_ID, historyStore, kbStore } from '@extension/storage';
-import type { KnowledgeItem, WorkspaceSummary } from '@extension/storage';
+import { byDueThenAge, GENERAL_SUMMARY_ID, historyStore, kbStore, taskStore } from '@extension/storage';
+import type { KnowledgeItem, Task, WorkspaceSummary } from '@extension/storage';
 import { flat, rollup } from '@src/background/history/rollup';
 import { Button } from '../components/ui/button';
 import { useLive } from '../hooks/useLive';
 import { useWorkspaces } from '../workspaces/WorkspacePicker';
 import { historyRequest } from './reader';
+import { TaskCheckbox } from '../tasks/TaskCheckbox';
 
 function useSummaries(): Record<string, WorkspaceSummary> {
   const [summaries, setSummaries] = useState<Record<string, WorkspaceSummary>>({});
@@ -39,9 +40,10 @@ function SummaryText({ text }: { text: string }) {
             </h4>
           );
         if (!line.trim()) return null;
+        // A box in a model's words is not a task: the tasks are listed from the board, with working boxes
         return (
           <p key={index} className="whitespace-pre-wrap">
-            {line.replace(/^\s*[-*•]\s*/, '• ').replace(/^• \[ \]\s*/, '☐ ')}
+            {line.replace(/^\s*[-*•]\s*/, '• ').replace(/^• \[[ xX]?\]\s*/, '• ')}
           </p>
         );
       })}
@@ -64,6 +66,7 @@ export default function WorkspaceSummaryView({
   const summaries = useSummaries();
   const workspaces = useWorkspaces();
   const items = useLive(() => kbStore.items(), [], [] as KnowledgeItem[]);
+  const openTasks = useLive(() => taskStore.list({ status: 'open' }), [], [] as Task[]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -80,8 +83,8 @@ export default function WorkspaceSummaryView({
   };
 
   const entries = useMemo(
-    () => rollup(workspaces, summaries, items, Date.now(), t('history_general')),
-    [workspaces, summaries, items],
+    () => rollup(workspaces, summaries, items, Date.now(), t('history_general'), openTasks),
+    [workspaces, summaries, items, openTasks],
   );
 
   const refreshButton = (
@@ -132,7 +135,9 @@ export default function WorkspaceSummaryView({
               {entry.actions.length > 0 && (
                 <ul className="mt-1.5 flex flex-col gap-0.5 text-[12px]" aria-label={t('history_rollup_actions')}>
                   {entry.actions.map(action => (
-                    <li key={action}>☐ {flat(action, 160)}</li>
+                    <li key={action.id}>
+                      <TaskCheckbox taskId={action.id} fallback={flat(action.title, 160)} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -145,6 +150,9 @@ export default function WorkspaceSummaryView({
 
   const summary = summaries[workspaceId] ?? null;
   const name = workspaces.find(workspace => workspace.id === workspaceId)?.name ?? '';
+  const ownTasks = openTasks
+    .filter(task => task.workspaceId === (workspaceId === GENERAL_SUMMARY_ID ? null : workspaceId))
+    .sort(byDueThenAge);
   return (
     <section
       aria-label={t('history_summary_title', [name])}
@@ -168,6 +176,18 @@ export default function WorkspaceSummaryView({
           <div className="glass rounded-xl px-3 py-2.5">
             <SummaryText text={summary.text} />
           </div>
+          {ownTasks.length > 0 && (
+            <section aria-label={t('tasks_summary_title')}>
+              <h4 className="label-mono mb-1">{t('tasks_summary_title')}</h4>
+              <ul className="flex flex-col gap-1 text-[12.5px]">
+                {ownTasks.map(task => (
+                  <li key={task.id}>
+                    <TaskCheckbox taskId={task.id} fallback={task.title} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {summary.sources.length > 0 && (
             <section aria-label={t('kb_sources')}>
               <h4 className="label-mono mb-1">{t('kb_sources')}</h4>

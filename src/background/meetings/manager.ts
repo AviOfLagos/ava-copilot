@@ -61,10 +61,12 @@ import {
   QA_INSTRUCTIONS,
   NOTE_INSTRUCTIONS,
   noteToMarkdown,
+  taskIdsOf,
   noteSchema,
   ROLLING_SUMMARY_INSTRUCTIONS,
   TRANSCRIBE_INSTRUCTIONS,
 } from './notes';
+import { withMeetingTasks } from '../tasks/sources';
 import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, transcriptText } from './segments';
 
 const logger = createLogger('Meetings');
@@ -913,7 +915,12 @@ export class MeetingManager {
     }
     try {
       const segments = await this.meetings.segments(meetingId);
-      const note = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      const written = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      // Each action item goes on the task board, keeping its due date, and carries its task's id
+      const note = await withMeetingTasks(meeting, written).catch(error => {
+        logger.warning('Could not put the action items on the task board', error);
+        return written;
+      });
       const markdown = noteToMarkdown(meeting, note, segments);
       await this.meetings.update(meetingId, { note, markdown, status: 'done', error: null });
       if (meeting.warnings.includes('note_failed')) {
@@ -923,8 +930,12 @@ export class MeetingManager {
 
       if (meeting.threadId) {
         // The thread gets the note without the transcript, which stays in the meeting
-        const summaryOnly = noteToMarkdown(meeting, note, []).replace(/\n\n## Transcript[\s\S]*$/, '');
-        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly);
+        // Its action items are live checkboxes: the message vouches for the tasks it names
+        const summaryOnly = noteToMarkdown(meeting, note, [], { markers: true }).replace(
+          /\n\n## Transcript[\s\S]*$/,
+          '',
+        );
+        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly, { taskIds: taskIdsOf(note) });
         await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${note.title}`);
       }
     } catch (error) {

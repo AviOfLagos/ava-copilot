@@ -1,3 +1,4 @@
+import { stripTaskMarkers } from '@extension/storage';
 import type { ThreadMessage, ThreadRecord } from '@extension/storage';
 import { filterExternalContent } from '../agent/messages/utils';
 
@@ -18,7 +19,10 @@ const ACTOR_NAMES: Record<string, string> = {
  */
 export function transcriptOf(messages: ThreadMessage[]): string {
   return messages
-    .map(message => `${ACTOR_NAMES[message.actor] ?? message.actor}: ${message.content.replace(/\s+/g, ' ').trim()}`)
+    .map(
+      message =>
+        `${ACTOR_NAMES[message.actor] ?? message.actor}: ${stripTaskMarkers(message.content).replace(/\s+/g, ' ').trim()}`,
+    )
     .join('\n');
 }
 

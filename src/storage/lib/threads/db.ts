@@ -19,6 +19,7 @@ import type {
   TeamItem,
 } from '../growth-team/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
+import type { Task } from '../tasks/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ThreadVoice } from '../settings/voiceEngineSettings';
@@ -114,6 +115,9 @@ export interface ThreadMessage {
   ts: number;
   // Images and videos the user attached to this message (see ./attachments.ts)
   attachments?: MessageAttachment[];
+  // The tasks the code that built this message wrote into it (the brief, a meeting note). Only a task marker whose
+  // id is here gets a live checkbox; a marker a model wrote is plain text (src/storage/lib/tasks/markers.ts)
+  taskIds?: string[];
 }
 
 /**
@@ -165,6 +169,8 @@ export interface ActionItem {
   owner: string;
   task: string;
   due: string | null;
+  // The task on the board this item is (src/storage/lib/tasks), written by code once the note is saved
+  taskId?: string;
 }
 
 // The structured note made when a meeting ends
@@ -335,6 +341,8 @@ export interface GraphNode {
   // When it happened: a source's date, or the date of the first source that named it
   date: number;
   updatedAt: number;
+  // An action's task on the board (src/storage/lib/tasks)
+  taskId?: string;
 }
 
 export type GraphEdgeKind = 'mentions' | 'attended' | 'decided_in' | 'raised_in' | 'assigned_to' | 'part_of';
@@ -389,6 +397,7 @@ export class AviCopilotDb extends Dexie {
   teamContacts!: Table<TeamContact, string>;
   teamSuppressed!: Table<SuppressedAddress, string>;
   teamChannels!: Table<TeamChannel, string>;
+  tasks!: Table<Task, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -466,6 +475,10 @@ export class AviCopilotDb extends Dexie {
     // takes the next free number
     this.version(12).stores({
       vocabulary: 'id, workspaceId, learnedFrom',
+    });
+    // v13: the task board (docs/pm-desk.md, Part 2). Additive
+    this.version(13).stores({
+      tasks: 'id, status, workspaceId, ownerId, [status+workspaceId], updatedAt, *mergedIds',
     });
   }
 }

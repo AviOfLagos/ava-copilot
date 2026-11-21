@@ -11117,5 +11117,73 @@
         "example": "Ellum"
       }
     }
+  },
+  "brief_source_tasks": {
+    "message": "tasks"
+  },
+  "tasks_who_avi": {
+    "message": "you"
+  },
+  "tasks_who_ava": {
+    "message": "Ava"
+  },
+  "tasks_doneBy": {
+    "message": "Done by $WHO$, $WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_droppedBy": {
+    "message": "Dropped by $WHO$, $WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_toggle_done": {
+    "message": "Mark \"$TITLE$\" done",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_toggle_reopen": {
+    "message": "Reopen \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_due": {
+    "message": "due $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-11-27"
+      }
+    }
+  },
+  "tasks_error_toggle": {
+    "message": "Could not change the task. Try again."
+  },
+  "tasks_summary_title": {
+    "message": "Open tasks"
   }
 }

@@ -92,3 +92,63 @@ describe('GraphBuilder', () => {
     expect((await graph.node('page:https://a.test'))?.type).toBe('page');
   });
 });
+
+describe('GraphBuilder and the task board', () => {
+  it('puts each action on the board and gives its node the task id', async () => {
+    const { createTaskStore } = await import('@extension/storage');
+    const { withGraphTasks } = await import('../../tasks/sources');
+    const tasks = createTaskStore(db);
+    builder = new GraphBuilder({
+      graph,
+      kb,
+      threads: createThreadStore(db),
+      meetings: createMeetingStore(db),
+      model: async () => ({}) as never,
+      overCap: async () => false,
+      enabled: async () => true,
+      tasks: (item, slice) => withGraphTasks(item, slice, candidate => tasks.record(candidate)),
+    });
+    generateStructured.mockResolvedValue({
+      output: {
+        people: [],
+        organizations: [],
+        projects: [],
+        decisions: [],
+        actions: [{ task: 'Draft the pricing page', owner: 'Bo' }],
+      },
+    });
+    await savePage('Bo drafts the pricing page');
+    await builder.handle({ type: 'put', itemId: 'page:https://a.test' });
+    const [node] = (await graph.nodes()).filter(entry => entry.type === 'action');
+    const [task] = await tasks.list();
+    expect(node.taskId).toBe(task.id);
+    expect(task).toMatchObject({ title: 'Draft the pricing page', ownerName: 'Bo', workspaceId: 'nexprove' });
+  });
+
+  it('still builds the graph when the board cannot be written', async () => {
+    builder = new GraphBuilder({
+      graph,
+      kb,
+      threads: createThreadStore(db),
+      meetings: createMeetingStore(db),
+      model: async () => ({}) as never,
+      overCap: async () => false,
+      enabled: async () => true,
+      tasks: async () => {
+        throw new Error('down');
+      },
+    });
+    generateStructured.mockResolvedValue({
+      output: {
+        people: [],
+        organizations: [],
+        projects: [],
+        decisions: [],
+        actions: [{ task: 'Ship it', owner: null }],
+      },
+    });
+    await savePage('Ship it');
+    await builder.handle({ type: 'put', itemId: 'page:https://a.test' });
+    expect((await graph.nodes()).some(entry => entry.type === 'action')).toBe(true);
+  });
+});

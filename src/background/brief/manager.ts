@@ -1,5 +1,14 @@
 import { t } from '@extension/i18n';
-import { briefSettingsStore, db, graphStore, personalityStore, threadStore, workspaceStore } from '@extension/storage';
+import {
+  briefSettingsStore,
+  db,
+  graphStore,
+  personalityStore,
+  stripTaskMarkers,
+  taskStore,
+  threadStore,
+  workspaceStore,
+} from '@extension/storage';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import type { CalendarWatcher } from '../calendar/watcher';
 import { generatePlainText } from '../llm/generate';
@@ -16,6 +25,7 @@ import {
   briefDue,
   briefLine,
   briefMarkdown,
+  briefTaskIds,
   localDate,
   PRIORITIES_INSTRUCTIONS,
   priorityLines,
@@ -85,9 +95,10 @@ export class MorningBrief {
     const settings = await briefSettingsStore.getSettings();
     if (settings.lastDay === localDate(Date.now()) && settings.lastThreadId) {
       const said = (await threadStore.messages(settings.lastThreadId)).filter(item => item.actor === 'planner');
-      if (said.length) return said.map(message => message.content).join('\n\n');
+      // Said out loud or handed to a model: the words only, without the checkboxes' markers
+      if (said.length) return stripTaskMarkers(said.map(message => message.content).join('\n\n'));
     }
-    return this.make({ notify: false });
+    return stripTaskMarkers(await this.make({ notify: false }));
   }
 
   /**
@@ -161,13 +172,15 @@ export class MorningBrief {
       { agents: [], runs: [] },
     );
     const nodes = await read(t('brief_source_knowledge'), () => graphStore.nodes(), []);
+    // The task board: one list per workspace (docs/pm-desk.md, Part 2.5)
+    const tasks = await read(t('brief_source_tasks'), () => taskStore.list({ status: 'open' }), []);
     // Who the brief is for and what they are working towards (all workspaces: the brief covers every one)
     const identity = await loadIdentityContext(null);
     const data: BriefData = {
       now,
       events: calendar.events,
       calendarNote,
-      actions: nodes.filter(node => node.type === 'action'),
+      tasks,
       decisions: nodes.filter(node => node.type === 'decision'),
       waiting: threads.filter(thread => thread.status === 'waiting_confirm' && !thread.archived),
       stopped: stoppedThreads(threads, now),
@@ -194,7 +207,8 @@ export class MorningBrief {
         .refresh()
         .catch(() => [])
         .then(() => workspaceSummaries.rollup(now))
-        .then(rollupMarkdown)
+        // Without tasks: the brief lists them once, under each workspace
+        .then(entries => rollupMarkdown(entries, { actions: false }))
         .catch(() => ''),
       goals: goalLines(identity),
     };
@@ -213,7 +227,7 @@ export class MorningBrief {
                 toneLine(await personalityStore.resolve(null).catch(() => null)),
             ),
             // Invite titles, chats and pages say what they like: data, never instructions
-            userMessage(wrapUntrustedContent(briefMarkdown(data))),
+            userMessage(wrapUntrustedContent(stripTaskMarkers(briefMarkdown(data)))),
           ],
         });
         priorities = priorityLines(answer);
@@ -226,7 +240,8 @@ export class MorningBrief {
     const text = briefMarkdown(data, priorities);
     const day = new Date(now).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     const thread = await threadStore.create({ title: t('brief_title', [day]), tags: ['brief'] });
-    await threadStore.addMessage(thread.id, 'planner', text);
+    // The brief vouches for the task lines it wrote: only those get a live checkbox
+    await threadStore.addMessage(thread.id, 'planner', text, { taskIds: briefTaskIds(data) });
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });
 
     if (notify) {

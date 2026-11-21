@@ -1,5 +1,6 @@
 import { GENERAL_SUMMARY_ID } from '@extension/storage';
-import type { KnowledgeItem, SummarySource, Workspace, WorkspaceSummary } from '@extension/storage';
+import { byDueThenAge } from '@extension/storage';
+import type { KnowledgeItem, SummarySource, Task, Workspace, WorkspaceSummary } from '@extension/storage';
 import { dayLabel } from '../kb/answer';
 import { hashText } from '../kb/chunker';
 import { itemScope } from '../kb/scope';
@@ -65,19 +66,21 @@ export interface RollupEntry {
   latest: { title: string; date: number; sourceType: string } | null;
   // Sources active in the last seven days
   recent: number;
-  actions: string[];
+  // Its oldest-due open tasks on the board, at most three
+  actions: { id: string; title: string }[];
 }
 
 /**
  * The all-workspaces view: per workspace (and what is in none), its latest activity, how busy its week
- * was, and the next actions its summary lists. Busiest first; workspaces with nothing in them are left out.
+ * was, and its open tasks from the board. Busiest first; workspaces with nothing in them are left out.
  */
 export function rollup(
   workspaces: Pick<Workspace, 'id' | 'name'>[],
-  summaries: Record<string, WorkspaceSummary>,
+  _summaries: Record<string, WorkspaceSummary>,
   items: KnowledgeItem[],
   now = Date.now(),
   generalName = 'No workspace',
+  tasks: Task[] = [],
 ): RollupEntry[] {
   const groups = [
     ...workspaces.map(workspace => ({ id: workspace.id, key: workspace.id, name: workspace.name })),
@@ -93,20 +96,25 @@ export function rollup(
       name: group.name,
       latest: { title: latest.title, date: latest.sourceUpdatedAt, sourceType: latest.sourceType },
       recent: own.filter(item => now - item.sourceUpdatedAt <= 7 * DAY).length,
-      actions: (summaries[group.key]?.actions ?? []).slice(0, 3),
+      actions: tasks
+        .filter(task => task.status === 'open' && task.workspaceId === group.id)
+        .sort(byDueThenAge)
+        .slice(0, 3)
+        .map(task => ({ id: task.id, title: task.title })),
     });
   }
   return entries.sort((a, b) => (b.latest?.date ?? 0) - (a.latest?.date ?? 0));
 }
 
-/** The roll-up as Markdown for the morning brief and the agent: every line flattened. */
-export function rollupMarkdown(entries: RollupEntry[]): string {
+/**
+ * The roll-up as Markdown for the morning brief and the agent: every line flattened. The brief lists tasks on its
+ * own (one list per workspace), so it asks for none here.
+ */
+export function rollupMarkdown(entries: RollupEntry[], options: { actions?: boolean } = {}): string {
   if (entries.length === 0) return '';
   const parts = entries.map(entry => {
     const head = `**${flat(entry.name, 60)}**: latest "${flat(entry.latest?.title ?? '', 80)}" (${dayLabel(entry.latest?.date ?? 0).slice(0, 10)}), ${entry.recent} active this week`;
-    const actions = entry.actions.map(
-      action => `- [ ] ${flat(action.replace(/\[\d+\]/g, ''), 140).replace(/[[\]]/g, '')}`,
-    );
+    const actions = options.actions === false ? [] : entry.actions.map(action => `- [ ] ${flat(action.title, 140)}`);
     return [head, ...actions].join('\n');
   });
   return `**Across your workspaces**\n${parts.join('\n')}`;
