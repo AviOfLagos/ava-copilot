@@ -23,3 +23,4 @@ import './setup/register';
 import './ambient/register';
 import './feedback/register';
 import './rounds/register';
+import './tasks/register';

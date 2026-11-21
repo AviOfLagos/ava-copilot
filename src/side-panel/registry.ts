@@ -11,7 +11,8 @@ import type { ThreadRecord } from '@extension/storage';
 
 type MessageKey = Parameters<typeof t>[0];
 
-export type RegisteredPlaceId = 'inbox' | 'workflows' | 'agents' | 'connectors' | 'skills' | 'models' | 'workspaces';
+export type RegisteredPlaceId =
+  'inbox' | 'tasks' | 'workflows' | 'agents' | 'connectors' | 'skills' | 'models' | 'workspaces';
 
 /** What a place may do in the panel: go elsewhere, open a chat, and talk to the background. */
 export interface PanelApi {

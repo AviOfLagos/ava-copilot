@@ -11185,5 +11185,152 @@
   },
   "tasks_summary_title": {
     "message": "Tarefas abertas"
+  },
+  "tasks_title": {
+    "message": "Tarefas"
+  },
+  "tasks_add": {
+    "message": "Adicionar tarefa"
+  },
+  "tasks_add_placeholder": {
+    "message": "O que precisa ser feito"
+  },
+  "tasks_add_submit": {
+    "message": "Adicionar"
+  },
+  "tasks_workspace": {
+    "message": "Espaço de trabalho"
+  },
+  "tasks_owner_placeholder": {
+    "message": "Quem faz"
+  },
+  "tasks_due_label": {
+    "message": "Prazo"
+  },
+  "tasks_cancel": {
+    "message": "Cancelar"
+  },
+  "tasks_save": {
+    "message": "Salvar"
+  },
+  "tasks_noWorkspace": {
+    "message": "Sem espaço de trabalho"
+  },
+  "tasks_noOwner": {
+    "message": "Sem responsável"
+  },
+  "tasks_from_meeting": {
+    "message": "De uma reunião"
+  },
+  "tasks_from_chat": {
+    "message": "De uma conversa"
+  },
+  "tasks_from_voice": {
+    "message": "Dita por voz"
+  },
+  "tasks_from_manual": {
+    "message": "Adicionada por você"
+  },
+  "tasks_from_note": {
+    "message": "Das suas notas"
+  },
+  "tasks_from_summary": {
+    "message": "De um resumo"
+  },
+  "tasks_from_whatsapp": {
+    "message": "Do WhatsApp"
+  },
+  "tasks_menu": {
+    "message": "Mais para $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "tasks_edit": {
+    "message": "Editar"
+  },
+  "tasks_give": {
+    "message": "Passar para alguém"
+  },
+  "tasks_merge": {
+    "message": "Juntar com…"
+  },
+  "tasks_merge_pick": {
+    "message": "A mesma tarefa que esta (ela é juntada a esta):"
+  },
+  "tasks_merge_submit": {
+    "message": "Juntar"
+  },
+  "tasks_moveTo": {
+    "message": "Mover para $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Acme"
+      }
+    }
+  },
+  "tasks_drop": {
+    "message": "Descartar"
+  },
+  "tasks_seenIn": {
+    "message": "Dita em $COUNT$ lugares",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "tasks_byWorkspace": {
+    "message": "Por espaço"
+  },
+  "tasks_byPerson": {
+    "message": "Por pessoa"
+  },
+  "tasks_status_open": {
+    "message": "Abertas"
+  },
+  "tasks_status_done": {
+    "message": "Concluídas"
+  },
+  "tasks_status_dropped": {
+    "message": "Descartadas"
+  },
+  "tasks_empty_open": {
+    "message": "Nenhuma tarefa aberta. Diga \"Ava, anote uma tarefa para…\" numa chamada, ou adicione uma aqui."
+  },
+  "tasks_empty_done": {
+    "message": "Nada concluído ainda."
+  },
+  "tasks_empty_dropped": {
+    "message": "Nada descartado."
+  },
+  "tasks_old_banner": {
+    "message": "$COUNT$ tarefas abertas não aparecem há duas semanas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_action": {
+    "message": "Fechar"
+  },
+  "tasks_old_confirm": {
+    "message": "Descartar $COUNT$ tarefas com mais de duas semanas? Você pode reabrir qualquer uma em Descartadas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_yes": {
+    "message": "Fechar tudo com mais de duas semanas"
   }
 }

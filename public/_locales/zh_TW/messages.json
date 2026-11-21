@@ -11185,5 +11185,152 @@
   },
   "tasks_summary_title": {
     "message": "未完成的任務"
+  },
+  "tasks_title": {
+    "message": "任務"
+  },
+  "tasks_add": {
+    "message": "新增任務"
+  },
+  "tasks_add_placeholder": {
+    "message": "要做什麼"
+  },
+  "tasks_add_submit": {
+    "message": "新增"
+  },
+  "tasks_workspace": {
+    "message": "工作區"
+  },
+  "tasks_owner_placeholder": {
+    "message": "由誰負責"
+  },
+  "tasks_due_label": {
+    "message": "到期日"
+  },
+  "tasks_cancel": {
+    "message": "取消"
+  },
+  "tasks_save": {
+    "message": "儲存"
+  },
+  "tasks_noWorkspace": {
+    "message": "無工作區"
+  },
+  "tasks_noOwner": {
+    "message": "無負責人"
+  },
+  "tasks_from_meeting": {
+    "message": "來自會議"
+  },
+  "tasks_from_chat": {
+    "message": "來自對話"
+  },
+  "tasks_from_voice": {
+    "message": "語音新增"
+  },
+  "tasks_from_manual": {
+    "message": "由你新增"
+  },
+  "tasks_from_note": {
+    "message": "來自你的筆記"
+  },
+  "tasks_from_summary": {
+    "message": "來自摘要"
+  },
+  "tasks_from_whatsapp": {
+    "message": "來自 WhatsApp"
+  },
+  "tasks_menu": {
+    "message": "$TITLE$ 的更多選項",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "tasks_edit": {
+    "message": "編輯"
+  },
+  "tasks_give": {
+    "message": "交給某人"
+  },
+  "tasks_merge": {
+    "message": "合併至…"
+  },
+  "tasks_merge_pick": {
+    "message": "與此相同的任務（將併入此任務）："
+  },
+  "tasks_merge_submit": {
+    "message": "合併"
+  },
+  "tasks_moveTo": {
+    "message": "移至 $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Acme"
+      }
+    }
+  },
+  "tasks_drop": {
+    "message": "放棄"
+  },
+  "tasks_seenIn": {
+    "message": "在 $COUNT$ 處提到",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "tasks_byWorkspace": {
+    "message": "依工作區"
+  },
+  "tasks_byPerson": {
+    "message": "依人員"
+  },
+  "tasks_status_open": {
+    "message": "未完成"
+  },
+  "tasks_status_done": {
+    "message": "已完成"
+  },
+  "tasks_status_dropped": {
+    "message": "已放棄"
+  },
+  "tasks_empty_open": {
+    "message": "沒有未完成的任務。通話時說「Ava，記下一個任務…」，或在此新增。"
+  },
+  "tasks_empty_done": {
+    "message": "尚未完成任何任務。"
+  },
+  "tasks_empty_dropped": {
+    "message": "沒有放棄的任務。"
+  },
+  "tasks_old_banner": {
+    "message": "有 $COUNT$ 個未完成的任務已兩週未被提及。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_action": {
+    "message": "關閉它們"
+  },
+  "tasks_old_confirm": {
+    "message": "放棄 $COUNT$ 個超過兩週的任務？你可以在「已放棄」中重新開啟。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_yes": {
+    "message": "關閉所有超過兩週的任務"
   }
 }

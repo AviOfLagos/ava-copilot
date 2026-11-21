@@ -105,14 +105,25 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
       return task;
     },
 
-    /** Changes a task's words, owner's name, due date or links. Its id, workspace and status change elsewhere. */
+    /**
+     * Changes a task's words, owner's name, due date or links. Its id, workspace and status change elsewhere. Giving it
+     * to a different name clears the person it was linked to.
+     */
     update(id: string, changes: TaskChanges): Promise<Task | null> {
-      return change(id, task => ({
-        ...task,
-        ...changes,
-        title: changes.title !== undefined ? oneLine(changes.title, 200) || task.title : task.title,
-        ...(changes.ownerName !== undefined ? { ownerName: ownerNameOf(changes.ownerName) } : {}),
-      }));
+      return change(id, task => {
+        const next: Task = {
+          ...task,
+          ...changes,
+          title: changes.title !== undefined ? oneLine(changes.title, 200) || task.title : task.title,
+          ...(changes.ownerName !== undefined ? { ownerName: ownerNameOf(changes.ownerName) } : {}),
+        };
+        // A new name is a new person: the link to the old one (setOwner) no longer holds
+        if (next.ownerName !== task.ownerName) next.ownerId = null;
+        // A field set to undefined is cleared
+        for (const key of ['detail', 'due', 'dueText', 'followUp'] as const)
+          if (next[key] === undefined) delete next[key];
+        return next;
+      });
     },
 
     /** Closes, drops or reopens a task. Reopening clears who closed it and when. */

@@ -11185,5 +11185,152 @@
   },
   "tasks_summary_title": {
     "message": "Open tasks"
+  },
+  "tasks_title": {
+    "message": "Tasks"
+  },
+  "tasks_add": {
+    "message": "Add task"
+  },
+  "tasks_add_placeholder": {
+    "message": "What is to be done"
+  },
+  "tasks_add_submit": {
+    "message": "Add"
+  },
+  "tasks_workspace": {
+    "message": "Workspace"
+  },
+  "tasks_owner_placeholder": {
+    "message": "Who does it"
+  },
+  "tasks_due_label": {
+    "message": "Due date"
+  },
+  "tasks_cancel": {
+    "message": "Cancel"
+  },
+  "tasks_save": {
+    "message": "Save"
+  },
+  "tasks_noWorkspace": {
+    "message": "No workspace"
+  },
+  "tasks_noOwner": {
+    "message": "No owner"
+  },
+  "tasks_from_meeting": {
+    "message": "From a meeting"
+  },
+  "tasks_from_chat": {
+    "message": "From a chat"
+  },
+  "tasks_from_voice": {
+    "message": "Said by voice"
+  },
+  "tasks_from_manual": {
+    "message": "Added by you"
+  },
+  "tasks_from_note": {
+    "message": "From your notes"
+  },
+  "tasks_from_summary": {
+    "message": "From a summary"
+  },
+  "tasks_from_whatsapp": {
+    "message": "From WhatsApp"
+  },
+  "tasks_menu": {
+    "message": "More for $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "tasks_edit": {
+    "message": "Edit"
+  },
+  "tasks_give": {
+    "message": "Give to someone"
+  },
+  "tasks_merge": {
+    "message": "Merge with…"
+  },
+  "tasks_merge_pick": {
+    "message": "The same task as this one (it is folded into this one):"
+  },
+  "tasks_merge_submit": {
+    "message": "Merge"
+  },
+  "tasks_moveTo": {
+    "message": "Move to $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Acme"
+      }
+    }
+  },
+  "tasks_drop": {
+    "message": "Drop"
+  },
+  "tasks_seenIn": {
+    "message": "Said in $COUNT$ places",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "tasks_byWorkspace": {
+    "message": "By workspace"
+  },
+  "tasks_byPerson": {
+    "message": "By person"
+  },
+  "tasks_status_open": {
+    "message": "Open"
+  },
+  "tasks_status_done": {
+    "message": "Done"
+  },
+  "tasks_status_dropped": {
+    "message": "Dropped"
+  },
+  "tasks_empty_open": {
+    "message": "No open tasks. Say \"Ava, note a task for…\" on a call, or add one here."
+  },
+  "tasks_empty_done": {
+    "message": "Nothing done yet."
+  },
+  "tasks_empty_dropped": {
+    "message": "Nothing dropped."
+  },
+  "tasks_old_banner": {
+    "message": "$COUNT$ open tasks have not come up in two weeks.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_action": {
+    "message": "Close them"
+  },
+  "tasks_old_confirm": {
+    "message": "Drop $COUNT$ tasks older than two weeks? You can reopen any of them under Dropped.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_yes": {
+    "message": "Close everything older than two weeks"
   }
 }

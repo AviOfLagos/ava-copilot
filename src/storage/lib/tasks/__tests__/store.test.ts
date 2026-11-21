@@ -246,7 +246,8 @@ describe('the task store', () => {
     const stop = tasks.onChange(all => seen.push(all.length));
     await new Promise(resolve => setTimeout(resolve, 20));
     await tasks.add({ title: 'One', workspaceId: null });
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Live queries report on their own clock: wait for it rather than for a fixed time
+    for (let i = 0; i < 100 && seen.at(-1) !== 1; i++) await new Promise(resolve => setTimeout(resolve, 20));
     stop();
     expect(seen.at(-1)).toBe(1);
   });

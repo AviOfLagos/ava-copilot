@@ -127,6 +127,13 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   list_connectors: 'settings',
   list_workspaces: 'settings',
   end_conversation: 'conversation',
+  // The task board (docs/pm-desk.md, Part 2.6)
+  task_add: 'tasks',
+  task_done: 'tasks',
+  task_reopen: 'tasks',
+  task_list: 'tasks',
+  task_assign: 'tasks',
+  task_move: 'tasks',
 };
 
 const MAX_DESCRIPTION = 160;
