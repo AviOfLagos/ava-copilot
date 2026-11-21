@@ -149,6 +149,19 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
       }));
     },
 
+    /** Gives every task of one person to another: for two people merged into one (People's `moveTasks` hook). */
+    replaceOwner(fromPersonId: string, toPersonId: string | null): Promise<number> {
+      return db.transaction('rw', db.tasks, () =>
+        db.tasks
+          .where('ownerId')
+          .equals(fromPersonId)
+          .modify(task => {
+            task.ownerId = toPersonId;
+            task.updatedAt = now();
+          }),
+      );
+    },
+
     /** Tasks that match every part of the query, oldest first. */
     async list(query: TaskListQuery = {}): Promise<Task[]> {
       const statuses = query.status === undefined ? null : ([] as TaskStatus[]).concat(query.status);

@@ -252,3 +252,16 @@ describe('the task store', () => {
     expect(seen.at(-1)).toBe(1);
   });
 });
+
+describe('replaceOwner', () => {
+  it("gives one person's tasks to another and leaves the rest", async () => {
+    const a = await tasks.add({ title: 'One', workspaceId: null, ownerName: 'Dana' });
+    const b = await tasks.add({ title: 'Two', workspaceId: null, ownerName: 'Lee' });
+    await tasks.setOwner(a.id, 'person-1');
+    await tasks.setOwner(b.id, 'person-2');
+    expect(await tasks.replaceOwner('person-1', 'person-3')).toBe(1);
+    expect((await tasks.get(a.id))?.ownerId).toBe('person-3');
+    expect((await tasks.get(a.id))?.ownerName).toBe('Dana');
+    expect((await tasks.get(b.id))?.ownerId).toBe('person-2');
+  });
+});
