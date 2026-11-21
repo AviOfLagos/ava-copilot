@@ -1,3 +1,4 @@
+import { hostOf, onSite } from '../browser/tabRegistry';
 import { createLogger } from '../log';
 
 const logger = createLogger('TabBinding');
@@ -13,6 +14,11 @@ export class TabBinding {
   canAdopt: ((tabId: number) => boolean) | null = null;
   // Told when a tab joins the binding mid-run (one the task opened, or a free one it took over)
   onAdd: ((tabId: number) => void) | null = null;
+  // Whether a free tab may be taken from any ordinary window. Off, only from the windows the binding already
+  // works in: an agent's run stays in the agents' window and never takes a tab the user has open elsewhere.
+  anyWindow = false;
+  // The site of the already-open tab this run started on, when the task named one (see tabsToBind)
+  reusedSite: string | null = null;
 
   constructor(
     tabIds: number[],
@@ -51,12 +57,33 @@ export class TabNotBoundError extends Error {
   }
 }
 
+/** The site a task names, and which of the open tabs on it may be taken (free, allowed, not private). */
+export interface SiteHint {
+  // The exact address of the open tab the task names ("facebook.com", "app.slack.com"), without "www."
+  site: string;
+  usable: (tab: chrome.tabs.Tab) => boolean;
+}
+
+/** The free open tab on the hinted site that was used last, from any ordinary window. */
+async function openTabOn(hint: SiteHint): Promise<chrome.tabs.Tab | null> {
+  const tabs = await chrome.tabs.query({ windowType: 'normal' });
+  const lastUsed = (tab: chrome.tabs.Tab) => (tab as { lastAccessed?: number }).lastAccessed ?? 0;
+  const matches = tabs
+    .filter(tab => tab.id !== undefined && !tab.incognito && hostOf(tab.url) === hint.site && hint.usable(tab))
+    .sort((a, b) => Number(b.active) - Number(a.active) || lastUsed(b) - lastUsed(a));
+  return matches[0] ?? null;
+}
+
 /**
- * Picks the tabs a run binds to, from the window the user sent the task from: the whole tab group
- * when the active tab is in one, the highlighted tabs when several are selected, otherwise the
- * active tab alone.
+ * Picks the tabs a run binds to. With a site hint (the site the task names), a free tab already open on that
+ * site is used, from any ordinary window, unless the tab in front is on that site already. Otherwise, from the
+ * window the user sent the task from: the whole tab group when the active tab is in one, the highlighted tabs
+ * when several are selected, otherwise the active tab alone.
  */
-export async function tabsToBind(windowId?: number): Promise<{ tabIds: number[]; groupId: number | null }> {
+export async function tabsToBind(
+  windowId?: number,
+  hint?: SiteHint,
+): Promise<{ tabIds: number[]; groupId: number | null; reusedSite?: string }> {
   let window: chrome.windows.Window | undefined;
   if (windowId !== undefined) {
     window = await chrome.windows.get(windowId).catch(() => undefined);
@@ -72,6 +99,12 @@ export async function tabsToBind(windowId?: number): Promise<{ tabIds: number[];
   const [active] = await chrome.tabs.query({ windowId: window.id, active: true });
   if (!active?.id) {
     throw new Error('No active tab to work in');
+  }
+  if (hint && !onSite(hostOf(active.url), hint.site)) {
+    const open = await openTabOn(hint).catch(() => null);
+    if (open?.id !== undefined) {
+      return { tabIds: [open.id], groupId: null, reusedSite: hint.site };
+    }
   }
   if (active.groupId !== undefined && active.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
     const grouped = await chrome.tabs.query({ groupId: active.groupId });
@@ -96,8 +129,15 @@ export async function groupTabs(binding: TabBinding, title: string): Promise<num
     return binding.groupId;
   }
   try {
+    // Only the tabs in the first tab's window: grouping a tab taken over in another window would move it there
+    const tabs = await Promise.all(binding.tabIds.map(tabId => chrome.tabs.get(tabId).catch(() => undefined)));
+    const home = tabs[0]?.windowId;
+    const tabIds = tabs.flatMap(tab => (tab?.id !== undefined && tab.windowId === home ? [tab.id] : []));
+    if (tabIds.length < 2) {
+      return binding.groupId;
+    }
     const groupId = await chrome.tabs.group({
-      tabIds: binding.tabIds as [number, ...number[]],
+      tabIds: tabIds as [number, ...number[]],
       ...(binding.groupId !== null ? { groupId: binding.groupId } : {}),
     });
     if (binding.groupId === null) {

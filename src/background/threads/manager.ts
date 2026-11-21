@@ -23,6 +23,7 @@ import type { FailureCode } from '../retry/classify';
 import type { Ending, RunEndings } from '../retry/endings';
 import type { UsageScope } from '../usage/meter';
 import { groupTabs, TabBinding, tabsToBind } from './binding';
+import { siteHintFor } from '../tabs/reuse';
 import { createBrowserContext, createExecutor, resolveModels } from './factory';
 import { buildRunContext, splitForSummary, SUMMARY_INSTRUCTIONS, transcriptOf } from './memory';
 import { effectOf } from './transcript';
@@ -118,6 +119,11 @@ export const reopenedNote = (url: string): string =>
 
 type Parked = Pick<Runner, 'executor' | 'browserContext' | 'binding' | 'modelKey'>;
 
+// A task a person gave (typed, said, or sent from their phone), as against one an agent, a routine or the brief
+// started. Only these may start on, or move to, a tab the user has open in another window.
+const attended = (thread: Pick<ThreadRecord, 'origin'>) =>
+  thread.origin === undefined || thread.origin === 'user' || thread.origin === 'voice' || thread.origin === 'whatsapp';
+
 const modelKeyOf = (thread: ThreadRecord) => (thread.model ? `${thread.model.provider}>${thread.model.modelName}` : '');
 
 async function existingTabs(tabIds: number[]): Promise<number[]> {
@@ -212,9 +218,14 @@ export class ThreadManager {
       throw new Error(t('threads_busy'));
     }
     await this.checkCapacity();
-    const binding = await this.bindingFor(thread, request.windowId);
+    const binding = await this.bindingFor(thread, request.windowId, text);
 
     const message = await this.store.addMessage(thread.id, 'user', text, { attachments });
+    if (binding.reusedSite) {
+      // The task named a site that is already open: it works there, and the chat says so
+      await this.store.addMessage(thread.id, 'system', t('threads_reusedTab', [binding.reusedSite]));
+      await chrome.tabs.update(binding.tabIds[0]!, { active: true }).catch(() => {});
+    }
     // A new request is a new task: its do-once keys start clean. Resuming or retrying keeps the task it has,
     // so what it already sent is found and not sent again (../once).
     // ...and no try queued for the old one comes back
@@ -754,10 +765,21 @@ export class ThreadManager {
     }
   }
 
-  private async bindingFor(thread: ThreadRecord, windowId?: number): Promise<TabBinding> {
+  /**
+   * @param task - The words of a new task. When they name a site the user already has open, the run starts on
+   *   that tab instead of the one in front. Only for a task a person gave: an agent or a routine stays where
+   *   it was started.
+   */
+  private async bindingFor(thread: ThreadRecord, windowId?: number, task?: string): Promise<TabBinding> {
     // A thread stays on its own tabs while they exist; a new thread takes the tabs the user is on
     const kept = await existingTabs(thread.boundTabIds);
-    const picked = kept.length ? { tabIds: kept, groupId: thread.boundGroupId } : await tabsToBind(windowId);
+    const hint =
+      !kept.length && task && attended(thread)
+        ? await siteHintFor(task, tabId => this.holderOf(tabId) === null)
+        : undefined;
+    const picked: { tabIds: number[]; groupId: number | null; reusedSite?: string } = kept.length
+      ? { tabIds: kept, groupId: thread.boundGroupId }
+      : await tabsToBind(windowId, hint);
     try {
       this.assertFree(thread.id, picked.tabIds);
     } catch (error) {
@@ -767,7 +789,9 @@ export class ThreadManager {
       }
       throw error;
     }
-    return new TabBinding(picked.tabIds, picked.groupId);
+    const binding = new TabBinding(picked.tabIds, picked.groupId);
+    binding.reusedSite = picked.reusedSite ?? null;
+    return binding;
   }
 
   /**
@@ -824,6 +848,8 @@ export class ThreadManager {
     if (!thread) {
       throw new Error(`Thread ${threadId} does not exist`);
     }
+    // A task a person gave may move to a free tab in any of their windows; an agent's stays in its own
+    binding.anyWindow = attended(thread);
     const scope: UsageScope = { sessionId: threadId, notify: () => {} };
     const modelKey = modelKeyOf(thread);
 

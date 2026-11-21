@@ -9,9 +9,11 @@ import type * as StorageModule from '@extension/storage';
 // --- fakes -------------------------------------------------------------------------------------
 
 const settings = { maxConcurrentThreads: 2 };
+const firewall = { enabled: false, allowList: [] as string[], denyList: [] as string[] };
 vi.mock('@extension/storage', async original => ({
   ...(await original<typeof StorageModule>()),
   generalSettingsStore: { getSettings: async () => settings },
+  firewallStore: { getFirewall: async () => firewall },
 }));
 
 class FakeExecutor {
@@ -142,6 +144,8 @@ const browser = {
   >(),
   // New tabs stay "loading" until a test says otherwise
   slowLoad: false,
+  // Tabs brought to the front of their window (chrome.tabs.update)
+  fronted: [] as number[],
   // The windows that are open; a tab opens in window 1 unless told otherwise
   windows: new Set<number>([1]),
   nextId: 1,
@@ -188,6 +192,10 @@ function installChrome() {
           q.active || q.highlighted ? tab.active : q.groupId === undefined || tab.groupId === q.groupId,
         ),
       group: async () => 9,
+      update: async (id: number, change: { active?: boolean }) => {
+        if (change.active) browser.fronted.push(id);
+        return tabs.get(id);
+      },
       create: async ({ url, windowId, active }: { url: string; windowId?: number; active?: boolean }) =>
         tabs.get(browser.open(url, windowId ?? 1, active ?? true)),
       remove: async (id: number) => {
@@ -230,6 +238,8 @@ beforeEach(() => {
   browser.tabs.clear();
   browser.windows = new Set([1]);
   browser.slowLoad = false;
+  browser.fronted = [];
+  Object.assign(firewall, { enabled: false, allowList: [], denyList: [] });
   browser.nextId = 1;
   FakeExecutor.created = [];
   settings.maxConcurrentThreads = 2;
@@ -713,6 +723,92 @@ describe('ThreadManager', () => {
     expect(await store.get(threadId)).toBeUndefined();
     expect(manager.isRunning(threadId)).toBe(false);
   });
+  describe('a task for a site that is already open uses that tab (#68)', () => {
+    const elsewhere = (url: string) => {
+      browser.windows.add(2);
+      return browser.open(url, 2, false);
+    };
+
+    it('starts on the open tab of the site the task names, in another window, and says so', async () => {
+      browser.open('https://news.example/today');
+      const facebook = elsewhere('https://www.facebook.com/messages');
+      const threadId = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1 });
+      const thread = await store.get(threadId);
+      expect(thread?.boundTabIds).toEqual([facebook]);
+      expect(thread?.boundWindowId).toBe(2);
+      expect((await store.messages(threadId)).map(m => m.content)).toContain('threads_reusedTab:facebook.com');
+      // Brought to the front of its own window, so the user can watch
+      expect(browser.fronted).toEqual([facebook]);
+    });
+
+    it('stays on the tab in front when the task is about it, or names no open site', async () => {
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://www.facebook.com/messages');
+      const about = await manager.send({ text: 'Summarise this page and post it on Facebook', windowId: 1 });
+      expect((await store.get(about))?.boundTabIds).toEqual([front]);
+      await manager.cancel(about);
+      await runEnded(lastExecutor());
+      const other = await manager.send({ text: 'Go to Reddit and find the launch thread', windowId: 1 });
+      expect((await store.get(other))?.boundTabIds).toEqual([front]);
+      expect(browser.fronted).toEqual([]);
+    });
+
+    it('never takes a tab another running task holds', async () => {
+      const facebook = browser.open('https://www.facebook.com/messages');
+      const first = await manager.send({ text: 'Read my messages', windowId: 1 });
+      expect((await store.get(first))?.boundTabIds).toEqual([facebook]);
+      const front = browser.open('https://news.example/today');
+      const second = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1 });
+      expect((await store.get(second))?.boundTabIds).toEqual([front]);
+    });
+
+    it('never takes a tab in a private window', async () => {
+      const front = browser.open('https://news.example/today');
+      const secret = elsewhere('https://www.facebook.com/messages');
+      Object.assign(browser.tabs.get(secret)!, { incognito: true });
+      const threadId = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+
+    it('never takes another product of the same company for the one named', async () => {
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://mail.google.com/mail/u/0/');
+      const threadId = await manager.send({ text: 'Search Google for pizza places', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+
+    it('never takes a tab the firewall blocks', async () => {
+      Object.assign(firewall, { enabled: true, denyList: ['facebook.com'] });
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://www.facebook.com/messages');
+      const threadId = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+
+    it("keeps an agent's chat where it was started, and lets only a person's task roam", async () => {
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://www.facebook.com/messages');
+      const agent = await manager.send({ text: 'Go to Facebook and reply to Ada', windowId: 1, origin: 'agent' });
+      expect((await store.get(agent))?.boundTabIds).toEqual([front]);
+      expect(contextOf(lastExecutor()).binding).toMatchObject({ anyWindow: false });
+      await manager.cancel(agent);
+      await runEnded(lastExecutor());
+      const mine = await manager.send({ text: 'Read the news', windowId: 1 });
+      expect((await store.get(mine))?.boundTabIds).toEqual([front]);
+      expect(contextOf(lastExecutor()).binding).toMatchObject({ anyWindow: true });
+    });
+
+    it('a follow-up stays on the tabs the chat already has', async () => {
+      const front = browser.open('https://news.example/today');
+      elsewhere('https://www.facebook.com/messages');
+      const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
+      await lastExecutor().complete();
+      await runEnded(lastExecutor());
+      await manager.send({ threadId, text: 'Now go to Facebook and reply to Ada', windowId: 1 });
+      expect((await store.get(threadId))?.boundTabIds).toEqual([front]);
+    });
+  });
+
   describe('cancel settles the thread', () => {
     const question = (threadId: string, id = 'q1') => ({
       id,
@@ -775,7 +871,9 @@ describe('ThreadManager', () => {
       // A navigator step that reports after the run ended, and a request shown too late
       void executor.emit(Actors.NAVIGATOR, ExecutionState.STEP_START);
       void executor.emit(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(question(threadId, 'late')));
-      await settle();
+      // The end takes several writes: two ticks are not enough on a busy machine
+      await runEnded(executor);
+      await vi.waitFor(async () => expect((await store.get(threadId))?.status).toBe('idle'));
       await settle();
       await expectIdle(threadId);
     });
