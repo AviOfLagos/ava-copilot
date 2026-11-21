@@ -10937,5 +10937,23 @@
   },
   "agents_growth_social_hint": {
     "message": "O plano de conteúdo da semana, posts e respostas na voz do produto, e o que cada post trouxe. Publicar espera o seu clique."
+  },
+  "agents_standup_run": {
+    "message": "Fazer a reunião diária de hoje"
+  },
+  "agents_standup_hint": {
+    "message": "Plano às segundas, 07:30; reunião diária às 07:45. Lê os números, cada agente escreve uma nota curta e o Growth Lead resume tudo na Caixa de entrada."
+  },
+  "agents_standup_done": {
+    "message": "Pronto. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_already": {
+    "message": "A reunião de hoje já aconteceu. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_running": {
+    "message": "A reunião de hoje está em andamento."
+  },
+  "agents_standup_notRun": {
+    "message": "A reunião não aconteceu: $1"
   }
 }

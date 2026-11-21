@@ -10937,5 +10937,23 @@
   },
   "agents_growth_social_hint": {
     "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
+  },
+  "agents_standup_run": {
+    "message": "執行今天的站會"
+  },
+  "agents_standup_hint": {
+    "message": "每週一 07:30 訂計畫，每天 07:45 站會。讀取數字，每個代理寫一段短筆記，由 Growth Lead 在收件匣總結。"
+  },
+  "agents_standup_done": {
+    "message": "完成。已放在收件匣的「Growth standup」。"
+  },
+  "agents_standup_already": {
+    "message": "今天的站會已執行過，在收件匣的「Growth standup」。"
+  },
+  "agents_standup_running": {
+    "message": "今天的站會正在進行。"
+  },
+  "agents_standup_notRun": {
+    "message": "站會未執行：$1"
   }
 }

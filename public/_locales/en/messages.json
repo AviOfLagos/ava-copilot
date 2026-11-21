@@ -10937,5 +10937,23 @@
   },
   "agents_growth_social_hint": {
     "message": "The week's content plan, posts and replies in the product's voice, and what each post brought. Posting waits for your click."
+  },
+  "agents_standup_run": {
+    "message": "Run today's standup"
+  },
+  "agents_standup_hint": {
+    "message": "Plan Mondays at 07:30, standup every day at 07:45. It reads the numbers, each agent writes a short note, and the Growth Lead sums it up in the Inbox."
+  },
+  "agents_standup_done": {
+    "message": "Done. It is in the Inbox as \"Growth standup\"."
+  },
+  "agents_standup_already": {
+    "message": "Today's standup already ran. It is in the Inbox as \"Growth standup\"."
+  },
+  "agents_standup_running": {
+    "message": "Today's standup is running."
+  },
+  "agents_standup_notRun": {
+    "message": "Standup did not run: $1"
   }
 }
