@@ -261,7 +261,10 @@ export function asOfText(asOf: number, now: number): string {
 export async function inboxDecisions(): Promise<InboxItem[]> {
   return (await db.inbox.toArray()).filter(
     item =>
-      (item.kind === 'approval' && (item.status === 'unread' || item.status === 'read')) ||
+      // An offer of help Ava made (../rounds) is hers to make, not a thing that waits on the user
+      (item.kind === 'approval' &&
+        (item.status === 'unread' || item.status === 'read') &&
+        !item.approval?.requestId.startsWith('checkin:')) ||
       (item.kind === 'alert' && item.status === 'unread' && item.externalId.startsWith('stuck:')),
   );
 }

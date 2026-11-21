@@ -119,7 +119,9 @@ const threadOf = (item: InboxItem): string | null =>
  * thing often shows up twice (a waiting chat and its Inbox item), so each is keyed by its chat or its run.
  * The order is the order of urgency: what is paused first, then decisions, then what failed.
  */
-export function waitingItems(data: BriefData): WaitingItem[] {
+export function waitingItems(
+  data: Pick<BriefData, 'waiting' | 'stopped' | 'inbox' | 'runs' | 'agentNames'>,
+): WaitingItem[] {
   const items: WaitingItem[] = [];
   const seen = new Set<string>();
   const add = (item: WaitingItem, ...also: (string | null | undefined)[]) => {

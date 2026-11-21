@@ -10625,5 +10625,155 @@
   },
   "growth_reason_no_collector": {
     "message": "尚無任何程式讀取此來源。"
+  },
+  "rounds_settings_title": {
+    "message": "巡查與主動協助"
+  },
+  "rounds_toggle": {
+    "message": "Ava 進行巡查"
+  },
+  "rounds_toggle_hint": {
+    "message": "Ava 每天數次讀取你的產品數據、郵件與卡住的工作，並各在收件匣留下一則簡短摘要。不會寄出、發布或更改任何東西。"
+  },
+  "rounds_name_pulse": {
+    "message": "產品脈動"
+  },
+  "rounds_name_mail": {
+    "message": "郵件"
+  },
+  "rounds_name_stuck": {
+    "message": "卡住的工作"
+  },
+  "rounds_runNow": {
+    "message": "立即執行"
+  },
+  "rounds_runNow_named": {
+    "message": "立即執行 $1"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 已於 $2 執行"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 已錯過"
+  },
+  "rounds_offers": {
+    "message": "今日主動協助：已提出 $1 次，剩餘 $2 次。"
+  },
+  "rounds_offers_silenced": {
+    "message": "今天不再主動提供協助：你說了今天不要。"
+  },
+  "rounds_pulse_title": {
+    "message": "產品脈動 · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1：今日至今 $2，昨日 $3，平常每日 $4"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "尚不清楚"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1：無讀數。$2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 上升：$4 $2，平常每日 $3"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 下降：$4 $2，平常每日 $3"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "昨日"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "今日至今"
+  },
+  "rounds_pulse_slack": {
+    "message": "今日 Slack 通知：$1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Slack 通知：未讀取。$1"
+  },
+  "rounds_metric_signups": {
+    "message": "註冊"
+  },
+  "rounds_metric_waitlist": {
+    "message": "候補名單"
+  },
+  "rounds_metric_access_requests": {
+    "message": "存取申請"
+  },
+  "rounds_metric_feedback": {
+    "message": "意見回饋"
+  },
+  "rounds_stuck_title": {
+    "message": "卡住的工作 · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "沒有卡住的工作，也沒有等你處理的事。"
+  },
+  "rounds_stuck_approval": {
+    "message": "等你點擊"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "需要你完成一個步驟"
+  },
+  "rounds_stuck_decision": {
+    "message": "等你決定"
+  },
+  "rounds_stuck_failed": {
+    "message": "失敗"
+  },
+  "rounds_stuck_more": {
+    "message": "另有 $1 項"
+  },
+  "rounds_mail_title": {
+    "message": "郵件巡查 · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "未讀取郵件：郵件代理尚未設定或已暫停。請在「代理」中開啟，即可在此收到郵件摘要。"
+  },
+  "rounds_mail_failed": {
+    "message": "未讀取郵件：$1"
+  },
+  "checkin_mail": {
+    "message": "要我整理你的郵件嗎？有 $1 封未讀。"
+  },
+  "checkin_mailPlain": {
+    "message": "要我整理你的郵件嗎？"
+  },
+  "checkin_retry": {
+    "message": "有 $1 項工作失敗：$2。要我再試一次嗎？"
+  },
+  "checkin_body": {
+    "message": "同意的話我現在就開始，你可以在旁邊看。拒絕代表今天不要：明天之前我不會再問。沒有你的點擊，不會寄出任何東西。"
+  },
+  "rounds_failed_title": {
+    "message": "$2 的「$1」巡查未執行"
+  },
+  "rounds_failed_cut": {
+    "message": "尚未完成就被中斷：瀏覽器或擴充功能停止了。下一個時段會再執行。"
+  },
+  "checkin_failed": {
+    "message": "我無法開始你同意的工作"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "今日 Slack 通知，至少：$1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "產品未指定附有 ID 的 Slack 頻道。"
+  },
+  "rounds_slack_not_connected": {
+    "message": "此工作區未啟用 Slack 連接器。"
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "Slack 連接器需要你重新登入。"
+  },
+  "rounds_slack_asks_first": {
+    "message": "讀取頻道的 Slack 工具會先詢問才執行。請在「連接」中設定為不詢問即可執行。"
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "Slack 連接器沒有可讀取單一頻道單日訊息的工具。"
+  },
+  "rounds_slack_failed": {
+    "message": "無法讀取 Slack。"
   }
 }

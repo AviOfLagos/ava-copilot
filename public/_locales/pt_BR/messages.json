@@ -10625,5 +10625,155 @@
   },
   "growth_reason_no_collector": {
     "message": "Nada lê esta fonte ainda."
+  },
+  "rounds_settings_title": {
+    "message": "Rondas e ofertas de ajuda"
+  },
+  "rounds_toggle": {
+    "message": "A Ava faz suas rondas"
+  },
+  "rounds_toggle_hint": {
+    "message": "Algumas vezes por dia a Ava lê os números dos seus produtos, seu e-mail e o que está travado, e deixa um resumo curto de cada na Caixa de entrada. Nada é enviado, publicado ou alterado."
+  },
+  "rounds_name_pulse": {
+    "message": "Pulso do produto"
+  },
+  "rounds_name_mail": {
+    "message": "E-mail"
+  },
+  "rounds_name_stuck": {
+    "message": "Trabalho travado"
+  },
+  "rounds_runNow": {
+    "message": "Rodar agora"
+  },
+  "rounds_runNow_named": {
+    "message": "Rodar $1 agora"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 rodou às $2"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 perdida"
+  },
+  "rounds_offers": {
+    "message": "Ofertas de ajuda hoje: $1 feitas, $2 restantes."
+  },
+  "rounds_offers_silenced": {
+    "message": "Sem mais ofertas de ajuda hoje: você disse hoje não."
+  },
+  "rounds_pulse_title": {
+    "message": "Pulso do produto · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1: $2 hoje até agora, $3 ontem, normalmente $4 por dia"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "ainda não se sabe"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1: sem leitura. $2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 subiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 caiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "ontem"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "hoje até agora"
+  },
+  "rounds_pulse_slack": {
+    "message": "Notificações do Slack hoje: $1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Notificações do Slack: não lidas. $1"
+  },
+  "rounds_metric_signups": {
+    "message": "Cadastros"
+  },
+  "rounds_metric_waitlist": {
+    "message": "Lista de espera"
+  },
+  "rounds_metric_access_requests": {
+    "message": "Pedidos de acesso"
+  },
+  "rounds_metric_feedback": {
+    "message": "Feedback"
+  },
+  "rounds_stuck_title": {
+    "message": "Trabalho travado · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "Nada está travado e nada espera por você."
+  },
+  "rounds_stuck_approval": {
+    "message": "espera o seu clique"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "precisa de um passo seu"
+  },
+  "rounds_stuck_decision": {
+    "message": "espera a sua decisão"
+  },
+  "rounds_stuck_failed": {
+    "message": "falhou"
+  },
+  "rounds_stuck_more": {
+    "message": "e mais $1"
+  },
+  "rounds_mail_title": {
+    "message": "Ronda de e-mail · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "O e-mail não foi lido: o agente de E-mail não está configurado ou está pausado. Ative-o em Agentes para receber um resumo aqui."
+  },
+  "rounds_mail_failed": {
+    "message": "O e-mail não foi lido: $1"
+  },
+  "checkin_mail": {
+    "message": "Quer que eu organize seu e-mail? $1 não lidos."
+  },
+  "checkin_mailPlain": {
+    "message": "Quer que eu organize seu e-mail?"
+  },
+  "checkin_retry": {
+    "message": "$1 tarefas falharam: $2. Quer que eu tente de novo?"
+  },
+  "checkin_body": {
+    "message": "Aprove e eu começo agora, onde você pode ver. Recusar significa hoje não: só ofereço de novo amanhã. Nada é enviado sem o seu clique."
+  },
+  "rounds_failed_title": {
+    "message": "A ronda de $1 das $2 não rodou"
+  },
+  "rounds_failed_cut": {
+    "message": "Foi interrompida antes de terminar: o navegador ou a extensão parou. Roda de novo no próximo horário."
+  },
+  "checkin_failed": {
+    "message": "Não consegui começar o que você aprovou"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Notificações do Slack hoje, pelo menos: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "o produto não indica nenhum canal do Slack com o id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "nenhum conector do Slack está ativo neste espaço de trabalho."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "o conector do Slack precisa que você entre de novo."
+  },
+  "rounds_slack_asks_first": {
+    "message": "a ferramenta do Slack que lê um canal pede permissão antes de rodar. Deixe-a rodar sem perguntar em Conexões."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "o conector do Slack não tem ferramenta que leia um canal por um dia."
+  },
+  "rounds_slack_failed": {
+    "message": "não foi possível ler o Slack."
   }
 }

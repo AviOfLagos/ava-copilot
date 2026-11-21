@@ -10625,5 +10625,155 @@
   },
   "growth_reason_no_collector": {
     "message": "Nothing reads this source yet."
+  },
+  "rounds_settings_title": {
+    "message": "Rounds and check-ins"
+  },
+  "rounds_toggle": {
+    "message": "Ava does her rounds"
+  },
+  "rounds_toggle_hint": {
+    "message": "A few times a day Ava reads your products’ numbers, your mail and what is stuck, and leaves one short digest each in the Inbox. Nothing is sent, posted or changed."
+  },
+  "rounds_name_pulse": {
+    "message": "Product pulse"
+  },
+  "rounds_name_mail": {
+    "message": "Mail"
+  },
+  "rounds_name_stuck": {
+    "message": "Stuck work"
+  },
+  "rounds_runNow": {
+    "message": "Run now"
+  },
+  "rounds_runNow_named": {
+    "message": "Run $1 now"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 ran at $2"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 missed"
+  },
+  "rounds_offers": {
+    "message": "Offers of help today: $1 made, $2 left."
+  },
+  "rounds_offers_silenced": {
+    "message": "No more offers of help today: you said not today."
+  },
+  "rounds_pulse_title": {
+    "message": "Product pulse · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1: $2 today so far, $3 yesterday, usually $4 a day"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "not known yet"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1: no reading. $2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 is up: $2 $4, usually $3 a day"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 is down: $2 $4, usually $3 a day"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "yesterday"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "today so far"
+  },
+  "rounds_pulse_slack": {
+    "message": "Slack notifications today: $1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Slack notifications: not read. $1"
+  },
+  "rounds_metric_signups": {
+    "message": "Sign-ups"
+  },
+  "rounds_metric_waitlist": {
+    "message": "Waitlist"
+  },
+  "rounds_metric_access_requests": {
+    "message": "Access requests"
+  },
+  "rounds_metric_feedback": {
+    "message": "Feedback"
+  },
+  "rounds_stuck_title": {
+    "message": "Stuck work · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "Nothing is stuck and nothing waits on you."
+  },
+  "rounds_stuck_approval": {
+    "message": "waits for your click"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "needs a step from you"
+  },
+  "rounds_stuck_decision": {
+    "message": "waits for your decision"
+  },
+  "rounds_stuck_failed": {
+    "message": "failed"
+  },
+  "rounds_stuck_more": {
+    "message": "and $1 more"
+  },
+  "rounds_mail_title": {
+    "message": "Mail round · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "Mail was not read: the Mail agent is not set up, or is paused. Turn it on in Agents to get a mail digest here."
+  },
+  "rounds_mail_failed": {
+    "message": "Mail was not read: $1"
+  },
+  "checkin_mail": {
+    "message": "Want me to sort your mail? $1 unread."
+  },
+  "checkin_mailPlain": {
+    "message": "Want me to sort your mail?"
+  },
+  "checkin_retry": {
+    "message": "$1 tasks failed: $2. Want me to try them again?"
+  },
+  "checkin_body": {
+    "message": "Approve and I start now, where you can watch. Decline means not today: I will not offer again until tomorrow. Nothing is sent without your click."
+  },
+  "rounds_failed_title": {
+    "message": "The $1 round at $2 did not run"
+  },
+  "rounds_failed_cut": {
+    "message": "It was cut off before it finished: the browser or the extension stopped. It runs again at its next time."
+  },
+  "checkin_failed": {
+    "message": "I could not start what you said yes to"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Slack notifications today, at least: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "the product names no Slack channel with its id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "no Slack connector is on for this workspace."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "the Slack connector needs you to sign in again."
+  },
+  "rounds_slack_asks_first": {
+    "message": "the Slack tool that reads a channel asks before it runs. Set it to run without asking in Connections."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "the Slack connector has no tool that reads one channel for one day."
+  },
+  "rounds_slack_failed": {
+    "message": "Slack could not be read."
   }
 }
