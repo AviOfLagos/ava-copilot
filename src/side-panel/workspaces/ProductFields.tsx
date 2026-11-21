@@ -221,6 +221,18 @@ export default function ProductFields({
             className={field}
           />
         </Row>
+        <Row label={t('product_api')}>
+          <input
+            value={value.agentApi?.baseUrl ?? ''}
+            placeholder={notSet}
+            onChange={event =>
+              set({
+                agentApi: event.target.value.trim() ? { kind: 'suture-agent-v1', baseUrl: event.target.value } : null,
+              })
+            }
+            className={field}
+          />
+        </Row>
         <Row label={t('product_slack')}>
           <textarea
             rows={2}

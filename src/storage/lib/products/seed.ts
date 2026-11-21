@@ -19,6 +19,13 @@ export const SUTURE_WORKSPACE: Omit<Workspace, 'createdAt'> = {
   accounts: {},
 };
 
+// Suture's agent API, on its admin console (AviOfLagos/suture, docs/API.md). The token is the owner's to put in
+// the vault; it is never in source.
+export const SUTURE_AGENT_API: NonNullable<ProductProfile['agentApi']> = {
+  kind: 'suture-agent-v1',
+  baseUrl: 'https://admin.trysuture.com/api/agent/v1',
+};
+
 export const SUTURE_PROFILE: Omit<ProductProfile, 'updatedAt'> = {
   workspaceId: SUTURE_WORKSPACE.id,
   name: 'Suture',
@@ -45,6 +52,7 @@ export const SUTURE_PROFILE: Omit<ProductProfile, 'updatedAt'> = {
   // The login that may use the console is the owner's to say
   superAdmin: { url: 'https://admin.trysuture.com', account: '' },
   slackChannels: [{ name: '#suture-notifications', id: 'C0CKJC0CT4M' }],
+  agentApi: SUTURE_AGENT_API,
   social: {},
   email: null,
   postalAddress: '',
@@ -57,3 +65,7 @@ export const SUTURE_PROFILE: Omit<ProductProfile, 'updatedAt'> = {
 
 // Seeds that have run are remembered by this name, so a profile the owner deleted stays deleted
 export const SUTURE_SEED = 'suture-2026-11';
+
+// A later step for an install that got the profile before it carried the API address: the address is added once,
+// and only to a profile that still has none
+export const SUTURE_API_SEED = 'suture-agent-api-2026-11';

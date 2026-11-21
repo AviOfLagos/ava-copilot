@@ -13,6 +13,7 @@ import type { AccountPlatform, ProductProfile, Workspace } from '@extension/stor
 import { cn } from '@extension/ui';
 import { Button } from '../components/ui/button';
 import ProductFields from './ProductFields';
+import ProductNumbers from './ProductNumbers';
 import { useDefaultWorkspaceId, useWorkspaces } from './WorkspacePicker';
 
 const PLATFORM_LABELS: Record<AccountPlatform, { label: string; placeholder: string }> = {
@@ -127,7 +128,11 @@ function Editor({
         ))}
       </fieldset>
       {product ? (
-        <ProductFields value={product} onChange={setProduct} />
+        <>
+          <ProductFields value={product} onChange={setProduct} />
+          {/* Numbers are read for a product that is saved: until then there is nothing to connect */}
+          {hadProduct && <ProductNumbers workspaceId={initial.id} hasApi={!!product.agentApi?.baseUrl.trim()} />}
+        </>
       ) : !productRead ? null : (
         <button
           type="button"
@@ -146,6 +151,10 @@ function Editor({
               onClick={async () => {
                 // The product first: a workspace gone with its product left behind would leave an orphan
                 await productStore.remove(draft.id);
+                // Its numbers and its API token are the background's to remove
+                void chrome.runtime
+                  .sendMessage({ type: 'growth_forget', workspaceId: draft.id, requestId: crypto.randomUUID() })
+                  .catch(() => undefined);
                 await workspaceStore.remove(draft.id);
                 onDone();
               }}>
