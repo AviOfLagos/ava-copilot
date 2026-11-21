@@ -11,6 +11,7 @@ describe('WhatsApp text', () => {
     const text = toWhatsAppText('**Orchid**\nOpen tasks:\n- [ ] Send the login (Ada) ^tsk_abcdefghij');
     expect(text).not.toContain('tsk_');
     expect(text).toContain('Send the login (Ada)');
+    expect(toWhatsAppText('Send it ^`tsk_abcdefghij` and ^**tsk_abcdefghij**')).not.toMatch(/\^tsk_/);
   });
 
   it('turns markdown into WhatsApp’s own marks and drops tables and code fences', () => {

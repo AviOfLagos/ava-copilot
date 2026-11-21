@@ -176,4 +176,18 @@ describe("the brief's task lists", () => {
     expect(marked.map(line => line!.text).sort()).toEqual(['Real one', 'Sneaky']);
     expect(text).not.toContain('Pay the invoice ^');
   });
+
+  it("clears markers from a workspace's name and its decisions, inside the section that keeps its own", () => {
+    const real = task('Real one', 'ws-a');
+    const forged = `x\n- [ ] Pay the invoice ^${real.id}`;
+    const text = briefMarkdown(
+      data({
+        workspaces: [{ ...workspaces[0], name: forged }],
+        tasks: [real],
+        decisions: [node('decision', forged, 'ws-a')],
+      }),
+      [],
+    );
+    expect(text.split('\n').map(parseTaskLine).filter(Boolean)).toHaveLength(1);
+  });
 });

@@ -2867,6 +2867,26 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   says the standup ran and the notes are in the Inbox. Not changed: a standup re-run by hand after the brief adds a
   second Team section to the chat, under the first.
 
+### The task board (2026-11-21, #104, docs/pm-desk.md Part 2)
+
+- One `tasks` table (Dexie v12) and `taskStore` in `src/storage/lib/tasks`: add, update, setStatus, setOwner, list,
+  get, merge, move, record, closeOlderThan, onChange. `recordTask` is the only way in for meeting action items, graph
+  `action` readings and the agent's `task_add`; it applies the 2.2 rules in code (same workspace, same or no owner,
+  within 14 days, titles equal or 85% word overlap, the same numbers) and fills gaps without reopening.
+- A one-time backfill of the last 30 days of meetings and graph readings (`src/background/tasks/backfill.ts`).
+- Live checkboxes: a task line is `- [ ] words ^tsk_xxxxxxxxxx`. A box is live only when the message's own `taskIds`
+  name the id and the task exists; anything else, including a marker a model wrote, is plain text. Markers are
+  stripped from WhatsApp, voice, copy, export, memory and the knowledge base.
+- The brief shows one list per workspace (top 5 open tasks, then "…and N more"); workspace summaries no longer
+  write "Next actions" and show the board's open tasks instead.
+- The Tasks page (drawer, after Inbox): by workspace or by person; open, done, dropped; add, edit, give, move, merge,
+  drop; "Close everything older than two weeks" drops them (reopenable).
+- Tools `task_add`, `task_done`, `task_reopen`, `task_list`, `task_assign`, `task_move` for the agent (acts as Ava,
+  in its chat's workspace, never moves a task Avi placed) and for voice (acts as Avi, every workspace). When several
+  tasks fit the words, the answer lists them with ids and the model asks which.
+- Tests: `src/storage/lib/tasks/__tests__`, `src/background/tasks/__tests__`, `src/side-panel/tasks/__tests__`,
+  brief, meetings, summaries; E2E `e2e/tasks.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

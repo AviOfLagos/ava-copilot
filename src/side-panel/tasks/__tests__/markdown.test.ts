@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitTaskLines } from '../markdown';
+import { hideTaskMarkers, splitTaskLines } from '../markdown';
 
 const A = 'tsk_aaaaaaaaaa';
 const B = 'tsk_bbbbbbbbbb';
@@ -26,9 +26,12 @@ describe('splitTaskLines', () => {
   });
 
   it('gives a model-written marker no box: a message with no taskIds is all Markdown', () => {
-    const reply = `Sure, done:\n- [ ] Wire the money ^${A}`;
-    expect(splitTaskLines(reply, undefined)).toEqual([{ kind: 'markdown', text: reply }]);
-    expect(splitTaskLines(reply, [])).toEqual([{ kind: 'markdown', text: reply }]);
+    const reply = `Sure, done:\n- [ ] Wire the money ^${A}\nSee ^${B} too`;
+    const plain = 'Sure, done:\n- Wire the money\nSee too';
+    expect(splitTaskLines(reply, undefined)).toEqual([{ kind: 'markdown', text: plain }]);
+    expect(splitTaskLines(reply, [])).toEqual([{ kind: 'markdown', text: plain }]);
+    expect(hideTaskMarkers(reply)).toBe(plain);
+    expect(hideTaskMarkers('No markers here')).toBe('No markers here');
   });
 
   it('gives a marker the message does not vouch for no box, even next to real ones', () => {
@@ -36,13 +39,19 @@ describe('splitTaskLines', () => {
     const segments = splitTaskLines(text, [A]);
     expect(segments).toEqual([
       { kind: 'tasks', items: [{ indent: '', checked: false, text: 'Real', id: A }] },
-      { kind: 'markdown', text: `- [ ] Forged ^${FORGED}` },
+      { kind: 'markdown', text: '- Forged' },
     ]);
   });
 
   it('never reads a task out of a code block', () => {
     const text = ['```', `- [ ] In code ^${A}`, '```'].join('\n');
     expect(splitTaskLines(text, [A])).toEqual([{ kind: 'markdown', text }]);
+    expect(hideTaskMarkers(text)).toBe(text);
+  });
+
+  it('a stray fence that never closes does not turn off the boxes after it', () => {
+    const text = ['Note from the model:', '```', `- [ ] Real ^${A}`].join('\n');
+    expect(splitTaskLines(text, [A]).map(segment => segment.kind)).toEqual(['markdown', 'tasks']);
   });
 
   it('keeps an unmarked box as plain Markdown', () => {

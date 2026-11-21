@@ -8,7 +8,7 @@ import { memo } from 'react';
 import { Streamdown } from 'streamdown';
 import { cn } from '@extension/ui';
 import { TaskCheckbox } from '../../tasks/TaskCheckbox';
-import { splitTaskLines } from '../../tasks/markdown';
+import { hideTaskMarkers, splitTaskLines } from '../../tasks/markdown';
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: 'user' | 'assistant' | 'system';
@@ -80,7 +80,8 @@ const MARKDOWN_CLASS = [
 
 /**
  * Markdown from the model, sanitised, with links that open in a new tab. A task line the message's own code
- * vouched for (`taskIds`) is drawn as a live checkbox from the task board, without its marker.
+ * vouched for (`taskIds`) is drawn as a live checkbox from the task board, without its marker; any other marker is
+ * hidden and its line stays plain Markdown.
  */
 export const MessageResponse = memo(
   ({ className, taskIds, children, ...props }: MessageResponseProps) => {
@@ -103,7 +104,7 @@ export const MessageResponse = memo(
           disallowedElements={BLOCKED_ELEMENTS}
           skipHtml
           urlTransform={safeUrl}>
-          {children}
+          {typeof children === 'string' ? hideTaskMarkers(children) : children}
         </Streamdown>
       );
     }

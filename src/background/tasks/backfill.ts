@@ -1,6 +1,6 @@
 import { db as defaultDb, createTaskStore } from '@extension/storage';
 import type { AviCopilotDb, MeetingRecord, TaskCandidate, TaskStore } from '@extension/storage';
-import { graphCandidate, meetingCandidates } from './sources';
+import { GRAPH_TASK_SOURCES, graphCandidate, meetingCandidates } from './sources';
 
 const DAY = 24 * 60 * 60 * 1000;
 // How far back the one-time backfill reads
@@ -39,7 +39,7 @@ export async function backfillTasks(
   );
   for (const node of actions) {
     const item = await db.kbItems.get(node.sourceItemIds[0] ?? '');
-    if (!item) continue;
+    if (!item || !GRAPH_TASK_SOURCES.has(item.sourceType)) continue;
     const edge = (await db.graphEdges.where('from').equals(node.id).toArray()).find(
       candidate => candidate.kind === 'assigned_to',
     );

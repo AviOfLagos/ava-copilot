@@ -42,6 +42,8 @@ export function toSpeakableText(markdown: string): string {
   text = text.replace(/\|/g, ', ');
   // Emoji and pictographs
   text = text.replace(EMOJI, '').replace(VARIATION_SELECTOR, '');
+  // Again, last: taking out marks above can join the pieces of a marker ("^`tsk_…`")
+  text = stripTaskMarkers(text);
 
   // Collapse what all that leaves behind
   text = text

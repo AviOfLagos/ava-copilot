@@ -65,6 +65,11 @@ describe('the same title', () => {
   it('reads numbers from titles', () => {
     expect([...numbersOf('PR 12 and v1.2 at 3pm')]).toEqual(['12', '1.2', '3']);
   });
+
+  it('reads "1,000" as 1000 and "2,5" as 2.5', () => {
+    expect([...numbersOf('Raise 1,000 by 2,5 points')]).toEqual(['1000', '2.5']);
+    expect([...numbersOf('Raise 1000')]).toEqual([...numbersOf('Raise 1,000')]);
+  });
 });
 
 describe('the same task', () => {

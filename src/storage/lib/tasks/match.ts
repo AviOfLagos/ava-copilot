@@ -54,7 +54,10 @@ export function overlap(a: ReadonlySet<string>, b: ReadonlySet<string>): number 
 
 /** Every number in a title ("PR 12", "v1.2", "3pm" give 12, 1.2, 3). */
 export function numbersOf(title: string): Set<string> {
-  return new Set((title.match(/\d+(?:[.,]\d+)*/g) ?? []).map(number => number.replace(/,/g, '.')));
+  // "1,000" is 1000; any other comma is a decimal point ("2,5")
+  return new Set(
+    (title.match(/\d+(?:[.,]\d+)*/g) ?? []).map(number => number.replace(/,(?=\d{3}(?!\d))/g, '').replace(/,/g, '.')),
+  );
 }
 
 /** Whether two titles name the same thing to do. */
@@ -91,6 +94,8 @@ export function sameOwner(
  * side without one; the mention is within 14 days of the task's last change; and the titles match.
  */
 export function isSameTask(task: Task, candidate: TaskCandidate, at: number): boolean {
+  // A closed task takes only mentions from before it was closed: said again afterwards, it is to be done again
+  if (task.status !== 'open' && at > (task.doneAt ?? task.updatedAt)) return false;
   return (
     (task.workspaceId ?? null) === (candidate.workspaceId ?? null) &&
     sameOwner(task, candidate) &&
@@ -100,8 +105,8 @@ export function isSameTask(task: Task, candidate: TaskCandidate, at: number): bo
 }
 
 /**
- * The task a mention joins, if any: an open one first, then the latest. A closed one still takes the mention, so
- * a task said again after it was ticked does not come back as a second one, and it stays closed.
+ * The task a mention joins, if any: an open one first, then the latest. A closed one takes only a mention from
+ * before it was closed (a backfill, a late note), and stays closed; one said after it was ticked is a new task.
  */
 export function findSameTask(tasks: Task[], candidate: TaskCandidate, at: number): Task | undefined {
   return tasks

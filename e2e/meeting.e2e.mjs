@@ -168,7 +168,8 @@ test('notes record the tab, transcribe live, summarize, and end in a note in its
   await click('Stop');
   await waitForText('Done ·');
   await waitForText('Stage 2 deadline is Friday');
-  assert.match(await panelText(), /Ada: Draft the launch post \(due Thursday\)/);
+  // On the task board now: a live box with the owner and the date worked out from "Thursday"
+  assert.match(await panelText(), /Draft the launch post \(Ada · due \d{4}-\d{2}-\d{2}\)/);
   assert.equal(await worker.evaluate(id => chrome.action.getBadgeText({ tabId: id }), tabId), '');
 
   // Every chunk was 16 kHz WAV, every chunk was transcribed, and no audio was kept

@@ -31,9 +31,12 @@ describe('a due date from the words used', () => {
     expect(dueFromText(words, said)).toBe(expected);
   });
 
-  it.each([['soon'], ['ASAP'], [''], ['Feb 30'], ['when Bo is back']])('"%s" gives no date', words => {
-    expect(dueFromText(words, WED)).toBeUndefined();
-  });
+  it.each([['soon'], ['ASAP'], [''], ['Feb 30'], ['when Bo is back'], ['Janet 5'], ['3 decks'], ['by 4 marchers']])(
+    '"%s" gives no date',
+    words => {
+      expect(dueFromText(words, WED)).toBeUndefined();
+    },
+  );
 
   it('writes local days', () => {
     expect(isoDay(new Date(2026, 0, 5, 23, 30).getTime())).toBe('2026-01-05');
