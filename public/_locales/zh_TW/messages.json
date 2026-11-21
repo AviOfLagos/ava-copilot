@@ -11310,7 +11310,7 @@
     "message": "沒有放棄的任務。"
   },
   "tasks_old_banner": {
-    "message": "有 $COUNT$ 個未完成的任務已兩週未被提及。",
+    "message": "兩週未被提及的未完成任務：$COUNT$",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -11322,7 +11322,7 @@
     "message": "關閉它們"
   },
   "tasks_old_confirm": {
-    "message": "放棄 $COUNT$ 個超過兩週的任務？你可以在「已放棄」中重新開啟。",
+    "message": "放棄超過兩週的任務（$COUNT$ 個）？你可以在「已放棄」中重新開啟。",
     "placeholders": {
       "count": {
         "content": "$1",

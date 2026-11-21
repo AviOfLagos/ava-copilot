@@ -11277,7 +11277,7 @@
     "message": "Descartar"
   },
   "tasks_seenIn": {
-    "message": "Dita em $COUNT$ lugares",
+    "message": "Mencionada em $COUNT$ lugares",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -11310,7 +11310,7 @@
     "message": "Nada descartado."
   },
   "tasks_old_banner": {
-    "message": "$COUNT$ tarefas abertas não aparecem há duas semanas.",
+    "message": "Tarefas abertas sem menção há duas semanas: $COUNT$",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -11322,7 +11322,7 @@
     "message": "Fechar"
   },
   "tasks_old_confirm": {
-    "message": "Descartar $COUNT$ tarefas com mais de duas semanas? Você pode reabrir qualquer uma em Descartadas.",
+    "message": "Descartar as tarefas com mais de duas semanas ($COUNT$)? Você pode reabrir qualquer uma em Descartadas.",
     "placeholders": {
       "count": {
         "content": "$1",

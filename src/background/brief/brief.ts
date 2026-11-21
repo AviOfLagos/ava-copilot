@@ -315,7 +315,7 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
     }
     if (group.decisions.length) parts.push(`Decided lately:\n${group.decisions.map(text => `- ${text}`).join('\n')}`);
     taskSections.add(sections.length);
-    sections.push(parts.join('\n'));
+    sections.push(parts.join('\n\n'));
   }
   // Which sources were read: with nothing above, this is what makes "nothing" true
   if (data.sourcesLine) sections.push(`_${plain(data.sourcesLine, 300)}_`);

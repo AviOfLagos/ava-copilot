@@ -11277,7 +11277,7 @@
     "message": "Drop"
   },
   "tasks_seenIn": {
-    "message": "Said in $COUNT$ places",
+    "message": "Mentioned in $COUNT$ places",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -11310,7 +11310,7 @@
     "message": "Nothing dropped."
   },
   "tasks_old_banner": {
-    "message": "$COUNT$ open tasks have not come up in two weeks.",
+    "message": "Open tasks not mentioned in two weeks: $COUNT$",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -11322,7 +11322,7 @@
     "message": "Close them"
   },
   "tasks_old_confirm": {
-    "message": "Drop $COUNT$ tasks older than two weeks? You can reopen any of them under Dropped.",
+    "message": "Drop the tasks older than two weeks ($COUNT$)? You can reopen any of them under Dropped.",
     "placeholders": {
       "count": {
         "content": "$1",
