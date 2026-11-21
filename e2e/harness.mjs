@@ -9,7 +9,7 @@ const dist = path.join(root, 'dist');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Extensions only load in Chrome for Testing or Chromium; branded Chrome ignores --load-extension
-function findChrome() {
+export function findChrome() {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const cache = path.join(os.homedir(), 'Library/Caches/ms-playwright');
   const builds = fs.existsSync(cache)

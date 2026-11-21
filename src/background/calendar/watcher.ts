@@ -3,6 +3,7 @@ import type { CalendarSettingsConfig, CalendarSourceName, UpcomingEvent } from '
 import { companionClient } from '../companion/client';
 import { brainSettingsStore } from '../companion/state';
 import { createLogger } from '../log';
+import { learnFromCalendar } from '../people/calendar';
 import type { CalendarEvent } from './ics';
 import { icsSource, macSource, planSources, readFromSources } from './sources';
 import type { CalendarSource } from './sources';
@@ -42,7 +43,7 @@ export interface CalendarReading {
 }
 
 const toStored = (events: CalendarEvent[]): UpcomingEvent[] =>
-  events.map(({ id, title, start, end, joinUrl, allDay, location }) => ({
+  events.map(({ id, title, start, end, joinUrl, allDay, location, attendees, organizer }) => ({
     id,
     title,
     start,
@@ -50,6 +51,8 @@ const toStored = (events: CalendarEvent[]): UpcomingEvent[] =>
     joinUrl,
     allDay,
     location,
+    ...(attendees?.length ? { attendees } : {}),
+    ...(organizer ? { organizer } : {}),
   }));
 
 export interface Reminder {
@@ -140,6 +143,8 @@ export class CalendarWatcher {
     }
     this.events = read.events;
     this.source = read.source;
+    // Invitees' names and addresses are learned (on this computer only); a failure never stops the calendar
+    void learnFromCalendar(read.events).catch(error => logger.warning('Could not learn invitees', error));
     this.readAt = now;
     this.okAt = now;
     await upcomingEventsStore.set({

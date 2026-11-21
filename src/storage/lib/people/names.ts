@@ -7,7 +7,8 @@ import type { HandleKind, PersonHandle } from './types';
 const MAX_NAME = 120;
 
 // What Meet and other tools add to a display name and is not part of it
-const DISPLAY_SUFFIXES = /\s*[([](you|presenting|host|co-host|guest|external|organizer|organiser|me)[)\]]\s*$/i;
+const DISPLAY_SUFFIXES =
+  /\s*[([](you|presenting|presentation|host|co-host|meeting host|guest|external|organizer|organiser|me)[)\]]\s*$/i;
 
 /** A display name as shown, tidied: spaces collapsed, quotes and tool suffixes such as "(You)" dropped. */
 export function cleanName(text: string | null | undefined): string {

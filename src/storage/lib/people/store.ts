@@ -285,8 +285,14 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
   ): Promise<ObserveResult> {
     const workspaceId = input.workspaceId ?? null;
     const key = nameKey(text);
-    let candidate = (hasAny(ids) ? await candidateByIdentifier(ids, workspaceId) : undefined) ?? byKey;
+    const linked = hasAny(ids) ? await candidateByIdentifier(ids, workspaceId) : undefined;
+    let candidate = linked ?? byKey;
     if (candidate?.status === 'not_person') return { kind: 'ignored' };
+    if (linked && byKey && byKey.id !== linked.id && ['watching', 'ask', 'asked'].includes(byKey.status)) {
+      // The address shows the name's own question is about the same someone: one question, not two
+      candidate = foldCandidate(linked, byKey);
+      await db.peopleNames.delete(byKey.id);
+    }
     if (candidate?.status === 'settled') {
       // Its person was removed or no longer matches: it is unsettled again
       candidate = { ...candidate, status: 'watching', personId: null, askedOn: null };
@@ -344,7 +350,7 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         : [...next.sightings, sighting].slice(-MAX_SIGHTINGS),
       count: repeat ? next.count : next.count + 1,
       taskIds,
-      tasks: taskIds.length > next.taskIds.length ? next.tasks + 1 : next.tasks,
+      tasks: next.tasks + (taskIds.length > next.taskIds.length ? 1 : 0) + (repeat ? 0 : Math.max(0, input.tasks ?? 0)),
       meetingIds: input.meetingId ? addUnique(next.meetingIds, input.meetingId) : next.meetingIds,
       suggestedPersonId: next.suggestedPersonId ?? match.suggested?.id ?? null,
       candidatePersonIds: match.ambiguous.length
@@ -358,6 +364,35 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
     }
     await db.peopleNames.put(next);
     return { kind: 'candidate', candidateId: next.id, asking: next.status === 'ask' || next.status === 'asked' };
+  }
+
+  /** `from` folded into `into`: its spellings, sightings, tasks and calls. */
+  function foldCandidate(into: NameCandidate, from: NameCandidate): NameCandidate {
+    const texts = [...into.otherTexts];
+    for (const spelling of [{ text: from.text, workspaceId: from.workspaceId }, ...from.otherTexts]) {
+      const key = nameKey(spelling.text);
+      if (key === nameKey(into.text) && spelling.workspaceId === into.workspaceId) continue;
+      if (!texts.some(other => nameKey(other.text) === key && other.workspaceId === spelling.workspaceId)) {
+        texts.push(spelling);
+      }
+    }
+    const refs = new Set(into.sightings.map(seen => `${seen.source}|${seen.ref ?? seen.at}`));
+    const extra = from.sightings.filter(seen => !refs.has(`${seen.source}|${seen.ref ?? seen.at}`));
+    const statusRank = { watching: 0, ask: 1, asked: 2, settled: 3, not_person: 4 } as const;
+    return {
+      ...into,
+      otherTexts: texts.slice(0, 20),
+      sightings: [...into.sightings, ...extra].sort((a, b) => a.at - b.at).slice(-MAX_SIGHTINGS),
+      count: into.count + extra.length,
+      taskIds: from.taskIds.reduce(addUnique, into.taskIds),
+      tasks: into.tasks + from.tasks,
+      meetingIds: from.meetingIds.reduce(addUnique, into.meetingIds),
+      suggestedPersonId: into.suggestedPersonId ?? from.suggestedPersonId,
+      status: statusRank[from.status] > statusRank[into.status] ? from.status : into.status,
+      askedOn: into.askedOn ?? from.askedOn,
+      firstAt: Math.min(into.firstAt, from.firstAt),
+      lastAt: Math.max(into.lastAt, from.lastAt),
+    };
   }
 
   const store = {
@@ -383,7 +418,13 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         let ambiguous: Person[] = [];
         if (known.length === 1) {
           await recordOnPerson(known[0], 'identifier', input, text, ids, now);
-          return { kind: 'person', personId: known[0].id, via: 'identifier', added: false } as const;
+          // A question about this name is answered by the address: settled, and its waiting tasks handed back
+          let taskIds: string[] = [];
+          if (byKey && ['watching', 'ask', 'asked'].includes(byKey.status)) {
+            taskIds = byKey.taskIds;
+            await db.peopleNames.put({ ...byKey, status: 'settled', personId: known[0].id, lastAt: now });
+          }
+          return { kind: 'person', personId: known[0].id, via: 'identifier', added: false, taskIds } as const;
         }
         if (known.length > 1) ambiguous = known;
         else if (key) {

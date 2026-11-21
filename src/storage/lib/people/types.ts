@@ -137,6 +137,8 @@ export interface ObserveInput {
   ref?: string;
   // A task is attached to this name: it is asked about at once
   taskId?: string;
+  // Tasks given to this name that have no id yet (a meeting note's action items)
+  tasks?: number;
   // Seen in this call
   meetingId?: string;
   // The owner's own word, or code that corroborated the link (a calendar attendee who is a roster name on the
@@ -145,7 +147,8 @@ export interface ObserveInput {
 }
 
 export type ObserveResult =
-  | { kind: 'person'; personId: string; via: ResolveVia; added: boolean }
+  // taskIds: tasks that waited on this name and are now this person's
+  | { kind: 'person'; personId: string; via: ResolveVia; added: boolean; taskIds?: string[] }
   | { kind: 'candidate'; candidateId: string; asking: boolean }
   | { kind: 'ignored' }
   | { kind: 'skipped' };
