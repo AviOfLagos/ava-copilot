@@ -68,10 +68,13 @@ export function createPeople(store: PeopleStore = peopleStore) {
     /** Records that a name was seen; links the task when it names a known person. */
     async observe(input: ObserveInput): Promise<ObserveResult> {
       const result = await store.observe(input);
-      if (result.kind === 'person' && input.taskId && peopleHooks.linkTaskOwner) {
-        await peopleHooks
-          .linkTaskOwner(input.taskId, result.personId)
-          .catch(error => logger.warning('Could not link a task to its owner', error));
+      if (result.kind === 'person' && peopleHooks.linkTaskOwner) {
+        const taskIds = [...new Set([...(input.taskId ? [input.taskId] : []), ...(result.taskIds ?? [])])];
+        for (const taskId of taskIds) {
+          await peopleHooks
+            .linkTaskOwner(taskId, result.personId)
+            .catch(error => logger.warning('Could not link a task to its owner', error));
+        }
       }
       return result;
     },
@@ -99,6 +102,19 @@ export function createPeople(store: PeopleStore = peopleStore) {
       }
       emit({ kind: 'settled', candidateId, personId: result.personId });
       return result;
+    },
+
+    /**
+     * "Yes, that is the same someone as that other name on the card": the other name is settled first (as a new
+     * person named as it was seen, unless it already was), then this one as the same person.
+     */
+    async answerLike(candidateId: string, otherCandidateId: string) {
+      const other = await store.candidate(otherCandidateId);
+      if (!other) throw new Error('That question is no longer open.');
+      let personId = other.status === 'settled' ? other.personId : null;
+      if (!personId) personId = (await api.answer(otherCandidateId, { kind: 'new', name: other.text })).personId;
+      if (!personId) throw new Error('That name was marked as not a person.');
+      return api.answer(candidateId, { kind: 'same', personId });
     },
 
     async create(fields: Parameters<PeopleStore['create']>[0]) {

@@ -112,6 +112,8 @@ export interface NameCandidate {
   suggestedPersonId: string | null;
   // When the name matched several people
   candidatePersonIds: string[];
+  // Another name on the same card that is likely the same someone ("Ada" given tasks, "Adaeze O." on the call)
+  likeCandidateId?: string | null;
   // watching: seen, not asked yet · ask: ready for a card · asked: on a card · settled: answered with a
   // person · not_person: the owner said it is not a person; never asked again
   status: 'watching' | 'ask' | 'asked' | 'settled' | 'not_person';
@@ -137,15 +139,15 @@ export interface ObserveInput {
   ref?: string;
   // A task is attached to this name: it is asked about at once
   taskId?: string;
+  // Tasks given to this name that have no id yet (a meeting note's action items)
+  tasks?: number;
   // Seen in this call
   meetingId?: string;
-  // The owner's own word, or code that corroborated the link (a calendar attendee who is a roster name on the
-  // same call): a new email, phone or handle is added to the person the name resolves to
-  trusted?: boolean;
 }
 
 export type ObserveResult =
-  | { kind: 'person'; personId: string; via: ResolveVia; added: boolean }
+  // taskIds: tasks that waited on this name and are now this person's
+  | { kind: 'person'; personId: string; via: ResolveVia; added: boolean; taskIds?: string[] }
   | { kind: 'candidate'; candidateId: string; asking: boolean }
   | { kind: 'ignored' }
   | { kind: 'skipped' };

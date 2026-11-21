@@ -11332,5 +11332,206 @@
   },
   "tasks_old_yes": {
     "message": "Fechar tudo com mais de duas semanas"
+  },
+  "people_title": {
+    "message": "Pessoas"
+  },
+  "people_intro": {
+    "message": "Todos que a Ava conhece, aprendidos das suas chamadas, convites, caixa de entrada e conversas. Tudo fica neste computador."
+  },
+  "people_tab_people": {
+    "message": "Pessoas"
+  },
+  "people_tab_sort": {
+    "message": "Para organizar ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "people_workspace_all": {
+    "message": "Todos os espaços"
+  },
+  "people_everywhere": {
+    "message": "em todo lugar"
+  },
+  "people_empty": {
+    "message": "Ainda não há pessoas. A Ava aprende com suas chamadas, convites e caixa de entrada, e pergunta quando não tem certeza."
+  },
+  "people_sort_empty": {
+    "message": "Nada para organizar. A Ava pergunta quando encontra um nome de que não tem certeza."
+  },
+  "people_add": {
+    "message": "Adicionar pessoa"
+  },
+  "people_add_placeholder": {
+    "message": "Nome da pessoa"
+  },
+  "people_save": {
+    "message": "Salvar"
+  },
+  "people_cancel": {
+    "message": "Cancelar"
+  },
+  "people_name_label": {
+    "message": "Nome"
+  },
+  "people_about_label": {
+    "message": "Quem é"
+  },
+  "people_names_a11y": {
+    "message": "Nomes e endereços de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_alias_add": {
+    "message": "Adicionar nome"
+  },
+  "people_alias_placeholder": {
+    "message": "Outro nome que a pessoa usa"
+  },
+  "people_alias_workspace": {
+    "message": "Onde este nome é usado"
+  },
+  "people_alias_remove_a11y": {
+    "message": "Remover o nome $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "people_merge_label": {
+    "message": "Mesma pessoa que…"
+  },
+  "people_merge_action": {
+    "message": "Juntar"
+  },
+  "people_remove": {
+    "message": "Remover"
+  },
+  "people_remove_confirm": {
+    "message": "Remover de vez"
+  },
+  "people_lastSeen": {
+    "message": "Visto $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "people_q_yes": {
+    "message": "Sim, $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_like": {
+    "message": "O mesmo que “$NAME$”",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_someoneElse": {
+    "message": "Outra pessoa"
+  },
+  "people_q_pick": {
+    "message": "Escolha uma pessoa"
+  },
+  "people_q_new": {
+    "message": "Pessoa nova"
+  },
+  "people_q_notPerson": {
+    "message": "Não é uma pessoa"
+  },
+  "people_q_me": {
+    "message": "Sou eu"
+  },
+  "people_q_saved": {
+    "message": "salvo como $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_ignored": {
+    "message": "não é uma pessoa: não será perguntado de novo"
+  },
+  "people_card_title": {
+    "message": "Quem é quem"
+  },
+  "people_card_done": {
+    "message": "Tudo organizado"
+  },
+  "people_card_open": {
+    "message": "Abrir Pessoas"
+  },
+  "people_card_meetingTitle": {
+    "message": "Quem é quem em “$TITLE$”",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "people_card_dailyTitle": {
+    "message": "Quem é quem: $COUNT$ nomes para organizar",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "people_from_meet": {
+    "message": "Meet"
+  },
+  "people_from_spoken": {
+    "message": "dito numa chamada"
+  },
+  "people_from_calendar": {
+    "message": "Agenda"
+  },
+  "people_from_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "people_from_slack": {
+    "message": "Slack"
+  },
+  "people_from_gmail": {
+    "message": "Gmail"
+  },
+  "people_from_github": {
+    "message": "GitHub"
+  },
+  "people_from_chat": {
+    "message": "uma conversa"
+  },
+  "people_from_note": {
+    "message": "uma nota"
+  },
+  "people_from_task": {
+    "message": "uma tarefa"
+  },
+  "people_from_avi": {
+    "message": "você"
   }
 }

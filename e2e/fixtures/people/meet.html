@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- A Google Meet call page, reduced to what the roster reader looks at. Made-up people only. -->
+<html lang="en">
+  <head
+    ><meta charset="utf-8" /><title>Meet - abc-defg-hij</title></head
+  >
+  <body>
+    <main>
+      <div data-participant-id="spaces/x/devices/1" class="tile">
+        <img alt="" />
+        <div class="XEazBc"><span class="notranslate">Adaeze O.</span></div>
+      </div>
+      <div data-participant-id="spaces/x/devices/2" class="tile">
+        <div class="XEazBc"><span class="notranslate">dev.kunle</span></div>
+      </div>
+      <div data-participant-id="spaces/x/devices/3" data-self-name="Owner Person" class="tile">
+        <div class="XEazBc"><span class="notranslate">You</span></div>
+      </div>
+      <div data-participant-id="spaces/x/devices/1/presentation" class="tile">
+        <div class="XEazBc"><span class="notranslate">Adaeze O. (Presentation)</span></div>
+      </div>
+      <div role="region" aria-label="Captions">
+        <div class="nMcdL"><div class="NWpY1d">Adaeze O.</div><div class="ygicle">We ship on Friday.</div></div>
+      </div>
+      <button aria-label="People" id="people-button">People</button>
+      <button aria-label="Leave call"><i>call_end</i></button>
+    </main>
+    <aside id="panel" hidden>
+      <div role="list" aria-label="Participants">
+        <div role="listitem" aria-label="Adaeze O."><span class="zWGUib">Adaeze O.</span><span>Meeting host</span></div>
+        <div role="listitem" aria-label="Owner Person (You)"><span class="zWGUib">Owner Person</span></div>
+        <div role="listitem" aria-label="dev.kunle"><span class="zWGUib">dev.kunle</span></div>
+        <div role="listitem" aria-label="Tolu Bello"><span class="zWGUib">Tolu Bello</span></div>
+      </div>
+    </aside>
+    <script>
+      // Any click on the page is counted: the roster reader must never make one
+      window.__clicks = 0;
+      document.addEventListener('click', () => (window.__clicks += 1), true);
+      document.getElementById('people-button').addEventListener('click', () => {
+        document.getElementById('panel').hidden = false;
+      });
+      // A hidden panel is not in the page for Meet: it is added when opened
+      const panel = document.getElementById('panel');
+      const list = panel.firstElementChild;
+      panel.removeChild(list);
+      window.__openPanel = () => panel.appendChild(list);
+    </script>
+  </body>
+</html>

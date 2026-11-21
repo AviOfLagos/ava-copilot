@@ -1,4 +1,5 @@
-import { Bot, Hash, Mail, MessageCircle, Settings2, Workflow } from 'lucide-react';
+import { Bot, Hash, Mail, MessageCircle, Settings2, Users, Workflow } from 'lucide-react';
+import { t } from '@extension/i18n';
 import type { LucideIcon } from 'lucide-react';
 import type { InboxItem } from '@extension/storage';
 
@@ -27,6 +28,7 @@ export function sourceLabel(source: string): string {
   if (source.startsWith('workflow:')) return 'Workflow';
   if (source.startsWith('agent:')) return 'Agent';
   if (source === 'system') return 'System';
+  if (source === 'people') return t('people_title');
   return source;
 }
 
@@ -36,6 +38,7 @@ export function sourceIcon(source: string): LucideIcon {
   if (source === 'gmail-web') return Mail;
   if (source.startsWith('workflow:')) return Workflow;
   if (source.startsWith('agent:')) return Bot;
+  if (source === 'people') return Users;
   return Settings2;
 }
 

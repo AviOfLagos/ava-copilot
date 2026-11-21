@@ -17,7 +17,19 @@ export interface CalendarEvent {
   location: string;
   // A meeting link found in the location or description (Meet, Zoom, Teams)
   joinUrl: string | null;
+  // Who was invited, and who sent it (docs/pm-desk.md 5.3): names and addresses as the invite gives them, which
+  // anyone can write. The Mac's Calendar does not give them yet (issue #32)
+  attendees?: CalendarPerson[];
+  organizer?: CalendarPerson | null;
 }
+
+export interface CalendarPerson {
+  name: string;
+  email: string | null;
+}
+
+// The most invitees kept per event
+const MAX_ATTENDEES = 50;
 
 interface Prop {
   name: string;
@@ -43,16 +55,63 @@ function unfold(text: string): string[] {
     .split('\n');
 }
 
+/** Splits at `separator` outside double quotes: a quoted name may hold a colon or a semicolon. */
+function splitOutsideQuotes(text: string, separator: string, limit = Infinity): string[] {
+  const parts: string[] = [];
+  let quoted = false;
+  let start = 0;
+  for (let i = 0; i < text.length && parts.length < limit - 1; i++) {
+    if (text[i] === '"') quoted = !quoted;
+    else if (text[i] === separator && !quoted) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
 function parseLine(line: string): Prop | null {
-  const colon = line.indexOf(':');
-  if (colon === -1) return null;
-  const [name, ...rest] = line.slice(0, colon).split(';');
+  const [head, value] = splitOutsideQuotes(line, ':', 2);
+  if (value === undefined) return null;
+  const [name, ...rest] = splitOutsideQuotes(head, ';');
   const params: Record<string, string> = {};
   for (const part of rest) {
     const eq = part.indexOf('=');
     if (eq !== -1) params[part.slice(0, eq).toUpperCase()] = part.slice(eq + 1).replace(/^"|"$/g, '');
   }
-  return { name: name.toUpperCase(), params, value: line.slice(colon + 1) };
+  return { name: name.toUpperCase(), params, value };
+}
+
+/**
+ * An ATTENDEE or ORGANIZER line as a person: the CN name and the mailto address. Rooms, resources and groups are
+ * not people, and neither is someone marked as not taking part.
+ */
+export function calendarPerson(prop: Prop): CalendarPerson | null {
+  const kind = (prop.params.CUTYPE ?? 'INDIVIDUAL').toUpperCase();
+  if (kind !== 'INDIVIDUAL' && kind !== 'UNKNOWN') return null;
+  if ((prop.params.ROLE ?? '').toUpperCase() === 'NON-PARTICIPANT') return null;
+  const address = /^mailto:(.+)$/i.exec(prop.value.trim())?.[1]?.trim().toLowerCase() ?? null;
+  const email = address && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) ? address : null;
+  const name = unescape(prop.params.CN ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+  if (!name && !email) return null;
+  // A CN that is only the address says nothing more
+  return { name: name && name.toLowerCase() !== email ? name : '', email };
+}
+
+function peopleOf(event: RawEvent): { attendees: CalendarPerson[]; organizer: CalendarPerson | null } {
+  const organizerProp = event.props.find(prop => prop.name === 'ORGANIZER');
+  const organizer = organizerProp ? calendarPerson(organizerProp) : null;
+  const attendees: CalendarPerson[] = [];
+  for (const prop of event.props) {
+    if (prop.name !== 'ATTENDEE' || attendees.length >= MAX_ATTENDEES) continue;
+    const person = calendarPerson(prop);
+    if (person && !attendees.some(other => person.email && other.email === person.email)) attendees.push(person);
+  }
+  return { attendees, organizer };
 }
 
 function unescape(value: string): string {
@@ -179,6 +238,7 @@ export function eventsBetween(ics: string, from: number, to: number): CalendarEv
     const text = (name: string) => unescape(event.props.find(prop => prop.name === name)?.value ?? '');
     const location = text('LOCATION');
     const joinUrl = joinLinkIn(`${location} ${text('DESCRIPTION')} ${text('URL')}`);
+    const { attendees, organizer } = peopleOf(event);
 
     const rule = event.props.find(prop => prop.name === 'RRULE')?.value;
     const isOverride = event.props.some(prop => prop.name === 'RECURRENCE-ID');
@@ -202,6 +262,8 @@ export function eventsBetween(ics: string, from: number, to: number): CalendarEv
         allDay: start.allDay,
         location,
         joinUrl,
+        attendees,
+        organizer,
       });
     }
   }

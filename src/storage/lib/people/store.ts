@@ -156,6 +156,27 @@ export function candidateSources(candidate: Pick<NameCandidate, 'sightings'>): P
   return [...new Set(candidate.sightings.map(sighting => sighting.source))];
 }
 
+/** Where a name seen in `workspaceId` is saved for a person: there, or in each of theirs when it has none. */
+function aliasWorkspaces(workspaceId: string | null, personWorkspaces: string[]): (string | null)[] {
+  if (workspaceId !== null) return [workspaceId];
+  return personWorkspaces.length ? personWorkspaces : [null];
+}
+
+/** True when the sighting's address, phone or handle differs from the one the question already holds. */
+function conflicts(candidate: Pick<NameCandidate, 'emails' | 'phones' | 'handles'>, ids: Identifiers): boolean {
+  const differs = (have: string[], seen: string[]) =>
+    have.length > 0 && seen.length > 0 && !seen.some(value => have.includes(value));
+  if (differs(candidate.emails, ids.emails) || differs(candidate.phones, ids.phones)) return true;
+  return ids.handles.some(
+    handle =>
+      candidate.handles.some(other => other.kind === handle.kind) &&
+      !candidate.handles.some(other => handleKey(other) === handleKey(handle)),
+  );
+}
+
+const firstIdentifier = (ids: Identifiers) =>
+  ids.emails[0] ?? ids.phones[0] ?? (ids.handles[0] ? handleKey(ids.handles[0]) : '');
+
 export function createPeopleStore(db: AviCopilotDb = defaultDb) {
   const tx = <T>(work: () => Promise<T>) => db.transaction('rw', db.people, db.peopleNames, work);
 
@@ -221,12 +242,6 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
     return null;
   }
 
-  /** Someone of that exact name in another workspace: offered as a likely match, never resolved to. */
-  async function elsewhere(key: string): Promise<Person | null> {
-    const named = await db.people.where('nameKey').equals(key).toArray();
-    return named.length === 1 ? named[0] : null;
-  }
-
   async function candidateByIdentifier(ids: Identifiers, workspaceId: string | null) {
     for (const email of ids.emails) {
       const found = await db.peopleNames.where('emails').equals(email).first();
@@ -262,14 +277,18 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
       lastSeenAt: now,
       updatedAt: now,
     };
-    // An address or handle is added only when the person was found by one, or on the owner's word
-    const strong = via === 'identifier' || (input.trusted === true && via !== 'first_name');
-    if (strong) next = addIdentifiers(next, ids);
-    if (via === 'identifier' && text && !hasAlias(next, text, workspaceId)) {
-      // The name used with a known address becomes an alias, unless it already means someone else here
-      const other = await resolve(text, { workspaceId });
-      if (other === null || ('person' in other && other.person.id === person.id)) {
-        next = addAliasTo(next, text, workspaceId, input.source);
+    // An address or handle is added only when the person was found by one; a name match never adds one
+    if (via === 'identifier') {
+      next = addIdentifiers(next, ids);
+      // The name used with a known address becomes an alias in the sighting's workspace, or, for a sighting with
+      // none (an inbox, an invite), in each of the person's workspaces: never "everywhere" for someone who has one.
+      // Not where it already means someone else.
+      for (const target of aliasWorkspaces(workspaceId, next.workspaceIds)) {
+        if (!text || hasAlias(next, text, target)) continue;
+        const other = await resolve(text, { workspaceId: target });
+        if (other === null || ('person' in other && other.person.id === person.id)) {
+          next = addAliasTo(next, text, target, input.source);
+        }
       }
     }
     await db.people.put(withKeys(next));
@@ -279,14 +298,38 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
     input: ObserveInput,
     text: string,
     ids: Identifiers,
-    match: { suggested: Person | null; ambiguous: Person[] },
+    offered: { suggested: Person | null; ambiguous: Person[] },
     byKey: NameCandidate | undefined,
     now: number,
   ): Promise<ObserveResult> {
     const workspaceId = input.workspaceId ?? null;
     const key = nameKey(text);
-    let candidate = (hasAny(ids) ? await candidateByIdentifier(ids, workspaceId) : undefined) ?? byKey;
+    let match = offered;
+    const linked = hasAny(ids) ? await candidateByIdentifier(ids, workspaceId) : undefined;
+    let candidate = linked ?? byKey;
     if (candidate?.status === 'not_person') return { kind: 'ignored' };
+    // A different address under a name already asked about, or under a name already settled, is someone (or
+    // something) else until the owner says otherwise: its own question, never pooled into the first one
+    let separate = false;
+    if (!linked && byKey && hasAny(ids)) {
+      const settledTo = byKey.status === 'settled' && byKey.personId ? await db.people.get(byKey.personId) : undefined;
+      if (conflicts(byKey, ids) || settledTo) {
+        candidate = undefined;
+        separate = true;
+        if (settledTo && !match.suggested) match = { ...match, suggested: settledTo };
+      }
+    }
+    if (
+      linked &&
+      byKey &&
+      byKey.id !== linked.id &&
+      ['watching', 'ask', 'asked'].includes(byKey.status) &&
+      !conflicts(byKey, linked)
+    ) {
+      // The address shows the name's own question is about the same someone: one question, not two
+      candidate = foldCandidate(linked, byKey);
+      await db.peopleNames.delete(byKey.id);
+    }
     if (candidate?.status === 'settled') {
       // Its person was removed or no longer matches: it is unsettled again
       candidate = { ...candidate, status: 'watching', personId: null, askedOn: null };
@@ -295,7 +338,7 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
     const fresh = !candidate;
     let next: NameCandidate = candidate ?? {
       id: newPeopleId('nam_'),
-      key: scopedKey(workspaceId, key),
+      key: separate ? `${scopedKey(workspaceId, key)}#${firstIdentifier(ids)}` : scopedKey(workspaceId, key),
       text,
       otherTexts: [],
       workspaceId,
@@ -344,7 +387,7 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         : [...next.sightings, sighting].slice(-MAX_SIGHTINGS),
       count: repeat ? next.count : next.count + 1,
       taskIds,
-      tasks: taskIds.length > next.taskIds.length ? next.tasks + 1 : next.tasks,
+      tasks: next.tasks + (taskIds.length > next.taskIds.length ? 1 : 0) + (repeat ? 0 : Math.max(0, input.tasks ?? 0)),
       meetingIds: input.meetingId ? addUnique(next.meetingIds, input.meetingId) : next.meetingIds,
       suggestedPersonId: next.suggestedPersonId ?? match.suggested?.id ?? null,
       candidatePersonIds: match.ambiguous.length
@@ -358,6 +401,35 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
     }
     await db.peopleNames.put(next);
     return { kind: 'candidate', candidateId: next.id, asking: next.status === 'ask' || next.status === 'asked' };
+  }
+
+  /** `from` folded into `into`: its spellings, sightings, tasks and calls. */
+  function foldCandidate(into: NameCandidate, from: NameCandidate): NameCandidate {
+    const texts = [...into.otherTexts];
+    for (const spelling of [{ text: from.text, workspaceId: from.workspaceId }, ...from.otherTexts]) {
+      const key = nameKey(spelling.text);
+      if (key === nameKey(into.text) && spelling.workspaceId === into.workspaceId) continue;
+      if (!texts.some(other => nameKey(other.text) === key && other.workspaceId === spelling.workspaceId)) {
+        texts.push(spelling);
+      }
+    }
+    const refs = new Set(into.sightings.map(seen => `${seen.source}|${seen.ref ?? seen.at}`));
+    const extra = from.sightings.filter(seen => !refs.has(`${seen.source}|${seen.ref ?? seen.at}`));
+    const statusRank = { watching: 0, ask: 1, asked: 2, settled: 3, not_person: 4 } as const;
+    return {
+      ...into,
+      otherTexts: texts.slice(0, 20),
+      sightings: [...into.sightings, ...extra].sort((a, b) => a.at - b.at).slice(-MAX_SIGHTINGS),
+      count: into.count + extra.length,
+      taskIds: from.taskIds.reduce(addUnique, into.taskIds),
+      tasks: into.tasks + from.tasks,
+      meetingIds: from.meetingIds.reduce(addUnique, into.meetingIds),
+      suggestedPersonId: into.suggestedPersonId ?? from.suggestedPersonId,
+      status: statusRank[from.status] > statusRank[into.status] ? from.status : into.status,
+      askedOn: into.askedOn ?? from.askedOn,
+      firstAt: Math.min(into.firstAt, from.firstAt),
+      lastAt: Math.max(into.lastAt, from.lastAt),
+    };
   }
 
   const store = {
@@ -383,14 +455,19 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         let ambiguous: Person[] = [];
         if (known.length === 1) {
           await recordOnPerson(known[0], 'identifier', input, text, ids, now);
+          // A question still open about this name is not settled by an address someone else could have written
+          // (a From line can be forged): the person is only offered, and its tasks wait for the owner's answer
+          if (byKey && ['watching', 'ask', 'asked'].includes(byKey.status) && !byKey.suggestedPersonId) {
+            await db.peopleNames.put({ ...byKey, suggestedPersonId: known[0].id, lastAt: now });
+          }
           return { kind: 'person', personId: known[0].id, via: 'identifier', added: false } as const;
         }
         if (known.length > 1) ambiguous = known;
         else if (key) {
           const found = await resolve(text, { workspaceId });
           if (found && 'person' in found) {
-            const trustedLink = input.trusted === true && found.via !== 'first_name';
-            if (!bringsNew(found.person, ids, workspaceId) || trustedLink) {
+            // Anyone can write a display name: a name brings no address to a person, only the owner's answer does
+            if (!bringsNew(found.person, ids, workspaceId)) {
               await recordOnPerson(found.person, found.via, input, text, ids, now);
               return { kind: 'person', personId: found.person.id, via: found.via, added: false } as const;
             }
@@ -398,9 +475,8 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
             suggested = found.person;
           } else if (found) {
             ambiguous = found.candidates;
-          } else {
-            suggested = await elsewhere(key);
           }
+          // Nobody here by that name: someone of that name in another workspace is not offered either
         }
         return upsertCandidate(input, text, ids, { suggested, ambiguous }, byKey, now);
       });
@@ -494,7 +570,12 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         const drop = await db.people.get(dropId);
         if (!keep || !drop) throw new Error('One of those people is no longer here.');
         let next: Person = { ...keep };
-        if (drop.nameKey !== keep.nameKey) next = addAliasTo(next, drop.name, null, 'avi');
+        // The dropped name keeps its reach: its own workspaces, or everywhere only if it had none
+        if (drop.nameKey !== keep.nameKey) {
+          for (const target of drop.workspaceIds.length ? drop.workspaceIds : [null]) {
+            next = addAliasTo(next, drop.name, target, 'avi');
+          }
+        }
         for (const alias of drop.aliases) next = addAliasTo(next, alias.text, alias.workspaceId, alias.from);
         let handles = next.handles;
         for (const handle of drop.handles) {
@@ -587,7 +668,13 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
           if (!person.nameKey) throw new Error('A person needs a name.');
         }
         const spellings = [{ text: candidate.text, workspaceId: candidate.workspaceId }, ...candidate.otherTexts];
-        for (const spelling of spellings) person = addAliasTo(person, spelling.text, spelling.workspaceId, 'avi');
+        // A name seen with no workspace (an inbox, an invite) is saved for the person's own workspaces
+        const own = [...person.workspaceIds];
+        for (const spelling of spellings) {
+          for (const target of aliasWorkspaces(spelling.workspaceId, own)) {
+            person = addAliasTo(person, spelling.text, target, 'avi');
+          }
+        }
         person = addIdentifiers(person, candidate);
         let seen = person.seen;
         for (const sighting of candidate.sightings) {
@@ -638,6 +725,37 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
             candidate.askedOn = cardId;
           }
         });
+    },
+
+    /**
+     * Puts the names ready to be asked on one card, in one transaction, so two cards made at once never share a
+     * name. A name spelt the same as one already on the card waits for the next. With `once`, a card that already
+     * has questions gets none.
+     */
+    async claim(
+      cardId: string,
+      options: { meetingId?: string; limit?: number; once?: boolean } = {},
+    ): Promise<NameCandidate[]> {
+      return tx(async () => {
+        if (options.once && (await db.peopleNames.where('askedOn').equals(cardId).count()) > 0) return [];
+        const limit = options.limit ?? 6;
+        const ready = await store.readyToAsk({ meetingId: options.meetingId, limit: Number.MAX_SAFE_INTEGER });
+        const keys = new Set<string>();
+        const picked: NameCandidate[] = [];
+        for (const candidate of ready) {
+          const key = nameKey(candidate.text);
+          if (keys.has(key)) continue;
+          keys.add(key);
+          picked.push(candidate);
+          if (picked.length >= limit) break;
+        }
+        if (picked.length === 0) return [];
+        await store.markAsked(
+          picked.map(candidate => candidate.id),
+          cardId,
+        );
+        return picked.map(candidate => ({ ...candidate, status: 'asked' as const, askedOn: cardId }));
+      });
     },
 
     /** The questions on a card (answered ones included, so the card shows what was said). */

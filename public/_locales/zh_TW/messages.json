@@ -11332,5 +11332,206 @@
   },
   "tasks_old_yes": {
     "message": "關閉所有超過兩週的任務"
+  },
+  "people_title": {
+    "message": "人員"
+  },
+  "people_intro": {
+    "message": "Ava 從你的通話、邀請、收件匣與聊天中認識的所有人。資料都留在這台電腦上。"
+  },
+  "people_tab_people": {
+    "message": "人員"
+  },
+  "people_tab_sort": {
+    "message": "待整理（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "people_workspace_all": {
+    "message": "所有工作區"
+  },
+  "people_everywhere": {
+    "message": "所有地方"
+  },
+  "people_empty": {
+    "message": "還沒有人員。Ava 會從你的通話、邀請與收件匣中認識他們，不確定時會問你。"
+  },
+  "people_sort_empty": {
+    "message": "沒有待整理的名字。Ava 遇到不確定的名字時會問你。"
+  },
+  "people_add": {
+    "message": "新增人員"
+  },
+  "people_add_placeholder": {
+    "message": "對方的名字"
+  },
+  "people_save": {
+    "message": "儲存"
+  },
+  "people_cancel": {
+    "message": "取消"
+  },
+  "people_name_label": {
+    "message": "名字"
+  },
+  "people_about_label": {
+    "message": "對方是誰"
+  },
+  "people_names_a11y": {
+    "message": "$NAME$ 的名字與聯絡方式",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_alias_add": {
+    "message": "新增名字"
+  },
+  "people_alias_placeholder": {
+    "message": "對方的其他稱呼"
+  },
+  "people_alias_workspace": {
+    "message": "這個名字用在哪裡"
+  },
+  "people_alias_remove_a11y": {
+    "message": "移除名字 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "people_merge_label": {
+    "message": "與此人相同…"
+  },
+  "people_merge_action": {
+    "message": "合併"
+  },
+  "people_remove": {
+    "message": "移除"
+  },
+  "people_remove_confirm": {
+    "message": "永久移除"
+  },
+  "people_lastSeen": {
+    "message": "$WHEN$ 出現過",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "people_q_yes": {
+    "message": "是，$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_like": {
+    "message": "和「$NAME$」是同一人",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_someoneElse": {
+    "message": "其他人"
+  },
+  "people_q_pick": {
+    "message": "選一個人"
+  },
+  "people_q_new": {
+    "message": "新的人"
+  },
+  "people_q_notPerson": {
+    "message": "不是人"
+  },
+  "people_q_me": {
+    "message": "那是我"
+  },
+  "people_q_saved": {
+    "message": "已存為 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_ignored": {
+    "message": "不是人：不會再問"
+  },
+  "people_card_title": {
+    "message": "誰是誰"
+  },
+  "people_card_done": {
+    "message": "都整理好了"
+  },
+  "people_card_open": {
+    "message": "開啟人員"
+  },
+  "people_card_meetingTitle": {
+    "message": "「$TITLE$」上的誰是誰",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "people_card_dailyTitle": {
+    "message": "誰是誰：$COUNT$ 個名字待整理",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "people_from_meet": {
+    "message": "Meet"
+  },
+  "people_from_spoken": {
+    "message": "通話中提到"
+  },
+  "people_from_calendar": {
+    "message": "行事曆"
+  },
+  "people_from_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "people_from_slack": {
+    "message": "Slack"
+  },
+  "people_from_gmail": {
+    "message": "Gmail"
+  },
+  "people_from_github": {
+    "message": "GitHub"
+  },
+  "people_from_chat": {
+    "message": "聊天"
+  },
+  "people_from_note": {
+    "message": "筆記"
+  },
+  "people_from_task": {
+    "message": "任務"
+  },
+  "people_from_avi": {
+    "message": "你"
   }
 }

@@ -225,6 +225,18 @@ export interface MeetingRecord {
   agentId?: string | null;
   // Whether the call shows its captions, as last read from the page (null: no captions button found)
   captionsOn?: boolean | null;
+  // Who was on the call: display names read from the page (tiles, and the People panel while it was open).
+  // Kept on this computer only (docs/pm-desk.md, rule 5)
+  roster?: string[];
+  // When notes come from audio: who spoke when, from the call's captions, to name the audio's speakers
+  speakerMarks?: SpeakerMark[];
+}
+
+// Seconds from the start, and the caption's speaker
+export interface SpeakerMark {
+  t0: number;
+  t1: number;
+  speaker: string;
 }
 
 export interface AudioChunk {

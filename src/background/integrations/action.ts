@@ -13,6 +13,7 @@ import type { AgentContext } from '../agent/types';
 import { createLogger } from '../log';
 import { beginOnce, canonicalJson, checkOnce, idempotencyKeyOf, stepFor } from '../once';
 import { callerOf } from './caller';
+import { learnFromGithub } from '../people/sources';
 import { serverDetail } from './errors';
 import { reviewToolCall } from './gate';
 import type { ConnectorService } from './service';
@@ -88,6 +89,16 @@ export function parseToolArgs(text: string): Record<string, unknown> | null {
   }
 }
 
+/** The GitHub connector: added from the catalog, or reached at GitHub's own MCP address. */
+function isGithub(connector: { catalogId?: string | null; url: string | null }): boolean {
+  if (connector.catalogId === 'github') return true;
+  try {
+    return new URL(connector.url ?? '').hostname === 'api.githubcopilot.com';
+  } catch {
+    return false;
+  }
+}
+
 export async function callToolAction(
   service: ConnectorService,
   context: AgentContext,
@@ -156,6 +167,8 @@ export async function callToolAction(
     // not run again by itself either; the model is told what it said and can ask to run it again.
     if (onceKey) await onceStore.finish(onceKey, result.isError ? 'the tool reported an error' : 'the tool answered');
     void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, t('conn_act_ok', [name]));
+    // GitHub's answers name authors and assignees: learned for people in the chat's workspace (docs/pm-desk.md Part 5)
+    if (!result.isError && isGithub(connector)) void learnFromGithub(result.text, scope.workspaceId);
     // A tool's answer comes from outside: data, never instructions
     const body = wrapUntrustedContent(result.text);
     return new ActionResult({
