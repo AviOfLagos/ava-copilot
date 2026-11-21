@@ -1,0 +1,50 @@
+{
+  "kind": "marketing",
+  "name": "The Marketing Manager sends one follow-up after 3 working days, then stops",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#75",
+    "spec": "docs/growth-team.md, Parts 8 and 12"
+  },
+  "replay": [
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "ada@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Your eval runner",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_follow_up",
+      "at_day": 2,
+      "email": "ada@acme.dev",
+      "subject": "Following up",
+      "body": "One more note."
+    },
+    {
+      "tool": "draft_follow_up",
+      "at_day": 4,
+      "email": "ada@acme.dev",
+      "subject": "Following up",
+      "body": "One more note."
+    },
+    {
+      "tool": "draft_follow_up",
+      "at_day": 9,
+      "email": "ada@acme.dev",
+      "subject": "Following up again",
+      "body": "Last try."
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "queued" },
+      { "state": "refused", "matches": ["waits 3 working days", "1 have passed"] },
+      { "state": "queued" },
+      { "state": "refused", "matches": ["one follow-up", "stops here"] }
+    ],
+    "queued": ["Your eval runner", "Following up"]
+  }
+}

@@ -79,6 +79,16 @@ export function registerTeamExecutor(action: TeamAction, executor: TeamExecutor)
 
 export function clearTeamExecutorsForTests(): void {
   executors.clear();
+  agreedHooks.clear();
+}
+
+// What changes in Ava's own state when the user says yes to a request (a channel test starts). Never anything
+// in the world: that is an executor's, through the gate
+const agreedHooks = new Map<TeamAction, (item: TeamItem) => Promise<string | null>>();
+
+/** Registers what a yes to a request of one kind changes in Ava's own state; the text it returns joins the note. */
+export function registerAgreedHook(action: TeamAction, hook: (item: TeamItem) => Promise<string | null>): void {
+  agreedHooks.set(action, hook);
 }
 
 export interface QueueDeps {
@@ -270,7 +280,13 @@ async function carryOut(item: TeamItem, deps: QueueDeps): Promise<TeamItem> {
     item.action === 'new_channel' ||
     item.action === 'plan_change'
   ) {
-    return finish({ status: 'done', note: t('team_note_yours') });
+    const changed = await agreedHooks
+      .get(item.action)?.(item)
+      .catch(error => {
+        logger.warning(`After a yes to ${item.action}`, error);
+        return null;
+      });
+    return finish({ status: 'done', note: changed ? `${t('team_note_yours')} ${changed}` : t('team_note_yours') });
   }
 
   const executor = executors.get(item.action);

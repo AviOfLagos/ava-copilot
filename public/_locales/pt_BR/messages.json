@@ -10925,5 +10925,11 @@
   },
   "growth_models_fallback_body": {
     "message": "Nenhuma chave do Claude está nas configurações de modelos, então os agentes de crescimento usam seus modelos \"smart\" e \"fast\". Adicione uma chave do Claude para usarem Sonnet no dia a dia, Haiku para organizar e Opus no plano de segunda."
+  },
+  "agents_growth_marketing": {
+    "message": "Gerente de Marketing de Produto"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "Posicionamento, uma lista de canais classificada por cadastros reais e rascunhos de contato que esperam o seu clique."
   }
 }

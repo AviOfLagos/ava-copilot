@@ -10925,5 +10925,11 @@
   },
   "growth_models_fallback_body": {
     "message": "No Claude key is set in the model settings, so the growth agents use your \"smart\" and \"fast\" models. Add a Claude key to give them Sonnet for daily work, Haiku for sorting and Opus for the Monday plan."
+  },
+  "agents_growth_marketing": {
+    "message": "Product Marketing Manager"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "Positioning, a channel list ranked from real sign-ups, and outreach drafts that wait for your click."
   }
 }

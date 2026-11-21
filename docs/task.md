@@ -2767,6 +2767,28 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - E2E `e2e/growth-lead.e2e.mjs`: the Growth team group, the product check, and a sort that ends as "[P0] …"
   waiting in the Inbox while a customer's email is sent back.
 
+### The Product Marketing Manager (2026-11-21, #75, docs/growth-team.md Parts 8 and 12)
+
+- Template `growth_marketing` in the Growth team group, personality `positioning`, `executor: 'browser'`,
+  weekdays at 10:00 and on `growth.signal`. Positioning goes through `update_product_profile`, which shows the
+  change first; the instructions say positioning comes before channels.
+- Channels (`marketing/channels.ts`, Dexie v11 `teamChannels`): `add_channel` keeps ideas with who is there and
+  a test's cost; `rank_channels` ranks by sign-ups a week over the last 28 read days, then the untested cheapest
+  first, and marks three "test next". `propose_channel_test` asks only for those (a `new_channel` request, always
+  asked); the user's yes starts the 7-day week through `registerAgreedHook` in the queue, which changes only
+  Ava's own list. After the week code keeps or drops it by the rounds' test against the week before; a day not
+  read leaves it testing.
+- Outreach (`marketing/outreach.ts`, Dexie v11 `teamContacts` and the shared `teamSuppressed`): drafts only.
+  Code refuses a suppressed address or a personal mailbox, a person already written to, more than 20 new people a
+  day per product, and a follow-up before 3 whole working days or after the first one. Every draft ends with the
+  sender, the postal address, why this person and how to opt out; a missing sender or address reads "not set" and
+  the agent is told to say so. `stop_contact` puts an address on the list for every product.
+- Eval kind `lead` is now `team` in `evals/runner/team.ts` (kinds `lead` and `marketing`): four new cases
+  (suppressed address, the daily limit, one follow-up, ranking from numbers).
+- E2E in `e2e/growth-lead.e2e.mjs`: the draft waits in the Inbox with "sender: not set", and the unsubscribed
+  address is refused.
+- Not yet: sending (Nex Mail, Part 12, after #43), and finding people (the agent browses public pages itself).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

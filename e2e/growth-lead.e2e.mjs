@@ -36,6 +36,34 @@ const scenarios = {
     () => [sort({ feedback_id: 'fb-1', sort: 'bug', title: 'Again', summary: 'Sorted twice.', cannot_sign_in: true })],
     done,
   ],
+  outreach: [
+    () => [{ stop_contact: { intent: 'Stopping', email: 'bob@acme.test', why: 'unsubscribed' } }],
+    () => [
+      {
+        draft_outreach: {
+          intent: 'Drafting',
+          email: 'bob@acme.test',
+          source: 'https://github.com/acme/rockets',
+          why: 'You build rocket kits.',
+          subject: 'Rocket kits',
+          body: 'A note about rocket kits.',
+        },
+      },
+    ],
+    () => [
+      {
+        draft_outreach: {
+          intent: 'Drafting',
+          email: 'ada@acme.test',
+          source: 'https://github.com/acme/launchpad',
+          why: 'You maintain an open-source launch checklist.',
+          subject: 'Your launch checklist',
+          body: 'Rocket Shop sells kits for model rockets. Would a kit for your checklist demo help?',
+        },
+      },
+    ],
+    done,
+  ],
 };
 
 let mock;
@@ -154,6 +182,7 @@ test('the team setup has a Growth team group, and a growth agent needs a workspa
   const group = await session.panel.evaluate(() => document.querySelector('[data-growth-team]').textContent);
   assert.match(group, /Growth team/);
   assert.match(group, /Growth Lead/);
+  assert.match(group, /Product Marketing Manager/);
   assert.match(group, /nothing is posted, sent, granted or spent without your click/);
   await session.panel.evaluate(() => document.querySelector('[data-team-template="growth_lead"]').click());
   await snap('growth-group');
@@ -225,4 +254,46 @@ test('a sorted bug waits in the Inbox as a P0 issue, and a customer email is sen
     'the issue opened',
   );
   await snap('issue-open');
+});
+
+test('the Marketing Manager drafts outreach that waits, says "not set" for the sender, and skips an unsubscribed address', async () => {
+  await openMenuItem('New chat', '');
+  await session.panel.waitForSelector('textarea', { timeout: 10000 });
+  mock.start('outreach');
+  const text = 'Rocket shop outreach. Run the scripted scenario outreach.';
+  await session.send(text);
+  await until(
+    async () => (await readThreads(session.panel)).find(item => item.title?.startsWith(text.slice(0, 20))),
+    'the chat',
+  );
+  await session.waitForEnd(40000);
+
+  const told = mock.runs.get('outreach').requests.join('\n');
+  assert.match(told, /do-not-write list \(unsubscribed\)/);
+  assert.match(told, /Refused by a rule in code: That address asked not to be written to/);
+  assert.match(told, /cannot go out until the sender address and the postal address are set/);
+
+  const emails = (await table('teamItems')).filter(item => item.action === 'outreach_email');
+  assert.deepEqual(
+    emails.map(item => `${item.target}:${item.mode}:${item.status}`),
+    ['ada@acme.test:batch:queued'],
+  );
+  assert.match(emails[0].body, /sender: not set/);
+  assert.match(emails[0].body, /Postal address: not set/);
+
+  await openMenuItem('Inbox', 'Approvals');
+  await until(
+    () => session.panel.evaluate(() => document.body.innerText.includes('Your launch checklist')),
+    'the draft in the Inbox',
+  );
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('button[aria-label]')]
+      .find(button => button.getAttribute('aria-label').includes('Your launch checklist'))
+      ?.click(),
+  );
+  await until(
+    () => session.panel.evaluate(() => document.body.innerText.includes('sender: not set')),
+    'the draft opened',
+  );
+  await snap('outreach-open');
 });

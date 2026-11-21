@@ -1,7 +1,15 @@
 import { db as defaultDb } from '../threads/db';
 import type { AviCopilotDb } from '../threads/db';
-import { feedbackRecordId } from './types';
-import type { FeedbackRecord, LedgerEntry, TeamItem, TeamItemStatus } from './types';
+import { feedbackRecordId, teamContactId } from './types';
+import type {
+  FeedbackRecord,
+  LedgerEntry,
+  SuppressedAddress,
+  TeamChannel,
+  TeamContact,
+  TeamItem,
+  TeamItemStatus,
+} from './types';
 
 /**
  * The growth team's items and ledger, over a database that defaults to the extension's own. Tests pass their
@@ -116,6 +124,31 @@ export function createTeamStore(db: AviCopilotDb = defaultDb) {
 
     linkFeedback: (id: string, itemId: string) => db.teamFeedback.update(id, { itemId }),
     forgetFeedback: (id: string) => db.teamFeedback.delete(id),
+
+    // ── The Product Marketing Manager's contacts and channels (#75) ──
+
+    contact: (workspaceId: string, email: string) => db.teamContacts.get(teamContactId(workspaceId, email)),
+    /** People first written to since `from`, for the day's limit. */
+    contactsSince: (workspaceId: string, from: number) =>
+      db.teamContacts
+        .where('firstAt')
+        .aboveOrEqual(from)
+        .filter(row => row.workspaceId === workspaceId)
+        .count(),
+    saveContact: (contact: TeamContact) => db.teamContacts.put(contact),
+    forgetContact: (id: string) => db.teamContacts.delete(id),
+
+    suppressed: (email: string) => db.teamSuppressed.get(email.trim().toLowerCase()),
+    /** Stops all writing to an address, for good, whatever the product. The first reason stands. */
+    async suppress(email: string, why: SuppressedAddress['why'], at: number): Promise<void> {
+      const key = email.trim().toLowerCase();
+      await db.transaction('rw', db.teamSuppressed, async () => {
+        if (!(await db.teamSuppressed.get(key))) await db.teamSuppressed.add({ email: key, why, at });
+      });
+    },
+
+    channels: (workspaceId: string) => db.teamChannels.where('workspaceId').equals(workspaceId).toArray(),
+    saveChannel: (channel: TeamChannel) => db.teamChannels.put(channel),
   };
 }
 

@@ -119,3 +119,54 @@ export interface FeedbackRecord {
 }
 
 export const feedbackRecordId = (workspaceId: string, feedbackId: string) => `${workspaceId}|${feedbackId}`;
+
+/**
+ * A person the Product Marketing Manager drafted outreach for (docs/growth-team.md, Parts 8 and 12): found through
+ * a public, relevant source, recorded with why. One first email and at most one follow-up, then stop.
+ */
+export interface TeamContact {
+  // `${workspaceId}|${email}` (lower case)
+  id: string;
+  workspaceId: string;
+  email: string;
+  // The public page where the person was found, and why they are relevant
+  source: string;
+  why: string;
+  firstAt: number;
+  followUps: number;
+  lastAt: number;
+}
+
+export const teamContactId = (workspaceId: string, email: string) => `${workspaceId}|${email.trim().toLowerCase()}`;
+
+/** An address no agent writes to again, for any product: a reply, an unsubscribe or a bounce. */
+export interface SuppressedAddress {
+  // lower case
+  email: string;
+  why: 'replied' | 'unsubscribed' | 'bounced' | 'asked';
+  at: number;
+}
+
+/** A channel on the Product Marketing Manager's list, and its one-week test. */
+export const CHANNEL_STATES = ['idea', 'testing', 'kept', 'dropped'] as const;
+export type ChannelState = (typeof CHANNEL_STATES)[number];
+
+export interface TeamChannel {
+  // `${workspaceId}|${key}`; key is the channel as sign-ups name it (utm source), lower case
+  id: string;
+  workspaceId: string;
+  key: string;
+  // Who is there, in a few words
+  reach: string;
+  // What a week's test would cost, in US dollars (0 for free)
+  costUsd: number;
+  state: ChannelState;
+  // The test week, as UTC days, when it was started
+  testFrom: string | null;
+  testTo: string | null;
+  // The verdict in plain words, set by code after the week
+  verdict: string;
+  updatedAt: number;
+}
+
+export const teamChannelId = (workspaceId: string, key: string) => `${workspaceId}|${key.trim().toLowerCase()}`;

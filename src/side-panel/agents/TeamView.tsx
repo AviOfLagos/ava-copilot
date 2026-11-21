@@ -31,6 +31,7 @@ export const TEAM_META: Record<TeamTemplateId, { name: MessageKey; hint: Message
 // The growth team: agents that work for the product of the workspace picked below
 export const GROWTH_META: Record<GrowthTemplateId, { name: MessageKey; hint: MessageKey }> = {
   growth_lead: { name: 'agents_growth_lead', hint: 'agents_growth_lead_hint' },
+  growth_marketing: { name: 'agents_growth_marketing', hint: 'agents_growth_marketing_hint' },
 };
 
 type SetupTemplateId = TeamTemplateId | GrowthTemplateId;

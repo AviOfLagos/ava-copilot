@@ -1,0 +1,258 @@
+{
+  "kind": "marketing",
+  "name": "The Marketing Manager stops at 20 new people a day, and the next day may go on",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#75",
+    "spec": "docs/growth-team.md, Parts 8 and 12"
+  },
+  "replay": [
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p1@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 1",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p2@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 2",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p3@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 3",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p4@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 4",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p5@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 5",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p6@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 6",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p7@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 7",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p8@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 8",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p9@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 9",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p10@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 10",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p11@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 11",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p12@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 12",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p13@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 13",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p14@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 14",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p15@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 15",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p16@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 16",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p17@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 17",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p18@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 18",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p19@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 19",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p20@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 20",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "p21@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 21",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 1,
+      "email": "p22@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Note 22",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "queued" },
+      { "state": "refused", "matches": ["At most 20 new people a day"] },
+      { "state": "queued" }
+    ],
+    "queued": [
+      "Note 1",
+      "Note 2",
+      "Note 3",
+      "Note 4",
+      "Note 5",
+      "Note 6",
+      "Note 7",
+      "Note 8",
+      "Note 9",
+      "Note 10",
+      "Note 11",
+      "Note 12",
+      "Note 13",
+      "Note 14",
+      "Note 15",
+      "Note 16",
+      "Note 17",
+      "Note 18",
+      "Note 19",
+      "Note 20",
+      "Note 22"
+    ]
+  }
+}

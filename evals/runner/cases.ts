@@ -111,13 +111,44 @@ const leadSort = z.object({
     .default({}),
 });
 const leadGrant = z.object({ tool: z.literal('request_beta_grant'), request_id: z.string(), why: z.string() });
+// The Product Marketing Manager's calls; `at_day` moves the clock that many days on from the case's Monday
+const atDay = z.number().int().min(0).max(60).default(0);
+const marketingOutreach = z.object({
+  tool: z.literal('draft_outreach'),
+  at_day: atDay,
+  email: z.string(),
+  source: z.string(),
+  why: z.string(),
+  subject: z.string(),
+  body: z.string(),
+});
+const marketingFollowUp = z.object({
+  tool: z.literal('draft_follow_up'),
+  at_day: atDay,
+  email: z.string(),
+  subject: z.string(),
+  body: z.string(),
+});
+const marketingStop = z.object({
+  tool: z.literal('stop_contact'),
+  email: z.string(),
+  why: z.enum(['replied', 'unsubscribed', 'bounced', 'asked']),
+});
+const marketingChannel = z.object({
+  tool: z.literal('add_channel'),
+  channel: z.string(),
+  reach: z.string(),
+  cost_usd: z.number().default(0),
+});
+const marketingRank = z.object({ tool: z.literal('rank_channels') });
 
 /**
- * The Growth Lead's recorded tool calls, replayed through the code behind them (src/background/growth-team/lead):
- * what each call ends as, and what reached the approval queue.
+ * A growth agent's recorded tool calls (the Growth Lead's, kind `lead`; the Product Marketing Manager's, kind
+ * `marketing`), replayed through the code behind them (src/background/growth-team): what each call ends as, and
+ * what reached the approval queue.
  */
-export const leadCase = z.object({
-  kind: z.literal('lead'),
+export const teamCase = z.object({
+  kind: z.enum(['lead', 'marketing']),
   name: z.string(),
   // The product's beta rule, and what the product says is left this week (absent: the product was not asked)
   beta: z
@@ -126,12 +157,28 @@ export const leadCase = z.object({
       remaining: z.number().optional(),
     })
     .optional(),
-  replay: z.array(z.discriminatedUnion('tool', [leadSort, leadGrant])).min(1),
+  // The profile's sender and postal address; both are set unless the case says otherwise
+  profile: z.object({ sender: z.string(), postal_address: z.string() }).partial().optional(),
+  // Sign-ups a day per channel over the 28 days before the case's Monday, every day read
+  signups_per_day: z.record(z.string(), z.number()).optional(),
+  replay: z
+    .array(
+      z.discriminatedUnion('tool', [
+        leadSort,
+        leadGrant,
+        marketingOutreach,
+        marketingFollowUp,
+        marketingStop,
+        marketingChannel,
+        marketingRank,
+      ]),
+    )
+    .min(1),
   expect: z.object({
     // One per replayed call: what it ended as, and patterns its text must match
     steps: z.array(
       z.object({
-        state: z.enum(['sorted', 'already', 'refused', 'queued']),
+        state: z.enum(['sorted', 'already', 'refused', 'queued', 'ok']),
         matches: z.array(z.string()).optional(),
       }),
     ),
@@ -163,8 +210,8 @@ export type PlannerCase = z.infer<typeof plannerCase>;
 export type SkillsCase = z.infer<typeof skillsCase>;
 export type VoiceCase = z.infer<typeof voiceCase>;
 export type DraftCase = z.infer<typeof draftCase>;
-export type LeadCase = z.infer<typeof leadCase>;
-export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | LeadCase;
+export type TeamCase = z.infer<typeof teamCase>;
+export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | TeamCase;
 export type VoiceStep = z.infer<typeof voiceStep>;
 
 const CHANNELS = new Set(plannerCase.shape.channel.unwrap().options as readonly string[]);
@@ -190,7 +237,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'skills') return skillsCase.parse(raw);
   if (kind === 'voice') return voiceCase.parse(raw);
   if (kind === 'draft') return draftCase.parse(raw);
-  if (kind === 'lead') return leadCase.parse(raw);
+  if (kind === 'lead' || kind === 'marketing') return teamCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

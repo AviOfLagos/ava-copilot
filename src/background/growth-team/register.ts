@@ -19,6 +19,23 @@ import {
 } from './actions';
 import { remoteBeta } from './beta';
 import {
+  addChannelAction,
+  addChannelSchema,
+  channelTestAgreed,
+  draftFollowUpAction,
+  draftFollowUpSchema,
+  draftOutreachAction,
+  draftOutreachSchema,
+  MARKETING_PROMPT,
+  proposeChannelTestAction,
+  proposeChannelTestSchema,
+  rankChannelsAction,
+  rankChannelsSchema,
+  stopContactAction,
+  stopContactSchema,
+} from './marketing/actions';
+import type { MarketingDeps } from './marketing/actions';
+import {
   readFeedbackAction,
   readFeedbackSchema,
   requestBetaGrantAction,
@@ -31,7 +48,7 @@ import type { LeadDeps } from './lead/feedback';
 import { channelSignals } from './lead/signals';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { budgetState, grantsInWeek } from './ledger';
-import { answerBatch, answerItem, BATCH_PREFIX, ITEM_PREFIX, recoverAgreed } from './queue';
+import { answerBatch, answerItem, BATCH_PREFIX, ITEM_PREFIX, recoverAgreed, registerAgreedHook } from './queue';
 import type { QueueDeps } from './queue';
 
 const logger = createLogger('GrowthTeam');
@@ -94,6 +111,57 @@ registerAgentAction({
       requestBetaGrantSchema,
     ),
 });
+
+// ── The Product Marketing Manager (#75) ───────────────────────────────────────────────────────────
+
+const MARKETING_DEPS: MarketingDeps = QUEUE_DEPS;
+
+registerAgentAction({
+  prompt: MARKETING_PROMPT,
+  create: context =>
+    new Action(
+      (input: z.infer<typeof addChannelSchema.schema>) => addChannelAction(context, input, MARKETING_DEPS),
+      addChannelSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof rankChannelsSchema.schema>) => rankChannelsAction(context, input, MARKETING_DEPS),
+      rankChannelsSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof proposeChannelTestSchema.schema>) =>
+        proposeChannelTestAction(context, input, MARKETING_DEPS),
+      proposeChannelTestSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof draftOutreachSchema.schema>) => draftOutreachAction(context, input, MARKETING_DEPS),
+      draftOutreachSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof draftFollowUpSchema.schema>) => draftFollowUpAction(context, input, MARKETING_DEPS),
+      draftFollowUpSchema,
+    ),
+});
+registerAgentAction({
+  create: context =>
+    new Action(
+      (input: z.infer<typeof stopContactSchema.schema>) => stopContactAction(context, input, MARKETING_DEPS),
+      stopContactSchema,
+    ),
+});
+// The user's yes to a channel test starts its week (Ava's own list; nothing goes out)
+registerAgreedHook('new_channel', item => channelTestAgreed(item));
 
 // Every morning, after the night's numbers are in: a channel whose sign-ups moved goes on the bus as
 // `growth.signal`, for each workspace whose Growth Lead is switched on. Plain code, no model.

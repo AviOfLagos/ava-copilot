@@ -10925,5 +10925,11 @@
   },
   "growth_models_fallback_body": {
     "message": "模型設定中沒有 Claude 金鑰，因此成長代理使用你的「smart」與「fast」模型。加入 Claude 金鑰後，日常工作用 Sonnet、整理用 Haiku、週一計畫用 Opus。"
+  },
+  "agents_growth_marketing": {
+    "message": "產品行銷經理"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "定位、依實際註冊數排序的管道清單，以及等待你點擊的開發信草稿。"
   }
 }

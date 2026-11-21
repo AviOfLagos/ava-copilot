@@ -15,7 +15,7 @@ export type TeamTemplateId = (typeof TEAM_TEMPLATE_IDS)[number];
 
 // The growth team (docs/growth-team.md, Part 8): agents that work for one product, the workspace's. Off until the
 // user creates them, each with its personality
-export const GROWTH_TEMPLATE_IDS = ['growth_lead'] as const;
+export const GROWTH_TEMPLATE_IDS = ['growth_lead', 'growth_marketing'] as const;
 export type GrowthTemplateId = (typeof GROWTH_TEMPLATE_IDS)[number];
 
 export const AGENT_TEMPLATE_IDS = [
@@ -210,6 +210,27 @@ function baseTemplate(id: AgentTemplateId, timezone: string): AgentProfileFields
         charter:
           "Owns the product's one number: sorts customer feedback, proposes issues for your approval, keeps the weekly plan; never spends or grants past the rule.",
       };
+    case 'growth_marketing':
+      return {
+        name: 'Product Marketing Manager',
+        avatar: '🧭',
+        instructions: `You decide who this workspace's product is for and where to reach them, then run outreach as drafts. Positioning first: who it is for, what they use instead, why this one, each claim provable; when the profile lacks it, propose it with update_product_profile from what the user or the product's own site says. Then the channel list: add_channel for places the audience already is, rank_channels, and propose_channel_test for the ones marked "test next", a cheap week each; code keeps the channel that moves the number. Free feedback before paid: ask design and developer communities for a critique, recruit early users for a short call or a form, and only then propose paid tests with request_spend. Outreach: draft_outreach to one person at a time, found on a public page where the product clearly fits their work, saying why them; draft_follow_up once, after 3 working days; stop_contact after a reply, an unsubscribe or a bounce. When a growth.signal arrives, look at that channel first. The sender address and the postal address come from the profile; when they are not set, say so in your answer and leave them "not set". Answer with the positioning, the ranked channels, what you drafted and what waits for the user. ${GROWTH_RULES} ${NEVER_COMMITS}`,
+        skills: [],
+        connectors: [],
+        domains: [],
+        modelRole: 'smart',
+        workspaceId: null,
+        executor: 'browser',
+        triggers: [{ type: 'schedule', cron: '0 10 * * 1-5', timezone }, { type: 'manual' }],
+        subscribes: ['growth.signal'],
+        publishes: [],
+        budget: { dailyUsd: 1, maxStepsPerRun: 40, runsPerDay: 3 },
+        startUrl: null,
+        inboxResults: true,
+        owns: ['positioning', 'channel list', 'outreach emails', 'tester programme', 'listing sites'],
+        charter:
+          'Owns who the product is for and where to find them: positioning, the channel list and its tests, outreach drafts; never sends an email itself.',
+      };
   }
 }
 
@@ -251,6 +272,7 @@ export const TEMPLATE_PERSONAS: Record<AgentTemplateId, Pick<AgentProfileFields,
   },
   // The growth team sounds like its personalities (docs/personas)
   growth_lead: { personalityId: 'growth', voices: {} },
+  growth_marketing: { personalityId: 'positioning', voices: {} },
 };
 
 export function agentTemplate(id: AgentTemplateId, timezone: string): AgentProfileFields {
