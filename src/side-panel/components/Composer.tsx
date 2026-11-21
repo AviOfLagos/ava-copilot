@@ -7,7 +7,11 @@ import { AttachmentReadError, readAttachment } from '../attachments/media';
 import type { PendingAttachment } from '../attachments/media';
 import type { SpeechInput } from '../hooks/useSpeechInput';
 import { ListeningStrip } from './Dictation';
+import { useComposerVocabulary } from './composerVocabulary';
+import type { DictationVocabulary, VocabularyApi } from './composerVocabulary';
 import './ui/morph-orb.css';
+
+export type { DictationVocabulary, VocabularyApi } from './composerVocabulary';
 
 interface ComposerProps {
   // The words, and any pictures and videos attached
@@ -18,7 +22,9 @@ interface ComposerProps {
   // Dictation: the mic button, and what is shown while it listens and writes the words down
   speech?: Pick<SpeechInput, 'status' | 'startedAt' | 'level' | 'toggle' | 'cancel'>;
   // Lets the panel hand over the words of a dictation when they are written down
-  setTranscriptSink?: (sink: (words: string) => void) => void;
+  setTranscriptSink?: (sink: (words: string, vocabulary?: DictationVocabulary) => void) => void;
+  // The user's vocabulary: corrections made by hand are offered as rules (see composerVocabulary.tsx)
+  vocabulary?: VocabularyApi;
   disabled: boolean;
   showStopButton: boolean;
   setContent?: (setter: (text: string) => void) => void;
@@ -89,6 +95,7 @@ export default function Composer({
   onStopTask,
   speech,
   setTranscriptSink,
+  vocabulary,
   disabled,
   showStopButton,
   setContent,
@@ -134,6 +141,9 @@ export default function Composer({
   };
   const resizeRef = useRef(resize);
   resizeRef.current = resize;
+  const vocab = useComposerVocabulary(text, setText, vocabulary, textareaRef);
+  // Text changed from outside the box (a correction put back, a word the user accepted) needs its height too
+  useEffect(() => resizeRef.current(), [text]);
 
   // The expand control, the panel being resized and the text box coming back after dictation all change the height
   useEffect(() => resizeRef.current(), [expanded]);
@@ -226,6 +236,7 @@ export default function Composer({
       const attached = files
         .map(file => `\n\n<nano_file_content type="file" name="${file.name}">\n${file.content}\n</nano_file_content>`)
         .join('\n');
+      vocab.beforeSend(trimmed);
       onSendMessage(
         attached ? `${trimmed}\n\n<nano_attached_files>${attached}</nano_attached_files>` : trimmed,
         media.map(item => item.outgoing),
@@ -239,8 +250,10 @@ export default function Composer({
       requestAnimationFrame(resize);
       return true;
     },
-    [disabled, files, media, reading, onSendMessage],
+    [disabled, files, media, reading, onSendMessage, vocab.beforeSend],
   );
+  const onDictatedRef = useRef(vocab.onDictated);
+  onDictatedRef.current = vocab.onDictated;
   const sendTextRef = useRef(sendText);
   sendTextRef.current = sendText;
 
@@ -262,12 +275,15 @@ export default function Composer({
 
   // The words of a dictation: after what is typed, and sent at once when Send was pressed while dictating
   useEffect(() => {
-    setTranscriptSink?.(words => {
+    setTranscriptSink?.((words, found) => {
       const joined = joinWords(textRef.current, words);
       if (sendWhenReadyRef.current) {
         waitToSend(false);
         if (sendTextRef.current(joined)) return;
       }
+      // Where the dictated words start in the box, for marking what the vocabulary changed
+      const spoken = words.trim();
+      onDictatedRef.current(joined, joined.length - spoken.length - (words.length - words.trimStart().length), found);
       setText(joined);
       requestAnimationFrame(() => {
         resize();
@@ -419,6 +435,8 @@ export default function Composer({
             </ul>
           )}
 
+          {vocab.chip}
+
           {/* Row one: the words, or the listening strip, across the whole width */}
           <div className="flex">
             {speech && speechStatus !== 'idle' ? (
@@ -431,6 +449,16 @@ export default function Composer({
               />
             ) : (
               <div className="relative min-w-0 flex-1">
+                {/* Behind the words: the same text, invisible, with the corrected words underlined */}
+                {vocab.mirror && (
+                  <div
+                    ref={vocab.mirrorRef}
+                    aria-hidden="true"
+                    data-testid="vocab-mirror"
+                    className={`vocab-mirror p-2 text-[14px] leading-5 ${tall ? 'pr-12' : ''}`}>
+                    {vocab.mirror}
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   value={text}
@@ -440,6 +468,9 @@ export default function Composer({
                   aria-label={t('chat_input_editor')}
                   onChange={onChange}
                   onKeyDown={onKeyDown}
+                  onClick={event => vocab.onCaret(event.currentTarget)}
+                  onKeyUp={event => vocab.onCaret(event.currentTarget)}
+                  onScroll={event => vocab.syncScroll(event.currentTarget)}
                   className="text-foreground placeholder:text-muted-foreground block min-h-9 w-full resize-none border-0 bg-transparent p-2 text-[14px] leading-5 outline-none disabled:cursor-not-allowed"
                 />
                 {tall && (

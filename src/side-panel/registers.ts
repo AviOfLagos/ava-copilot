@@ -14,6 +14,7 @@ import './history/register';
 import './personalities/register';
 import './audio-devices/register';
 import './identity/register';
+import './vocabulary/register';
 import './capabilities/register';
 import './settings/register';
 import './meet-voice/register';

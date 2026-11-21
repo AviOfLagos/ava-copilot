@@ -29,6 +29,10 @@ vi.mock('../../offscreen', () => ({
   },
 }));
 
+// The user's vocabulary is tested on its own (../vocabulary); here only that the conversation applies it
+vi.mock('../vocabulary', () => ({ correctedText: async (text: string) => text.replace('Illum', 'Ellum') }));
+const stored: [string, string, string][] = [];
+
 const state = {
   economy: null as null | { mode: 'economy'; economy: { stt: { engine: 'moonshine' }; tts: Record<string, unknown> } },
   personality: null as Personality | null,
@@ -61,7 +65,9 @@ vi.mock('@extension/storage', async importOriginal => {
     threadStore: {
       create: async () => ({ id: 'voice-1', tags: ['voice'] }),
       messages: async (id: string) => state.messages[id] ?? [],
-      addMessage: async () => {},
+      addMessage: async (thread: string, actor: string, content: string) => {
+        stored.push([thread, actor, content]);
+      },
       remove: async () => {},
       get: async () => undefined,
     },
@@ -98,6 +104,20 @@ beforeEach(() => {
   state.threads = [];
   state.messages = {};
   state.agents = {};
+});
+
+describe('what the user said in the voice conversation', () => {
+  it('is kept with the vocabulary applied, and what Ava said is kept as it was', async () => {
+    stored.length = 0;
+    const voice = manager();
+    await voice.start();
+    await voice.onTurn('Open the Illum AI page', 'Opening Illum now');
+    expect(stored).toEqual([
+      ['voice-1', 'user', 'Open the Ellum AI page'],
+      ['voice-1', 'planner', 'Opening Illum now'],
+    ]);
+    await voice.stop();
+  });
 });
 
 describe('the Live voice of a personality', () => {

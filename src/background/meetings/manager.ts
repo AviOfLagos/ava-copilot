@@ -50,6 +50,7 @@ import { deliverMeetingEvent } from './alerts';
 import type { MeetingEvent } from './join-flow';
 import { isCallUrl } from './call-url';
 import { installedVoiceModels } from '../voice/engines/models';
+import { correctedText, vocabularyHint } from '../voice/vocabulary';
 import { toVoiceOffscreen } from '../voice/engines/offscreen';
 import {
   BLOCK_SUMMARY_INSTRUCTIONS,
@@ -378,17 +379,20 @@ export class MeetingManager {
     }
     const now = (Date.now() - meeting.startedAt) / 1000;
     await this.meetings.addSegments(
-      lines.map(line => {
-        const length = Math.max(1, line.text.length / CHARS_PER_SECOND);
-        return {
-          meetingId,
-          tStart: Math.max(0, now - length),
-          tEnd: now,
-          speaker: line.speaker,
-          text: line.text,
-          chunkIndex: -1,
-        };
-      }),
+      await this.corrected(
+        meeting,
+        lines.map(line => {
+          const length = Math.max(1, line.text.length / CHARS_PER_SECOND);
+          return {
+            meetingId,
+            tStart: Math.max(0, now - length),
+            tEnd: now,
+            speaker: line.speaker,
+            text: line.text,
+            chunkIndex: -1,
+          };
+        }),
+      ),
     );
     if (lines.length > 0) await this.heard(meeting);
     await this.maybeSummarize(meetingId);
@@ -731,7 +735,7 @@ export class MeetingManager {
         meetingId: chunk.meetingId,
       }));
       await this.stitch(chunk, segments);
-      await this.meetings.completeChunk(chunk, segments, keepAudio);
+      await this.meetings.completeChunk(chunk, await this.corrected(meeting, segments), keepAudio);
       await this.meetings.clearWarning(chunk.meetingId, 'transcription');
       if (segments.length > 0) await this.heard(meeting);
       return true;
@@ -763,6 +767,7 @@ export class MeetingManager {
 
   /** Writes a chunk down with a model that takes audio, with the last lines before it as context. */
   private async transcribeWithModel(model: ChatModel, chunk: AudioChunk, previous: TranscriptSegment[]) {
+    const hint = await vocabularyHint(await this.workspaceOf(chunk.meetingId));
     const { output } = await generateStructured({
       chatModel: model,
       schema: clipSchema,
@@ -771,15 +776,40 @@ export class MeetingManager {
         systemMessage(TRANSCRIBE_INSTRUCTIONS),
         userMessage([
           textPart(
-            previous.length
+            (previous.length
               ? `For context, the meeting just before this clip:\n${transcriptText(previous)}`
-              : 'This clip is the start of the meeting.',
+              : 'This clip is the start of the meeting.') + (hint ? `\n${hint}` : ''),
           ),
           { type: 'file', mediaType: chunk.mimeType, data: chunk.data ?? '' },
         ]),
       ],
     });
     return output;
+  }
+
+  /** The workspace the meeting's chat belongs to, for the vocabulary that applies in it. */
+  private async workspaceOf(meetingId: string): Promise<string | null> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting?.threadId) return null;
+    return (await this.threads.get(meeting.threadId).catch(() => undefined))?.workspaceId ?? null;
+  }
+
+  /**
+   * The segments with the user's vocabulary applied to their words (docs/pm-desk.md, Part 4). What the recogniser
+   * wrote stays in `textRaw` wherever the text changed. Runs after stitching, so overlap is found on the raw words.
+   */
+  private async corrected<T extends { text: string; textRaw?: string }>(
+    meeting: MeetingRecord,
+    segments: T[],
+  ): Promise<T[]> {
+    if (segments.length === 0) return segments;
+    const workspaceId = await this.workspaceOf(meeting.id);
+    return Promise.all(
+      segments.map(async segment => {
+        const text = await correctedText(segment.text, { workspaceId });
+        return text === segment.text ? segment : { ...segment, text, textRaw: segment.text };
+      }),
+    );
   }
 
   /**
@@ -796,10 +826,17 @@ export class MeetingManager {
     if (!previous) {
       return;
     }
-    const joined = stitchOverlap(previous.text, segments[0].text);
-    if (joined.previous !== previous.text) {
-      if (joined.previous) await this.meetings.updateSegment(previous.id, { text: joined.previous });
-      else await this.meetings.deleteSegment(previous.id);
+    // Overlap is found on what the recogniser wrote, not on what the vocabulary made of it
+    const written = previous.textRaw ?? previous.text;
+    const joined = stitchOverlap(written, segments[0].text);
+    if (joined.previous !== written) {
+      if (joined.previous) {
+        const text = await correctedText(joined.previous, { workspaceId: await this.workspaceOf(chunk.meetingId) });
+        await this.meetings.updateSegment(previous.id, {
+          text,
+          textRaw: text === joined.previous ? undefined : joined.previous,
+        });
+      } else await this.meetings.deleteSegment(previous.id);
     }
     if (joined.next) segments[0].text = joined.next;
     else segments.shift();

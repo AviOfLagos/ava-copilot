@@ -18,6 +18,7 @@ import {
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import Composer from './components/Composer';
+import type { DictationVocabulary, VocabularyApi } from './components/Composer';
 import ConfirmCard from './components/ConfirmCard';
 import BookmarkList from './components/BookmarkList';
 import { Button } from './components/ui/button';
@@ -86,7 +87,12 @@ type PanelMessage =
   | { type: 'voice_state'; status: 'off' | 'connecting' | 'listening' | 'speaking'; threadId: string | null }
   | { type: 'voice_text_sent'; clientId: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
-  | { type: 'speech_to_text_result'; text: string }
+  | {
+      type: 'speech_to_text_result';
+      text: string;
+      changes?: DictationVocabulary['changes'];
+      unsure?: DictationVocabulary['unsure'];
+    }
   | { type: 'speech_to_text_error'; error: string; retryable?: boolean }
   | { type: 'heartbeat_ack' };
 
@@ -141,7 +147,7 @@ const SidePanel = () => {
   // composer has mounted, by the effect below — the composer is not mounted while on another place.
   const pendingPromptRef = useRef<string | null>(null);
   // Where a dictation's words go: the composer adds them after what is typed, or sends them
-  const transcriptSinkRef = useRef<((words: string) => void) | null>(null);
+  const transcriptSinkRef = useRef<((words: string, vocabulary?: DictationVocabulary) => void) | null>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
   // The words of every send the background has not taken yet: they go back in the composer if it refuses
@@ -252,7 +258,7 @@ const SidePanel = () => {
     setInputTextRef.current?.(text);
     setBanner([why, t('chat_send_kept')].filter(Boolean).join(' '));
   }, []);
-  const setTranscriptSink = useCallback((sink: (words: string) => void) => {
+  const setTranscriptSink = useCallback((sink: (words: string, vocabulary?: DictationVocabulary) => void) => {
     transcriptSinkRef.current = sink;
   }, []);
 
@@ -347,7 +353,10 @@ const SidePanel = () => {
           break;
         case 'speech_to_text_result':
           setSttError(null);
-          transcriptSinkRef.current?.(message.text ?? '');
+          transcriptSinkRef.current?.(message.text ?? '', {
+            changes: message.changes ?? [],
+            unsure: message.unsure ?? [],
+          });
           speechDone(true);
           break;
         case 'speech_to_text_error':
@@ -814,6 +823,24 @@ const SidePanel = () => {
     </>
   );
 
+  // What the composer asks of the vocabulary: learn a correction, and never change a word again
+  const composerWorkspace = view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace;
+  const composerVocabulary: VocabularyApi = {
+    learn: async (from, to, confirmed) => {
+      const reply = await panelApi.request<{ saved?: boolean; automatic?: boolean }>({
+        type: 'vocab_learn',
+        from,
+        to,
+        confirmed,
+        workspaceId: composerWorkspace,
+      });
+      return { saved: reply.saved === true, automatic: reply.automatic === true };
+    },
+    never: async word => {
+      await panelApi.request({ type: 'vocab_never', word });
+    },
+  };
+
   const composer = (
     <div className="shrink-0 px-2.5 pb-2.5 pt-1">
       {thread?.pendingRequest && view === 'chat' && (
@@ -826,6 +853,7 @@ const SidePanel = () => {
         onStopTask={handleStop}
         speech={gatedSpeech}
         setTranscriptSink={setTranscriptSink}
+        vocabulary={composerVocabulary}
         disabled={isBusy || sending}
         showStopButton={isBusy}
         setContent={setter => {

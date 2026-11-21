@@ -110,6 +110,28 @@ describe('AmbientManager.heard', () => {
     expect(utterances.map(u => u.text)).toEqual(['first line', 'second line']);
   });
 
+  it('applies the vocabulary to the words it keeps, and never to a switch it obeys', async () => {
+    const correct = vi.fn(async (text: string) => text.replace('Illum', 'Ellum'));
+    const m = manager({ correct });
+    await heard(m, 'We should ship the Illum page on Friday');
+    await heard(m, 'Ava, back on the record');
+    const [session] = await store.sessions();
+    expect((await store.utterances(session.id)).map(u => u.text)).toEqual(['We should ship the Ellum page on Friday']);
+    // The switch was matched on what was heard, and was never corrected
+    expect(correct).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the words as written when the correction fails', async () => {
+    const m = manager({
+      correct: async () => {
+        throw new Error('disk');
+      },
+    });
+    await heard(m, 'We should ship the Illum page');
+    const [session] = await store.sessions();
+    expect((await store.utterances(session.id)).map(u => u.text)).toEqual(['We should ship the Illum page']);
+  });
+
   it('obeys a switch and never keeps it', async () => {
     const m = manager();
     await heard(m, 'Ava, feel free to chime in');

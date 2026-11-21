@@ -48,6 +48,8 @@ export interface AmbientDeps {
   // The assistant's name, as the words the switches start with
   nameWords: () => Promise<string[]>;
   indicate: (state: AmbientIndicator) => void;
+  // The user's vocabulary applied to what was heard (docs/pm-desk.md, Part 4); left out, the words are kept as written
+  correct?: (text: string) => Promise<string>;
   now?: () => number;
   // How long after the last utterance a session is (re)indexed, so a long talk is not indexed line by line
   indexDelayMs?: number;
@@ -102,7 +104,9 @@ export class AmbientManager {
     const now = this.now();
     const endedAt = Math.min(utterance.endedAt, now);
     const startedAt = Math.min(utterance.startedAt, endedAt);
-    const { session } = await this.deps.store.add({ text, startedAt, endedAt });
+    // After the switches: a spoken switch is matched on what was heard, and only the words kept are corrected
+    const kept = this.deps.correct ? await this.deps.correct(text).catch(() => text) : text;
+    const { session } = await this.deps.store.add({ text: kept, startedAt, endedAt });
     if (settings.cloudAllowed) this.scheduleIndex(session.id);
   }
 

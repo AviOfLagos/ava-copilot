@@ -184,6 +184,7 @@ export async function startMockLlm(scenarios) {
       const audio = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
       if (audio) {
         dictation.recordings.push({ mimeType: audio.inlineData.mimeType, bytes: audio.inlineData.data.length });
+        dictation.prompts.push(parts.map(part => part.text ?? '').join(' '));
         if (dictation.delayMs) await new Promise(resolve => setTimeout(resolve, dictation.delayMs));
         if (dictation.failStatus) {
           res.writeHead(dictation.failStatus, { 'Content-Type': 'application/json' });
@@ -368,7 +369,7 @@ export async function startMockLlm(scenarios) {
   const calendar = { ics: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR' };
 
   // Dictation in the chat box: every recording sent to be written down, and the words that come back
-  const dictation = { recordings: [], text: 'remind me to call Ada at five', delayMs: 0, failStatus: 0 };
+  const dictation = { recordings: [], prompts: [], text: 'remind me to call Ada at five', delayMs: 0, failStatus: 0 };
 
   // What the knowledge base tests see: every text embedded and every question with its sources
   const kb = {
