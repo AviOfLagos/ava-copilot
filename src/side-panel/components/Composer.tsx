@@ -62,7 +62,7 @@ const EXPANDED_SHARE = 0.7;
 // Line height and padding of the text box (leading-5, p-2), and the room kept for the expand control
 const LINE_PX = 20;
 const PAD_PX = 16;
-const EXPAND_ROOM_PX = 40;
+const EXPAND_ROOM_PX = 48;
 // The expand control shows once the text passes three lines
 const SHOW_EXPAND_ABOVE_PX = PAD_PX + LINE_PX * 3;
 
@@ -190,6 +190,18 @@ export default function Composer({
     return () => window.removeEventListener('keydown', onKey);
   }, [micOn, cancelSpeech]);
 
+  // Esc shrinks an expanded box, wherever the focus is (while dictating it drops the recording first)
+  useEffect(() => {
+    if (!expanded || micOn) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      event.preventDefault();
+      setExpanded(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded, micOn]);
+
   const nudge = () => {
     const pill = pillRef.current;
     if (!pill) return;
@@ -278,11 +290,6 @@ export default function Composer({
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Escape' && expanded) {
-      event.preventDefault();
-      setExpanded(false);
-      return;
-    }
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       submit();
@@ -438,12 +445,11 @@ export default function Composer({
                 {tall && (
                   <button
                     type="button"
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground absolute right-2 top-1 flex size-7 items-center justify-center rounded-full transition-colors"
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground absolute right-4 top-1 flex size-7 items-center justify-center rounded-full transition-colors"
                     onClick={() => {
                       setExpanded(value => !value);
                       textareaRef.current?.focus();
                     }}
-                    aria-pressed={expanded}
                     aria-label={expanded ? t('chat_input_collapse') : t('chat_input_expand')}
                     title={expanded ? t('chat_input_collapse') : t('chat_input_expand')}>
                     {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}

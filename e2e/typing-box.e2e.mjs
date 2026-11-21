@@ -185,12 +185,17 @@ test('expanded the box takes 70% of the panel; the same control, Escape and send
   m = await measure();
   assert.ok(m.area.height < 130, `shrunk (${m.area.height})`);
 
-  // Escape shrinks it too
+  // Escape shrinks it too, with the focus in the box and with it on a button elsewhere
   await panel().click('button[aria-label="Expand the text box"]');
   await panel().focus('textarea');
   await panel().keyboard.press('Escape');
   m = await measure();
   assert.ok(m.area.height < 130, `Escape shrinks it (${m.area.height})`);
+  await panel().click('button[aria-label="Expand the text box"]');
+  await panel().evaluate(() => document.querySelector('button[aria-label="Attach a text file"]').focus());
+  await panel().keyboard.press('Escape');
+  m = await measure();
+  assert.ok(m.area.height < 130, `Escape with the focus on a button shrinks it (${m.area.height})`);
 
   // Taking the text down to three lines drops the control, and the box with it
   await panel().click('button[aria-label="Expand the text box"]');
