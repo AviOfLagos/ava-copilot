@@ -1818,6 +1818,12 @@
   "chat_input_attach": {
     "message": "Attach a text file"
   },
+  "chat_input_expand": {
+    "message": "Expand the text box"
+  },
+  "chat_input_collapse": {
+    "message": "Shrink the text box"
+  },
   "chat_input_attachments": {
     "message": "Attached files"
   },
