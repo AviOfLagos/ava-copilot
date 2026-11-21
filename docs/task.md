@@ -2814,6 +2814,12 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - E2E: the Product Social Manager is in the Growth team group and starts with its own personality.
 - Not yet: posting (after #43). The product's social accounts are "not set" in the profile until someone sets
   them, and the agent says so instead of posting from another account.
+- After review: "12k", "1.5m", "100x" and "1.200" are read as the numbers they say (a rounded "12k" matches a
+  known 12,345); every window metrics_query can total (up to 92 days ending today or yesterday), whole months,
+  and the change on the week or four weeks before (matched only by a number written with "%") are known, as is
+  any number metrics_query or rank_channels showed in the last day; single, curly and corner quotation marks and
+  Markdown quote lines count as quotes, apostrophes do not; a routine's or agent-started chat is checked even
+  with no agent id, and the draft's fields are checked with its text.
 
 ## 5. Risks, in order
 

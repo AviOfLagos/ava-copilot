@@ -37,10 +37,9 @@ export async function socialDraftCheck(
   now: number,
   store?: FactStore,
 ): Promise<string | null> {
-  if (!proposal.agentId || !CHECKED.has(proposal.action)) return null;
-  const text = `${proposal.title}\n${proposal.body}`;
-  // The fast path: a draft with no number past ten and no quotation mark needs no lookup
-  if (!/\d{2,}|["“«„]/.test(text)) return null;
+  // The user's own words in their own chat are theirs; an agent's or a routine's are checked
+  if ((!proposal.agentId && !proposal.automated) || !CHECKED.has(proposal.action)) return null;
+  const text = [proposal.title, proposal.body, ...Object.values(proposal.fields ?? {})].join('\n');
   return factRefusal(text, await knownNumbers(profile, now, store));
 }
 

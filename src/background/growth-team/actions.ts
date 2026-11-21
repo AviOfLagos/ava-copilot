@@ -80,13 +80,18 @@ function fail(context: AgentContext, error: string): ActionResult {
 /** Who is asking: the chat's workspace and, when an agent runs it, that agent. */
 export async function whoAsks(
   context: Pick<AgentContext, 'taskId'>,
-): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'> | { error: string }> {
+): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'automated'> | { error: string }> {
   const thread = await threadStore.get(context.taskId);
   const workspace = await workspaceStore.get(thread?.workspaceId);
   if (!workspace)
     return { error: 'This chat is in no workspace, so it has no product to act for. Ask the user to pick one.' };
   const agent = thread?.agentId ? await db.agents.get(thread.agentId) : undefined;
-  return { workspaceId: workspace.id, agentId: agent?.id ?? null, agentName: agent?.name ?? 'Ava' };
+  return {
+    workspaceId: workspace.id,
+    agentId: agent?.id ?? null,
+    agentName: agent?.name ?? 'Ava',
+    automated: Boolean(agent) || thread?.origin === 'agent' || thread?.origin === 'workflow',
+  };
 }
 
 async function run(

@@ -11,6 +11,7 @@ import type { Proposal, ProposeResult, QueueDeps } from '../queue';
 import { addChannel, channelKey, rankChannels, rankedText, startTest, TEST_DAYS } from './channels';
 import type { ChannelStore } from './channels';
 import { draftFollowUp, draftOutreach, stopContact } from './outreach';
+import { rememberShown } from '../social/facts';
 
 /**
  * The Product Marketing Manager's tools (docs/growth-team.md, Part 8). Positioning goes through
@@ -147,7 +148,13 @@ export async function rankChannelsAction(
   void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Ranking the channels');
   const found = await productOf(context);
   if ('error' in found) return fail(context, found.error);
-  const ranked = await rankChannels(found.profile.workspaceId, deps.now?.() ?? Date.now(), deps.channelStore);
+  const now = deps.now?.() ?? Date.now();
+  const ranked = await rankChannels(found.profile.workspaceId, now, deps.channelStore);
+  rememberShown(
+    found.profile.workspaceId,
+    ranked.map(channel => channel.perWeek),
+    now,
+  );
   return ok(context, `${ranked.length} channels`, rankedText(ranked));
 }
 
