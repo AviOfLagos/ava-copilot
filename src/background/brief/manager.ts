@@ -10,6 +10,7 @@ import { resolveModels } from '../threads/factory';
 import { isOverDailyBudget } from '../usage/budget';
 import { briefSectionsPending, sectionMarkdown, todaysBriefSections } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
+import { briefExtraSections, briefExtrasPending } from './extras';
 import { rollupMarkdown, workspaceSummaries } from '../history/summaries';
 import {
   briefDue,
@@ -73,6 +74,8 @@ export class MorningBrief {
   async check(): Promise<void> {
     if (briefDue(await briefSettingsStore.getSettings())) {
       if (await briefSectionsPending(db, Date.now()).catch(() => false)) return;
+      // A section another feature is still making (the growth team's standup): the brief comes when it ends
+      if (await briefExtrasPending(Date.now())) return;
       await this.make().catch(error => logger.error('The morning brief failed', error));
     }
   }
@@ -172,7 +175,18 @@ export class MorningBrief {
       sourcesLine: sourcesLine(sources, t),
       workspaces: await workspaceStore.list(),
       // What workflows gathered for the brief today
-      sections: await todaysBriefSections(db, now).catch(() => []),
+      sections: [
+        ...(await todaysBriefSections(db, now).catch(() => [])),
+        // Sections other features add (the growth team's Team section)
+        ...(await briefExtraSections(now)).map(section => ({
+          workflowId: section.id,
+          workflowName: section.title,
+          title: section.title,
+          markdown: section.markdown,
+          workspaceId: section.workspaceId,
+          at: now,
+        })),
+      ],
       // Where each workspace is at, from its summary (imported AI sessions, chats, meetings, notes)
       rollup: await workspaceSummaries
         .refresh()

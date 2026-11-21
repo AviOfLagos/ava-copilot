@@ -2848,6 +2848,21 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   after the standup's hours gets no "did not run" item; the plan in prompts is quoted as data; a failed standup
   shows a model error by its kind only. "Yesterday" is the last whole UTC day, as the product's numbers are kept.
 
+### The Team section of the morning brief (2026-11-21, #78, docs/growth-team.md Part 5b)
+
+- `src/background/brief/extras.ts`: other features add brief sections through `registerBriefExtra` (`pending`,
+  `sections`); the brief waits while one is pending and shows each section under its bold title.
+- `src/background/growth-team/standup/brief.ts` registers "Team · <product>" for each workspace whose Growth Lead
+  is on: the Lead's standup summary (at most 200 words), or "Standup did not run: <reason>" (it starts at 07:45,
+  after this brief; still running, added when it ends; the browser was not open at 07:45, it runs now; the
+  browser was not open between 07:45 and 12:00; or the recorded reason). The brief waits for a running standup
+  until 07:58, or 13 minutes after a late one started.
+- A standup that ends after the brief adds its section to the brief's chat (`addSection`) and lets a waiting brief
+  come (`check`).
+- Tests: `team-brief.test.ts` (every wording, the waiting rule, a ran day and a skipped day on a fake clock) and
+  `brief/__tests__/manager.test.ts` (the brief waits, then shows the section); E2E: the brief made after the
+  standup shows the Team section with the off-plan line.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

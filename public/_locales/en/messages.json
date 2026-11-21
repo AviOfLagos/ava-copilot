@@ -10955,5 +10955,26 @@
   },
   "agents_standup_notRun": {
     "message": "Standup did not run: $1"
+  },
+  "brief_team_title": {
+    "message": "Team · $1"
+  },
+  "brief_team_notRun": {
+    "message": "Standup did not run: $1."
+  },
+  "brief_team_noReason": {
+    "message": "no reason was recorded"
+  },
+  "brief_team_running": {
+    "message": "it was still running at $1, and it is added here when it ends"
+  },
+  "brief_team_later": {
+    "message": "it starts at 07:45, after this brief"
+  },
+  "brief_team_notOpen": {
+    "message": "the browser was not open at 07:45; it runs now and is added here when it ends"
+  },
+  "brief_team_skipped": {
+    "message": "the browser was not open between 07:45 and 12:00"
   }
 }
