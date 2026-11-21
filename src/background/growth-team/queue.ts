@@ -305,7 +305,7 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   if (!title || !body) return { state: 'refused', why: 'A title and the text itself are both needed.' };
 
   // A personality is only inspired by a person: a draft never names them or speaks as them (Part 8)
-  const asSomeoneElse = personaRefusal(proposal.action, title, body);
+  const asSomeoneElse = personaRefusal(proposal.action, title, body, proposal.target, proposal.why);
   if (asSomeoneElse) return { state: 'refused', why: asSomeoneElse };
 
   // The recipient of an email is in `target`, and it is no secret to them: only the text is looked at

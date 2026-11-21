@@ -258,8 +258,21 @@ Avoid:
  */
 export const PERSONA_SOURCE_NAMES: Record<string, readonly string[]> = {
   operator: ['Jeff Bezos', 'Bezos'],
-  growth: ['Sean Ellis', 'Morgan Brown', 'Hacking Growth'],
-  positioning: ['April Dunford', 'Dunford', 'Gabriel Weinberg', 'Justin Mares', 'Obviously Awesome'],
+  growth: ['Sean Ellis', 'Ellis', 'Morgan Brown', 'Hacking Growth'],
+  positioning: [
+    'April Dunford',
+    'Dunford',
+    'Gabriel Weinberg',
+    'Weinberg',
+    'Justin Mares',
+    'Mares',
+    'Obviously Awesome',
+    // "traction" alone is an ordinary word; the book and its method are not
+    'Traction book',
+    'book Traction',
+    'Bullseye framework',
+    'Bullseye method',
+  ],
   build_in_public: ['Arvid Kahl', 'Kahl', 'Zero to Sold', 'The Embedded Entrepreneur', 'The Bootstrapped Founder'],
 };
 

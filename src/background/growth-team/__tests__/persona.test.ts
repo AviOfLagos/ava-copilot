@@ -24,10 +24,26 @@ const { propose } = await import('../queue');
 
 describe('a personality is only inspired by a person', () => {
   it('finds the people and their books, whatever the case or spacing', () => {
-    expect(namedSources('As sean   ellis would say, ask the must-have question')).toEqual(['Sean Ellis']);
+    expect(namedSources('As sean   ellis would say, ask the must-have question')).toEqual(['Sean Ellis', 'Ellis']);
     expect(namedSources("I'm April Dunford, and positioning matters")).toEqual(['April Dunford', 'Dunford']);
     expect(namedSources('Read Zero to Sold this weekend')).toEqual(['Zero to Sold']);
     expect(namedSources('Like Bezos says: Day 1')).toEqual(['Bezos']);
+  });
+
+  it('sees through hyphens, missing spaces, accents and invisible characters', () => {
+    for (const text of [
+      'Sean-Ellis',
+      'SeanEllis',
+      'Sean\u200bEllis',
+      'Séan Ellis',
+      'Sean Ellis’s survey',
+      'Sean\nEllis',
+    ]) {
+      expect(namedSources(text), text).toContain('Sean Ellis');
+    }
+    expect(namedSources('Ellis says users want it')).toEqual(['Ellis']);
+    expect(namedSources('We ran the Bullseye framework on our channels')).toEqual(['Bullseye framework']);
+    expect(namedSources('As the Traction book says')).toEqual(['Traction book']);
   });
 
   it('does not take ordinary growth words for a name', () => {

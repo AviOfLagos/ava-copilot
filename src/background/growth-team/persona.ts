@@ -21,9 +21,20 @@ export const isOutward = (action: TeamAction): boolean => OUTWARD.has(action);
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Whole words, case ignored, any spacing or a curly apostrophe between the parts
+// Whole words, case ignored, with spaces, a hyphen, a dot, an underscore or nothing between the parts
 const wordsOf = (name: string) =>
-  new RegExp(`(?<![\\p{L}\\p{N}])${name.trim().split(/\s+/).map(escape).join('\\s+')}(?![\\p{L}\\p{N}])`, 'iu');
+  new RegExp(
+    `(?<![\\p{L}\\p{N}])${plain(name).trim().split(/\s+/).map(escape).join('[\\s\\-_.]*')}(?![\\p{L}\\p{N}])`,
+    'iu',
+  );
+
+// Accents and invisible characters do not hide a name: "Séan", "Sean\u200bEllis"
+function plain(text: string): string {
+  return text
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, '');
+}
 
 const PATTERNS = Object.values(PERSONA_SOURCE_NAMES)
   .flat()
@@ -31,7 +42,8 @@ const PATTERNS = Object.values(PERSONA_SOURCE_NAMES)
 
 /** The source names the text holds, in the order of the list; empty when it names none. */
 export function namedSources(text: string): string[] {
-  return PATTERNS.filter(entry => entry.pattern.test(text)).map(entry => entry.name);
+  const seen = plain(text);
+  return PATTERNS.filter(entry => entry.pattern.test(seen)).map(entry => entry.name);
 }
 
 /** Why a draft may not go to the Inbox as written, or null when it may. */
