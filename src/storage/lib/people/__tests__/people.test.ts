@@ -318,3 +318,28 @@ describe('remove', () => {
     expect((await store.observe({ text: 'Bisi', source: 'slack', workspaceId: A, ref: 'z' })).kind).toBe('candidate');
   });
 });
+
+describe('forged or look-alike details', () => {
+  it("a known address used with an open question's name only offers the person, and the tasks wait", async () => {
+    const ada = await store.create({ name: 'Adaeze Okafor', workspaceId: A, email: 'ada@example.test' });
+    await store.observe({ text: 'Chidi', source: 'spoken', workspaceId: A, taskId: 'task-1' });
+    const forged = await store.observe({ text: 'Chidi', source: 'gmail', workspaceId: A, email: 'ada@example.test' });
+    expect(forged).toMatchObject({ kind: 'person', personId: ada.id });
+    expect((forged as { taskIds?: string[] }).taskIds).toBeUndefined();
+    const [open] = await store.readyToAsk();
+    expect(open).toMatchObject({ text: 'Chidi', status: 'ask', suggestedPersonId: ada.id, taskIds: ['task-1'] });
+  });
+
+  it('a trusted link never adds a second address to someone who has one', async () => {
+    const ada = await store.create({ name: 'Adaeze Okafor', workspaceId: A, email: 'ada@example.test' });
+    await store.observe({
+      text: 'Adaeze Okafor',
+      source: 'calendar',
+      workspaceId: A,
+      email: 'evil@example.test',
+      trusted: true,
+    });
+    expect((await store.get(ada.id))?.emails).toEqual(['ada@example.test']);
+    expect((await store.unsettled())[0].suggestedPersonId).toBe(ada.id);
+  });
+});

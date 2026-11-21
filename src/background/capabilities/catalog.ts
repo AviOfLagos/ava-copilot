@@ -103,6 +103,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   read_chat: 'memory',
   remember: 'memory',
   update_memory: 'memory',
+  person_note: 'memory',
   where_are_we: 'memory',
   drive_search: 'memory',
   drive_read: 'memory',

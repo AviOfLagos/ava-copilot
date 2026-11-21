@@ -62,6 +62,7 @@ function deps(record: MeetingRecord, lines: string[], events: UpcomingEvent[] = 
     people,
     events: async () => events,
     own: async () => OWN,
+    card: async () => 0,
   };
 }
 

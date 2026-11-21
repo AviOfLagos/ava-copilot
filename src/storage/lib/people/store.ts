@@ -418,19 +418,22 @@ export function createPeopleStore(db: AviCopilotDb = defaultDb) {
         let ambiguous: Person[] = [];
         if (known.length === 1) {
           await recordOnPerson(known[0], 'identifier', input, text, ids, now);
-          // A question about this name is answered by the address: settled, and its waiting tasks handed back
-          let taskIds: string[] = [];
-          if (byKey && ['watching', 'ask', 'asked'].includes(byKey.status)) {
-            taskIds = byKey.taskIds;
-            await db.peopleNames.put({ ...byKey, status: 'settled', personId: known[0].id, lastAt: now });
+          // A question still open about this name is not settled by an address someone else could have written
+          // (a From line can be forged): the person is only offered, and its tasks wait for the owner's answer
+          if (byKey && ['watching', 'ask', 'asked'].includes(byKey.status) && !byKey.suggestedPersonId) {
+            await db.peopleNames.put({ ...byKey, suggestedPersonId: known[0].id, lastAt: now });
           }
-          return { kind: 'person', personId: known[0].id, via: 'identifier', added: false, taskIds } as const;
+          return { kind: 'person', personId: known[0].id, via: 'identifier', added: false } as const;
         }
         if (known.length > 1) ambiguous = known;
         else if (key) {
           const found = await resolve(text, { workspaceId });
           if (found && 'person' in found) {
-            const trustedLink = input.trusted === true && found.via !== 'first_name';
+            // Trusted adds an address only to someone who has none yet: it never replaces or adds to one they have
+            const trustedLink =
+              input.trusted === true &&
+              found.via !== 'first_name' &&
+              (ids.emails.length === 0 || found.person.emails.length === 0);
             if (!bringsNew(found.person, ids, workspaceId) || trustedLink) {
               await recordOnPerson(found.person, found.via, input, text, ids, now);
               return { kind: 'person', personId: found.person.id, via: found.via, added: false } as const;

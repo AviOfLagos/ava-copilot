@@ -112,6 +112,8 @@ export interface NameCandidate {
   suggestedPersonId: string | null;
   // When the name matched several people
   candidatePersonIds: string[];
+  // Another name on the same card that is likely the same someone ("Ada" given tasks, "Adaeze O." on the call)
+  likeCandidateId?: string | null;
   // watching: seen, not asked yet · ask: ready for a card · asked: on a card · settled: answered with a
   // person · not_person: the owner said it is not a person; never asked again
   status: 'watching' | 'ask' | 'asked' | 'settled' | 'not_person';

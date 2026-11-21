@@ -8,6 +8,7 @@ import type { PanelApi } from '../registry';
 import { HOUR_MS, tomorrowMorning } from './InboxRow';
 import { openThreadId, relativeTime, sourceLabel } from './meta';
 import { draftPrompt } from './whatsapp/WhatsAppView';
+import { WhosWhoCard } from '../people/WhosWho';
 
 export interface InboxDetailProps {
   item: InboxItem;
@@ -81,7 +82,12 @@ export default function InboxDetail({
       </header>
 
       {/* The body is from outside the extension: shown as plain text, never as markup */}
-      <p className="glass whitespace-pre-wrap rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed">{item.body}</p>
+      {item.source !== 'people' && (
+        <p className="glass whitespace-pre-wrap rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed">{item.body}</p>
+      )}
+
+      {/* A "Who's who" card: its questions, answered here (its body only lists them for the Inbox row) */}
+      {item.source === 'people' && <WhosWhoCard cardId={item.externalId} api={api} />}
 
       {item.links.length > 0 && (
         <ul className="glass flex flex-col gap-1.5 rounded-xl px-3 py-2">

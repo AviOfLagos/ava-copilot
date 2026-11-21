@@ -11,7 +11,7 @@ import type { People } from './people';
  */
 
 /** The invite's own id, the same for every repeat of a recurring event: one event is one sighting. */
-export const inviteRef = (eventId: string) => `cal:${eventId.split('@')[0]}`;
+export const inviteRef = (eventId: string) => `cal:${eventId.replace(/@\d+$/, '')}`;
 
 /** The people on an invite who are not the owner: attendees and the organizer, one per address. */
 export function inviteesOf(event: Pick<CalendarEvent, 'attendees' | 'organizer'>, own: Set<string>): CalendarPerson[] {

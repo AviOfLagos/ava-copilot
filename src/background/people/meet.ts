@@ -3,6 +3,7 @@ import type { MeetingRecord, ObserveInput, TranscriptSegment, UpcomingEvent } fr
 import { isGenericSpeaker } from '../meetings/speakers';
 import { inviteeInput, inviteesOf, inviteRef } from './calendar';
 import { isNobody, isSelfName, ownerEmails } from './owner';
+import { postMeetingCard } from './cards';
 import { people } from './people';
 import type { People } from './people';
 
@@ -47,10 +48,18 @@ export function meetingInputs(
   const roster = (meeting.roster ?? []).filter(name => !isSelfName(name));
   for (const text of roster) inputs.push({ ...base, text, source: 'meet', context: 'was on the call' });
 
-  // An invitee whose name is a roster name gives that person their address: both say they were on this call
-  const rosterKeys = new Map(roster.map(name => [nameKey(name), name]));
-  for (const invitee of invite ? inviteesOf(invite, own) : []) {
-    const onCall = rosterKeys.get(nameKey(invitee.name));
+  // An invitee whose name is a roster name gives that person their address: both say they were on this call.
+  // Only a name that is on the roster once and on the invite once counts; the store adds the address only to
+  // someone who has none yet, so a look-alike invite can never move or add to a known person's address
+  const rosterKeys = new Map<string, string | null>();
+  for (const name of roster) rosterKeys.set(nameKey(name), rosterKeys.has(nameKey(name)) ? null : name);
+  const invitees = invite ? inviteesOf(invite, own) : [];
+  const inviteCount = new Map<string, number>();
+  for (const invitee of invitees)
+    inviteCount.set(nameKey(invitee.name), (inviteCount.get(nameKey(invitee.name)) ?? 0) + 1);
+  for (const invitee of invitees) {
+    const key = nameKey(invitee.name);
+    const onCall = key && inviteCount.get(key) === 1 ? rosterKeys.get(key) : null;
     inputs.push(
       onCall
         ? { ...base, text: onCall, source: 'calendar', email: invitee.email, trusted: true, context: 'was invited' }
@@ -96,6 +105,8 @@ export interface MeetDeps {
   people: Pick<People, 'observeAll'>;
   events: () => Promise<UpcomingEvent[]>;
   own: () => Promise<Set<string>>;
+  // The "Who's who" card after the call
+  card: (meetingId: string) => Promise<unknown>;
 }
 
 const defaultDeps: MeetDeps = {
@@ -103,6 +114,7 @@ const defaultDeps: MeetDeps = {
   people,
   events: async () => (await upcomingEventsStore.get().catch(() => null))?.events ?? [],
   own: ownerEmails,
+  card: meetingId => postMeetingCard(meetingId),
 };
 
 /** Learns the names of a finished call. Never throws on a missing meeting. */
@@ -112,4 +124,5 @@ export async function learnFromMeeting(meetingId: string, deps: MeetDeps = defau
   const segments = await deps.meetings.segments(meetingId);
   const invite = inviteFor(meeting, await deps.events());
   await deps.people.observeAll(meetingInputs(meeting, segments, invite, await deps.own()));
+  await deps.card(meetingId);
 }
