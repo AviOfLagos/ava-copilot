@@ -48,21 +48,14 @@ export function meetingInputs(
   const roster = (meeting.roster ?? []).filter(name => !isSelfName(name));
   for (const text of roster) inputs.push({ ...base, text, source: 'meet', context: 'was on the call' });
 
-  // An invitee whose name is a roster name gives that person their address: both say they were on this call.
-  // Only a name that is on the roster once and on the invite once counts; the store adds the address only to
-  // someone who has none yet, so a look-alike invite can never move or add to a known person's address
-  const rosterKeys = new Map<string, string | null>();
-  for (const name of roster) rosterKeys.set(nameKey(name), rosterKeys.has(nameKey(name)) ? null : name);
+  // An invitee whose name is a roster name is told in the call's workspace, so it joins that name's question with
+  // its address: the owner's answer links them. A name match alone never gives anyone an address
+  const rosterKeys = new Set(roster.map(name => nameKey(name)));
   const invitees = invite ? inviteesOf(invite, own) : [];
-  const inviteCount = new Map<string, number>();
-  for (const invitee of invitees)
-    inviteCount.set(nameKey(invitee.name), (inviteCount.get(nameKey(invitee.name)) ?? 0) + 1);
   for (const invitee of invitees) {
-    const key = nameKey(invitee.name);
-    const onCall = key && inviteCount.get(key) === 1 ? rosterKeys.get(key) : null;
     inputs.push(
-      onCall
-        ? { ...base, text: onCall, source: 'calendar', email: invitee.email, trusted: true, context: 'was invited' }
+      rosterKeys.has(nameKey(invitee.name))
+        ? { ...base, text: invitee.name, source: 'calendar', email: invitee.email, context: 'was invited' }
         : { ...inviteeInput(invitee, invite!.id), ref: inviteRef(invite!.id) },
     );
   }

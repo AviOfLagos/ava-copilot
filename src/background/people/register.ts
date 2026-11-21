@@ -168,14 +168,18 @@ registerVoiceTool({
     },
   },
   guardLabel: 'note something about a person',
-  handler: async args =>
-    personNote({
+  handler: async (args, heard) => {
+    const voice = services().voice;
+    return personNote({
       name: String(args.name ?? ''),
       note: typeof args.note === 'string' ? args.note : undefined,
       alias: typeof args.alias === 'string' ? args.alias : undefined,
       email: typeof args.email === 'string' ? args.email : undefined,
-      workspaceId: services().voice.workspaceId,
-    }),
+      workspaceId: voice.workspaceId,
+      // What the owner said, not what the model heard elsewhere (a page, a call)
+      userWords: voice.userWords(heard),
+    });
+  },
 });
 
 export const personNoteSchema = {

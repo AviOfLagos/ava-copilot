@@ -37,7 +37,18 @@ export function likelyPerson(candidate: Pick<NameCandidate, 'text' | 'otherTexts
       (candidate.workspaceId === null ||
         person.workspaceIds.length === 0 ||
         person.workspaceIds.includes(candidate.workspaceId)) &&
-      [person.name, ...person.aliases.map(alias => alias.text)].some(name => said.has(firstNameOf(nameKey(name)))),
+      [
+        person.name,
+        // Only the names that hold where the question was seen
+        ...person.aliases
+          .filter(
+            alias =>
+              alias.workspaceId === null ||
+              candidate.workspaceId === null ||
+              alias.workspaceId === candidate.workspaceId,
+          )
+          .map(alias => alias.text),
+      ].some(name => said.has(firstNameOf(nameKey(name)))),
   );
   return fits.length === 1 ? fits[0] : null;
 }
@@ -59,10 +70,11 @@ export function likeOnCard(cards: NameCandidate[]): Map<string, string> {
   return pairs;
 }
 
-/** One line of a card's text for the Inbox list: the name and where it was seen. */
+/** One line of a card's text for the Inbox list: the name, its address if it came with one, and where it was seen. */
 export function questionLine(candidate: NameCandidate): string {
   const where = [...new Set(candidate.sightings.map(sighting => sighting.context).filter(Boolean))].slice(0, 2);
-  return `“${candidate.text}”${where.length ? ` — ${where.join('; ')}` : ''}`;
+  const address = candidate.emails[0] ? ` <${candidate.emails[0]}>` : '';
+  return `“${candidate.text}”${address}${where.length ? ` — ${where.join('; ')}` : ''}`;
 }
 
 export interface CardDeps {
@@ -95,14 +107,10 @@ async function offer(store: PeopleStore, cards: NameCandidate[]): Promise<void> 
 
 /** The card after a call: its unsettled names, in the meeting's chat and the Inbox. Nothing when all are known. */
 export async function postMeetingCard(meetingId: string, deps: CardDeps = defaultDeps): Promise<number> {
-  const cards = await deps.store.readyToAsk({ meetingId, limit: MAX_QUESTIONS });
-  if (cards.length === 0) return 0;
   const cardId = meetingCardId(meetingId);
+  const cards = await deps.store.claim(cardId, { meetingId, limit: MAX_QUESTIONS });
+  if (cards.length === 0) return 0;
   await offer(deps.store, cards);
-  await deps.store.markAsked(
-    cards.map(candidate => candidate.id),
-    cardId,
-  );
   const meeting = await deps.meetingTitle(meetingId);
   await deps.addItem({
     source: PEOPLE_SOURCE,
@@ -119,14 +127,9 @@ export async function postMeetingCard(meetingId: string, deps: CardDeps = defaul
 /** The day's card: names from everywhere else, most-seen first. Once a day; nothing when there is nothing to ask. */
 export async function postDailyCard(day = localDay(), deps: CardDeps = defaultDeps): Promise<number> {
   const cardId = dailyCardId(day);
-  if ((await deps.store.onCard(cardId)).length > 0) return 0;
-  const cards = await deps.store.readyToAsk({ limit: MAX_QUESTIONS });
+  const cards = await deps.store.claim(cardId, { limit: MAX_QUESTIONS, once: true });
   if (cards.length === 0) return 0;
   await offer(deps.store, cards);
-  await deps.store.markAsked(
-    cards.map(candidate => candidate.id),
-    cardId,
-  );
   await deps.addItem({
     source: PEOPLE_SOURCE,
     externalId: cardId,

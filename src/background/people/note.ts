@@ -16,11 +16,34 @@ export interface PersonNoteInput {
   alias?: string;
   email?: string;
   workspaceId: string | null;
-  // When given (a typed chat), every name and address must be in the owner's own words there
-  userWords?: string;
+  // Every name and address must be in the owner's own words: what they typed in the chat, or said to Ava
+  userWords: string;
 }
 
-const said = (words: string, value: string) => words.toLowerCase().includes(value.trim().toLowerCase());
+const tokens = (text: string) =>
+  text
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+/** Whole words, in order: "Ada" is not in "Canada", "ill" is not in "I will". */
+export function saidName(words: string, value: string): boolean {
+  const have = tokens(words);
+  const want = tokens(value);
+  if (want.length === 0) return true;
+  for (let at = 0; at + want.length <= have.length; at++) {
+    if (want.every((word, index) => have[at + index] === word)) return true;
+  }
+  return false;
+}
+
+/** Every part of an address, typed ("ada@example.test") or spoken ("ada at example dot test"). */
+export function saidEmail(words: string, email: string): boolean {
+  const have = new Set(tokens(words));
+  return tokens(email).every(word => have.has(word));
+}
 
 export async function personNote(input: PersonNoteInput, api: People = people): Promise<string> {
   const name = cleanName(input.name);
@@ -28,11 +51,13 @@ export async function personNote(input: PersonNoteInput, api: People = people): 
   const alias = cleanName(input.alias);
   const email = input.email ? cleanEmail(input.email) : null;
   if (input.email?.trim() && !email) return `"${input.email.trim()}" is not an email address.`;
-  if (input.userWords !== undefined) {
-    const missing = [name, alias, email ?? ''].filter(value => value && !said(input.userWords!, value));
-    if (missing.length) {
-      return `I only note people from the user's own words, and they did not write "${missing[0]}". Ask them to say it.`;
-    }
+  const words = input.userWords;
+  const missing = [
+    ...[name, alias].filter(value => value && !saidName(words, value)),
+    ...(email && !saidEmail(words, email) ? [email] : []),
+  ];
+  if (missing.length) {
+    return `I only note people from the user's own words, and they did not say "${missing[0]}". Ask them to say it.`;
   }
   const note = (input.note ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
   const found = await api.resolve(name, { workspaceId: input.workspaceId });

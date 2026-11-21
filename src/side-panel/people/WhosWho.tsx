@@ -37,7 +37,8 @@ export function whereSeen(candidate: NameCandidate): string {
     t(SOURCE_LABEL[source] ?? 'people_from_avi'),
   );
   const contexts = [...new Set(candidate.sightings.map(sighting => sighting.context).filter(Boolean))].slice(0, 2);
-  return [sources.join(', '), ...contexts].filter(Boolean).join(' · ');
+  // The address it came with, so the owner sees whose it is before saying yes
+  return [candidate.emails[0] ?? '', sources.join(', '), ...contexts].filter(Boolean).join(' · ');
 }
 
 const peopleFor = (people: Person[], workspaceId: string | null) =>

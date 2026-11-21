@@ -123,6 +123,15 @@ describe('what code offers', () => {
     expect(likelyPerson(candidate, [person('p1', 'Kunle A.', ['ws_beta'])])).toBeNull();
   });
 
+  it('never offers someone through a name that holds in another workspace', () => {
+    const kay = {
+      ...(person('p1', 'Kehinde Ojo', [A, 'ws_beta']) as object),
+      aliases: [{ text: 'Kay', workspaceId: A, from: 'avi' }],
+    } as never;
+    expect(likelyPerson({ text: 'Kay', otherTexts: [], workspaceId: 'ws_beta' }, [kay])).toBeNull();
+    expect(likelyPerson({ text: 'Kay', otherTexts: [], workspaceId: A }, [kay])).not.toBeNull();
+  });
+
   it('pairs a spoken name only when exactly one roster name starts that way', () => {
     const on = (id: string, text: string, source: 'meet' | 'spoken') =>
       ({ id, text, sightings: [{ source, at: 0 }], suggestedPersonId: null }) as never;

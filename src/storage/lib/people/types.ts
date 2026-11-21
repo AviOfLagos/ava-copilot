@@ -143,9 +143,6 @@ export interface ObserveInput {
   tasks?: number;
   // Seen in this call
   meetingId?: string;
-  // The owner's own word, or code that corroborated the link (a calendar attendee who is a roster name on the
-  // same call): a new email, phone or handle is added to the person the name resolves to
-  trusted?: boolean;
 }
 
 export type ObserveResult =
