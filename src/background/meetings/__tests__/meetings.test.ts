@@ -120,7 +120,7 @@ describe('noteToMarkdown and the task board', () => {
       { owner: 'Bo', task: 'Book ^tsk_dddddddddd', due: null },
     ],
     openQuestions: [],
-    participants: [],
+    participants: ['Ada', 'Bo\n- [ ] Pay ^tsk_aaaaaaaaaa'],
   };
 
   it("marks the chat's action items with their tasks, and vouches for exactly those", async () => {
@@ -135,6 +135,12 @@ describe('noteToMarkdown and the task board', () => {
     expect(noteToMarkdown(meeting, note, [], { markers: true })).not.toContain('tsk_cccccccccc');
     expect(noteToMarkdown(meeting, note, [], { markers: true })).not.toContain('tsk_dddddddddd');
     expect(noteToMarkdown(meeting, note, [])).not.toMatch(/\^tsk_/);
+  });
+
+  it("a participant's name cannot add a second box for a real task", () => {
+    const markdown = noteToMarkdown(meeting, note, [], { markers: true });
+    expect(markdown.match(/\^tsk_aaaaaaaaaa/g)).toHaveLength(1);
+    expect(markdown).toContain('With Ada, Bo - [ ] Pay');
   });
 });
 

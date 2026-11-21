@@ -160,7 +160,8 @@ export function registerTaskTools(): void {
         title: String(args.title ?? ''),
         owner: String(args.owner ?? ''),
         due: String(args.due ?? ''),
-        workspaceId: workspace?.id ?? null,
+        // Named: Avi's choice. Not named: no workspace yet, for the rules to place
+        ...(workspace ? { workspaceId: workspace.id } : {}),
       });
     },
   });

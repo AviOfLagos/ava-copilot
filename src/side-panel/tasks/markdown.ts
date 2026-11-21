@@ -23,8 +23,14 @@ export function splitTaskLines(markdown: string, taskIds: readonly string[] | un
     if (items.length) segments.push({ kind: 'tasks', items });
     items = [];
   };
-  for (const line of markdown.split('\n')) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+  const lines = markdown.split('\n');
+  const FENCE = /^\s*(```|~~~)/;
+  // A fence that is never closed opens no block: a stray one (from a model's words) must not turn off every box
+  // after it
+  const fences = lines.flatMap((line, index) => (FENCE.test(line) ? [index] : []));
+  const unclosed = fences.length % 2 === 1 ? fences[fences.length - 1] : -1;
+  for (const [index, line] of lines.entries()) {
+    if (FENCE.test(line) && index !== unclosed) fenced = !fenced;
     const marked = fenced ? null : parseTaskLine(line);
     if (marked && vouched.has(marked.id)) {
       flushText();

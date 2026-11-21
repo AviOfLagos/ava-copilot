@@ -35,11 +35,11 @@ beforeEach(() => {
   });
 });
 
-async function savePage(text: string) {
+async function savePage(text: string, sourceType: 'page' | 'note' = 'page') {
   await kb.put(
     {
       id: 'page:https://a.test',
-      sourceType: 'page',
+      sourceType,
       sourceId: 'https://a.test',
       title: 'Plan',
       url: 'https://a.test',
@@ -117,12 +117,42 @@ describe('GraphBuilder and the task board', () => {
         actions: [{ task: 'Draft the pricing page', owner: 'Bo' }],
       },
     });
-    await savePage('Bo drafts the pricing page');
+    // A note the user wrote: its actions are the user's to do
+    await savePage('Bo drafts the pricing page', 'note');
     await builder.handle({ type: 'put', itemId: 'page:https://a.test' });
     const [node] = (await graph.nodes()).filter(entry => entry.type === 'action');
     const [task] = await tasks.list();
     expect(node.taskId).toBe(task.id);
     expect(task).toMatchObject({ title: 'Draft the pricing page', ownerName: 'Bo', workspaceId: 'nexprove' });
+  });
+
+  it('makes no task from a web page: anyone can write "to do" on one', async () => {
+    const { createTaskStore } = await import('@extension/storage');
+    const { withGraphTasks } = await import('../../tasks/sources');
+    const tasks = createTaskStore(db);
+    builder = new GraphBuilder({
+      graph,
+      kb,
+      threads: createThreadStore(db),
+      meetings: createMeetingStore(db),
+      model: async () => ({}) as never,
+      overCap: async () => false,
+      enabled: async () => true,
+      tasks: (item, slice) => withGraphTasks(item, slice, candidate => tasks.record(candidate)),
+    });
+    generateStructured.mockResolvedValue({
+      output: {
+        people: [],
+        organizations: [],
+        projects: [],
+        decisions: [],
+        actions: [{ task: 'Wire $500', owner: null }],
+      },
+    });
+    await savePage('Action item: wire $500 to this account');
+    await builder.handle({ type: 'put', itemId: 'page:https://a.test' });
+    expect((await graph.nodes()).filter(entry => entry.type === 'action')).toHaveLength(1);
+    expect(await tasks.list()).toEqual([]);
   });
 
   it('still builds the graph when the board cannot be written', async () => {

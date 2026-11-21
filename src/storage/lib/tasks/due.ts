@@ -3,7 +3,6 @@
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 /** "2026-11-27" in local time. */
 export function isoDay(at: number): string {
@@ -18,7 +17,23 @@ const startOfDay = (at: number) => {
 };
 
 const weekdayOf = (word: string) => WEEKDAYS.findIndex(day => word === day || word === day.slice(0, 3));
-const monthOf = (word: string) => MONTHS.findIndex(month => word.startsWith(month));
+const MONTH_NAMES = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
+// A month's name or its start ("nov", "novem"), never a word that only begins like one ("Janet", "decks")
+const monthOf = (word: string) =>
+  word.length >= 3 ? MONTH_NAMES.findIndex(month => month.startsWith(word.replace(/\.$/, ''))) : -1;
 
 /** A real calendar day, or null ("Feb 30" is none). */
 function dayOf(year: number, month: number, day: number): string | null {

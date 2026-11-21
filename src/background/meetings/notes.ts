@@ -118,7 +118,9 @@ export function noteHeading(
     date,
     meeting.platform,
     duration && `${duration} long`,
-    note.participants.length > 0 && `With ${note.participants.join(', ')}`,
+    // Names come from the model: one line each, and never a task marker
+    note.participants.length > 0 &&
+      `With ${note.participants.map(name => stripTaskMarkers(name.replace(/\s+/g, ' ').trim())).join(', ')}`,
   ]
     .filter(Boolean)
     .join(' · ');

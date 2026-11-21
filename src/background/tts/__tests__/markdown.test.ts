@@ -4,6 +4,8 @@ import { toSpeakableText } from '../markdown';
 describe('toSpeakableText', () => {
   it('never reads out a task marker', () => {
     expect(toSpeakableText('- [ ] Send the login ^tsk_abcdefghij')).not.toContain('tsk');
+    // Marks taken out later must not join the pieces of one back together
+    expect(toSpeakableText('Send it ^`tsk_abcdefghij` and ^*tsk_abcdefghij*')).not.toContain('tsk');
   });
 
   it('drops heading marks', () => {

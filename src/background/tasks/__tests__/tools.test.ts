@@ -90,10 +90,26 @@ describe('task_done and task_reopen', () => {
     expect((await tasks.list({ status: 'open' })).map(task => task.workspaceId)).toEqual(['ws-2']);
   });
 
-  it('a chat falls back to every workspace when its own has no match', async () => {
+  it("a chat's agent never reaches another workspace's tasks, by words or by id", async () => {
     const elsewhere = await add('Renew the domain', 'ws-2');
-    await taskSetStatus(tasks, chat('ws-1'), { task: 'domain' }, 'done', WORKSPACES);
+    expect(await taskSetStatus(tasks, chat('ws-1'), { task: 'domain' }, 'done', WORKSPACES)).toMatch(/^No open task/);
+    expect(await taskSetStatus(tasks, chat('ws-1'), { task: elsewhere.id }, 'done', WORKSPACES)).toBe(
+      `No task has the id ${elsewhere.id}.`,
+    );
+    expect((await tasks.get(elsewhere.id))?.status).toBe('open');
+    // Voice is the user's own words: every workspace
+    await taskSetStatus(tasks, voice, { task: 'domain' }, 'done', WORKSPACES);
     expect((await tasks.get(elsewhere.id))?.status).toBe('done');
+  });
+
+  it('an id names a task only in the state the tool works on', async () => {
+    const login = await add('Fix the login page');
+    expect(await taskSetStatus(tasks, voice, { task: login.id }, 'open')).toBe('"Fix the login page" is open already.');
+    await tasks.setStatus(login.id, 'dropped', 'avi');
+    expect(await taskSetStatus(tasks, voice, { task: login.id }, 'done')).toBe(
+      '"Fix the login page" is dropped already.',
+    );
+    expect((await tasks.get(login.id))?.status).toBe('dropped');
   });
 
   it('says so when nothing fits or the id is unknown', async () => {
@@ -137,9 +153,12 @@ describe('task_add', () => {
     expect(await tasks.list()).toHaveLength(1);
   });
 
-  it('by voice, the workspace Avi names is his choice', async () => {
+  it('by voice, the workspace Avi names is his choice; none named is left for the rules', async () => {
     await taskAdd(tasks, voice, { title: 'Book the venue', workspaceId: 'ws-2' }, NOW);
-    expect((await tasks.list())[0]).toMatchObject({ workspaceId: 'ws-2', workspaceSetBy: 'avi' });
+    await taskAdd(tasks, voice, { title: 'Call the bank' }, NOW);
+    const [venue, bank] = await tasks.list();
+    expect(venue).toMatchObject({ workspaceId: 'ws-2', workspaceSetBy: 'avi' });
+    expect(bank).toMatchObject({ workspaceId: null, workspaceSetBy: 'rule' });
   });
 
   it('refuses a title with no words', async () => {

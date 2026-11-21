@@ -73,6 +73,8 @@ export function toWhatsAppText(markdown: string, max = WHATSAPP_REPLY_MAX, more 
       .replace(/`([^`]+)`/g, '$1')
       .replace(/^>\s?/, '')
       .replaceAll(BOLD, '*');
+    // Again, last: taking out marks above can join the pieces of a marker ("^`tsk_…`")
+    line = stripTaskMarkers(line);
     lines.push(line.trimEnd());
   }
   const text = lines

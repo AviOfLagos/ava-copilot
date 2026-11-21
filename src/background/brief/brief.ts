@@ -307,13 +307,16 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
   if (data.rollup?.trim()) sections.push(data.rollup.trim());
 
   for (const group of briefGroups(data)) {
-    const parts = [`**${plain(group.name, 60)}**`];
+    // This section keeps its own markers, so everything else in it is cleared of them here
+    const parts = [`**${stripTaskMarkers(plain(group.name, 60))}**`];
     if (group.tasks.length) {
       const lines = group.tasks.map(task => taskLine(task, taskText(task)));
       if (group.more > 0) lines.push(`- …and ${group.more} more on the Tasks page`);
       parts.push(`Open tasks:\n${lines.join('\n')}`);
     }
-    if (group.decisions.length) parts.push(`Decided lately:\n${group.decisions.map(text => `- ${text}`).join('\n')}`);
+    if (group.decisions.length) {
+      parts.push(`Decided lately:\n${group.decisions.map(text => `- ${stripTaskMarkers(text)}`).join('\n')}`);
+    }
     taskSections.add(sections.length);
     sections.push(parts.join('\n\n'));
   }
@@ -339,7 +342,7 @@ function taskText(task: Task): string {
   const details = [task.ownerName ? plain(task.ownerName, 40) : '', task.due ? `due ${task.due}` : '']
     .filter(Boolean)
     .join(', ');
-  return `${plain(stripTaskMarkers(task.title), 160)}${details ? ` (${details})` : ''}`;
+  return stripTaskMarkers(`${plain(stripTaskMarkers(task.title), 160)}${details ? ` (${details})` : ''}`);
 }
 
 /**

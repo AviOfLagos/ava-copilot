@@ -49,6 +49,11 @@ describe('splitTaskLines', () => {
     expect(hideTaskMarkers(text)).toBe(text);
   });
 
+  it('a stray fence that never closes does not turn off the boxes after it', () => {
+    const text = ['Note from the model:', '```', `- [ ] Real ^${A}`].join('\n');
+    expect(splitTaskLines(text, [A]).map(segment => segment.kind)).toEqual(['markdown', 'tasks']);
+  });
+
   it('keeps an unmarked box as plain Markdown', () => {
     expect(splitTaskLines('- [ ] Plain box', [A])).toEqual([{ kind: 'markdown', text: '- [ ] Plain box' }]);
   });

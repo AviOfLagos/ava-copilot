@@ -15,6 +15,9 @@ export interface TaskSource {
   quote?: string;
 }
 
+/** A field a later mention would otherwise fill. */
+export type EditedField = 'ownerName' | 'due';
+
 export interface Task {
   // 'tsk_' + 10 random base32 chars
   id: string;
@@ -46,6 +49,8 @@ export interface Task {
   externalRefs: { system: string; id: string }[];
   // The ids of tasks merged into this one: a marker written with one of them still finds this task
   mergedIds?: string[];
+  // Fields the user set by hand: a later mention never fills them, even when the user cleared them
+  edited?: EditedField[];
   createdAt: number;
   updatedAt: number;
 }

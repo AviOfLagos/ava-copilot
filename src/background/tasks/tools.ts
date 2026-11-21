@@ -78,15 +78,16 @@ async function resolve(
 ): Promise<Found> {
   const words = ref.trim();
   if (!words) return { answer: 'Say which task: its words or its id.' };
+  // A chat's agent sees its own workspace only (a page it read must not reach another workspace's tasks); voice is
+  // the user's own words and sees every workspace
+  const inScope = (task: Task) => scope.workspaceId === undefined || task.workspaceId === scope.workspaceId;
   if (isTaskId(words)) {
     const task = await store.get(words);
-    return task ? { task } : { answer: `No task has the id ${words}.` };
+    if (!task || !inScope(task)) return { answer: `No task has the id ${words}.` };
+    if (!statuses.includes(task.status)) return { answer: `${quoted(task)} is ${task.status} already.` };
+    return { task };
   }
-  const all = await store.list({ status: statuses });
-  // In a chat, its own workspace first; across all of them when nothing there fits
-  const own = scope.workspaceId === undefined ? all : all.filter(task => task.workspaceId === scope.workspaceId);
-  let matches = findTasks(own, words);
-  if (matches.length === 0 && own !== all) matches = findTasks(all, words);
+  const matches = findTasks((await store.list({ status: statuses })).filter(inScope), words);
   if (matches.length === 1) return { task: matches[0] };
   if (matches.length === 0) {
     return { answer: `No ${statuses.join(' or ')} task matches those words. task_list shows what is there.` };
@@ -117,8 +118,9 @@ export async function taskAdd(
     dueText: input.due || null,
     due: dueFromText(input.due, now),
     workspaceId: input.workspaceId !== undefined ? input.workspaceId : (scope.workspaceId ?? null),
-    // Avi saying where it goes is his choice; Ava placing it in the chat's workspace is hers
-    workspaceSetBy: scope.by,
+    // A workspace the user named is their choice; Ava placing it in the chat's workspace is hers; with neither it
+    // is left for the rules to place
+    workspaceSetBy: input.workspaceId !== undefined ? scope.by : scope.workspaceId !== undefined ? 'ava' : 'rule',
     source: scope.source,
     at: now,
   });
@@ -177,7 +179,8 @@ export async function taskAssign(
   const found = await resolve(store, scope, input.task, ['open'], workspaces);
   if ('answer' in found) return found.answer;
   // The name as said; the people part links it to a person (tasks.setOwner)
-  const task = await store.update(found.task.id, { ownerName: input.owner });
+  // Said by the user's own voice, it is their choice, and later mentions do not change it
+  const task = await store.update(found.task.id, { ownerName: input.owner }, { byUser: scope.by === 'avi' });
   return task?.ownerName
     ? `${quoted(task)} now belongs to ${JSON.stringify(task.ownerName)}.`
     : `${quoted(task)} has no owner now.`;

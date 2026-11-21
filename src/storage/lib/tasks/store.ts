@@ -109,7 +109,7 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
      * Changes a task's words, owner's name, due date or links. Its id, workspace and status change elsewhere. Giving it
      * to a different name clears the person it was linked to.
      */
-    update(id: string, changes: TaskChanges): Promise<Task | null> {
+    update(id: string, changes: TaskChanges, options: { byUser?: boolean } = {}): Promise<Task | null> {
       return change(id, task => {
         const next: Task = {
           ...task,
@@ -119,6 +119,13 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
         };
         // A new name is a new person: the link to the old one (setOwner) no longer holds
         if (next.ownerName !== task.ownerName) next.ownerId = null;
+        // What the user set or cleared by hand stays so (record() does not fill it)
+        if (options.byUser) {
+          const edited = new Set(task.edited ?? []);
+          if (changes.ownerName !== undefined) edited.add('ownerName');
+          if ('due' in changes) edited.add('due');
+          if (edited.size) next.edited = [...edited];
+        }
         // A field set to undefined is cleared
         for (const key of ['detail', 'due', 'dueText', 'followUp'] as const)
           if (next[key] === undefined) delete next[key];
@@ -254,15 +261,19 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
         const same = findSameTask(await inWorkspace(workspaceId), { ...candidate, title, ownerName }, at);
         if (same) {
           const seen = sourceId !== undefined && !same.seenIn.includes(sourceId);
+          const kept = new Set(same.edited ?? []);
+          const fillOwner = !kept.has('ownerName');
+          const fillDue = !kept.has('due');
           const next: Task = {
             ...same,
             seenIn: seen ? [...same.seenIn, sourceId] : same.seenIn,
-            ownerName: same.ownerName ?? ownerName,
-            ownerId: same.ownerId ?? candidate.ownerId ?? null,
-            ...(same.due || !due ? {} : { due }),
-            ...(same.dueText || !dueText ? {} : { dueText }),
+            ownerName: same.ownerName ?? (fillOwner ? ownerName : null),
+            ownerId: same.ownerId ?? (fillOwner ? (candidate.ownerId ?? null) : null),
+            ...(same.due || !due || !fillDue ? {} : { due }),
+            ...(same.dueText || !dueText || !fillDue ? {} : { dueText }),
             ...(same.detail || !candidate.detail ? {} : { detail: candidate.detail.trim().slice(0, 2000) }),
-            updatedAt: Math.max(same.updatedAt, at),
+            // A closed task is not made to look recent by an old mention
+            updatedAt: same.status === 'open' ? Math.max(same.updatedAt, at) : same.updatedAt,
           };
           const changed = JSON.stringify(next) !== JSON.stringify(same);
           if (changed) await db.tasks.put(next);

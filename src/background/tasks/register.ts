@@ -71,12 +71,16 @@ command(
     due: isoDate.optional(),
   }),
   async input => {
-    const task = await taskStore.update(input.id, {
-      ...(input.title !== undefined ? { title: input.title } : {}),
-      ...(input.ownerName !== undefined ? { ownerName: input.ownerName || null } : {}),
-      // A date set by hand replaces the words it was worked out from
-      ...(input.due !== undefined ? { due: input.due || undefined, dueText: undefined } : {}),
-    });
+    const task = await taskStore.update(
+      input.id,
+      {
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.ownerName !== undefined ? { ownerName: input.ownerName || null } : {}),
+        // A date set by hand replaces the words it was worked out from
+        ...(input.due !== undefined ? { due: input.due || undefined, dueText: undefined } : {}),
+      },
+      { byUser: true },
+    );
     if (!task) throw new Error('That task is no longer on the board.');
     return task;
   },

@@ -176,7 +176,11 @@ describe('the one-time backfill', () => {
     const login = (await tasks.list()).find(task => task.title === 'Send the login')!;
     expect((await db.meetings.get('m-a'))?.note?.actionItems[0].taskId).toBe(login.id);
     expect((await db.meetings.get('m-b'))?.note?.actionItems[0].taskId).toBe(login.id);
-    expect((await db.graphNodes.get('action:m-b'))?.taskId).toBe(login.id);
+    // The graph's reading of a meeting is no second source: the note's items are already on the board
+    expect((await db.graphNodes.get('action:m-b'))?.taskId).toBeUndefined();
+    expect((await db.graphNodes.get('action:c-1'))?.taskId).toBe(
+      (await tasks.list()).find(task => task.title === 'Draft the pricing page')!.id,
+    );
     expect((await db.meetings.get('m-old'))?.note?.actionItems[0].taskId).toBeUndefined();
     expect((await db.graphNodes.get('action:old'))?.taskId).toBeUndefined();
   });

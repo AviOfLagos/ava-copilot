@@ -67,9 +67,17 @@ function ownerIn(slice: Pick<GraphSlice, 'entities' | 'edges'>, actionId: string
   return (edge && slice.entities.find(entity => entity.id === edge.to)?.label) || null;
 }
 
+/**
+ * The knowledge items whose graph actions become tasks: what the user said or wrote. Not a web page (anyone can
+ * write "to do" on one), and not a meeting, whose note's action items are already on the board (two readings of one
+ * call would make two tasks).
+ */
+export const GRAPH_TASK_SOURCES = new Set<KnowledgeItem['sourceType']>(['thread', 'note', 'ai-session', 'ambient']);
+
 /** A graph action as a mention, from the knowledge item that raised it. */
 export function graphCandidate(
-  item: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'workspaceId' | 'sourceDate'>,
+  item: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'workspaceId' | 'sourceDate'> &
+    Partial<Pick<KnowledgeItem, 'sourceUpdatedAt'>>,
   action: Pick<GraphNode, 'label' | 'workspaceId' | 'date'>,
   owner: string | null,
 ): TaskCandidate {
@@ -79,7 +87,8 @@ export function graphCandidate(
     workspaceId: action.workspaceId ?? item.workspaceId ?? null,
     // A meeting's id, a chat's id, a note's or page's own id: the same id a meeting note's items carry
     source: { kind: sourceKindOf(item), id: item.sourceId },
-    at: item.sourceDate || action.date,
+    // When it was last said: a chat started weeks ago may hold today's request
+    at: item.sourceUpdatedAt || item.sourceDate || action.date,
   };
 }
 
@@ -88,10 +97,12 @@ export function graphCandidate(
  * action nodes, for the graph view; the board is where they are ticked.
  */
 export async function withGraphTasks(
-  item: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'workspaceId' | 'sourceDate'>,
+  item: Pick<KnowledgeItem, 'sourceType' | 'sourceId' | 'workspaceId' | 'sourceDate'> &
+    Partial<Pick<KnowledgeItem, 'sourceUpdatedAt'>>,
   slice: GraphSlice,
   record: RecordFn = recordTask,
 ): Promise<GraphSlice> {
+  if (!GRAPH_TASK_SOURCES.has(item.sourceType)) return slice;
   const entities: GraphNode[] = [];
   for (const entity of slice.entities) {
     if (entity.type !== 'action') {
