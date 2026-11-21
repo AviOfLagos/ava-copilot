@@ -9,6 +9,7 @@ import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
 import type { VocabEntry } from '../vocabulary/types';
+import type { NameCandidate, Person } from '../people/types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
 import type {
   FeedbackRecord,
@@ -343,6 +344,8 @@ export interface GraphNode {
   updatedAt: number;
   // An action's task on the board (src/storage/lib/tasks)
   taskId?: string;
+  // A person node's person (../people), once one is known
+  personId?: string | null;
 }
 
 export type GraphEdgeKind = 'mentions' | 'attended' | 'decided_in' | 'raised_in' | 'assigned_to' | 'part_of';
@@ -398,6 +401,9 @@ export class AviCopilotDb extends Dexie {
   teamSuppressed!: Table<SuppressedAddress, string>;
   teamChannels!: Table<TeamChannel, string>;
   tasks!: Table<Task, string>;
+  // People (../people, docs/pm-desk.md Part 5): who is who, and the names not settled yet
+  people!: Table<Person, string>;
+  peopleNames!: Table<NameCandidate, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -479,6 +485,11 @@ export class AviCopilotDb extends Dexie {
     // v13: the task board (docs/pm-desk.md, Part 2). Additive
     this.version(13).stores({
       tasks: 'id, status, workspaceId, ownerId, [status+workspaceId], updatedAt, *mergedIds',
+    });
+    // v14: people and the names not settled yet (#107). Additive
+    this.version(14).stores({
+      people: 'id, nameKey, *aliasKeys, *emails, *phones, *handleKeys, *workspaceIds, updatedAt',
+      peopleNames: 'id, &key, status, askedOn, *emails, *phones, *handleKeys, *meetingIds, lastAt',
     });
   }
 }
