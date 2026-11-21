@@ -10886,5 +10886,23 @@
   },
   "team_auto_held": {
     "message": "$1, com permissão sempre, deixou aprovado: $2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "Líder de crescimento"
+  },
+  "persona_builtin_growth_description": {
+    "message": "Inspirado no trabalho público de Sean Ellis: primeiro um produto que as pessoas sentiriam falta, uma métrica norte, testes priorizados."
+  },
+  "persona_builtin_positioning_name": {
+    "message": "Posicionamento e prospecção"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "Inspirado no trabalho público de April Dunford sobre posicionamento, com os testes de canais de “Traction”: para quem é, depois onde."
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "Construindo em público"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "Inspirado no trabalho público de Arvid Kahl sobre construir em público: ache onde as pessoas já conversam, ajude primeiro, mostre o trabalho real."
   }
 }

@@ -2725,6 +2725,19 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - The workspace screen shows the ledger: spent of budget, beta places this week, waiting and held.
 - Tests: `background/growth-team/__tests__` (rules, queue), `e2e/team-approvals.e2e.mjs`.
 
+### Three personalities for the growth team (2026-11-21, #73, docs/growth-team.md Part 8)
+
+- Built-ins `growth` (inspired by Sean Ellis), `positioning` (April Dunford, with the channel tests from
+  *Traction*) and `build_in_public` (Arvid Kahl) in `src/storage/lib/personalities/builtins.ts`. Each one's
+  instructions hold, in order, five beliefs, "When …" rules, first questions and what to avoid, in our own words,
+  under 2,000 characters. Sources: `docs/personas/<id>.md`.
+- Inspired by, never the person: the instructions say so, and code makes it hold. `PERSONA_SOURCE_NAMES` lists
+  the people and their books; `growth-team/persona.ts` refuses a post, reply, email, listing or issue that names
+  one (or speaks as one) before it reaches the Inbox. The operator's Bezos is on the list too.
+- The local voice engines have seven voices besides Ava's, so two of the nine built-ins share one there; the test
+  now says every voice is used before one is shared.
+- Eval kind `draft` (`evals/runner/draft.ts`): four cases, three refused drafts and one clean one.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

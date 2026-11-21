@@ -10886,5 +10886,23 @@
   },
   "team_auto_held": {
     "message": "$1 依「每次都允許」已核准並保留：$2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "成長負責人"
+  },
+  "persona_builtin_growth_description": {
+    "message": "靈感來自 Sean Ellis 公開的作品：先做出人們會捨不得的產品，一個北極星指標，排序過的實驗。"
+  },
+  "persona_builtin_positioning_name": {
+    "message": "定位與開發"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "靈感來自 April Dunford 公開的定位作品，加上《Traction》的通路測試：先問給誰，再問在哪裡。"
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "公開打造者"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "靈感來自 Arvid Kahl 公開分享的「公開打造」：找到人們已經在聊的地方，先幫忙，展示真實的工作。"
   }
 }

@@ -67,6 +67,29 @@ export const voiceCase = z.object({
 });
 
 /**
+ * A draft an agent wrote for other people, under a personality: what the personality tells the model, and what
+ * code does with the draft before it can reach the Inbox (src/background/growth-team/persona.ts).
+ */
+export const draftCase = z.object({
+  kind: z.literal('draft'),
+  name: z.string(),
+  // A built-in personality id
+  personality: z.string().min(1),
+  action: z.enum(['post', 'reply', 'outreach_email', 'follow_up', 'listing', 'customer_issue']),
+  // What the model wrote, as it would reach queue_for_approval
+  replay: z.object({ title: z.string().min(1), text: z.string().min(1) }),
+  expect: z.object({
+    // Whether code refuses the draft
+    refused: z.boolean(),
+    // Patterns the refusal must match (regex source, case-insensitive)
+    why_matches: z.array(z.string()).optional(),
+    // Patterns the personality's prompt section must match: what the model is told
+    prompt_matches: z.array(z.string()).optional(),
+  }),
+  source: z.unknown().optional(),
+});
+
+/**
  * What Suture writes for a failing trace (evals/suture/<issue>/<trace>.eval.json): the user's message, the answer
  * that failed, and the model's recorded replies when the trace has them. Replayed as a planner case: the user must
  * not get the failing answer again, nor an empty one.
@@ -87,7 +110,8 @@ export const sutureCase = z.object({
 export type PlannerCase = z.infer<typeof plannerCase>;
 export type SkillsCase = z.infer<typeof skillsCase>;
 export type VoiceCase = z.infer<typeof voiceCase>;
-export type EvalCase = PlannerCase | SkillsCase | VoiceCase;
+export type DraftCase = z.infer<typeof draftCase>;
+export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase;
 export type VoiceStep = z.infer<typeof voiceStep>;
 
 const CHANNELS = new Set(plannerCase.shape.channel.unwrap().options as readonly string[]);
@@ -112,6 +136,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'planner') return plannerCase.parse(raw);
   if (kind === 'skills') return skillsCase.parse(raw);
   if (kind === 'voice') return voiceCase.parse(raw);
+  if (kind === 'draft') return draftCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

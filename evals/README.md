@@ -31,6 +31,7 @@ evals: 6 total, 5 passed, 1 failed
 | `planner` | The planner with the real prompt for `channel`, the model replaced by `replay.planner` (the last reply repeats for any further call) | `expect`: the answer (`answer_not_empty`, `answer_not`, `answer_matches`, `answer_not_matches`) and the system prompt the model got (`prompt_matches`, `prompt_not_matches`). `live`: checked only with a live model |
 | `skills` | `skillSectionFor` with the built-in skills, for `input` on the tab `url` | `expect.skills`: the skills used, in order |
 | `voice` | The on-device voice conversation (economy mode) fed `heard`: `{ say, level: near\|far, pause }`, `{ quiet }`, `{ wait_ms }` | `expect.turns`: the turns Ava answers, as she was asked them |
+| `draft` | A recorded draft (`replay.title`, `replay.text`) for `action` under the built-in `personality`, through the check `propose` runs before the Inbox (`growth-team/persona.ts`) | `expect.refused`, `why_matches`, and `prompt_matches` on the personality's prompt section |
 | (none) | A Suture case: replayed as a planner case | The failing answer is not given again; the answer is not empty |
 
 A recorded reply cannot show that a better prompt makes a better answer: a case about what the model says

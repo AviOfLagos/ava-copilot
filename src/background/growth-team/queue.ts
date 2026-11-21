@@ -8,6 +8,7 @@ import { localDay } from '../rounds/plan';
 import { grantAsk, grantRefusal, recordGrant, recordSpend, remoteLeft, spendRefusal } from './ledger';
 import type { BetaRule, RemoteGrants } from './ledger';
 import { modeFor, offersAlways, TEAM_LIMITS } from './modes';
+import { personaRefusal } from './persona';
 import { findCustomerDetails, findingsText } from './privacy';
 
 /**
@@ -302,6 +303,10 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   const title = oneLine(proposal.title, 160);
   const body = clean(proposal.body, 6000);
   if (!title || !body) return { state: 'refused', why: 'A title and the text itself are both needed.' };
+
+  // A personality is only inspired by a person: a draft never names them or speaks as them (Part 8)
+  const asSomeoneElse = personaRefusal(proposal.action, title, body);
+  if (asSomeoneElse) return { state: 'refused', why: asSomeoneElse };
 
   // The recipient of an email is in `target`, and it is no secret to them: only the text is looked at
   const ownAddresses = [profile.email?.from, profile.email?.replyTo].filter((value): value is string => Boolean(value));

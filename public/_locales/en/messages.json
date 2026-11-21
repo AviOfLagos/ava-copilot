@@ -10886,5 +10886,23 @@
   },
   "team_auto_held": {
     "message": "$1, allowed every time, kept it as approved: $2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "Growth lead"
+  },
+  "persona_builtin_growth_description": {
+    "message": "Inspired by Sean Ellis’s public work: a product people would miss first, one north star, ranked tests."
+  },
+  "persona_builtin_positioning_name": {
+    "message": "Positioning and outreach"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "Inspired by April Dunford’s public work on positioning, with the channel tests from “Traction”: who it is for, then where."
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "Builder in public"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "Inspired by Arvid Kahl’s public work on building in public: find where people already talk, help first, show real work."
   }
 }

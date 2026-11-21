@@ -1,0 +1,19 @@
+{
+  "kind": "draft",
+  "name": "A build-in-public post in the product's own voice goes to the Inbox",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#73",
+    "spec": "docs/growth-team.md, Part 8"
+  },
+  "personality": "build_in_public",
+  "action": "post",
+  "replay": {
+    "title": "Week 3 of building Suture in public",
+    "text": "This week Suture fixed its own failing trace: the eval that failed on Monday passes now. Here is the trace, the fix and the number."
+  },
+  "expect": {
+    "refused": false,
+    "prompt_matches": ["Words that go out follow the product's voice"]
+  }
+}
