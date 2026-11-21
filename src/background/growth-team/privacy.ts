@@ -14,9 +14,11 @@ export interface PrivacyFinding {
 }
 
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+/gi;
-// Seven or more digits with the usual marks between them. A date (2026-11-21), a time, a version number and a
-// plain count are not phone numbers.
-const PHONE = /(?<![\w.])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?\d{2,4}(?:[\s.-]\d{2,4}){2,4}(?![\w.-]*\d)/g;
+// Seven or more digits with the usual marks between them ("(555) 123-4567", "+44 7911 123456"), or ten to fifteen
+// in a row with or without a "+". A date (2026-11-21), a time, a version number and a plain count are not phone
+// numbers.
+const PHONE = /(?<![\w.])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?\d{2,6}(?:[\s.-]\d{2,6}){1,4}(?![\w.-]*\d)/g;
+const PHONE_RUN = /(?<![\w.+])\+?\d{10,15}(?![\w.])/g;
 const DATE_LIKE = /^\d{4}[-./]\d{1,2}[-./]\d{1,2}$|^\d{1,2}[-./]\d{1,2}[-./]\d{2,4}$/;
 // A link whose path or query names one person or account: /users/123, ?user_id=…, ?email=…, a UUID in a path
 const ID_PARAM = /[?&](?:user(?:_?id)?|uid|account(?:_?id)?|member(?:_?id)?|customer(?:_?id)?|email|org(?:_?id)?)=/i;
@@ -52,7 +54,7 @@ export function findCustomerDetails(text: string, known: string[] = [], allowedL
   }
   // Links are judged above: digits inside one are not a phone number
   const withoutLinks = text.replace(URL_RE, ' ');
-  for (const match of withoutLinks.matchAll(PHONE)) {
+  for (const match of [...withoutLinks.matchAll(PHONE), ...withoutLinks.matchAll(PHONE_RUN)]) {
     const value = match[0].trim();
     const digits = value.replace(/\D/g, '');
     if (digits.length < 7 || digits.length > 15 || DATE_LIKE.test(value)) continue;

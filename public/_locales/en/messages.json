@@ -10883,5 +10883,8 @@
   },
   "team_ledger_waiting": {
     "message": "$1 waiting for your approval, $2 approved and held."
+  },
+  "team_auto_held": {
+    "message": "$1, allowed every time, kept it as approved: $2"
   }
 }

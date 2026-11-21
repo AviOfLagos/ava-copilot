@@ -62,17 +62,20 @@ export function createTeamStore(db: AviCopilotDb = defaultDb) {
      * Writes a ledger line unless `allowed` says no, in one transaction: the lines are read, the limit is
      * checked and the new line is written with nothing able to slip in between. One item makes one line.
      *
-     * @param allowed - Given the workspace's lines so far, why this one may not be added, or null when it may
+     * @param allowed - Given the workspace's lines so far and the ids of their items that are done (carried out in
+     *   the world, not only agreed), why this one may not be added, or null when it may
      */
     async record(
       entry: LedgerEntry,
-      allowed: (entries: LedgerEntry[]) => string | null,
+      allowed: (entries: LedgerEntry[], doneItemIds: ReadonlySet<string>) => string | null,
     ): Promise<{ ok: true; entry: LedgerEntry } | { ok: false; why: string }> {
-      return db.transaction('rw', db.teamLedger, async () => {
+      return db.transaction('rw', db.teamLedger, db.teamItems, async () => {
         const entries = await db.teamLedger.where('workspaceId').equals(entry.workspaceId).toArray();
         const same = entries.find(line => line.itemId === entry.itemId && line.kind === entry.kind);
         if (same) return { ok: true as const, entry: same };
-        const why = allowed(entries);
+        const items = await db.teamItems.bulkGet(entries.map(line => line.itemId));
+        const done = new Set(items.filter(item => item?.status === 'done').map(item => item!.id));
+        const why = allowed(entries, done);
         if (why) return { ok: false as const, why };
         await db.teamLedger.add(entry);
         return { ok: true as const, entry };

@@ -24,8 +24,37 @@ export function grantsInWeek(entries: readonly LedgerEntry[], now: number): numb
 }
 
 /**
+ * The product's own count of places left, less the grants agreed here that it has not seen yet: a grant counts in
+ * the product only once it is carried out there, so until then the agreed ones still take a place.
+ */
+export function remoteLeft(
+  remote: RemoteGrants | null,
+  entries: readonly LedgerEntry[],
+  doneItemIds: ReadonlySet<string>,
+  now: number,
+): RemoteGrants | null {
+  if (!remote) return null;
+  const pending = entries.filter(
+    entry =>
+      entry.kind === 'beta_grant' && entry.at > now - WEEK_MS && entry.at <= now && !doneItemIds.has(entry.itemId),
+  ).length;
+  return { remaining: remote.remaining - pending };
+}
+
+/** What a grant asks for, from the item's fields: a length that is not a number is not inside the rule. */
+export function grantAsk(fields: Record<string, string> | undefined): { plan?: string; days?: number } {
+  const days = fields?.days?.trim();
+  return {
+    ...(fields?.plan?.trim() ? { plan: fields.plan } : {}),
+    ...(days ? { days: Number(days) } : {}),
+  };
+}
+
+/**
  * Why a beta place may not be given now, or null when it may.
  *
+ * @param remote - What the product says is left, already less the grants agreed here that it has not seen
+ *   (`remoteLeft`)
  * @param ask - What the grant would give, when it says: a plan or a length other than the rule's is outside it
  */
 export function grantRefusal(
@@ -39,7 +68,7 @@ export function grantRefusal(
   if (ask.plan && ask.plan.trim().toLowerCase() !== rule.plan.trim().toLowerCase()) {
     return `The beta rule gives the ${rule.plan} plan only: ${ask.plan} is outside it and needs the user's own decision.`;
   }
-  if (ask.days !== undefined && ask.days > rule.days) {
+  if (ask.days !== undefined && !(Number.isFinite(ask.days) && ask.days > 0 && ask.days <= rule.days)) {
     return `The beta rule gives ${rule.days} days: ${ask.days} days is outside it and needs the user's own decision.`;
   }
   const used = grantsInWeek(entries, now);
@@ -90,7 +119,7 @@ type Recorded = { ok: true; entry: LedgerEntry } | { ok: false; why: string };
  * the write are one transaction: two grants landing together cannot both take the last place.
  */
 export function recordGrant(
-  item: Pick<TeamItem, 'id' | 'workspaceId' | 'title'>,
+  item: Pick<TeamItem, 'id' | 'workspaceId' | 'title' | 'fields'>,
   rule: BetaRule | null,
   now: number,
   remote: RemoteGrants | null = null,
@@ -106,7 +135,7 @@ export function recordGrant(
       itemId: item.id,
       at: now,
     },
-    entries => grantRefusal(rule, entries, now, remote),
+    (entries, done) => grantRefusal(rule, entries, now, remoteLeft(remote, entries, done, now), grantAsk(item.fields)),
   );
 }
 

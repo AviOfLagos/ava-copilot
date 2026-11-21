@@ -5,7 +5,7 @@ import { addInboxItem, inboxItemId } from '../inbox/store';
 import { createLogger } from '../log';
 import { digest } from '../once';
 import { localDay } from '../rounds/plan';
-import { grantRefusal, recordGrant, recordSpend, spendRefusal } from './ledger';
+import { grantAsk, grantRefusal, recordGrant, recordSpend, remoteLeft, spendRefusal } from './ledger';
 import type { BetaRule, RemoteGrants } from './ledger';
 import { modeFor, offersAlways, TEAM_LIMITS } from './modes';
 import { findCustomerDetails, findingsText } from './privacy';
@@ -66,7 +66,12 @@ export type TeamExecutor = (
 
 const executors = new Map<TeamAction, TeamExecutor>();
 
-/** Registers what carries out an approved item of one kind. Without one, an approved item is held. */
+/**
+ * Registers what carries out an approved item of one kind. Without one, an approved item is held.
+ *
+ * An executor sends, posts or grants in the world, so it must pass `reviewAction` (`src/background/gate/review.ts`)
+ * before it does, like every other commit action: the user's yes here does not replace the gate.
+ */
 export function registerTeamExecutor(action: TeamAction, executor: TeamExecutor): void {
   executors.set(action, executor);
 }
@@ -120,7 +125,15 @@ const actionName = (action: TeamAction): string => {
 };
 
 const itemRequestId = (item: Pick<TeamItem, 'id'>) => `${ITEM_PREFIX}${item.id}`;
-const batchRequestId = (batchId: string) => `${BATCH_PREFIX}${batchId}`;
+// The batch row keeps one Inbox id; its answer carries a fingerprint of the items it showed, so a tap approves
+// what the user saw and not a draft that arrived after the row was drawn
+const batchRowId = (batchId: string) => `${BATCH_PREFIX}${batchId}`;
+const SNAPSHOT_MARK = '|';
+const batchSnapshot = (items: readonly Pick<TeamItem, 'id'>[]) => digest(items.map(item => item.id).sort());
+
+// Work other people read: a customer's details in it are refused, not only flagged (Part 8, "Privacy")
+const PUBLIC_ACTIONS: ReadonlySet<TeamAction> = new Set(['post', 'reply', 'listing', 'customer_issue']);
+const EMAIL_ACTIONS: ReadonlySet<TeamAction> = new Set(['outreach_email', 'follow_up']);
 
 function itemBody(item: TeamItem): string {
   const lines = [item.body];
@@ -138,6 +151,7 @@ function itemBody(item: TeamItem): string {
   if (item.target) lines.push('', `${t('team_item_where')}: ${item.target}`);
   if (item.why) lines.push(`${t('team_item_why')}: ${item.why}`);
   if (item.namesCustomer) lines.push('', t('team_item_namesCustomer'));
+  if (item.note) lines.push(item.note);
   return lines.join('\n').trim();
 }
 
@@ -168,18 +182,19 @@ const closeInbox = (requestId: string) =>
  */
 async function refreshBatch(batchId: string, sample: Pick<TeamItem, 'workspaceId' | 'agentId' | 'agentName'>) {
   const waiting = (await teamStore.inBatch(batchId)).filter(item => item.status === 'queued');
-  const requestId = batchRequestId(batchId);
-  const id = inboxItemId('system', requestId);
+  const externalId = batchRowId(batchId);
+  const id = inboxItemId('system', externalId);
   if (waiting.length < 2) {
-    await closeInbox(requestId);
+    await closeInbox(externalId);
     return;
   }
+  const requestId = `${externalId}${SNAPSHOT_MARK}${await batchSnapshot(waiting)}`;
   const now = Date.now();
   const existing = await db.inbox.get(id);
   const row: InboxItem = {
     id,
     source: 'system',
-    externalId: requestId,
+    externalId,
     kind: 'approval',
     title: t('team_batch_title', [String(waiting.length), sample.agentName]),
     body: [
@@ -210,11 +225,14 @@ async function reportAfter(item: TeamItem): Promise<void> {
   await addInboxItem({
     source: 'system',
     externalId: `team-done:${item.id}`,
-    kind: item.status === 'done' ? 'result' : 'alert',
-    title: t(item.status === 'done' ? 'team_auto_done' : 'team_auto_failed', [item.agentName, item.title]),
+    kind: item.status === 'done' || item.status === 'held' ? 'result' : 'alert',
+    title: t(
+      item.status === 'done' ? 'team_auto_done' : item.status === 'held' ? 'team_auto_held' : 'team_auto_failed',
+      [item.agentName, item.title],
+    ),
     body: [item.note, item.link ?? ''].filter(Boolean).join('\n'),
     links: item.link ? [{ label: item.title.slice(0, 60), url: item.link }] : [],
-    priority: item.status === 'done' ? 'low' : 'normal',
+    priority: item.status === 'done' || item.status === 'held' ? 'low' : 'normal',
     workspaceId: item.workspaceId,
     agentId: item.agentId,
   }).catch(error => logger.warning('Could not report what ran', error));
@@ -232,6 +250,7 @@ async function carryOut(item: TeamItem, deps: QueueDeps): Promise<TeamItem> {
 
   if (item.action === 'beta_grant') {
     const remote = profile && deps.remoteGrants ? await deps.remoteGrants(profile).catch(() => null) : null;
+    // Read before the ledger is: a grant the product already counts is done here first
     // The rule typed into the profile, else the one the product enforces: never one made up here
     const recorded = await recordGrant(item, profile?.betaRule ?? remote?.rule ?? null, now, remote);
     if (!recorded.ok) return finish({ status: 'refused', note: recorded.why });
@@ -284,12 +303,27 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   const body = clean(proposal.body, 6000);
   if (!title || !body) return { state: 'refused', why: 'A title and the text itself are both needed.' };
 
-  const findings = findCustomerDetails(
-    `${title}\n${body}\n${proposal.target}`,
-    proposal.customerNames,
-    proposal.allowedLinks,
+  // The recipient of an email is in `target`, and it is no secret to them: only the text is looked at
+  const ownAddresses = [profile.email?.from, profile.email?.replyTo].filter((value): value is string => Boolean(value));
+  const findings = findCustomerDetails(`${title}\n${body}`, proposal.customerNames, proposal.allowedLinks).filter(
+    finding =>
+      !(
+        finding.kind === 'email' && ownAddresses.some(address => address.toLowerCase() === finding.sample.toLowerCase())
+      ),
   );
+  if (findings.length && (PUBLIC_ACTIONS.has(proposal.action) || EMAIL_ACTIONS.has(proposal.action))) {
+    return {
+      state: 'refused',
+      why: `The text holds ${findingsText(findings)}. A customer's details never go in a post, an issue or an email: take them out (link to the feedback in the admin console instead) and try again.`,
+    };
+  }
   const namesCustomer = findings.length > 0 || proposal.declaredNamesCustomer === true;
+
+  // The same thing proposed again is the same item, whatever the limits say now
+  const onceKey = proposal.onceKey?.trim() || (await digest([proposal.action, proposal.target, body]));
+  const id = teamItemId(proposal.workspaceId, `${proposal.action}:${onceKey}`);
+  const existing = await teamStore.get(id);
+  if (existing) return { state: 'exists', item: existing };
 
   // The hard limits, before anything is written down
   const entries = await teamStore.ledger(proposal.workspaceId);
@@ -307,10 +341,16 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   }
   if (proposal.action === 'beta_grant') {
     const remote = deps.remoteGrants ? await deps.remoteGrants(profile).catch(() => null) : null;
-    const why = grantRefusal(profile.betaRule ?? remote?.rule ?? null, entries, now, remote, {
-      plan: proposal.fields?.plan,
-      days: proposal.fields?.days ? Number(proposal.fields.days) : undefined,
-    });
+    const done = new Set(
+      (await teamStore.forWorkspace(proposal.workspaceId)).filter(item => item.status === 'done').map(item => item.id),
+    );
+    const why = grantRefusal(
+      profile.betaRule ?? remote?.rule ?? null,
+      entries,
+      now,
+      remoteLeft(remote, entries, done, now),
+      grantAsk(proposal.fields),
+    );
     if (why) return { state: 'refused', why };
   }
   const today = (await teamStore.since(proposal.workspaceId, startOfLocalDay(now))).filter(
@@ -325,11 +365,6 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
       };
     }
   }
-
-  const onceKey = proposal.onceKey?.trim() || (await digest([proposal.action, proposal.target, body]));
-  const id = teamItemId(proposal.workspaceId, `${proposal.action}:${onceKey}`);
-  const existing = await teamStore.get(id);
-  if (existing) return { state: 'exists', item: existing };
 
   const mine = today.filter(item => item.agentId === proposal.agentId);
   if (mine.length >= TEAM_LIMITS.queuedPerAgentPerDay) {
@@ -410,19 +445,58 @@ export async function answerItem(
       })
       .catch(error => logger.warning('Could not save the rule', error));
   }
-  return carryOut(claimed, deps);
+  const done = await carryOut(claimed, deps);
+  // A yes that a limit stopped after all (the budget or the beta places ran out meanwhile) is said, once
+  if (done.status === 'refused') await reportAfter(done);
+  return done;
 }
 
-/** One tap for the whole batch: every item still waiting in it gets the same answer. */
-export async function answerBatch(batchId: string, approved: boolean, deps: QueueDeps = {}): Promise<TeamItem[]> {
+/**
+ * One tap for the whole batch: every item still waiting in it gets the same answer, if they are the items the row
+ * showed. Null when the batch changed after it was drawn: the row has been redrawn, and nothing was answered.
+ *
+ * @param answer - What follows the prefix in the row's request id: the batch id and the fingerprint of its items
+ */
+export async function answerBatch(answer: string, approved: boolean, deps: QueueDeps = {}): Promise<TeamItem[] | null> {
+  const mark = answer.lastIndexOf(SNAPSHOT_MARK);
+  const batchId = mark >= 0 ? answer.slice(0, mark) : answer;
+  const snapshot = mark >= 0 ? answer.slice(mark + 1) : '';
   const waiting = (await teamStore.inBatch(batchId)).filter(item => item.status === 'queued');
+  if (!waiting.length) {
+    await closeInbox(batchRowId(batchId));
+    return [];
+  }
+  if (snapshot !== (await batchSnapshot(waiting))) return null;
   const answered: TeamItem[] = [];
   for (const item of waiting.sort((a, b) => a.createdAt - b.createdAt)) {
     const result = await answerItem(item.id, approved, {}, deps);
     if (result) answered.push(result);
   }
-  await closeInbox(batchRequestId(batchId));
+  await closeInbox(batchRowId(batchId));
   return answered;
+}
+
+/**
+ * After the background stopped between a yes and the ledger line: a spend or a grant the user agreed to that is
+ * held with no line is carried out again (the ledger writes one line per item, so this cannot count it twice).
+ */
+export async function recoverAgreed(deps: QueueDeps = {}): Promise<number> {
+  const held = await db.teamItems.where('status').equals('held').toArray();
+  let recovered = 0;
+  for (const item of held) {
+    if (item.action !== 'spend' && item.action !== 'beta_grant') continue;
+    const lines = await teamStore.ledger(item.workspaceId);
+    if (lines.some(line => line.itemId === item.id)) {
+      // Counted already: a spend is then done; a grant waits, held, for what carries it out
+      if (item.action === 'spend')
+        await teamStore.update(item.id, { status: 'done', doneAt: deps.now?.() ?? Date.now() });
+      continue;
+    }
+    const done = await carryOut(item, deps);
+    if (done.status === 'refused') await reportAfter(done);
+    recovered += 1;
+  }
+  return recovered;
 }
 
 /** What to tell the agent about an item, in words that keep it from trying another way. */
@@ -433,6 +507,9 @@ export function resultText(result: ProposeResult): string {
     return `This was already proposed (${item.status}${item.note ? `: ${item.note}` : ''}). Nothing new was added; do not propose it again.`;
   }
   if (result.state === 'ran') {
+    if (item.status === 'held') {
+      return "Allowed by the user's rule and kept as approved. Nothing has gone out yet: that waits for the account check. Do not do it yourself.";
+    }
     return item.status === 'done'
       ? `Done inside its limit, and the user was told: ${item.note}${item.link ? ` ${item.link}` : ''}`
       : `It did not go through (${item.status}): ${item.note}. Do not try it again; the user was told.`;

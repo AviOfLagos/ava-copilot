@@ -23,8 +23,15 @@ function store() {
 
 const { db, emptyProductProfile, permissionRulesStore, productStore, teamScope, teamStore } =
   await import('@extension/storage');
-const { answerBatch, answerItem, clearTeamExecutorsForTests, propose, registerTeamExecutor, resultText } =
-  await import('../queue');
+const {
+  answerBatch,
+  answerItem,
+  clearTeamExecutorsForTests,
+  propose,
+  recoverAgreed,
+  registerTeamExecutor,
+  resultText,
+} = await import('../queue');
 const { TEAM_LIMITS } = await import('../modes');
 
 const NOW = new Date(2026, 10, 23, 9, 0).getTime();
@@ -54,6 +61,12 @@ const draft = (over: Partial<Proposal> = {}): Proposal => ({
 const inbox = async () =>
   (await db.inbox.toArray()).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
 const open = async () => (await inbox()).filter(item => item.status !== 'done');
+// What a tap on the batch row sends: the row's own request id, after the prefix
+const batchTap = async () => {
+  const row = (await open()).find(item => item.approval?.action === 'team_batch');
+  if (!row) throw new Error('no batch row');
+  return row.approval!.requestId.slice('team-batch:'.length);
+};
 const queued = (result: Awaited<ReturnType<typeof propose>>): TeamItem => {
   if (result.state !== 'queued') throw new Error(`expected a queued item, got ${result.state}`);
   return result.item;
@@ -95,7 +108,7 @@ describe('approve the batch', () => {
     // A batch never offers "Allow every time", and neither does a draft in it
     expect(rows.some(row => row.approval?.always)).toBe(false);
 
-    const answered = await answerBatch(items[0]!.batchId!, true, deps);
+    const answered = (await answerBatch(await batchTap(), true, deps))!;
     expect(answered).toHaveLength(3);
     // Approved, and held: nothing can post yet, and nothing did
     expect((await teamStore.forWorkspace('suture')).map(item => item.status)).toEqual(['held', 'held', 'held']);
@@ -120,10 +133,29 @@ describe('approve the batch', () => {
     expect(batch).toBeUndefined();
     expect((await open()).map(row => row.approval?.requestId)).toEqual([`team-item:${three.id}`]);
 
-    // The declined one is not swept up by a later batch tap
-    await answerBatch(three.batchId!, true, deps);
+    // A fourth draft brings the batch row back; the declined one is not swept up by its tap
+    clock += 1000;
+    const four = queued(await propose(draft({ title: 'Four', body: 'Fourth' }), deps));
+    await answerBatch(await batchTap(), true, deps);
     expect((await teamStore.get(two.id))?.status).toBe('declined');
     expect((await teamStore.get(three.id))?.status).toBe('held');
+    expect((await teamStore.get(four.id))?.status).toBe('held');
+  });
+
+  it('approves only the drafts the row showed: one that arrived after it was drawn waits', async () => {
+    queued(await propose(draft({ title: 'One', body: 'First' }), deps));
+    queued(await propose(draft({ title: 'Two', body: 'Second' }), deps));
+    const seen = await batchTap();
+    clock += 1000;
+    const late = queued(await propose(draft({ title: 'Late', body: 'Arrived after the row was drawn' }), deps));
+
+    // The tap on the old row answers nothing; the redrawn row lists three
+    expect(await answerBatch(seen, true, deps)).toBeNull();
+    expect((await teamStore.forWorkspace('suture')).every(item => item.status === 'queued')).toBe(true);
+    const redrawn = (await open()).find(row => row.approval?.action === 'team_batch')!;
+    expect(redrawn.title).toBe('team_batch_title|3|Social Manager');
+    expect(await answerBatch(await batchTap(), true, deps)).toHaveLength(3);
+    expect((await teamStore.get(late.id))?.status).toBe('held');
   });
 
   it('keeps one item for the same thing proposed twice', async () => {
@@ -229,6 +261,25 @@ describe('always asked', () => {
     });
     const spent = (await teamStore.ledger('suture')).reduce((sum, entry) => sum + entry.amount, 0);
     expect(spent).toBe(60);
+    // The refused yes is said in the Inbox, once
+    expect((await open()).filter(row => row.externalId === `team-done:${second.id}`)).toHaveLength(1);
+    // Proposed again once the budget is gone, it is still the same request, not a new refusal
+    expect(
+      (await propose(draft({ action: 'spend', title: 'First', body: 'First test', amountUsd: 60, fields }), deps))
+        .state,
+    ).toBe('exists');
+  });
+
+  it('carries out a spend agreed just before the background stopped, once', async () => {
+    const fields = { buys: 'A critique', triedFree: 'Asked two forums', expected: 'A clearer page' };
+    const item = queued(await propose(draft({ action: 'spend', amountUsd: 30, fields }), deps));
+    // The yes was written, the ledger line was not
+    await teamStore.decide(item.id, 'held', '', clock);
+    expect(await recoverAgreed(deps)).toBe(1);
+    expect(await teamStore.get(item.id)).toMatchObject({ status: 'done' });
+    expect(await teamStore.ledger('suture')).toHaveLength(1);
+    expect(await recoverAgreed(deps)).toBe(0);
+    expect(await teamStore.ledger('suture')).toHaveLength(1);
   });
 
   it('asks on its own for a new channel, a new account and a plan change, and keeps no rule for them', async () => {
@@ -259,16 +310,58 @@ describe('always asked', () => {
     expect(again.mode).toBe('always_ask');
   });
 
-  it('asks on its own for anything that names a customer, even a draft that would join the batch', async () => {
-    const byCode = queued(await propose(draft({ body: 'Thanks to ada@acme.io for the report!' }), deps));
-    expect(byCode).toMatchObject({ mode: 'always_ask', namesCustomer: true, batchId: null });
-    const byRecord = queued(
+  it("refuses a customer's details in a post, a reply, an issue or an email, before the Inbox", async () => {
+    for (const over of [
+      { body: 'Thanks to ada@acme.io for the report!' },
+      { body: 'Call us back on (555) 123-4567' },
+      { action: 'reply' as const, body: 'Acme Corp cut eval time in half', customerNames: ['Acme Corp'] },
+      { action: 'customer_issue' as const, body: 'See https://app.trysuture.com/users/8431/settings' },
+      {
+        action: 'outreach_email' as const,
+        body: 'Ada from Acme Corp told us you might like it',
+        customerNames: ['Ada'],
+      },
+    ]) {
+      expect(await propose(draft({ title: over.body.slice(0, 20), ...over }), deps), over.body).toMatchObject({
+        state: 'refused',
+        why: expect.stringMatching(/never go in a post, an issue or an email/),
+      });
+    }
+    expect(await teamStore.forWorkspace('suture')).toHaveLength(0);
+    expect(await open()).toHaveLength(0);
+  });
+
+  it("lets an email carry the product's own address, and the recipient's in where it goes", async () => {
+    await productStore.save(
+      suture({ email: { from: 'hello@trysuture.com', replyTo: 'avi@trysuture.com', via: 'nexmail' } }),
+    );
+    const email = await propose(
+      draft({
+        action: 'outreach_email',
+        title: 'Evals for your agent',
+        body: 'Saw your post on agent evals. Reply to hello@trysuture.com to try it.',
+        target: 'dev@someco.io',
+      }),
+      deps,
+    );
+    expect(email).toMatchObject({ state: 'queued', item: { mode: 'batch', namesCustomer: false } });
+  });
+
+  it('asks on its own for anything the agent says names a customer, and for a request that holds their details', async () => {
+    const spend = queued(
       await propose(
-        draft({ title: 'Praise', body: 'Acme Corp cut eval time in half', customerNames: ['Acme Corp'] }),
+        draft({
+          action: 'spend',
+          title: 'A user test',
+          body: 'A paid call with ada@acme.io',
+          amountUsd: 20,
+          fields: { buys: 'One call', triedFree: 'Asked on the forum', expected: 'A clearer onboarding' },
+        }),
         deps,
       ),
     );
-    expect(byRecord).toMatchObject({ mode: 'always_ask', namesCustomer: true });
+    expect(spend).toMatchObject({ mode: 'always_ask', namesCustomer: true });
+    expect((await open())[0]!.body).toContain('Found in the text: an email address.');
     const declared = queued(
       await propose(draft({ title: 'Quote', body: 'A team we work with loved it', declaredNamesCustomer: true }), deps),
     );
@@ -418,12 +511,44 @@ describe('auto, inside a hard limit', () => {
       scope: teamScope('suture', 'lead', 'customer_issue'),
       label: 'issues',
     });
-    const result = await propose(
+    // Found by code: refused outright
+    const found = await propose(
       issue('fb-9', { body: 'Ada at Acme Corp cannot sign in', customerNames: ['Ada', 'Acme Corp'] }),
       deps,
     );
-    expect(result).toMatchObject({ state: 'queued', item: { mode: 'always_ask', namesCustomer: true } });
+    expect(found.state).toBe('refused');
+    // Only said by the agent: asked, never on auto
+    const said = await propose(issue('fb-10', { declaredNamesCustomer: true }), deps);
+    expect(said).toMatchObject({ state: 'queued', item: { mode: 'always_ask', namesCustomer: true } });
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("counts grants agreed here against the product's own places until the product has them", async () => {
+    await permissionRulesStore.allow({ kind: 'team', scope: teamScope('suture', 'lead', 'beta_grant'), label: 'beta' });
+    // The rule allows five, the product says one is left
+    const oneLeft = { ...deps, remoteGrants: async () => ({ remaining: 1 }) };
+    const grantOf = (id: string) =>
+      draft({ agentId: 'lead', action: 'beta_grant', title: `Tester ${id}`, body: `Access ${id}`, onceKey: id });
+    expect(await propose(grantOf('p1'), oneLeft)).toMatchObject({ state: 'ran', item: { status: 'held' } });
+    // Still "1 left" in the product, since nothing carried the first one out there: the second is refused
+    expect(await propose(grantOf('p2'), oneLeft)).toMatchObject({
+      state: 'refused',
+      why: expect.stringMatching(/product itself says no beta places/),
+    });
+    // Once the first is carried out, the product's count already has it
+    const [first] = await teamStore.forWorkspace('suture');
+    await teamStore.update(first!.id, { status: 'done' });
+    const zeroLeft = { ...deps, remoteGrants: async () => ({ remaining: 0 }) };
+    expect((await propose(grantOf('p3'), oneLeft)).state).toBe('ran');
+    expect((await propose(grantOf('p4'), zeroLeft)).state).toBe('refused');
+  });
+
+  it('refuses a grant whose length is not a number, or outside the rule', async () => {
+    const grantOf = (days: string) =>
+      draft({ action: 'beta_grant', title: 'Tester', body: `Access ${days}`, onceKey: days, fields: { days } });
+    expect((await propose(grantOf('thirty'), deps)).state).toBe('refused');
+    expect((await propose(grantOf('60'), deps)).state).toBe('refused');
+    expect((await propose(grantOf('30'), deps)).state).toBe('queued');
   });
 
   it('does not try a broken step again, and says the outcome is unknown', async () => {

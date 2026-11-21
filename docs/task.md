@@ -2716,6 +2716,12 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   issues a day. The check and the write of a ledger line are one transaction, so concurrent yeses cannot pass the
   limit. An item is written down before anything happens and is carried out once.
 - Nothing goes out in this phase: an approved post or email is "held" until #43 lands an executor.
+- After review: a customer's email, phone, name or id link in a post, reply, issue or email is refused, not only
+  flagged; a grant agreed here and not yet given in the product counts against the product's own places; a tap on
+  the batch row approves only the drafts it showed (its answer carries a fingerprint of them); a spend or grant
+  agreed just before the background stopped is written to the ledger on the next start; a yes that a limit
+  stopped is said in the Inbox. Known and left: the daily item caps are counted outside a transaction, so two
+  proposals landing together can pass them by one.
 - The workspace screen shows the ledger: spent of budget, beta places this week, waiting and held.
 - Tests: `background/growth-team/__tests__` (rules, queue), `e2e/team-approvals.e2e.mjs`.
 

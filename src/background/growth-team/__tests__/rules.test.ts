@@ -134,6 +134,16 @@ describe('customer details in text', () => {
   it('finds an email address, a phone number and a link with a user id', () => {
     expect(kinds('Reported by ada@acme.io after the upgrade')).toEqual(['email']);
     expect(kinds('Call her on +234 803 555 0142')).toEqual(['phone']);
+    for (const phone of [
+      '(555) 123-4567',
+      '+15551234567',
+      '5551234567',
+      '+44 7911 123456',
+      '07911 123456',
+      '+2348031234567',
+    ]) {
+      expect(kinds(`Call on ${phone} today`), phone).toEqual(['phone']);
+    }
     expect(kinds('See https://app.example.com/users/8431/settings')).toEqual(['id_link']);
     expect(kinds('See https://app.example.com/page?user_id=77')).toEqual(['id_link']);
     expect(kinds('See https://app.example.com/t/3f2c9a1e-8b7d-4c6a-9e1f-0a2b3c4d5e6f')).toEqual(['id_link']);

@@ -10883,5 +10883,8 @@
   },
   "team_ledger_waiting": {
     "message": "$1 項等待你核准，$2 項已核准並保留中。"
+  },
+  "team_auto_held": {
+    "message": "$1 依「每次都允許」已核准並保留：$2"
   }
 }
