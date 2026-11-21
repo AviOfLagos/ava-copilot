@@ -11,9 +11,9 @@ import type { AgentContext } from '../../agent/types';
 import { createLogger } from '../../log';
 import { registerAgentAction, registerCommand, registerRecovery, registerVoiceTool } from '../../registry';
 import { services } from '../../registry/services';
-import { addVocabulary } from './add';
+import { addVocabulary, NOT_SAID, saidByUser } from './add';
 import { pendingCorrections } from './pending';
-import { syncVocabularySeeds } from './seeds';
+import { dismissSeed, syncVocabularySeeds } from './seeds';
 
 const logger = createLogger('Vocabulary');
 
@@ -76,6 +76,8 @@ command(
 );
 
 command('vocab_delete', z.object({ id: z.string() }), async input => {
+  // A seed the owner removes does not come back at the next sync
+  if (input.id.startsWith('seed:')) await dismissSeed(input.id);
   await vocabularyStore.remove(input.id);
   return { ok: true };
 });
@@ -129,14 +131,16 @@ registerVoiceTool({
     },
   },
   guardLabel: 'remember how to spell a word',
-  async handler(args) {
+  async handler(args, heard) {
+    const heardAs = String(args.heard_as ?? '').trim();
+    // Only on what the user said: call audio and pages cannot teach a spelling
+    if (!saidByUser(heard, String(args.write ?? ''), heardAs ? [heardAs] : [])) return NOT_SAID;
     const threadId = services().voice.currentThreadId;
     const thread = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
-    const heard = String(args.heard_as ?? '').trim();
     return (
       await addVocabulary({
         write: String(args.write ?? ''),
-        heardAs: heard ? [heard] : [],
+        heardAs: heardAs ? [heardAs] : [],
         workspaceId: thread?.workspaceId ?? null,
       })
     ).message;
@@ -175,6 +179,14 @@ registerAgentAction({
             'This run was not started by the user in a chat, so it cannot change how words are written.',
           includeInMemory: true,
         });
+      }
+      // Only on the user's own words in this chat, never on what a page said
+      const said = (await threadStore.messages(context.taskId).catch(() => []))
+        .filter(message => message.actor === 'user')
+        .map(message => message.content)
+        .join(' ');
+      if (!saidByUser(said, input.write, input.heard_as ? [input.heard_as] : [])) {
+        return new ActionResult({ extractedContent: NOT_SAID, includeInMemory: true });
       }
       const result = await addVocabulary({
         write: input.write,

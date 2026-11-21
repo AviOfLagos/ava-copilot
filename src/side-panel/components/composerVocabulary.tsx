@@ -49,9 +49,14 @@ const ruleKey = (rule: { from: string; to: string }) => `${rule.from.toLowerCase
 export function useComposerVocabulary(
   text: string,
   setText: (value: string) => void,
-  api: VocabularyApi | undefined,
+  vocabulary: VocabularyApi | undefined,
   areaRef: RefObject<HTMLTextAreaElement>,
 ) {
+  // The panel hands over a new object on each render; only whether there is one, and the latest, matter
+  const apiRef = useRef(vocabulary);
+  apiRef.current = vocabulary;
+  const hasApi = vocabulary !== undefined;
+  const api = vocabulary;
   // The text as dictated, to see what the user then changed
   const baseline = useRef<string | null>(null);
   const [marks, setMarks] = useState<Marks | null>(null);
@@ -80,7 +85,7 @@ export function useComposerVocabulary(
 
   // A hand-made correction of dictated words is offered as a rule, once the user pauses
   useEffect(() => {
-    if (!api || baseline.current === null || text === baseline.current) {
+    if (!hasApi || baseline.current === null || text === baseline.current) {
       setRule(null);
       return;
     }
@@ -89,7 +94,7 @@ export function useComposerVocabulary(
       setRule(found && !dismissed.current.has(ruleKey(found)) ? found : null);
     }, RULE_AFTER_MS);
     return () => window.clearTimeout(timer);
-  }, [text, api]);
+  }, [text, hasApi]);
 
   /** Dictated words went into the box: `joined` is the whole text now, `offset` where the words start in it. */
   const onDictated = useCallback((joined: string, offset: number, found?: DictationVocabulary) => {
@@ -116,21 +121,19 @@ export function useComposerVocabulary(
   }, []);
 
   /** Sending: a correction the user made and did not answer is counted; made twice, it is saved and says so. */
-  const beforeSend = useCallback(
-    (sent: string) => {
-      const found = api && baseline.current !== null ? suggestRule(baseline.current, sent) : null;
-      baseline.current = null;
-      setMarks(null);
-      setRule(null);
-      setPicked(null);
-      if (!api || !found || dismissed.current.has(ruleKey(found))) return;
-      void api
-        .learn(found.from, found.to, false)
-        .then(result => result.saved && result.automatic && setNote(t('vocab_chip_saved', [found.from, found.to])))
-        .catch(() => {});
-    },
-    [api],
-  );
+  const beforeSend = useCallback((sent: string) => {
+    const live = apiRef.current;
+    const found = live && baseline.current !== null ? suggestRule(baseline.current, sent) : null;
+    baseline.current = null;
+    setMarks(null);
+    setRule(null);
+    setPicked(null);
+    if (!live || !found || dismissed.current.has(ruleKey(found))) return;
+    void live
+      .learn(found.from, found.to, false)
+      .then(result => result.saved && result.automatic && setNote(t('vocab_chip_saved', [found.from, found.to])))
+      .catch(() => {});
+  }, []);
 
   /** The caret is on a corrected word: offer to put the old one back. */
   const onCaret = useCallback(

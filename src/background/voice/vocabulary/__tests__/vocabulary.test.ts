@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AviCopilotDb, checkHeardAs, createVocabularyStore, spelledOut, suggestRule } from '@extension/storage';
 import type { VocabEntry } from '@extension/storage';
-import { addVocabulary } from '../add';
+import { addVocabulary, saidByUser } from '../add';
 import { hintFromEntries } from '../hint';
 import { correctTranscript } from '../index';
 import type { CorrectDeps } from '../index';
@@ -139,18 +139,57 @@ describe('saying it: "it is spelled E-L-L-U-M", "when you hear Illum, write Ellu
   it('the owner may say an ordinary word; a learned correction may not', async () => {
     expect((await addVocabulary({ write: 'Ellum', heardAs: ['album'] }, store)).refused).toEqual([]);
     const learned = await addVocabulary(
-      { write: 'Quillon', heardAs: ['quill on', 'album'], learnedFrom: 'correction' },
+      { write: 'Quillon', heardAs: ['quil lon', 'album'], learnedFrom: 'correction' },
       store,
     );
-    expect(learned.saved).toEqual(['quill on']);
+    expect(learned.saved).toEqual(['quil lon']);
     expect(learned.refused).toEqual(['album']);
     expect(learned.message).toContain('ordinary word');
+  });
+
+  it('a correction learned by itself is never made of ordinary words, even two of them', async () => {
+    const result = await addVocabulary({ write: 'gonna', heardAs: ['going to'], learnedFrom: 'correction' }, store);
+    expect(result.refused).toEqual(['going to']);
+    expect((await store.all())[0].heardAs).toEqual([]);
   });
 
   it('refuses a spelling that is not a word', async () => {
     const result = await addVocabulary({ write: 'E' }, store);
     expect(result.ok).toBe(false);
     expect(await store.all()).toEqual([]);
+  });
+});
+
+describe('what the user must have said', () => {
+  it("needs the spelling, and what it was heard as, in the user's own words", () => {
+    expect(saidByUser('Ava, it is spelled E L L U M', 'Ellum')).toBe(true);
+    expect(saidByUser('when you hear Illum, write Ellum', 'Ellum', ['Illum'])).toBe(true);
+    // Words a page or a call said, not the user
+    expect(saidByUser('Open the invoices page', 'Ellum')).toBe(false);
+    expect(saidByUser('it is spelled Ellum', 'Ellum', ['yes'])).toBe(false);
+    expect(saidByUser('', 'Ellum')).toBe(false);
+  });
+});
+
+describe('seeds and the owner', () => {
+  it('never write over what the owner edited, and do not come back once removed', async () => {
+    await store.syncSeeds('workspace', [{ key: 'a', write: 'Quillon Labs', kind: 'name', workspaceId: null }]);
+    const [seed] = await store.all();
+    await store.update(seed.id, { write: 'Quillon Labs Ltd', heardAs: ['Quill on Labs'] });
+    await store.syncSeeds('workspace', [{ key: 'a', write: 'Quillon Labs', kind: 'name', workspaceId: null }]);
+    expect(await store.all()).toEqual([expect.objectContaining({ write: 'Quillon Labs Ltd', learnedFrom: 'avi' })]);
+    await store.remove(seed.id);
+    await store.syncSeeds(
+      'workspace',
+      [{ key: 'a', write: 'Quillon Labs', kind: 'name', workspaceId: null }],
+      new Set([seed.id]),
+    );
+    expect(await store.all()).toEqual([]);
+  });
+
+  it('a product name applies in its own workspace only', () => {
+    const seeds = seedsFromNames([], [{ workspaceId: 'ws-a', name: 'Zorvane' }]);
+    expect(seeds.products[0].workspaceId).toBe('ws-a');
   });
 });
 
@@ -166,6 +205,7 @@ describe('learning from a correction in the composer', () => {
 
   it.each([
     ['Please open Illum AI now', 'Please open Illum AI now'],
+    ['See you tomorrow at noon', 'See you Friday at noon'],
     ['Please open Illum AI now', 'Please open illum AI now'],
     ['Please open Illum AI now', 'Please open now'],
     ['Please open Illum AI now', 'Please open Illum AI now, thanks'],

@@ -43,7 +43,12 @@ export function seedsFromNames(
       .map(workspace => ({ key: workspace.id, write: workspace.name, kind: 'name', workspaceId: null })),
     products: products
       .filter(product => worthSeeding(product.name, isWord))
-      .map(product => ({ key: product.workspaceId, write: product.name, kind: 'product', workspaceId: null })),
+      .map(product => ({
+        key: product.workspaceId,
+        write: product.name,
+        kind: 'product',
+        workspaceId: product.workspaceId,
+      })),
   };
 }
 
@@ -54,8 +59,9 @@ export async function syncVocabularySeeds(): Promise<void> {
     workspaces,
     Object.values(products).map(product => ({ workspaceId: product.workspaceId, name: product.name })),
   );
-  await vocabularyStore.syncSeeds('workspace', seeds.workspaces);
-  await vocabularyStore.syncSeeds('product', seeds.products);
+  const dismissed = await dismissedSeeds();
+  await vocabularyStore.syncSeeds('workspace', seeds.workspaces, dismissed);
+  await vocabularyStore.syncSeeds('product', seeds.products, dismissed);
 }
 
 /**
@@ -78,5 +84,19 @@ export async function addPersonSeeds(
       });
     }
   }
-  await vocabularyStore.syncSeeds('person', seeds);
+  await vocabularyStore.syncSeeds('person', seeds, await dismissedSeeds());
+}
+
+const DISMISSED_KEY = 'vocab-dismissed-seeds';
+
+/** The seeds the owner removed from the list: they are not added again. */
+export async function dismissedSeeds(): Promise<Set<string>> {
+  const stored = await chrome.storage.local.get(DISMISSED_KEY);
+  return new Set((stored[DISMISSED_KEY] as string[] | undefined) ?? []);
+}
+
+export async function dismissSeed(id: string): Promise<void> {
+  const all = await dismissedSeeds();
+  all.add(id);
+  await chrome.storage.local.set({ [DISMISSED_KEY]: [...all].slice(-500) });
 }

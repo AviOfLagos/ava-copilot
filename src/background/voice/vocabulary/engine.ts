@@ -54,6 +54,7 @@ const MIN_NEAR_LETTERS = 4;
 const MIN_CODE = 3;
 // Between the words of a phrase heard as one: spaces, and the dots and dashes of "L.M."
 const PHRASE_GAP = /^[ \t.\-]+$/;
+const PHRASE_GAP_NO_DOTS = /^[ \t\-]+$/;
 const PAIR_GAP = /^[ \t]+$/;
 
 function tokenize(text: string): Token[] {
@@ -105,6 +106,8 @@ export function isNear(heard: string, spelling: string): boolean {
 interface Known {
   words: string[];
   endsWithDot: boolean;
+  // Only a phrase written with dots ("L.M.") may be heard across one
+  hasDots: boolean;
   entry: VocabEntry;
 }
 
@@ -119,15 +122,26 @@ export function correctWithEntries(text: string, allEntries: VocabEntry[], optio
   // Known mishearings, the longest phrase first; the first entry in precedence order wins
   const known: Known[] = entries
     .flatMap(entry => entry.heardAs.map(phrase => ({ phrase, entry })))
-    .map(({ phrase, entry }) => ({ words: phraseWords(phrase), endsWithDot: /\.\s*$/.test(phrase), entry }))
+    .map(({ phrase, entry }) => ({
+      words: phraseWords(phrase),
+      endsWithDot: /\.\s*$/.test(phrase),
+      hasDots: phrase.includes('.'),
+      entry,
+    }))
     .filter(item => item.words.length > 0 && item.words.length <= 3)
     .sort((a, b) => b.words.length - a.words.length);
 
   // One candidate spelling per distinct folded spelling, the winning entry's
   const spellings = new Map<string, VocabEntry>();
+  // Names of people that were only seeded protect their spelling but are not matched against near misses: a
+  // name that is one letter off is far more often another person than a mishearing
+  const nearSpellings = new Map<string, VocabEntry>();
   for (const entry of entries) {
     const key = foldWord(entry.write);
-    if (key.length > 0 && !spellings.has(key)) spellings.set(key, entry);
+    if (key.length === 0) continue;
+    if (!spellings.has(key)) spellings.set(key, entry);
+    if (!nearSpellings.has(key) && !(entry.kind === 'person' && entry.learnedFrom === 'seed'))
+      nearSpellings.set(key, entry);
   }
 
   const tokens = tokenize(text);
@@ -145,7 +159,8 @@ export function correctWithEntries(text: string, allEntries: VocabEntry[], optio
       let fits = true;
       for (let k = 0; k < n && fits; k++) {
         if (tokens[i + k].lower !== item.words[k]) fits = false;
-        else if (k > 0 && !gapOk(tokens[i + k - 1], tokens[i + k], PHRASE_GAP)) fits = false;
+        else if (k > 0 && !gapOk(tokens[i + k - 1], tokens[i + k], item.hasDots ? PHRASE_GAP : PHRASE_GAP_NO_DOTS))
+          fits = false;
       }
       if (!fits) continue;
       if (item.words.every(word => keep.has(word))) continue;
@@ -178,19 +193,24 @@ export function correctWithEntries(text: string, allEntries: VocabEntry[], optio
     const here = tokens[i];
     const next = tokens[i + 1];
     const candidates: { folded: string; length: number }[] = [{ folded: here.lower, length: 1 }];
-    // Two words heard as one name, unless both are ordinary words ("quill and" is not "Quillon")
-    if (next && gapOk(here, next, PAIR_GAP) && !(options.isWord(here.lower) && options.isWord(next.lower))) {
-      candidates.push({ folded: here.lower + next.lower, length: 2 });
+    // Two words heard as one name. Not two ordinary words ("quill and" is not "Quillon"), not a short word in front
+    // of a name that is already right ("an Ellum"), and a short word only when neither is a real word
+    if (next && gapOk(here, next, PAIR_GAP) && !spellings.has(next.lower) && !spellings.has(here.lower)) {
+      const real = [options.isWord(here.lower), options.isWord(next.lower)];
+      const short = here.lower.length < 3 || next.lower.length < 3;
+      if (!(real[0] && real[1]) && !(short && (real[0] || real[1]))) {
+        candidates.push({ folded: here.lower + next.lower, length: 2 });
+      }
     }
 
     // How many words this step used up
     let used = 1;
     for (const candidate of candidates) {
-      if (candidate.folded.length < MIN_NEAR_LETTERS) continue;
-      if (candidate.length === 1 && keep.has(candidate.folded)) continue;
       // Already written right: nothing to change, and nothing to suggest for this word
       const exact = spellings.get(candidate.folded);
       if (exact && candidate.length === 1) break;
+      if (candidate.folded.length < MIN_NEAR_LETTERS) continue;
+      if (candidate.length === 1 && keep.has(candidate.folded)) continue;
       if (exact) {
         // Two words that join into a spelling ("El lum"): written as it, unless that is how they were written
         const lastWord = tokens[i + 1];
@@ -204,7 +224,9 @@ export function correctWithEntries(text: string, allEntries: VocabEntry[], optio
         used = 2;
         break;
       }
-      const close = [...spellings].filter(([spelling]) => isNear(candidate.folded, spelling)).map(([, entry]) => entry);
+      const close = [...nearSpellings]
+        .filter(([spelling]) => isNear(candidate.folded, spelling))
+        .map(([, entry]) => entry);
       if (close.length === 0) continue;
       const last = tokens[i + candidate.length - 1];
       const from = text.slice(here.start, last.end);

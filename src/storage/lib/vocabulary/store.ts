@@ -123,6 +123,8 @@ export function createVocabularyStore(db: AviCopilotDb = defaultDb) {
     async syncSeeds(
       group: string,
       seeds: { key: string; write: string; kind: VocabKind; workspaceId: string | null; heardAs?: string[] }[],
+      // Seeds the owner removed: they do not come back
+      dismissed: ReadonlySet<string> = new Set(),
     ): Promise<void> {
       const mine = (id: string) => id.startsWith(`seed:${group}:`);
       const wanted = new Map(seeds.map(seed => [`seed:${group}:${seed.key}`, seed]));
@@ -133,7 +135,10 @@ export function createVocabularyStore(db: AviCopilotDb = defaultDb) {
           }
         }
         for (const [id, seed] of wanted) {
+          if (dismissed.has(id)) continue;
           const existing = await db.vocabulary.get(id);
+          // What the owner edited is his now: a seed never writes over it
+          if (existing && existing.learnedFrom !== 'seed') continue;
           const heardAs = [...new Set([...(existing?.heardAs ?? []), ...(seed.heardAs ?? [])])].slice(0, MAX_HEARD);
           await db.vocabulary.put({
             id,

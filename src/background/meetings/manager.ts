@@ -789,7 +789,7 @@ export class MeetingManager {
 
   /** The workspace the meeting's chat belongs to, for the vocabulary that applies in it. */
   private async workspaceOf(meetingId: string): Promise<string | null> {
-    const meeting = await this.meetings.get(meetingId);
+    const meeting = await this.meetings.get(meetingId).catch(() => undefined);
     if (!meeting?.threadId) return null;
     return (await this.threads.get(meeting.threadId).catch(() => undefined))?.workspaceId ?? null;
   }

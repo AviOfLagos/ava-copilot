@@ -65,6 +65,10 @@ const MUST_NOT_CHANGE = [
   'The illusion of choice is a real problem',
   'Illumination of the room was poor',
   'Remind me to chase Ada about the figures',
+  'I met an Ellum employee at the demo',
+  'Please talk to Ellum about it',
+  'It is Ellum AI that we use at home',
+  'Did you ask of Zorvane or in Vextra',
   'The vector graphics are rendered by the browser',
   'Our next extra step is to extract the data',
   'Is the plumber coming on Thursday or Friday',
@@ -194,6 +198,23 @@ describe('the rules', () => {
   it('keeps case, spacing and punctuation of everything else', () => {
     const text = '  Hello,\n  Illum   AI!  (and Elum?)  ';
     expect(run(text).text).toBe('  Hello,\n  Ellum   AI!  (and Ellum?)  ');
+  });
+
+  it('a short word before a misheard name is kept: "an Elum" is "an Ellum"', () => {
+    expect(run('I met an Elum employee').text).toBe('I met an Ellum employee');
+  });
+
+  it('a person who was only seeded is protected but not matched by near misses', () => {
+    const entries = [entry('Tobi', [], { kind: 'person', learnedFrom: 'seed' }), entry('Ellum')];
+    expect(run('Toby and Tobi met Elum', entries).text).toBe('Toby and Tobi met Ellum');
+    const typed = [entry('Tobi', [], { kind: 'person' })];
+    expect(run('Toby met Tobi', typed).text).toBe('Tobi met Tobi');
+  });
+
+  it('a phrase is not heard across the end of a sentence unless it was written with dots', () => {
+    const entries = [entry('OpenAI', ['Open AI']), entry('Ellum', ['L.M.'])];
+    expect(run('They will open. AI is next', entries).text).toBe('They will open. AI is next');
+    expect(run('They use Open AI daily and L.M. too', entries).text).toBe('They use OpenAI daily and Ellum too');
   });
 
   it('does nothing without entries or text', () => {

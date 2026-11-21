@@ -13,6 +13,18 @@ export interface SuggestedRule {
 
 const MAX_WORDS = 3;
 
+function distance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      row.push(Math.min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)));
+    }
+    previous = row;
+  }
+  return previous[b.length];
+}
+
 const wordsOf = (text: string): string[] => text.match(/[\p{L}\p{N}][\p{L}\p{N}'’.\-]*/gu) ?? [];
 const clean = (word: string) => word.replace(/^[.\-'’]+|[.\-'’]+$/g, '');
 
@@ -40,6 +52,10 @@ export function suggestRule(before: string, after: string): SuggestedRule | null
   if (from.join(' ').toLowerCase() === to.join(' ').toLowerCase()) return null;
   // A rewrite of a sentence is not a spelling: only a change that keeps some of the sound is a rule
   if (foldWord(from.join('')).length < 2 || foldWord(to.join('')).length < 2) return null;
+  // A different word altogether ("tomorrow" for "Friday") is an edit of the sentence, not a spelling
+  const a1 = foldWord(from.join(''));
+  const b1 = foldWord(to.join(''));
+  if (distance(a1, b1) > Math.max(3, Math.ceil(Math.max(a1.length, b1.length) * 0.6))) return null;
   return { from: from.join(' '), to: to.join(' ') };
 }
 

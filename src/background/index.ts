@@ -498,7 +498,12 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
           }
           try {
-            const words = await transcribeWords(message.audio, message.threadId);
+            const words = await transcribeWords(
+              message.audio,
+              message.threadId,
+              'audio/webm',
+              typeof message.workspaceId === 'string' ? message.workspaceId : null,
+            );
             return port.postMessage({
               type: 'speech_to_text_result',
               text: words.text,

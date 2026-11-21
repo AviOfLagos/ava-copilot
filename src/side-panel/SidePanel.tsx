@@ -234,12 +234,19 @@ const SidePanel = () => {
       .catch(error => console.error('Failed to load favorite prompts:', error));
   }, []);
 
+  // The workspace the chat box writes in, for the vocabulary that applies there before a chat exists
+  const composerWorkspaceRef = useRef<string | null>(null);
   const threadIdRef = useRef(threadId);
   threadIdRef.current = threadId;
   const speech = useSpeechInput(
     useCallback(audio => {
       setSttError(null);
-      postRef.current({ type: 'speech_to_text', audio, threadId: threadIdRef.current });
+      postRef.current({
+        type: 'speech_to_text',
+        audio,
+        threadId: threadIdRef.current,
+        workspaceId: composerWorkspaceRef.current,
+      });
     }, []),
     useCallback((message: string, retryable?: boolean) => (retryable ? setSttError(message) : setBanner(message)), []),
     // While dictating, a voice conversation and "Hey Ava" do not hear the microphone, so the words are answered once
@@ -825,6 +832,7 @@ const SidePanel = () => {
 
   // What the composer asks of the vocabulary: learn a correction, and never change a word again
   const composerWorkspace = view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace;
+  composerWorkspaceRef.current = composerWorkspace;
   const composerVocabulary: VocabularyApi = {
     learn: async (from, to, confirmed) => {
       const reply = await panelApi.request<{ saved?: boolean; automatic?: boolean }>({

@@ -57,3 +57,18 @@ export async function addVocabulary(
   }
   return { ok: true, message: parts.join(' '), saved, refused };
 }
+
+/**
+ * Whether the user's own words contain what is to be saved: the spelling, and what it was heard as when that is given.
+ * A page or a call cannot make the user say a word, so this is what stops them steering the vocabulary. Spelled
+ * out ("E L L U M") counts, since letters are compared and not spacing.
+ */
+export function saidByUser(said: string, write: string, heardAs: string[] = []): boolean {
+  const heard = foldWord(said);
+  return [write, ...heardAs].every(word => {
+    const folded = foldWord(spelledOut(word));
+    return folded.length > 0 && heard.includes(folded);
+  });
+}
+
+export const NOT_SAID = 'I only change how I write a word when you say it to me yourself, so I have not saved that.';

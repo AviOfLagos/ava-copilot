@@ -69,7 +69,8 @@ export function checkHeardAs(
   if (letterCount(phrase) < 2) return 'tooShort';
   if (words.length > 3) return 'tooLong';
   if (words.join(' ') === phraseWords(write).join(' ')) return 'sameAsWrite';
-  if (learnedFrom !== 'avi' && words.length === 1 && isWord(words[0])) return 'ordinaryWord';
+  // Only the owner may say that ordinary words are a mishearing: "going to" is not one
+  if (learnedFrom !== 'avi' && words.every(word => isWord(word))) return 'ordinaryWord';
   return null;
 }
 
