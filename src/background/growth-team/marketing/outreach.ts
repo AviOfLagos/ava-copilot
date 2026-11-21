@@ -1,5 +1,6 @@
-import { teamContactId, teamStore } from '@extension/storage';
+import { canonicalEmail, teamContactId, teamStore } from '@extension/storage';
 import type { ProductProfile, SuppressedAddress } from '@extension/storage';
+import { addressRefusal, isEmail } from '../addresses';
 import { propose } from '../queue';
 import type { Proposal, ProposeResult, QueueDeps } from '../queue';
 
@@ -16,34 +17,6 @@ export const NEW_PEOPLE_PER_DAY = 20;
 // A follow-up waits this many working days after the first email
 export const FOLLOW_UP_AFTER_WORKING_DAYS = 3;
 
-// Personal mailboxes: outreach is for business contacts only (Part 12, "No bought lists, no personal addresses")
-const PERSONAL_DOMAINS = new Set([
-  'gmail.com',
-  'googlemail.com',
-  'yahoo.com',
-  'ymail.com',
-  'hotmail.com',
-  'outlook.com',
-  'live.com',
-  'msn.com',
-  'icloud.com',
-  'me.com',
-  'mac.com',
-  'aol.com',
-  'proton.me',
-  'protonmail.com',
-  'gmx.com',
-  'gmx.de',
-  'mail.com',
-  'yandex.com',
-  'yandex.ru',
-  'qq.com',
-  '163.com',
-  'zoho.com',
-]);
-
-const EMAIL = /^[^\s@<>()",;]+@[^\s@<>()",;]+\.[a-z]{2,}$/i;
-
 export interface OutreachInput {
   email: string;
   // The public page where the person was found
@@ -55,7 +28,8 @@ export interface OutreachInput {
 }
 
 export type OutreachResult =
-  { state: 'refused'; why: string } | { state: 'drafted'; text: string; result: ProposeResult; missing: string[] };
+  | { state: 'refused'; why: string }
+  | { state: 'drafted'; text: string; result: Exclude<ProposeResult, { state: 'refused' }>; missing: string[] };
 
 export type OutreachDeps = QueueDeps;
 
@@ -107,17 +81,6 @@ export function outreachFooter(profile: ProductProfile, why: string): { text: st
   };
 }
 
-async function refusedAddress(email: string): Promise<string | null> {
-  if (!EMAIL.test(email)) return `"${email}" is not an email address.`;
-  const domain = email.split('@')[1]!.toLowerCase();
-  if (PERSONAL_DOMAINS.has(domain)) {
-    return `${domain} is a personal mailbox. Outreach goes to work addresses found on a public, relevant page only.`;
-  }
-  const suppressed = await teamStore.suppressed(email);
-  if (suppressed) return `That address asked not to be written to (${suppressed.why}); no agent writes to it again.`;
-  return null;
-}
-
 /** Drafts the first email to a person, for the user's approval. */
 export async function draftOutreach(
   profile: ProductProfile,
@@ -126,23 +89,34 @@ export async function draftOutreach(
   deps: OutreachDeps = {},
 ): Promise<OutreachResult> {
   const now = deps.now?.() ?? Date.now();
-  const email = input.email.trim().toLowerCase();
-  const refused = await refusedAddress(email);
+  const email = canonicalEmail(input.email);
+  const refused = await addressRefusal(email);
   if (refused) return { state: 'refused', why: refused };
   const source = publicSource(input.source);
   if (!source) return { state: 'refused', why: 'Give the public page where you found this person, as a link.' };
   const why = input.why.replace(/\s+/g, ' ').trim().slice(0, 300);
   if (!why) return { state: 'refused', why: 'Say why this person is relevant, in one line.' };
 
-  const contactId = teamContactId(profile.workspaceId, email);
-  if (await teamStore.contact(profile.workspaceId, email)) {
+  // The person takes one of the day's places first, so two drafts at once cannot pass the limit together
+  const contact = {
+    id: teamContactId(profile.workspaceId, email),
+    workspaceId: profile.workspaceId,
+    email,
+    source,
+    why,
+    firstAt: now,
+    followUps: 0,
+    lastAt: now,
+    itemId: null,
+  };
+  const place = await teamStore.reserveContact(contact, startOfLocalDay(now), NEW_PEOPLE_PER_DAY);
+  if (place === 'exists') {
     return {
       state: 'refused',
-      why: 'This person was written to before. The only next step is one follow-up, with draft_follow_up, after 3 working days.',
+      why: 'This person was written to before. The only next step is one follow-up, with draft_follow_up, 3 working days after the user approved the first email.',
     };
   }
-  const today = await teamStore.contactsSince(profile.workspaceId, startOfLocalDay(now));
-  if (today >= NEW_PEOPLE_PER_DAY) {
+  if (place === 'full') {
     return {
       state: 'refused',
       why: `At most ${NEW_PEOPLE_PER_DAY} new people a day for one product, and that many were drafted today. The rest wait for tomorrow.`,
@@ -155,25 +129,23 @@ export async function draftOutreach(
       ...who,
       action: 'outreach_email',
       title: input.subject.replace(/\s+/g, ' ').trim().slice(0, 140),
-      body: `${input.body.trim()}\n\n${footer.text}`,
+      body: input.body.trim(),
+      footer: footer.text,
       target: email,
       why: `${why} (found at ${source})`,
       onceKey: `outreach:${email}`,
       allowedLinks: [source],
     },
     deps,
-  );
-  if (result.state === 'refused') return { state: 'refused', why: result.why };
-  await teamStore.saveContact({
-    id: contactId,
-    workspaceId: profile.workspaceId,
-    email,
-    source,
-    why,
-    firstAt: now,
-    followUps: 0,
-    lastAt: now,
+  ).catch(async error => {
+    await teamStore.forgetContact(contact.id);
+    throw error;
   });
+  if (result.state === 'refused') {
+    await teamStore.forgetContact(contact.id);
+    return { state: 'refused', why: result.why };
+  }
+  await teamStore.saveContact({ ...contact, itemId: result.item.id });
   return { state: 'drafted', result, missing: footer.missing, text: draftedText(footer.missing) };
 }
 
@@ -185,15 +157,26 @@ export async function draftFollowUp(
   deps: OutreachDeps = {},
 ): Promise<OutreachResult> {
   const now = deps.now?.() ?? Date.now();
-  const email = input.email.trim().toLowerCase();
-  const refused = await refusedAddress(email);
+  const email = canonicalEmail(input.email);
+  const refused = await addressRefusal(email);
   if (refused) return { state: 'refused', why: refused };
   const contact = await teamStore.contact(profile.workspaceId, email);
   if (!contact) return { state: 'refused', why: 'Nobody wrote to this person first: a follow-up needs a first email.' };
   if (contact.followUps >= 1) {
     return { state: 'refused', why: 'This person had their one follow-up. Outreach to them stops here.' };
   }
-  const waited = workingDaysBetween(contact.firstAt, now);
+  // The clock runs from the user's yes to the first email, never from a draft nobody approved
+  const first = contact.itemId ? await teamStore.get(contact.itemId) : undefined;
+  if (!first || !['held', 'done'].includes(first.status) || !first.decidedAt) {
+    return {
+      state: 'refused',
+      why:
+        first?.status === 'declined' || first?.status === 'failed' || first?.status === 'refused'
+          ? 'The first email to this person did not go ahead, so there is nothing to follow up.'
+          : 'The first email to this person still waits for the user; a follow-up comes 3 working days after their yes.',
+    };
+  }
+  const waited = workingDaysBetween(first.decidedAt, now);
   if (waited < FOLLOW_UP_AFTER_WORKING_DAYS) {
     return {
       state: 'refused',
@@ -206,7 +189,8 @@ export async function draftFollowUp(
       ...who,
       action: 'follow_up',
       title: input.subject.replace(/\s+/g, ' ').trim().slice(0, 140),
-      body: `${input.body.trim()}\n\n${footer.text}`,
+      body: input.body.trim(),
+      footer: footer.text,
       target: email,
       why: `Follow-up, ${waited} working days after the first email`,
       onceKey: `follow-up:${email}`,
@@ -228,8 +212,8 @@ function draftedText(missing: string[]): string {
 
 /** A reply, an unsubscribe or a bounce: no agent writes to the address again, for any product. */
 export async function stopContact(email: string, why: SuppressedAddress['why'], now = Date.now()): Promise<string> {
-  const address = email.trim().toLowerCase();
-  if (!EMAIL.test(address)) return `"${email}" is not an email address.`;
+  const address = canonicalEmail(email);
+  if (!isEmail(address)) return `"${email}" is not an email address.`;
   await teamStore.suppress(address, why, now);
   return `${address} is on the do-not-write list (${why}). No agent writes to it again.`;
 }

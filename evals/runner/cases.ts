@@ -141,6 +141,8 @@ const marketingChannel = z.object({
   cost_usd: z.number().default(0),
 });
 const marketingRank = z.object({ tool: z.literal('rank_channels') });
+// The user's yes to the item with this title, on that day: not a model call, the click the agent waits for
+const userApproves = z.object({ tool: z.literal('user_approves'), at_day: atDay, title: z.string() });
 
 /**
  * A growth agent's recorded tool calls (the Growth Lead's, kind `lead`; the Product Marketing Manager's, kind
@@ -171,6 +173,7 @@ export const teamCase = z.object({
         marketingStop,
         marketingChannel,
         marketingRank,
+        userApproves,
       ]),
     )
     .min(1),

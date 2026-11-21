@@ -2788,6 +2788,15 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - E2E in `e2e/growth-lead.e2e.mjs`: the draft waits in the Inbox with "sender: not set", and the unsubscribed
   address is refused.
 - Not yet: sending (Nex Mail, Part 12, after #43), and finding people (the agent browses public pages itself).
+- After review: the address rules live in `propose` itself (`growth-team/addresses.ts`), so no tool goes around
+  them, and `queue_for_approval` no longer takes emails; addresses are kept in one form (lower case, no "+tag");
+  personal mailboxes are matched by name whatever the country ending; the footer is added after the checks, so a
+  postal code is not taken for a phone number; a follow-up counts from the user's yes to the first email and
+  never follows a declined one; a person takes the day's place in one transaction; an address stopped while its
+  email waited is not carried out; a declined channel test may be asked for again; `startTest` keeps the three-at-
+  once cap in a transaction; a test unread two weeks after its week is dropped; "no reading" is never shown as 0.
+  The send executor (after #43) must check the do-not-write list again right before sending. Also: the queue
+  takes extra draft checks (`registerProposalCheck`), used by #76.
 
 ## 5. Risks, in order
 

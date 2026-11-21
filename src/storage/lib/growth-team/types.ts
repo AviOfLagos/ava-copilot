@@ -125,7 +125,7 @@ export const feedbackRecordId = (workspaceId: string, feedbackId: string) => `${
  * a public, relevant source, recorded with why. One first email and at most one follow-up, then stop.
  */
 export interface TeamContact {
-  // `${workspaceId}|${email}` (lower case)
+  // `${workspaceId}|${canonical email}`
   id: string;
   workspaceId: string;
   email: string;
@@ -135,9 +135,19 @@ export interface TeamContact {
   firstAt: number;
   followUps: number;
   lastAt: number;
+  // The first email's item: a follow-up waits until the user said yes to it, and counts from then
+  itemId: string | null;
 }
 
-export const teamContactId = (workspaceId: string, email: string) => `${workspaceId}|${email.trim().toLowerCase()}`;
+/** An address in the one form it is kept and compared in: lower case, without a "+tag". */
+export const canonicalEmail = (email: string): string => {
+  const address = email.trim().toLowerCase();
+  const at = address.lastIndexOf('@');
+  if (at <= 0) return address;
+  return `${address.slice(0, at).replace(/\+.*$/, '')}${address.slice(at)}`;
+};
+
+export const teamContactId = (workspaceId: string, email: string) => `${workspaceId}|${canonicalEmail(email)}`;
 
 /** An address no agent writes to again, for any product: a reply, an unsubscribe or a bounce. */
 export interface SuppressedAddress {

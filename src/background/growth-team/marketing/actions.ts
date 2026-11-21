@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { productStore } from '@extension/storage';
+import { productStore, teamStore } from '@extension/storage';
 import type { ProductProfile, TeamItem } from '@extension/storage';
 import { ActionResult } from '../../agent/types';
 import type { AgentContext } from '../../agent/types';
@@ -170,6 +170,13 @@ export async function proposeChannelTest(
       why: `${key} is not one of the channels to test next (it is ${channel.state}). Test the top three from rank_channels, one week each.`,
     };
   }
+  // A test the user declined may be asked for again later: each ask is its own item
+  const asked = (await teamStore.forWorkspace(profile.workspaceId)).filter(
+    item => item.action === 'new_channel' && item.fields?.channel === key,
+  );
+  if (asked.some(item => item.status === 'queued')) {
+    return { state: 'refused', why: `A test of ${key} already waits for the user.` };
+  }
   return propose(
     {
       ...who,
@@ -178,7 +185,7 @@ export async function proposeChannelTest(
       body: input.plan,
       target: key,
       why: channel.costUsd ? `A cheap test: about $${channel.costUsd.toFixed(2)}` : 'A free test',
-      onceKey: `channel-test:${key}`,
+      onceKey: `channel-test:${key}:${asked.length}`,
       fields: { channel: key },
     },
     deps,
@@ -230,6 +237,9 @@ export async function stopContactAction(
   deps: MarketingDeps = {},
 ): Promise<ActionResult> {
   void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Stopping outreach');
+  // Only an agent or chat working for a product keeps the list
+  const found = await productOf(context);
+  if ('error' in found) return fail(context, found.error);
   return ok(context, 'Stopped', await stopContact(input.email, input.why, deps.now?.() ?? Date.now()));
 }
 

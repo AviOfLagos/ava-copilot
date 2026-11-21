@@ -1,5 +1,13 @@
 import { t } from '@extension/i18n';
-import { db, permissionRulesStore, productStore, teamItemId, teamScope, teamStore } from '@extension/storage';
+import {
+  canonicalEmail,
+  db,
+  permissionRulesStore,
+  productStore,
+  teamItemId,
+  teamScope,
+  teamStore,
+} from '@extension/storage';
 import type { InboxItem, ProductProfile, TeamAction, TeamItem } from '@extension/storage';
 import { addInboxItem, inboxItemId } from '../inbox/store';
 import { createLogger } from '../log';
@@ -8,6 +16,7 @@ import { localDay } from '../rounds/plan';
 import { grantAsk, grantRefusal, recordGrant, recordSpend, remoteLeft, spendRefusal } from './ledger';
 import type { BetaRule, RemoteGrants } from './ledger';
 import { modeFor, offersAlways, TEAM_LIMITS } from './modes';
+import { addressRefusal } from './addresses';
 import { personaRefusal } from './persona';
 import { findCustomerDetails, findingsText } from './privacy';
 
@@ -48,6 +57,9 @@ export interface Proposal {
   allowedLinks?: string[];
   amountUsd?: number;
   fields?: Record<string, string>;
+  // Lines code adds after the text (an email's sender, postal address and opt-out): kept out of the checks on
+  // what the agent wrote, since code wrote them from the profile
+  footer?: string;
 }
 
 export type ProposeResult =
@@ -85,6 +97,16 @@ export function clearTeamExecutorsForTests(): void {
 // What changes in Ava's own state when the user says yes to a request (a channel test starts). Never anything
 // in the world: that is an executor's, through the gate
 const agreedHooks = new Map<TeamAction, (item: TeamItem) => Promise<string | null>>();
+
+// Checks an agent's draft must pass before it reaches the Inbox, beyond the ones here (no invented numbers or
+// quotes). Each returns why the draft is refused, or null
+type ProposalCheck = (proposal: Proposal, profile: ProductProfile, now: number) => Promise<string | null>;
+const proposalChecks: ProposalCheck[] = [];
+
+/** Registers a check every proposal passes; a refusal stops it before anything is stored. */
+export function registerProposalCheck(check: ProposalCheck): void {
+  proposalChecks.push(check);
+}
 
 /** Registers what a yes to a request of one kind changes in Ava's own state; the text it returns joins the note. */
 export function registerAgreedHook(action: TeamAction, hook: (item: TeamItem) => Promise<string | null>): void {
@@ -259,6 +281,12 @@ async function carryOut(item: TeamItem, deps: QueueDeps): Promise<TeamItem> {
     (await teamStore.update(item.id, { ...changes, doneAt: now })) ?? { ...item, ...changes };
   const profile = await productStore.forWorkspace(item.workspaceId);
 
+  // An address put on the do-not-write list while its email waited is not written to after all
+  if (EMAIL_ACTIONS.has(item.action)) {
+    const why = await addressRefusal(item.target);
+    if (why) return finish({ status: 'failed', note: why });
+  }
+
   if (item.action === 'beta_grant') {
     const remote = profile && deps.remoteGrants ? await deps.remoteGrants(profile).catch(() => null) : null;
     // Read before the ledger is: a grant the product already counts is done here first
@@ -323,6 +351,15 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   // A personality is only inspired by a person: a draft never names them or speaks as them (Part 8)
   const asSomeoneElse = personaRefusal(proposal.action, title, body, proposal.target, proposal.why);
   if (asSomeoneElse) return { state: 'refused', why: asSomeoneElse };
+  // An email goes to a work address that is not on the do-not-write list, whichever tool proposed it
+  if (EMAIL_ACTIONS.has(proposal.action)) {
+    const why = await addressRefusal(proposal.target);
+    if (why) return { state: 'refused', why };
+  }
+  for (const check of proposalChecks) {
+    const why = await check({ ...proposal, title, body }, profile, now);
+    if (why) return { state: 'refused', why };
+  }
 
   // The recipient of an email is in `target`, and it is no secret to them: only the text is looked at
   const ownAddresses = [profile.email?.from, profile.email?.replyTo].filter((value): value is string => Boolean(value));
@@ -405,8 +442,8 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
     agentName: oneLine(proposal.agentName, 60) || 'Ava',
     action: proposal.action,
     title,
-    body,
-    target: oneLine(proposal.target, 200),
+    body: proposal.footer?.trim() ? `${body}\n\n${proposal.footer.trim()}` : body,
+    target: EMAIL_ACTIONS.has(proposal.action) ? canonicalEmail(proposal.target) : oneLine(proposal.target, 200),
     why: oneLine(proposal.why, 400),
     namesCustomer,
     mode,

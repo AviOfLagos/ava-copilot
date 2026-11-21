@@ -24,6 +24,7 @@ const { draftFollowUp, draftOutreach, NEW_PEOPLE_PER_DAY, outreachFooter, stopCo
   await import('../marketing/outreach');
 const { addChannel, rankChannels, rankedText, startTest, testVerdict } = await import('../marketing/channels');
 const { channelTestAgreed, proposeChannelTest } = await import('../marketing/actions');
+const { answerItem, propose } = await import('../queue');
 
 // Monday 23 November 2026, 09:00 local
 const MONDAY = new Date(2026, 10, 23, 9).getTime();
@@ -111,6 +112,7 @@ describe('outreach drafts', () => {
         firstAt: MONDAY - 60_000,
         followUps: 0,
         lastAt: MONDAY,
+        itemId: null,
       });
     }
     expect(await draftOutreach(suture(), who, first('ada@acme.dev'), { now: () => MONDAY })).toMatchObject({
@@ -123,11 +125,16 @@ describe('outreach drafts', () => {
     );
   });
 
-  it('allows one follow-up after 3 working days, then stops', async () => {
+  it('allows one follow-up, 3 working days after the user approved the first email, then stops', async () => {
     // Thursday: the weekend does not count
     const thursday = MONDAY + 3 * DAY;
-    await draftOutreach(suture(), who, first('ada@acme.dev'), { now: () => thursday });
+    const drafted = await draftOutreach(suture(), who, first('ada@acme.dev'), { now: () => thursday });
     const follow = { email: 'ada@acme.dev', subject: 'Following up', body: 'One more note, then I will leave it.' };
+    expect(await draftFollowUp(suture(), who, follow, { now: () => thursday + 9 * DAY })).toMatchObject({
+      state: 'refused',
+      why: expect.stringMatching(/still waits for the user/),
+    });
+    await teamStore.decide(drafted.state === 'drafted' ? drafted.result.item.id : '', 'held', '', thursday);
     // The next Tuesday: Friday and Monday have passed
     expect(await draftFollowUp(suture(), who, follow, { now: () => thursday + 5 * DAY })).toMatchObject({
       state: 'refused',
@@ -141,6 +148,47 @@ describe('outreach drafts', () => {
     expect(
       await draftFollowUp(suture(), who, { ...follow, email: 'eve@acme.dev' }, { now: () => thursday }),
     ).toMatchObject({ state: 'refused', why: expect.stringMatching(/needs a first email/) });
+  });
+
+  it('never follows up an email the user declined', async () => {
+    const drafted = await draftOutreach(suture(), who, first('ada@acme.dev'), { now: () => MONDAY });
+    await teamStore.decide(drafted.state === 'drafted' ? drafted.result.item.id : '', 'declined', '', MONDAY);
+    const follow = { email: 'ada@acme.dev', subject: 'Following up', body: 'One more note.' };
+    expect(await draftFollowUp(suture(), who, follow, { now: () => MONDAY + 14 * DAY })).toMatchObject({
+      state: 'refused',
+      why: expect.stringMatching(/did not go ahead/),
+    });
+  });
+
+  it('keeps the address rules in the queue itself, in one form, whichever tool proposes', async () => {
+    const email = (target: string) =>
+      propose(
+        { ...who, action: 'outreach_email', title: 'Hello', body: 'A note.', target, why: 'x' },
+        { now: () => MONDAY },
+      );
+    await stopContact('bob+news@Acme.dev', 'unsubscribed', MONDAY);
+    expect(await email('BOB@acme.dev')).toMatchObject({ state: 'refused', why: expect.stringMatching(/asked not to/) });
+    expect(await email('bob+other@acme.dev')).toMatchObject({ state: 'refused' });
+    for (const personal of ['ada@yahoo.co.uk', 'ada@hotmail.com.br', 'ada@gmx.net', 'ada@web.de', 'ada@pm.me']) {
+      expect(await email(personal), personal).toMatchObject({
+        state: 'refused',
+        why: expect.stringMatching(/personal/),
+      });
+    }
+    expect((await email('ada@acme.dev')).state).toBe('queued');
+  });
+
+  it('does not take a postal code in the footer for a phone number', async () => {
+    const brazil = suture({ postalAddress: 'Av. Paulista 1000, 01310-100 São Paulo' });
+    await productStore.save(brazil);
+    expect((await draftOutreach(brazil, who, first('ada@acme.dev'), { now: () => MONDAY })).state).toBe('drafted');
+  });
+
+  it('does not carry out an email whose address was stopped while it waited', async () => {
+    const drafted = await draftOutreach(suture(), who, first('ada@acme.dev'), { now: () => MONDAY });
+    await stopContact('ada@acme.dev', 'replied', MONDAY);
+    const item = await answerItem(drafted.state === 'drafted' ? drafted.result.item.id : '', true, {}, {});
+    expect(item).toMatchObject({ status: 'failed', note: expect.stringMatching(/asked not to be written to/) });
   });
 
   it('counts working days, Monday to Friday', () => {
@@ -251,5 +299,28 @@ describe('the channel list', () => {
     expect(await channelTestAgreed(item!, NOW)).toBe('The test of hn runs from 2026-11-23 to 2026-11-29.');
     expect((await teamStore.channels('suture'))[0]).toMatchObject({ state: 'testing', testFrom: '2026-11-23' });
     expect(await startTest('suture', 'hn', NOW)).toMatch(/testing already/);
+  });
+
+  it('may ask again after a decline, never twice at once, and runs at most three tests', async () => {
+    const empty = { metrics: async () => [], readings: async () => [] };
+    const ask = (channel: string) =>
+      proposeChannelTest(suture(), who, { channel, plan: 'A week of posts.' }, { now: () => NOW, channelStore: empty });
+    await addChannel('suture', { key: 'hn', reach: 'developers', costUsd: 0 }, NOW);
+    const first = await ask('hn');
+    expect(await ask('hn')).toMatchObject({ state: 'refused', why: expect.stringMatching(/already waits/) });
+    await teamStore.decide(first.state === 'queued' ? first.item.id : '', 'declined', '', NOW);
+    expect((await ask('hn')).state).toBe('queued');
+
+    for (const key of ['a1', 'a2', 'a3', 'a4']) await addChannel('suture', { key, reach: 'x', costUsd: 0 }, NOW);
+    for (const key of ['a1', 'a2', 'a3']) expect(await startTest('suture', key, NOW)).toMatch(/runs from/);
+    expect(await startTest('suture', 'a4', NOW)).toMatch(/3 channels are being tested already/);
+  });
+
+  it('drops a test that stayed unread two weeks after its week', async () => {
+    await addChannel('suture', { key: 'hn', reach: 'developers', costUsd: 0 }, NOW);
+    await startTest('suture', 'hn', NOW);
+    const later = NOW + 22 * 24 * 60 * 60 * 1000;
+    const ranked = await rankChannels('suture', later, { metrics: async () => [], readings: async () => [] });
+    expect(ranked[0]).toMatchObject({ key: 'hn', state: 'dropped', verdict: expect.stringMatching(/no reading/) });
   });
 });

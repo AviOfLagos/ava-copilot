@@ -124,15 +124,23 @@ export function queueForApprovalAction(
   return run(
     context,
     input.intent || 'Leaving it for your approval',
-    who => ({
-      ...who,
-      action: input.kind,
-      title: input.title,
-      body: input.text,
-      target: input.where,
-      why: input.why,
-      declaredNamesCustomer: input.names_customer,
-    }),
+    who =>
+      input.kind === 'outreach_email' || input.kind === 'follow_up'
+        ? {
+            // An email goes only through the tools that keep its rules: the do-not-write list, the day's limit,
+            // one follow-up, and the footer
+            error:
+              'An email to a person is drafted with draft_outreach (a first email) or draft_follow_up (the one follow-up), which keep the rules. queue_for_approval does not take emails.',
+          }
+        : {
+            ...who,
+            action: input.kind,
+            title: input.title,
+            body: input.text,
+            target: input.where,
+            why: input.why,
+            declaredNamesCustomer: input.names_customer,
+          },
     deps,
   );
 }

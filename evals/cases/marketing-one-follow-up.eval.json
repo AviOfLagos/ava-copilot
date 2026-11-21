@@ -1,6 +1,6 @@
 {
   "kind": "marketing",
-  "name": "The Marketing Manager sends one follow-up after 3 working days, then stops",
+  "name": "The Marketing Manager sends one follow-up, 3 working days after the user approved the first email, then stops",
   "source": {
     "found": "2026-11-21",
     "issue": "AviOfLagos/ava-copilot#75",
@@ -18,7 +18,19 @@
     },
     {
       "tool": "draft_follow_up",
-      "at_day": 2,
+      "at_day": 1,
+      "email": "ada@acme.dev",
+      "subject": "Following up",
+      "body": "One more note."
+    },
+    {
+      "tool": "user_approves",
+      "at_day": 0,
+      "title": "Your eval runner"
+    },
+    {
+      "tool": "draft_follow_up",
+      "at_day": 3,
       "email": "ada@acme.dev",
       "subject": "Following up",
       "body": "One more note."
@@ -40,10 +52,27 @@
   ],
   "expect": {
     "steps": [
-      { "state": "queued" },
-      { "state": "refused", "matches": ["waits 3 working days", "1 have passed"] },
-      { "state": "queued" },
-      { "state": "refused", "matches": ["one follow-up", "stops here"] }
+      {
+        "state": "queued"
+      },
+      {
+        "state": "refused",
+        "matches": ["still waits for the user"]
+      },
+      {
+        "state": "ok"
+      },
+      {
+        "state": "refused",
+        "matches": ["waits 3 working days", "2 have passed"]
+      },
+      {
+        "state": "queued"
+      },
+      {
+        "state": "refused",
+        "matches": ["one follow-up", "stops here"]
+      }
     ],
     "queued": ["Your eval runner", "Following up"]
   }

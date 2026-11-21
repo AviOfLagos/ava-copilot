@@ -1,6 +1,6 @@
 import { db as defaultDb } from '../threads/db';
 import type { AviCopilotDb } from '../threads/db';
-import { feedbackRecordId, teamContactId } from './types';
+import { canonicalEmail, feedbackRecordId, teamContactId } from './types';
 import type {
   FeedbackRecord,
   LedgerEntry,
@@ -136,12 +136,29 @@ export function createTeamStore(db: AviCopilotDb = defaultDb) {
         .filter(row => row.workspaceId === workspaceId)
         .count(),
     saveContact: (contact: TeamContact) => db.teamContacts.put(contact),
+    /**
+     * Takes one of the day's places for a new person, in one transaction: refused when the person was written to
+     * before or the day is full, so two drafts at once cannot both take the last place.
+     */
+    async reserveContact(contact: TeamContact, dayStart: number, limit: number): Promise<'ok' | 'exists' | 'full'> {
+      return db.transaction('rw', db.teamContacts, async () => {
+        if (await db.teamContacts.get(contact.id)) return 'exists';
+        const today = await db.teamContacts
+          .where('firstAt')
+          .aboveOrEqual(dayStart)
+          .filter(row => row.workspaceId === contact.workspaceId)
+          .count();
+        if (today >= limit) return 'full';
+        await db.teamContacts.add(contact);
+        return 'ok';
+      });
+    },
     forgetContact: (id: string) => db.teamContacts.delete(id),
 
-    suppressed: (email: string) => db.teamSuppressed.get(email.trim().toLowerCase()),
+    suppressed: (email: string) => db.teamSuppressed.get(canonicalEmail(email)),
     /** Stops all writing to an address, for good, whatever the product. The first reason stands. */
     async suppress(email: string, why: SuppressedAddress['why'], at: number): Promise<void> {
-      const key = email.trim().toLowerCase();
+      const key = canonicalEmail(email);
       await db.transaction('rw', db.teamSuppressed, async () => {
         if (!(await db.teamSuppressed.get(key))) await db.teamSuppressed.add({ email: key, why, at });
       });

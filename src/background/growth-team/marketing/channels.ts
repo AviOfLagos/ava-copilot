@@ -1,4 +1,4 @@
-import { growthStore, shiftDay, teamChannelId, teamStore, utcDay } from '@extension/storage';
+import { db, growthStore, shiftDay, teamChannelId, teamStore, utcDay } from '@extension/storage';
 import type { GrowthStore, TeamChannel } from '@extension/storage';
 import { whatChanged } from '../../rounds/plan';
 
@@ -14,6 +14,8 @@ export const RANK_DAYS = 28;
 // Channels tested at once, and a test's length
 export const TESTS_AT_ONCE = 3;
 export const TEST_DAYS = 7;
+// A test still unread this many days after its week is dropped for want of numbers, freeing its place
+export const VERDICT_GRACE_DAYS = 14;
 const MAX_CHANNELS = 30;
 
 export type ChannelStore = Pick<GrowthStore, 'metrics' | 'readings'>;
@@ -145,7 +147,10 @@ export async function rankChannels(
   // Finished test weeks get their verdict
   for (const channel of list) {
     if (channel.state !== 'testing' || !channel.testTo || channel.testTo >= today) continue;
-    const verdict = testVerdict(channel, byChannel.get(channel.key), readDays);
+    let verdict = testVerdict(channel, byChannel.get(channel.key), readDays);
+    if (verdict?.state === 'testing' && shiftDay(channel.testTo, VERDICT_GRACE_DAYS) < today) {
+      verdict = { state: 'dropped', verdict: 'Dropped: no reading for its test week, so it could not be judged.' };
+    }
     if (verdict && (verdict.state !== channel.state || verdict.verdict !== channel.verdict)) {
       Object.assign(channel, verdict, { updatedAt: now });
       await teamStore.saveChannel(channel);
@@ -174,7 +179,8 @@ export async function rankChannels(
   const ranked: RankedChannel[] = [...known.values()].map(channel => {
     const days = byChannel.get(channel.key);
     const total = sumOver(days, window);
-    const measured = window.length > 0 && days !== undefined;
+    // Measured only from days in the window: older test days do not make a 0
+    const measured = window.some(date => days?.has(date));
     return {
       key: channel.key,
       reach: channel.reach,
@@ -218,11 +224,18 @@ export function rankedText(ranked: readonly RankedChannel[]): string {
 
 /** Starts a channel's test week, once the user approved it. */
 export async function startTest(workspaceId: string, key: string, now: number): Promise<string> {
-  const channel = (await teamStore.channels(workspaceId)).find(item => item.key === channelKey(key));
-  if (!channel) return `The channel ${key} is no longer on the list.`;
-  if (channel.state !== 'idea') return `The channel ${channel.key} is ${channel.state} already.`;
-  const testFrom = utcDay(now);
-  const testTo = shiftDay(testFrom, TEST_DAYS - 1);
-  await teamStore.saveChannel({ ...channel, state: 'testing', testFrom, testTo, verdict: '', updatedAt: now });
-  return `The test of ${channel.key} runs from ${testFrom} to ${testTo}.`;
+  // One transaction: two yeses at once cannot start the same test twice, or a fourth test
+  return db.transaction('rw', db.teamChannels, async () => {
+    const list = await teamStore.channels(workspaceId);
+    const channel = list.find(item => item.key === channelKey(key));
+    if (!channel) return `The channel ${key} is no longer on the list.`;
+    if (channel.state !== 'idea') return `The channel ${channel.key} is ${channel.state} already.`;
+    if (list.filter(item => item.state === 'testing').length >= TESTS_AT_ONCE) {
+      return `${TESTS_AT_ONCE} channels are being tested already, so ${channel.key} waits until one ends.`;
+    }
+    const testFrom = utcDay(now);
+    const testTo = shiftDay(testFrom, TEST_DAYS - 1);
+    await teamStore.saveChannel({ ...channel, state: 'testing', testFrom, testTo, verdict: '', updatedAt: now });
+    return `The test of ${channel.key} runs from ${testFrom} to ${testTo}.`;
+  });
 }

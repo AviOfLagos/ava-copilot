@@ -130,6 +130,13 @@ export async function runTeamCase(evalCase: TeamCase): Promise<void> {
         );
         state = added.ok ? 'ok' : 'refused';
         text = added.ok ? `${added.channel.key} added` : added.why;
+      } else if (call.tool === 'user_approves') {
+        const item = (await teamStore.forWorkspace(WORKSPACE)).find(
+          entry => entry.title === call.title && entry.status === 'queued',
+        );
+        if (item) await teamStore.decide(item.id, 'held', '', now);
+        state = item ? 'ok' : 'refused';
+        text = item ? `Approved ${item.title}` : `Nothing waiting is called ${call.title}`;
       } else {
         state = 'ok';
         text = rankedText(await rankChannels(WORKSPACE, now, channelStore));
