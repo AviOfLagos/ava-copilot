@@ -156,7 +156,10 @@ describe('task_add', () => {
   it('by voice, the workspace Avi names is his choice; none named is left for the rules', async () => {
     await taskAdd(tasks, voice, { title: 'Book the venue', workspaceId: 'ws-2' }, NOW);
     await taskAdd(tasks, voice, { title: 'Call the bank' }, NOW);
-    const [venue, bank] = await tasks.list();
+    // Both are added at the same moment, and equal times are ordered by random id: find them by title.
+    const all = await tasks.list();
+    const venue = all.find(task => task.title === 'Book the venue');
+    const bank = all.find(task => task.title === 'Call the bank');
     expect(venue).toMatchObject({ workspaceId: 'ws-2', workspaceSetBy: 'avi' });
     expect(bank).toMatchObject({ workspaceId: null, workspaceSetBy: 'rule' });
   });
