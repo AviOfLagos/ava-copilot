@@ -11117,5 +11117,73 @@
         "example": "Ellum"
       }
     }
+  },
+  "brief_source_tasks": {
+    "message": "任務"
+  },
+  "tasks_who_avi": {
+    "message": "你"
+  },
+  "tasks_who_ava": {
+    "message": "Ava"
+  },
+  "tasks_doneBy": {
+    "message": "由 $WHO$ 完成，$WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_droppedBy": {
+    "message": "由 $WHO$ 放棄，$WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_toggle_done": {
+    "message": "將「$TITLE$」標為完成",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_toggle_reopen": {
+    "message": "重新開啟「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_due": {
+    "message": "截止 $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-11-27"
+      }
+    }
+  },
+  "tasks_error_toggle": {
+    "message": "無法變更任務，請再試一次。"
+  },
+  "tasks_summary_title": {
+    "message": "未完成的任務"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { KnowledgeChunk, KnowledgeItem, WorkspaceSummary } from '@extension/storage';
+import type { KnowledgeChunk, KnowledgeItem, Task, WorkspaceSummary } from '@extension/storage';
 import { chunkSession } from '../chunk';
 import { importBatch, sessionSourceId } from '../importer';
 import { actionsOf, fingerprintOf, plainSummary, rollup, rollupMarkdown } from '../rollup';
@@ -83,8 +83,11 @@ describe('actions and the roll-up', () => {
     expect(actionsOf('no sections')).toEqual([]);
   });
 
-  it('lists each workspace with its latest activity and actions, most recent first', () => {
+  it('lists each workspace with its latest activity and its open tasks from the board, most recent first', () => {
+    // What a summary's own words say is to be done no longer counts: the board's tasks do
     const summary = { actions: actionsOf(text) } as WorkspaceSummary;
+    const task = (id: string, title: string, workspaceId: string | null, status: Task['status'] = 'open') =>
+      ({ id, title, workspaceId, status, createdAt: NOW, updatedAt: NOW }) as Task;
     const entries = rollup(
       [
         { id: 'acme', name: 'Acme' },
@@ -94,14 +97,24 @@ describe('actions and the roll-up', () => {
       { acme: summary },
       items,
       NOW,
+      undefined,
+      [
+        task('tsk_aaaaaaaaaa', 'Send the launch email', 'acme'),
+        task('tsk_bbbbbbbbbb', 'Update the pricing page', 'acme'),
+        task('tsk_cccccccccc', 'Closed one', 'acme', 'done'),
+        task('tsk_dddddddddd', 'Fest thing', 'fest'),
+      ],
     );
     expect(entries.map(entry => entry.name)).toEqual(['Tech Fest', 'Acme', 'No workspace']);
     expect(entries[1]).toMatchObject({ recent: 2, latest: { title: 'Acme pricing page' } });
-    expect(entries[1].actions).toHaveLength(2);
+    expect(entries[1].actions.map(action => action.id)).toEqual(['tsk_aaaaaaaaaa', 'tsk_bbbbbbbbbb']);
     const markdown = rollupMarkdown(entries);
     expect(markdown).toContain('**Acme**: latest "Acme pricing page"');
-    expect(markdown).toContain('- [ ] Send the launch email (by 2026-10-17)');
+    expect(markdown).toContain('- [ ] Send the launch email');
+    expect(markdown).not.toContain('Closed one');
     expect(markdown).not.toContain('[2]');
+    // The brief lists tasks on its own, so it asks for none here
+    expect(rollupMarkdown(entries, { actions: false })).not.toContain('- [ ]');
   });
 
   it('writes a plain summary and a fingerprint that changes with the items', () => {

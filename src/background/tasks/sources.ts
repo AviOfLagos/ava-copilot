@@ -54,7 +54,9 @@ export async function withMeetingTasks<N extends Pick<MeetingNote, 'actionItems'
   const actionItems = [];
   for (const [index, item] of note.actionItems.entries()) {
     const recorded = await record(candidates[index]).catch(() => null);
-    actionItems.push(recorded ? { ...item, taskId: recorded.task.id } : item);
+    // Only this code gives an item its task id: one that came in with the model's words is dropped
+    const own = { owner: item.owner, task: item.task, due: item.due };
+    actionItems.push(recorded ? { ...own, taskId: recorded.task.id } : own);
   }
   return { ...note, actionItems };
 }

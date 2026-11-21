@@ -53,7 +53,7 @@ const inboxItem = (id: string, fields: Partial<InboxItem> = {}): InboxItem =>
 const brief = (fields: Partial<BriefData> = {}): BriefData => ({
   now: NOW,
   events: [],
-  actions: [],
+  tasks: [],
   decisions: [],
   waiting: [],
   stopped: [],

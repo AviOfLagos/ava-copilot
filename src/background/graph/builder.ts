@@ -1,4 +1,4 @@
-import { graphStore, kbSettingsStore, kbStore, meetingStore, threadStore } from '@extension/storage';
+import { graphStore, kbSettingsStore, kbStore, meetingStore, stripTaskMarkers, threadStore } from '@extension/storage';
 import type { GraphSlice, GraphStore, KbStore, KnowledgeItem, MeetingStore, ThreadStore } from '@extension/storage';
 import { withGraphTasks } from '../tasks/sources';
 import { wrapUntrustedContent } from '../agent/messages/utils';
@@ -147,7 +147,7 @@ export class GraphBuilder {
       const messages = await this.deps.threads.messages(item.sourceId);
       return messages
         .filter(message => message.actor === 'user' || message.actor === 'planner')
-        .map(message => `${message.actor === 'user' ? 'User' : 'Copilot'}: ${message.content}`)
+        .map(message => `${message.actor === 'user' ? 'User' : 'Copilot'}: ${stripTaskMarkers(message.content)}`)
         .join('\n');
     }
     if (item.sourceType === 'meeting') {

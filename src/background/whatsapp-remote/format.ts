@@ -1,4 +1,5 @@
 import { t } from '@extension/i18n';
+import { stripTaskMarkers } from '@extension/storage';
 import type { ConfirmRequest } from '@extension/storage';
 
 /**
@@ -38,7 +39,8 @@ export function clip(text: string, max: number, more = '…'): string {
 export function toWhatsAppText(markdown: string, max = WHATSAPP_REPLY_MAX, more = '…'): string {
   const lines: string[] = [];
   let inCode = false;
-  for (const raw of markdown.replaceAll(BOLD, '').replace(/\r\n?/g, '\n').split('\n')) {
+  // A task's marker is for the panel's checkbox: WhatsApp gets the words only
+  for (const raw of stripTaskMarkers(markdown).replaceAll(BOLD, '').replace(/\r\n?/g, '\n').split('\n')) {
     if (/^\s*(```|~~~)/.test(raw)) {
       inCode = !inCode;
       continue;

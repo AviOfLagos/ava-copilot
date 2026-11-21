@@ -1,3 +1,4 @@
+import { stripTaskMarkers } from '@extension/storage';
 import type {
   AmbientUtterance,
   KnowledgeAnchor,
@@ -99,7 +100,8 @@ export function chunkThread(threadId: string, messages: ThreadMessage[]): DraftC
 
   for (const message of turns) {
     const speaker = message.actor === 'user' ? 'User' : 'Copilot';
-    for (const piece of splitText(message.content)) {
+    // A task marker is for the panel's checkbox, not for search or a model's reading
+    for (const piece of splitText(stripTaskMarkers(message.content))) {
       const line = `${speaker}: ${piece}`;
       if (lines.length > 0 && lines.join('\n').length + line.length + 1 > CHUNK_CHARS) {
         flush();

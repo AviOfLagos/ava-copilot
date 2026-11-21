@@ -8,6 +8,8 @@ export interface TurnStep {
   kind: StepKind;
   text: string;
   ts: number;
+  // A planner message's vouched tasks (ThreadMessage.taskIds)
+  taskIds?: string[];
 }
 
 export interface Turn {
@@ -76,6 +78,7 @@ export function toTurns(messages: ThreadMessage[], running: boolean): Turn[] {
         kind: stepKind(message),
         text: message.content,
         ts: message.ts,
+        ...(message.taskIds?.length ? { taskIds: message.taskIds } : {}),
       }));
     const all = [group.request, ...group.rest].filter((message): message is ThreadMessage => message !== null);
     return {
