@@ -396,3 +396,23 @@ test("the Growth Lead's standup: each agent's note, the off-plan work named, in 
   const inbox = await table('inbox');
   assert.ok(inbox.some(item => item.title.startsWith('Growth plan · Rocket Shop · week of')));
 });
+
+test("the morning brief has a Team section from the morning's standup", async () => {
+  const reply = await session.panel.evaluate(() => chrome.runtime.sendMessage({ type: 'brief_make' }));
+  assert.ok(reply?.threadId, `the brief was made: ${JSON.stringify(reply)}`);
+  const said = (await table('messages'))
+    .filter(message => message.threadId === reply.threadId)
+    .map(message => message.content)
+    .join('\n');
+  assert.match(said, /\*\*Team · Rocket Shop\*\*\nYesterday was quiet/);
+  assert.match(said, /Off plan \(2\): Growth Lead: "Tidy the issue labels"/);
+
+  // The brief as the user opens it
+  await session.panel.evaluate(threadId => chrome.storage.session.set({ 'open-thread': threadId }), reply.threadId);
+  await session.panel.reload();
+  await until(() => session.panel.evaluate(() => document.body.innerText.includes('Team · Rocket Shop')), 'the brief');
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('strong, b, p')].find(el => el.textContent.includes('Team · Rocket Shop'))?.scrollIntoView(),
+  );
+  await snap('brief-team');
+});

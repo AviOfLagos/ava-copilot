@@ -63,6 +63,9 @@ import { PLAN_CRON, STANDUP_CRON } from './standup/plan';
 import { runStandupNow, runStandups, runWeeklyPlans } from './standup/run';
 import type { StandupDeps } from './standup/run';
 import { modelWriter } from './standup/writer';
+import { teamPending, teamSectionOf, teamSections } from './standup/brief';
+import { registerBriefExtra } from '../brief/extras';
+import { services } from '../registry/services';
 import { isOverDailyBudget } from '../usage/budget';
 
 const logger = createLogger('GrowthTeam');
@@ -223,10 +226,36 @@ registerJobHandler(SIGNALS_JOB, async () => {
 const PLAN_JOB = 'growth-plan';
 const STANDUP_JOB = 'growth-standup';
 
+// ── The Team section of the morning brief (#78) ─────────────────────────────────────────────────
+
+registerBriefExtra({ id: 'growth-team', pending: teamPending, sections: teamSections });
+
+/** A standup that ended: its section joins today's brief if that was made already, and a waiting brief comes. */
+async function standupFinished(record: Parameters<NonNullable<StandupDeps['finished']>>[0]): Promise<void> {
+  let brief: ReturnType<typeof services>['brief'];
+  try {
+    brief = services().brief;
+  } catch {
+    // The background is still starting: no brief is made yet, and when it is, it reads the saved record
+    return;
+  }
+  const section = await teamSectionOf(record);
+  await brief.addSection({
+    workflowId: 'growth-team',
+    workflowName: section.title,
+    title: section.title,
+    markdown: section.markdown,
+    workspaceId: section.workspaceId,
+    at: record.at,
+  });
+  await brief.check();
+}
+
 export const STANDUP_DEPS: StandupDeps = {
   writer: modelWriter,
   publish: publishOnBus,
   overCap: () => isOverDailyBudget(),
+  finished: standupFinished,
 };
 
 registerJobHandler(PLAN_JOB, async () => {
