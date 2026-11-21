@@ -2,6 +2,7 @@ import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
 import type { CommitKind } from './gateSettings';
+import type { TeamAction } from '../growth-team/types';
 
 /**
  * "Allow every time": the user approved a kind of action in a place once and said not to ask again. A rule
@@ -13,7 +14,26 @@ import type { CommitKind } from './gateSettings';
 // Kinds that are always asked, whatever the user allowed before: money, deleting, and handing out access
 export const ALWAYS_ASK_KINDS: readonly CommitKind[] = ['purchase', 'delete', 'permission'];
 
-export type RuleKind = CommitKind | 'tool';
+// 'team': a kind of work a growth agent does for a product (../growth-team), e.g. filing an issue from feedback
+export type RuleKind = CommitKind | 'tool' | 'team';
+
+/**
+ * The growth team's kinds of work that may get a rule: only these two, and each still runs inside a hard limit
+ * that code keeps (docs/growth-team.md, Part 9). Everything else a growth agent does is asked: spending, a new
+ * channel, a new account and a plan change outside the beta rule one by one, always; posts, replies, outreach
+ * and listings as a batch. Nothing here is the agent's to change.
+ */
+export const TEAM_RULE_ACTIONS: readonly TeamAction[] = ['customer_issue', 'beta_grant'];
+
+/** The place a growth agent's rule covers: one product's workspace, one agent, one kind of work. */
+export const teamScope = (workspaceId: string, agentId: string | null, action: TeamAction): string =>
+  `team:${workspaceId}/${agentId ?? 'ava'}/${action}`;
+
+/** The kind of work a team rule's scope names, or null when it is not a team scope. */
+export function teamActionOf(scope: string): string | null {
+  const match = /^team:[^/]+\/[^/]+\/([a-z_]+)$/.exec(scope);
+  return match ? match[1]! : null;
+}
 
 export interface PermissionRule {
   id: string;
@@ -48,9 +68,15 @@ export type PermissionRulesStorage = BaseStorage<PermissionRulesState> & {
   remove: (id: string) => Promise<void>;
 };
 
-/** Whether a kind may get an "Allow every time" rule at all. */
-export const canAllowAlways = (kind: string): kind is RuleKind =>
-  kind === 'tool' || (['send', 'publish', 'submit'] as string[]).includes(kind);
+/**
+ * Whether a kind may get an "Allow every time" rule at all. A team rule also depends on what it is for: only the
+ * kinds of work in TEAM_RULE_ACTIONS, so spending, a new channel, a new account and a plan change can never be
+ * remembered, whoever asks.
+ */
+export const canAllowAlways = (kind: string, scope = ''): kind is RuleKind =>
+  kind === 'team'
+    ? (TEAM_RULE_ACTIONS as readonly string[]).includes(teamActionOf(scope) ?? '')
+    : kind === 'tool' || (['send', 'publish', 'submit'] as string[]).includes(kind);
 
 // Hosts that serve other people's documents under one name: a rule there covers one document or account
 // ("docs.google.com/forms/d/<id>", "mail.google.com/mail/u/0"), never every form anyone made
@@ -107,12 +133,12 @@ export const permissionRulesStore: PermissionRulesStorage = {
     return rules.map(rule => (counts[rule.id] ? { ...rule, ...counts[rule.id] } : rule));
   },
   async find(kind, scope) {
-    if (!scope || !canAllowAlways(kind)) return null;
+    if (!scope || !canAllowAlways(kind, scope)) return null;
     return (await permissionRulesStore.list()).find(rule => rule.kind === kind && rule.scope === scope) ?? null;
   },
   async allow(candidate, now = Date.now()) {
     // A kind that is always asked never gets a rule, whatever a caller sends
-    if (!candidate.scope || !canAllowAlways(candidate.kind)) return null;
+    if (!candidate.scope || !canAllowAlways(candidate.kind, candidate.scope)) return null;
     const rules = (await storage.get())?.rules ?? [];
     const existing = rules.find(rule => rule.kind === candidate.kind && rule.scope === candidate.scope);
     if (existing) return existing;

@@ -10775,5 +10775,113 @@
   },
   "rounds_slack_failed": {
     "message": "não foi possível ler o Slack."
+  },
+  "team_action_post": {
+    "message": "Publicação"
+  },
+  "team_action_reply": {
+    "message": "Resposta"
+  },
+  "team_action_outreach": {
+    "message": "E-mail de prospecção"
+  },
+  "team_action_followUp": {
+    "message": "Acompanhamento"
+  },
+  "team_action_listing": {
+    "message": "Cadastro em diretório"
+  },
+  "team_action_issue": {
+    "message": "Issue vinda de um cliente"
+  },
+  "team_action_beta": {
+    "message": "Acesso beta"
+  },
+  "team_action_spend": {
+    "message": "Pedido de gasto"
+  },
+  "team_action_channel": {
+    "message": "Novo canal"
+  },
+  "team_action_account": {
+    "message": "Nova conta"
+  },
+  "team_action_plan": {
+    "message": "Mudança de plano"
+  },
+  "team_action_tool": {
+    "message": "Ferramenta para conectar"
+  },
+  "team_item_title": {
+    "message": "$1 · $2: $3"
+  },
+  "team_item_where": {
+    "message": "Onde"
+  },
+  "team_item_why": {
+    "message": "Por quê"
+  },
+  "team_item_namesCustomer": {
+    "message": "Isto cita um cliente, por isso é sempre perguntado à parte."
+  },
+  "team_spend_amount": {
+    "message": "Valor"
+  },
+  "team_spend_buys": {
+    "message": "O que compra"
+  },
+  "team_spend_triedFree": {
+    "message": "Tentado de graça antes"
+  },
+  "team_spend_expected": {
+    "message": "Resultado esperado"
+  },
+  "team_batch_title": {
+    "message": "Aprovar os $1 rascunhos de $2"
+  },
+  "team_batch_body": {
+    "message": "Um toque aprova todos os rascunhos abaixo. Para decidir um a um, responda cada um na própria linha. Nada é publicado nem enviado ainda: os rascunhos aprovados ficam retidos até a verificação de conta existir."
+  },
+  "team_auto_done": {
+    "message": "$1 fez: $2"
+  },
+  "team_auto_failed": {
+    "message": "$1 não conseguiu: $2"
+  },
+  "team_note_spendAgreed": {
+    "message": "Você concordou com $1. O pagamento é com você; o orçamento já conta esse valor."
+  },
+  "team_note_yours": {
+    "message": "Você disse sim. Os passos são com você; estão no pedido."
+  },
+  "team_note_held": {
+    "message": "Aprovado. Nada saiu: publicar e enviar aguardam a verificação de conta (#43)."
+  },
+  "team_note_unknownOutcome": {
+    "message": "Foi interrompido no meio, então pode ou não ter sido concluído. Não é repetido sozinho: confira e peça de novo."
+  },
+  "team_note_declined": {
+    "message": "Você recusou."
+  },
+  "team_rule_label": {
+    "message": "$1: $2, dentro do limite"
+  },
+  "team_ledger_title": {
+    "message": "Orçamento e vagas beta"
+  },
+  "team_ledger_budget": {
+    "message": "Orçamento de marketing: $1 de $2 gastos, $3 restantes. Os agentes só pedem; quem paga é você."
+  },
+  "team_ledger_noBudget": {
+    "message": "Orçamento de marketing: não definido."
+  },
+  "team_ledger_beta": {
+    "message": "Vagas beta: $1 de $2 concedidas nos últimos 7 dias."
+  },
+  "team_ledger_noBeta": {
+    "message": "Regra do beta: não definida, então nenhuma vaga é dada sem você."
+  },
+  "team_ledger_waiting": {
+    "message": "$1 aguardando sua aprovação, $2 aprovados e retidos."
   }
 }

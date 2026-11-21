@@ -21,7 +21,14 @@ describe('answerApproval', () => {
     const handler = vi.fn().mockResolvedValue(true);
     registerApprovalHandler('agent-step:', handler);
     await answerApproval('agent-step:run2:node2', false);
-    expect(handler).toHaveBeenCalledWith('agent-step:run2:node2', false);
+    expect(handler).toHaveBeenCalledWith('agent-step:run2:node2', false, {});
+  });
+
+  it('passes "Allow every time" on to the handler', async () => {
+    const handler = vi.fn().mockResolvedValue(true);
+    registerApprovalHandler('team-item:', handler);
+    await answerApproval('team-item:x', true, { always: true });
+    expect(handler).toHaveBeenCalledWith('team-item:x', true, { always: true });
   });
 
   it('tries handlers in registration order and stops at the first matching prefix', async () => {

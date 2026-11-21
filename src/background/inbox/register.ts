@@ -64,9 +64,12 @@ command('inbox_snooze', z.object({ id, until: z.number().int().positive() }), as
 // called requestId in the message's own data.
 command(
   'inbox_answer',
-  z.object({ approvalRequestId: z.string().min(1).max(300), approved: z.boolean() }),
+  // `always`: "Allow every time", for an item that offers it (its handler decides whether a rule may be kept)
+  z.object({ approvalRequestId: z.string().min(1).max(300), approved: z.boolean(), always: z.boolean().optional() }),
   async input => {
-    const handled = await answerApproval(input.approvalRequestId, input.approved);
+    const handled = await answerApproval(input.approvalRequestId, input.approved, {
+      always: input.approved && input.always === true,
+    });
     if (!handled) throw new Error('That could not be answered any more.');
   },
 );

@@ -9,6 +9,7 @@ import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
+import type { LedgerEntry, TeamItem } from '../growth-team/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
@@ -368,6 +369,9 @@ export class AviCopilotDb extends Dexie {
   growthReadings!: Table<GrowthReading, string>;
   growthSources!: Table<GrowthSourceState, string>;
   growthLinks!: Table<GrowthLink, string>;
+  // The growth team (../growth-team): what its agents proposed, and the ledger of money and beta places
+  teamItems!: Table<TeamItem, string>;
+  teamLedger!: Table<LedgerEntry, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -425,6 +429,11 @@ export class AviCopilotDb extends Dexie {
       growthReadings: 'id, productId, [productId+metric+date]',
       growthSources: 'id, productId',
       growthLinks: 'id, productId',
+    });
+    // The growth team's approvals and ledger (docs/growth-team.md, Part 9): only added
+    this.version(9).stores({
+      teamItems: 'id, workspaceId, agentId, status, batchId',
+      teamLedger: 'id, workspaceId, itemId',
     });
   }
 }

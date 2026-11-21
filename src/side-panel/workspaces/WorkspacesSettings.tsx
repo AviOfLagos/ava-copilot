@@ -13,6 +13,7 @@ import type { AccountPlatform, ProductProfile, Workspace } from '@extension/stor
 import { cn } from '@extension/ui';
 import { Button } from '../components/ui/button';
 import ProductFields from './ProductFields';
+import ProductLedger from './ProductLedger';
 import ProductNumbers from './ProductNumbers';
 import { useDefaultWorkspaceId, useWorkspaces } from './WorkspacePicker';
 
@@ -132,6 +133,8 @@ function Editor({
           <ProductFields value={product} onChange={setProduct} />
           {/* Numbers are read for a product that is saved: until then there is nothing to connect */}
           {hadProduct && <ProductNumbers workspaceId={initial.id} hasApi={!!product.agentApi?.baseUrl.trim()} />}
+          {/* The budget and the beta places as the ledger counts them: they change only by an answer in the Inbox */}
+          {hadProduct && <ProductLedger workspaceId={initial.id} />}
         </>
       ) : !productRead ? null : (
         <button

@@ -2699,6 +2699,26 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers, a simulated full day),
   `e2e/rounds.e2e.mjs`.
 
+### Approval modes, the budget ledger and tool requests (2026-11-21, #72, docs/growth-team.md Part 9)
+
+- Store: `src/storage/lib/growth-team` (Dexie v9: `teamItems`, `teamLedger`). Code: `src/background/growth-team`
+  (`modes.ts`, `ledger.ts`, `privacy.ts`, `queue.ts`, `requests.ts`, `actions.ts`, `register.ts`).
+- Three agent actions: `queue_for_approval`, `request_spend` (amount, what it buys, tried for free, expected),
+  `request_tool` (the free-first ladder: connected, free API, browser, free tier, paid; paid becomes a spending
+  request, a free tier a new-account request).
+- Modes: posts, replies, outreach, follow-ups and listings go in one batch per agent per day, approved with one
+  tap ("Approve all 3 drafts from …"). An issue from a customer and a beta grant can be "Allow every time", kept as
+  a `team` rule in PR #92's `permissionRulesStore` (scope `team:<workspace>/<agent>/<action>`), and then run by
+  themselves. Spending, a new channel, a new account, a plan change, a tool, and anything that names a customer
+  always ask: `canAllowAlways` refuses those rules, and a forged one is ignored.
+- Limits in code: the beta rule (testers a week over a rolling 7 days, the plan, the days; the product's own
+  `grants.remaining` wins when it can be read), the marketing budget, 20 items per agent per day, 10 customer
+  issues a day. The check and the write of a ledger line are one transaction, so concurrent yeses cannot pass the
+  limit. An item is written down before anything happens and is carried out once.
+- Nothing goes out in this phase: an approved post or email is "held" until #43 lands an executor.
+- The workspace screen shows the ledger: spent of budget, beta places this week, waiting and held.
+- Tests: `background/growth-team/__tests__` (rules, queue), `e2e/team-approvals.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

@@ -67,7 +67,27 @@ const spendSchema = z
   .object({ ...windowed, total_usd: z.number().nonnegative(), truncated: z.boolean() })
   .passthrough();
 
-const rootSchema = z.object({ name: z.string(), version: z.number(), read_at: z.string() }).passthrough();
+const rootSchema = z
+  .object({
+    name: z.string(),
+    version: z.number(),
+    read_at: z.string(),
+    // The beta rule in force on the product's side, and how many places are left in its rolling week
+    beta_rule: z
+      .object({
+        set: z.boolean(),
+        testers_per_week: z.number().int().positive().optional(),
+        plan: z.string().optional(),
+        duration_days: z.number().int().positive().optional(),
+      })
+      .passthrough()
+      .optional(),
+    grants: z
+      .object({ used_7d: z.number().int().nonnegative(), remaining: z.number().int().nonnegative() })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
 
 const errorSchema = z.object({ error: z.object({ code: z.string(), message: z.string().optional() }) });
 
@@ -89,9 +109,21 @@ export interface Count {
   partial: boolean;
 }
 
+export interface BetaReading {
+  // null: the product has no rule set, so it grants nothing
+  rule: { testersPerWeek: number; plan: string; days: number } | null;
+  used: number;
+  remaining: number;
+}
+
 export interface SutureClient {
   /** A cheap first call: whether the API answers this token at all. */
   check(): Promise<Read<true>>;
+  /**
+   * The beta rule the product enforces and the places left in its own rolling week. The product's count is the
+   * truth: the ledger never gives a place the product says is gone.
+   */
+  grants(): Promise<Read<BetaReading>>;
   signups(day: string): Promise<Read<Count>>;
   waitlist(day: string): Promise<Read<Count>>;
   accessRequests(day: string): Promise<Read<Count>>;
@@ -249,6 +281,26 @@ export function createSutureClient(baseUrl: string, token: string, fetcher: type
     async check() {
       const read = await get('', rootSchema);
       return read.ok ? { ok: true, value: true } : read;
+    },
+
+    async grants() {
+      const read = await get('', rootSchema);
+      if (!read.ok) return read;
+      const { beta_rule: rule, grants } = read.value;
+      if (!rule || !grants) {
+        return { ok: false, reason: 'unexpected_shape', detail: 'The product did not say what its beta rule is.' };
+      }
+      const complete = rule.set && rule.testers_per_week && rule.plan && rule.duration_days;
+      return {
+        ok: true,
+        value: {
+          rule: complete
+            ? { testersPerWeek: rule.testers_per_week!, plan: rule.plan!, days: rule.duration_days! }
+            : null,
+          used: grants.used_7d,
+          remaining: grants.remaining,
+        },
+      };
     },
 
     async signups(day) {

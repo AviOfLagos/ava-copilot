@@ -17,7 +17,8 @@ export interface InboxItem {
   agentId: string | null;
   runId: string | null;
   // For approvals: what waits on the user's answer
-  approval: { requestId: string; action: string } | null;
+  // `always`: the answer may also be "Allow every time" (a rule is saved, see settings/permissionRules)
+  approval: { requestId: string; action: string; always?: boolean } | null;
   createdAt: number;
   updatedAt: number;
   // Set once this item folds together more than one raw message from the same source that arrived
