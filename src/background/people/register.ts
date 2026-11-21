@@ -13,10 +13,15 @@ import { createLogger } from '../log';
 import { registerAgentAction, registerCommand, registerRecovery, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
 import { DAILY_CRON, DAILY_JOB, DAILY_KEY, postDailyCard } from './cards';
+import { syncPeopleSeeds, syncPeopleSeedsSoon, unlinkTasks, watchTaskOwners, wirePeopleHooks } from './links';
 import { personNote } from './note';
 import { onPeopleChange, people } from './people';
 
 const logger = createLogger('People');
+
+// The task board and the vocabulary hear about people through these hooks
+wirePeopleHooks();
+watchTaskOwners();
 
 // ── Panel commands: the panel reads the tables itself and changes them only through these ─────────────────────
 
@@ -24,6 +29,8 @@ function command<S extends z.ZodType>(type: string, schema: S, run: (input: z.in
   registerCommand(type, schema, async (input, context) => {
     try {
       context.reply({ type: 'people_ok', requestId: context.requestId, result: (await run(input)) ?? null });
+      // An edit, a new name or a removal changes what the recogniser should know
+      syncPeopleSeedsSoon();
     } catch (error) {
       const appError = toAppError(error);
       logger.warning(`${type} failed (${appError.kind})`);
@@ -125,15 +132,20 @@ registerJobHandler(DAILY_JOB, async () => {
     return 0;
   });
   if (asked) logger.info(`Who's who: ${asked} names to sort`);
+  // Names learned quietly through the day (an address's sender name) reach the vocabulary too
+  await syncPeopleSeeds();
 });
 
 registerRecovery('people', async () => {
   await jobs.schedule({ kind: DAILY_JOB, key: DAILY_KEY, cron: DAILY_CRON, catchUpMs: 12 * 3600_000 });
+  await syncPeopleSeeds();
 });
 
-// ── Graph nodes follow merges and removals ─────────────────────────────────────────────────────────────────────
+// ── Graph nodes, tasks and seeds follow merges and removals ────────────────────────────────────────────────────
 
 onPeopleChange(event => {
+  if (event.kind !== 'settled') syncPeopleSeedsSoon();
+  if (event.kind === 'removed') void unlinkTasks(event.personId).catch(() => 0);
   if (event.kind === 'merged') {
     void db.graphNodes
       .filter(node => node.personId === event.droppedId)

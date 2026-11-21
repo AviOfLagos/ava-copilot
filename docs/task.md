@@ -2889,7 +2889,7 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 
 ### People: who is who, under every name (2026-11-21, #107, docs/pm-desk.md Part 5)
 
-- Store: `src/storage/lib/people` (Dexie v12 `people`, `peopleNames`). `observe` is the one way in, plain code: a
+- Store: `src/storage/lib/people` (Dexie v14 `people`, `peopleNames`). `observe` is the one way in, plain code: a
   known email, phone or handle is that person whatever the name; a bare name seen once is only watched; it is asked
   about after a second sighting, at once when a task waits on it, and at once for names on a call. `resolve` goes
   exact name in the workspace, alias for the workspace, alias for everywhere, unique first name. An alias saved for
@@ -2908,8 +2908,11 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   someone else, a new person, not a person. Every answer is kept for that workspace.
 - People page (`side-panel/people`): people with their names per workspace, edit, merge, remove, and "To sort".
   `person_note` is a voice tool and an agent action; from a chat it takes only names the owner typed.
-- Hooks for later parts (`background/people/people.ts`): `peopleHooks.linkTaskOwner`, `moveTasks` (task board,
-  #104) and `seedVocabulary` (#106), all empty until those land.
+- Task board and vocabulary (`background/people/links.ts`): action-item and graph-action owners go through
+  `observe` with source `task` and their task id; a resolved owner is linked with `taskStore.setOwner`, an unknown
+  one is asked about and linked on the answer; a merge moves the tasks, a removal unlinks them (`replaceOwner`).
+  Owners the task tools name (`task_add`, `task_assign`) are observed from the board's changes. Every person's name
+  and the other names that hold in each workspace are vocabulary seeds (`addPersonSeeds`), synced after changes.
 - Tests: store, sources, cards, note, meet and calendar unit tests; E2E `people-pages.e2e.mjs` (Meet, Gmail and
   Slack readers on saved pages) and `people.e2e.mjs` (answer a card in the Inbox, see the name on the People page).
 

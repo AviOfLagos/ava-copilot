@@ -70,22 +70,23 @@ export function meetingInputs(
   }
   for (const { text } of spoke.values()) inputs.push({ ...base, text, source: 'meet', context: 'spoke on the call' });
 
-  const owners = new Map<string, { text: string; tasks: number }>();
+  // Each action item's owner, with the task the board gave it: a known name links the task to its person, an
+  // unknown one is asked about at once, and the answer links every task that waited on it
+  const owners = new Map<string, { text: string; taskIds: string[]; untracked: number }>();
   for (const item of meeting.note?.actionItems ?? []) {
     const owner = item.owner?.trim() ?? '';
     if (!owner || isSelfName(owner) || isNobody(owner)) continue;
-    const entry = owners.get(nameKey(owner)) ?? { text: owner, tasks: 0 };
-    entry.tasks += 1;
+    const entry = owners.get(nameKey(owner)) ?? { text: owner, taskIds: [], untracked: 0 };
+    if (item.taskId) entry.taskIds.push(item.taskId);
+    else entry.untracked += 1;
     owners.set(nameKey(owner), entry);
   }
-  for (const { text, tasks } of owners.values()) {
-    inputs.push({
-      ...base,
-      text,
-      source: 'spoken',
-      tasks,
-      context: tasks === 1 ? 'was given a task on the call' : `was given ${tasks} tasks on the call`,
-    });
+  for (const { text, taskIds, untracked } of owners.values()) {
+    const count = taskIds.length + untracked;
+    const context = count === 1 ? 'was given a task on the call' : `was given ${count} tasks on the call`;
+    for (const taskId of taskIds) inputs.push({ ...base, text, source: 'task', taskId, context });
+    // Items the board could not take still make the name worth asking about
+    if (untracked) inputs.push({ ...base, text, source: 'task', tasks: untracked, context });
   }
   return inputs;
 }

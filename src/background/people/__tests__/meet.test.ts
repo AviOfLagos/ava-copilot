@@ -87,7 +87,7 @@ describe('meetingInputs', () => {
       ['calendar', 'Adaeze O.', 'ada@example.test', WS],
       ['calendar', 'Tolu Bello', 'tolu@example.test', null],
       ['meet', 'Adaeze O.', null, WS],
-      ['spoken', 'Ada', null, WS],
+      ['task', 'Ada', null, WS],
     ]);
     expect(inputs.at(-1)).toMatchObject({ tasks: 2, context: 'was given 2 tasks on the call', workspaceId: WS });
   });
@@ -156,5 +156,26 @@ describe('learning from calls', () => {
     // It is asked about, showing the address and offering Ada Obi for the owner to confirm or not
     const [question] = await people.store.unsettled();
     expect(question).toMatchObject({ emails: ['mallory@evil.test'], suggestedPersonId: ada.id });
+  });
+
+  it("an action item's task goes with its owner's name, so a known owner's task is linked at once", async () => {
+    const ada = await people.create({ name: 'Ada Obi', workspaceId: WS });
+    const record = meeting('m3', {
+      roster: [],
+      note: {
+        ...meeting('m3').note!,
+        actionItems: [
+          { owner: 'Ada', task: 'Write the release note', due: null, taskId: 'tsk_1' },
+          { owner: 'Ada', task: 'Book the demo', due: null, taskId: 'tsk_2' },
+        ],
+      },
+    });
+    const inputs = meetingInputs(record, [], null, OWN);
+    expect(inputs.map(input => [input.source, input.text, input.taskId])).toEqual([
+      ['task', 'Ada', 'tsk_1'],
+      ['task', 'Ada', 'tsk_2'],
+    ]);
+    const results = await people.observeAll(inputs);
+    expect(results.every(result => result.kind === 'person' && result.personId === ada.id)).toBe(true);
   });
 });

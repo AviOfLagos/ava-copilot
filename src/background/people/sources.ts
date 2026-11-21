@@ -1,5 +1,5 @@
 import { cleanEmail, db, entityId, localDay, looksLikePhone, workspaceStore } from '@extension/storage';
-import type { KnowledgeItem, ObserveInput, PersonSource } from '@extension/storage';
+import type { GraphSlice, KnowledgeItem, ObserveInput, PersonSource } from '@extension/storage';
 import type { WatcherConversation } from '../inbox/watchers/types';
 import { createLogger } from '../log';
 import { isNobody, isSelfName, ownerEmails } from './owner';
@@ -209,4 +209,36 @@ export async function learnFromReading(item: KnowledgeItem, names: string[]): Pr
       await db.graphNodes.update(entityId('person', workspaceId, name), { personId: result.personId }).catch(() => 0);
     }
   }
+}
+
+/**
+ * The owners of a chat's or note's actions that went on the task board, each with its task: a known name links
+ * the task to its person, an unknown one is asked about. A meeting's are learned from its note (./meet.ts).
+ */
+export function taskOwnerInputs(
+  item: Pick<KnowledgeItem, 'id' | 'sourceType' | 'workspaceId'>,
+  slice: Pick<GraphSlice, 'entities' | 'edges'>,
+): ObserveInput[] {
+  if (!GRAPH_SOURCES[item.sourceType]) return [];
+  const inputs: ObserveInput[] = [];
+  for (const action of slice.entities) {
+    if (action.type !== 'action' || !action.taskId) continue;
+    const edge = slice.edges.find(other => other.from === action.id && other.kind === 'assigned_to');
+    const owner = (edge && slice.entities.find(entity => entity.id === edge.to)?.label) || '';
+    if (!owner || isSelfName(owner) || isNobody(owner)) continue;
+    inputs.push({
+      text: owner,
+      source: 'task',
+      workspaceId: action.workspaceId ?? item.workspaceId ?? null,
+      taskId: action.taskId,
+      ref: `kb|${item.id}`,
+      context: 'was given a task in a chat or note',
+    });
+  }
+  return inputs.slice(0, 30);
+}
+
+export async function learnTaskOwners(item: KnowledgeItem, slice: GraphSlice): Promise<void> {
+  const inputs = taskOwnerInputs(item, slice);
+  if (inputs.length) await people.observeAll(inputs);
 }

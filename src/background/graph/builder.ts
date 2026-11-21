@@ -13,7 +13,7 @@ import { resolveModels } from '../threads/factory';
 import { isOverDailyBudget } from '../usage/budget';
 import { mergeReadings, READING_INSTRUCTIONS, readingFromNote, readingSchema, sliceFrom } from './extract';
 import type { Reading } from './extract';
-import { learnFromReading } from '../people/sources';
+import { learnFromReading, learnTaskOwners } from '../people/sources';
 
 const logger = createLogger('Graph');
 
@@ -141,7 +141,9 @@ export class GraphBuilder {
     });
     await this.deps.graph.replace(withTasks);
     // The people it names are learned for that workspace (docs/pm-desk.md Part 5)
-    void learnFromReading(item, reading.people).catch(error => logger.warning('Could not learn names', error));
+    void learnFromReading(item, reading.people)
+      .then(() => learnTaskOwners(item, withTasks))
+      .catch(error => logger.warning('Could not learn names', error));
   }
 
   /** The words of a source, as the graph reads them. */
