@@ -108,11 +108,16 @@ export default function InboxPlace({ api }: { api: PanelApi }) {
   const workspaceUsed = useMemo(() => new Set(items.map(item => item.workspaceId).filter(Boolean)), [items]);
   const agentUsed = useMemo(() => new Set(items.map(item => item.agentId).filter(Boolean)), [items]);
 
-  const answer = async (item: InboxItem, approved: boolean) => {
+  const answer = async (item: InboxItem, approved: boolean, always = false) => {
     if (!item.approval) return;
     setError(null);
     try {
-      await api.request({ type: 'inbox_answer', approvalRequestId: item.approval.requestId, approved });
+      await api.request({
+        type: 'inbox_answer',
+        approvalRequestId: item.approval.requestId,
+        approved,
+        ...(always ? { always: true } : {}),
+      });
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : String(problem));
     }
@@ -140,7 +145,7 @@ export default function InboxPlace({ api }: { api: PanelApi }) {
           setWhatsapp(tab);
         }}
         onBack={() => setOpenId(null)}
-        onAnswer={approved => answer(openItem, approved)}
+        onAnswer={(approved, always) => answer(openItem, approved, always)}
         onMarkDone={() => markDone(openItem)}
         onMarkUnread={() => markUnread(openItem)}
         onSnooze={until => snooze(openItem, until)}

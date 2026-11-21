@@ -31,6 +31,12 @@ const BUILTIN_LABELS: Record<string, { name: MessageKey; description: MessageKey
   legal: { name: 'persona_builtin_legal_name', description: 'persona_builtin_legal_description' },
   auntie: { name: 'persona_builtin_auntie_name', description: 'persona_builtin_auntie_description' },
   operator: { name: 'persona_builtin_operator_name', description: 'persona_builtin_operator_description' },
+  growth: { name: 'persona_builtin_growth_name', description: 'persona_builtin_growth_description' },
+  positioning: { name: 'persona_builtin_positioning_name', description: 'persona_builtin_positioning_description' },
+  build_in_public: {
+    name: 'persona_builtin_buildInPublic_name',
+    description: 'persona_builtin_buildInPublic_description',
+  },
 };
 
 export function personalityName(personality: Personality): string {

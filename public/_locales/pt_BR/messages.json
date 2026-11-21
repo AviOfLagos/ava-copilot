@@ -10775,5 +10775,209 @@
   },
   "rounds_slack_failed": {
     "message": "não foi possível ler o Slack."
+  },
+  "team_action_post": {
+    "message": "Publicação"
+  },
+  "team_action_reply": {
+    "message": "Resposta"
+  },
+  "team_action_outreach": {
+    "message": "E-mail de prospecção"
+  },
+  "team_action_followUp": {
+    "message": "Acompanhamento"
+  },
+  "team_action_listing": {
+    "message": "Cadastro em diretório"
+  },
+  "team_action_issue": {
+    "message": "Issue vinda de um cliente"
+  },
+  "team_action_beta": {
+    "message": "Acesso beta"
+  },
+  "team_action_spend": {
+    "message": "Pedido de gasto"
+  },
+  "team_action_channel": {
+    "message": "Novo canal"
+  },
+  "team_action_account": {
+    "message": "Nova conta"
+  },
+  "team_action_plan": {
+    "message": "Mudança de plano"
+  },
+  "team_action_tool": {
+    "message": "Ferramenta para conectar"
+  },
+  "team_item_title": {
+    "message": "$1 · $2: $3"
+  },
+  "team_item_where": {
+    "message": "Onde"
+  },
+  "team_item_why": {
+    "message": "Por quê"
+  },
+  "team_item_namesCustomer": {
+    "message": "Isto cita um cliente, por isso é sempre perguntado à parte."
+  },
+  "team_spend_amount": {
+    "message": "Valor"
+  },
+  "team_spend_buys": {
+    "message": "O que compra"
+  },
+  "team_spend_triedFree": {
+    "message": "Tentado de graça antes"
+  },
+  "team_spend_expected": {
+    "message": "Resultado esperado"
+  },
+  "team_batch_title": {
+    "message": "Aprovar os $1 rascunhos de $2"
+  },
+  "team_batch_body": {
+    "message": "Um toque aprova todos os rascunhos abaixo. Para decidir um a um, responda cada um na própria linha. Nada é publicado nem enviado ainda: os rascunhos aprovados ficam retidos até a verificação de conta existir."
+  },
+  "team_auto_done": {
+    "message": "$1 fez: $2"
+  },
+  "team_auto_failed": {
+    "message": "$1 não conseguiu: $2"
+  },
+  "team_note_spendAgreed": {
+    "message": "Você concordou com $1. O pagamento é com você; o orçamento já conta esse valor."
+  },
+  "team_note_yours": {
+    "message": "Você disse sim. Os passos são com você; estão no pedido."
+  },
+  "team_note_held": {
+    "message": "Aprovado. Nada saiu: publicar e enviar aguardam a verificação de conta (#43)."
+  },
+  "team_note_unknownOutcome": {
+    "message": "Foi interrompido no meio, então pode ou não ter sido concluído. Não é repetido sozinho: confira e peça de novo."
+  },
+  "team_note_declined": {
+    "message": "Você recusou."
+  },
+  "team_rule_label": {
+    "message": "$1: $2, dentro do limite"
+  },
+  "team_ledger_title": {
+    "message": "Orçamento e vagas beta"
+  },
+  "team_ledger_budget": {
+    "message": "Orçamento de marketing: $1 de $2 gastos, $3 restantes. Os agentes só pedem; quem paga é você."
+  },
+  "team_ledger_noBudget": {
+    "message": "Orçamento de marketing: não definido."
+  },
+  "team_ledger_beta": {
+    "message": "Vagas beta: $1 de $2 concedidas nos últimos 7 dias."
+  },
+  "team_ledger_noBeta": {
+    "message": "Regra do beta: não definida, então nenhuma vaga é dada sem você."
+  },
+  "team_ledger_waiting": {
+    "message": "$1 aguardando sua aprovação, $2 aprovados e retidos."
+  },
+  "team_auto_held": {
+    "message": "$1, com permissão sempre, deixou aprovado: $2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "Líder de crescimento"
+  },
+  "persona_builtin_growth_description": {
+    "message": "Inspirado no trabalho público de Sean Ellis: primeiro um produto que as pessoas sentiriam falta, uma métrica norte, testes priorizados."
+  },
+  "persona_builtin_positioning_name": {
+    "message": "Posicionamento e prospecção"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "Inspirado no trabalho público de April Dunford sobre posicionamento, com os testes de canais de “Traction”: para quem é, depois onde."
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "Construindo em público"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "Inspirado no trabalho público de Arvid Kahl sobre construir em público: ache onde as pessoas já conversam, ajude primeiro, mostre o trabalho real."
+  },
+  "agents_growth_title": {
+    "message": "Time de crescimento"
+  },
+  "agents_growth_intro": {
+    "message": "Trabalha para o produto do workspace escolhido abaixo. Faz rascunhos e planos; nada é postado, enviado, concedido ou gasto sem o seu clique."
+  },
+  "agents_growth_lead": {
+    "message": "Líder de crescimento"
+  },
+  "agents_growth_lead_hint": {
+    "message": "Organiza o feedback dos clientes, propõe issues, acompanha os cadastros por canal e mantém o plano da semana."
+  },
+  "growth_setup_needsProduct": {
+    "message": "O time de crescimento trabalha para um produto: escolha um workspace que tenha um produto (Workspaces › o workspace › Adicionar o produto)."
+  },
+  "growth_models_fallback_title": {
+    "message": "O time de crescimento usa os seus modelos"
+  },
+  "growth_models_fallback_body": {
+    "message": "Nenhuma chave do Claude está nas configurações de modelos, então os agentes de crescimento usam seus modelos \"smart\" e \"fast\". Adicione uma chave do Claude para usarem Sonnet no dia a dia, Haiku para organizar e Opus no plano de segunda."
+  },
+  "agents_growth_marketing": {
+    "message": "Gerente de Marketing de Produto"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "Posicionamento, uma lista de canais classificada por cadastros reais e rascunhos de contato que esperam o seu clique."
+  },
+  "agents_growth_social": {
+    "message": "Gerente de Redes Sociais do Produto"
+  },
+  "agents_growth_social_hint": {
+    "message": "O plano de conteúdo da semana, posts e respostas na voz do produto, e o que cada post trouxe. Publicar espera o seu clique."
+  },
+  "agents_standup_run": {
+    "message": "Fazer a reunião diária de hoje"
+  },
+  "agents_standup_hint": {
+    "message": "Plano às segundas, 07:30; reunião diária às 07:45. Lê os números, cada agente escreve uma nota curta e o Growth Lead resume tudo na Caixa de entrada."
+  },
+  "agents_standup_done": {
+    "message": "Pronto. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_already": {
+    "message": "A reunião de hoje já aconteceu. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_running": {
+    "message": "A reunião de hoje está em andamento."
+  },
+  "agents_standup_notRun": {
+    "message": "A reunião não aconteceu: $1"
+  },
+  "brief_team_title": {
+    "message": "Equipe · $1"
+  },
+  "brief_team_notRun": {
+    "message": "A reunião diária não aconteceu: $1."
+  },
+  "brief_team_noReason": {
+    "message": "nenhum motivo foi registrado"
+  },
+  "brief_team_running": {
+    "message": "ainda estava em andamento às $1 e entra aqui quando terminar"
+  },
+  "brief_team_later": {
+    "message": "ela começa às 07:45, depois deste resumo"
+  },
+  "brief_team_notOpen": {
+    "message": "o navegador não estava aberto às 07:45; ela acontece agora e entra aqui quando terminar"
+  },
+  "brief_team_skipped": {
+    "message": "o navegador não estava aberto entre 07:45 e 12:00"
+  },
+  "brief_team_empty": {
+    "message": "A reunião diária aconteceu, mas o Growth Lead não escreveu um resumo. As notas estão na Caixa de entrada."
   }
 }

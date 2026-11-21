@@ -10775,5 +10775,209 @@
   },
   "rounds_slack_failed": {
     "message": "Slack could not be read."
+  },
+  "team_action_post": {
+    "message": "Post"
+  },
+  "team_action_reply": {
+    "message": "Reply"
+  },
+  "team_action_outreach": {
+    "message": "Outreach email"
+  },
+  "team_action_followUp": {
+    "message": "Follow-up"
+  },
+  "team_action_listing": {
+    "message": "Listing"
+  },
+  "team_action_issue": {
+    "message": "Issue from a customer"
+  },
+  "team_action_beta": {
+    "message": "Beta access"
+  },
+  "team_action_spend": {
+    "message": "Spending request"
+  },
+  "team_action_channel": {
+    "message": "New channel"
+  },
+  "team_action_account": {
+    "message": "New account"
+  },
+  "team_action_plan": {
+    "message": "Plan change"
+  },
+  "team_action_tool": {
+    "message": "Tool to connect"
+  },
+  "team_item_title": {
+    "message": "$1 · $2: $3"
+  },
+  "team_item_where": {
+    "message": "Where"
+  },
+  "team_item_why": {
+    "message": "Why"
+  },
+  "team_item_namesCustomer": {
+    "message": "This names a customer, so it is always asked on its own."
+  },
+  "team_spend_amount": {
+    "message": "Amount"
+  },
+  "team_spend_buys": {
+    "message": "What it buys"
+  },
+  "team_spend_triedFree": {
+    "message": "Tried for free first"
+  },
+  "team_spend_expected": {
+    "message": "Result expected"
+  },
+  "team_batch_title": {
+    "message": "Approve all $1 drafts from $2"
+  },
+  "team_batch_body": {
+    "message": "One tap approves every draft below. To decide one by one, answer each on its own row. Nothing is posted or sent yet: approved drafts are held until the account check is in place."
+  },
+  "team_auto_done": {
+    "message": "$1 did it: $2"
+  },
+  "team_auto_failed": {
+    "message": "$1 could not do it: $2"
+  },
+  "team_note_spendAgreed": {
+    "message": "You agreed to $1. Paying it is yours to do; the budget now counts it."
+  },
+  "team_note_yours": {
+    "message": "You said yes. The steps are yours to do; they are in the request."
+  },
+  "team_note_held": {
+    "message": "Approved. Nothing has gone out: posting and sending wait for the account check (#43)."
+  },
+  "team_note_unknownOutcome": {
+    "message": "It was cut off part of the way, so it may or may not have gone through. It is not tried again by itself: check, then ask again."
+  },
+  "team_note_declined": {
+    "message": "You declined it."
+  },
+  "team_rule_label": {
+    "message": "$1: $2, inside its limit"
+  },
+  "team_ledger_title": {
+    "message": "Budget and beta places"
+  },
+  "team_ledger_budget": {
+    "message": "Marketing budget: $1 of $2 spent, $3 left. Agents can only ask; you pay."
+  },
+  "team_ledger_noBudget": {
+    "message": "Marketing budget: not set."
+  },
+  "team_ledger_beta": {
+    "message": "Beta places: $1 of $2 given in the last 7 days."
+  },
+  "team_ledger_noBeta": {
+    "message": "Beta rule: not set, so no place is given without you."
+  },
+  "team_ledger_waiting": {
+    "message": "$1 waiting for your approval, $2 approved and held."
+  },
+  "team_auto_held": {
+    "message": "$1, allowed every time, kept it as approved: $2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "Growth lead"
+  },
+  "persona_builtin_growth_description": {
+    "message": "Inspired by Sean Ellis’s public work: a product people would miss first, one north star, ranked tests."
+  },
+  "persona_builtin_positioning_name": {
+    "message": "Positioning and outreach"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "Inspired by April Dunford’s public work on positioning, with the channel tests from “Traction”: who it is for, then where."
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "Builder in public"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "Inspired by Arvid Kahl’s public work on building in public: find where people already talk, help first, show real work."
+  },
+  "agents_growth_title": {
+    "message": "Growth team"
+  },
+  "agents_growth_intro": {
+    "message": "Works for the product of the workspace you pick below. Drafts and plans; nothing is posted, sent, granted or spent without your click."
+  },
+  "agents_growth_lead": {
+    "message": "Growth Lead"
+  },
+  "agents_growth_lead_hint": {
+    "message": "Sorts customer feedback, proposes issues, watches the sign-ups by channel and keeps the weekly plan."
+  },
+  "growth_setup_needsProduct": {
+    "message": "The growth team works for one product: pick a workspace that has a product (Workspaces › the workspace › Add the product)."
+  },
+  "growth_models_fallback_title": {
+    "message": "The growth team uses your own models"
+  },
+  "growth_models_fallback_body": {
+    "message": "No Claude key is set in the model settings, so the growth agents use your \"smart\" and \"fast\" models. Add a Claude key to give them Sonnet for daily work, Haiku for sorting and Opus for the Monday plan."
+  },
+  "agents_growth_marketing": {
+    "message": "Product Marketing Manager"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "Positioning, a channel list ranked from real sign-ups, and outreach drafts that wait for your click."
+  },
+  "agents_growth_social": {
+    "message": "Product Social Manager"
+  },
+  "agents_growth_social_hint": {
+    "message": "The week's content plan, posts and replies in the product's voice, and what each post brought. Posting waits for your click."
+  },
+  "agents_standup_run": {
+    "message": "Run today's standup"
+  },
+  "agents_standup_hint": {
+    "message": "Plan Mondays at 07:30, standup every day at 07:45. It reads the numbers, each agent writes a short note, and the Growth Lead sums it up in the Inbox."
+  },
+  "agents_standup_done": {
+    "message": "Done. It is in the Inbox as \"Growth standup\"."
+  },
+  "agents_standup_already": {
+    "message": "Today's standup already ran. It is in the Inbox as \"Growth standup\"."
+  },
+  "agents_standup_running": {
+    "message": "Today's standup is running."
+  },
+  "agents_standup_notRun": {
+    "message": "Standup did not run: $1"
+  },
+  "brief_team_title": {
+    "message": "Team · $1"
+  },
+  "brief_team_notRun": {
+    "message": "Standup did not run: $1."
+  },
+  "brief_team_noReason": {
+    "message": "no reason was recorded"
+  },
+  "brief_team_running": {
+    "message": "it was still running at $1, and it is added here when it ends"
+  },
+  "brief_team_later": {
+    "message": "it starts at 07:45, after this brief"
+  },
+  "brief_team_notOpen": {
+    "message": "the browser was not open at 07:45; it runs now and is added here when it ends"
+  },
+  "brief_team_skipped": {
+    "message": "the browser was not open between 07:45 and 12:00"
+  },
+  "brief_team_empty": {
+    "message": "The standup ran, but the Growth Lead wrote no summary. The notes are in the Inbox."
   }
 }

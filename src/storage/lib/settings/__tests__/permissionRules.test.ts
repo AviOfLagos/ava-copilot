@@ -14,7 +14,7 @@ vi.hoisted(() => {
   });
 });
 
-const { canAllowAlways, pageScope, permissionRulesStore, toolScope } = await import('../permissionRules');
+const { canAllowAlways, pageScope, permissionRulesStore, teamScope, toolScope } = await import('../permissionRules');
 
 describe('pageScope', () => {
   it('is the host and the first path segment', () => {
@@ -42,8 +42,22 @@ describe('pageScope', () => {
 
 describe('canAllowAlways', () => {
   it('never covers paying, deleting or giving access', () => {
-    expect(['send', 'publish', 'submit', 'tool'].every(canAllowAlways)).toBe(true);
-    expect(['purchase', 'delete', 'permission', 'login', 'captcha'].some(canAllowAlways)).toBe(false);
+    expect(['send', 'publish', 'submit', 'tool'].every(kind => canAllowAlways(kind))).toBe(true);
+    expect(['purchase', 'delete', 'permission', 'login', 'captcha'].some(kind => canAllowAlways(kind))).toBe(false);
+  });
+
+  it('remembers only the two kinds of growth work that run inside a hard limit', () => {
+    const scope = (action: string) => `team:ws/agent/${action}`;
+    expect(canAllowAlways('team', scope('customer_issue'))).toBe(true);
+    expect(canAllowAlways('team', scope('beta_grant'))).toBe(true);
+    // Spending, a new channel, a new account and a plan change are always the user's own decision
+    for (const action of ['spend', 'new_channel', 'new_account', 'plan_change', 'tool', 'post', 'outreach_email']) {
+      expect(canAllowAlways('team', scope(action))).toBe(false);
+    }
+    // A team rule with no place, or a place that is not a team's, covers nothing
+    expect(canAllowAlways('team')).toBe(false);
+    expect(canAllowAlways('team', 'example.com/app')).toBe(false);
+    expect(canAllowAlways('team', 'team:ws/agent/customer_issue/extra')).toBe(false);
   });
 });
 
@@ -84,6 +98,24 @@ describe('permissionRulesStore', () => {
     expect(await permissionRulesStore.allow({ kind: 'delete', scope: 'a.example', label: 'x' })).toBeNull();
     expect(await permissionRulesStore.allow({ kind: 'send', scope: '', label: 'x' })).toBeNull();
     expect(await permissionRulesStore.list()).toHaveLength(0);
+  });
+
+  it('never keeps a team rule for spending, a new channel, a new account or a plan change', async () => {
+    for (const action of ['spend', 'new_channel', 'new_account', 'plan_change'] as const) {
+      const scope = teamScope('ws', 'agent', action);
+      expect(await permissionRulesStore.allow({ kind: 'team', scope, label: action })).toBeNull();
+      expect(await permissionRulesStore.find('team', scope)).toBeNull();
+    }
+    expect(await permissionRulesStore.list()).toHaveLength(0);
+    const kept = await permissionRulesStore.allow({
+      kind: 'team',
+      scope: teamScope('ws', 'agent', 'customer_issue'),
+      label: 'Issues from customers',
+    });
+    expect(kept).not.toBeNull();
+    // One agent's rule is not another agent's, nor another product's
+    expect(await permissionRulesStore.find('team', teamScope('ws', 'other', 'customer_issue'))).toBeNull();
+    expect(await permissionRulesStore.find('team', teamScope('ws2', 'agent', 'customer_issue'))).toBeNull();
   });
 
   it('names a tool by its hash, so a changed tool is asked about again', () => {

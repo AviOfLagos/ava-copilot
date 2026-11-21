@@ -4,7 +4,12 @@
  * whichever prefix matches. Agents (WS5b) and connectors (WS4) plug in the same way later.
  */
 
-export type ApprovalHandler = (requestId: string, approved: boolean) => Promise<boolean>;
+// `always`: the user answered "Allow every time"; a handler that keeps no rules ignores it
+export interface ApprovalOptions {
+  always?: boolean;
+}
+
+export type ApprovalHandler = (requestId: string, approved: boolean, options?: ApprovalOptions) => Promise<boolean>;
 
 interface Entry {
   prefix: string;
@@ -19,10 +24,14 @@ export function registerApprovalHandler(prefix: string, handler: ApprovalHandler
 }
 
 /** Routes an answer to its handler by the request id's prefix. False when nothing claims that prefix. */
-export async function answerApproval(requestId: string, approved: boolean): Promise<boolean> {
+export async function answerApproval(
+  requestId: string,
+  approved: boolean,
+  options: ApprovalOptions = {},
+): Promise<boolean> {
   const entry = handlers.find(candidate => requestId.startsWith(candidate.prefix));
   if (!entry) return false;
-  return entry.handler(requestId, approved);
+  return entry.handler(requestId, approved, options);
 }
 
 /** Test-only: clears every registered handler, so test files that register their own start clean. */

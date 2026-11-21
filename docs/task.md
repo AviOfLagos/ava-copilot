@@ -2699,6 +2699,174 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers, a simulated full day),
   `e2e/rounds.e2e.mjs`.
 
+### Approval modes, the budget ledger and tool requests (2026-11-21, #72, docs/growth-team.md Part 9)
+
+- Store: `src/storage/lib/growth-team` (Dexie v9: `teamItems`, `teamLedger`). Code: `src/background/growth-team`
+  (`modes.ts`, `ledger.ts`, `privacy.ts`, `queue.ts`, `requests.ts`, `actions.ts`, `register.ts`).
+- Three agent actions: `queue_for_approval`, `request_spend` (amount, what it buys, tried for free, expected),
+  `request_tool` (the free-first ladder: connected, free API, browser, free tier, paid; paid becomes a spending
+  request, a free tier a new-account request).
+- Modes: posts, replies, outreach, follow-ups and listings go in one batch per agent per day, approved with one
+  tap ("Approve all 3 drafts from …"). An issue from a customer and a beta grant can be "Allow every time", kept as
+  a `team` rule in PR #92's `permissionRulesStore` (scope `team:<workspace>/<agent>/<action>`), and then run by
+  themselves. Spending, a new channel, a new account, a plan change, a tool, and anything that names a customer
+  always ask: `canAllowAlways` refuses those rules, and a forged one is ignored.
+- Limits in code: the beta rule (testers a week over a rolling 7 days, the plan, the days; the product's own
+  `grants.remaining` wins when it can be read), the marketing budget, 20 items per agent per day, 10 customer
+  issues a day. The check and the write of a ledger line are one transaction, so concurrent yeses cannot pass the
+  limit. An item is written down before anything happens and is carried out once.
+- Nothing goes out in this phase: an approved post or email is "held" until #43 lands an executor.
+- After review: a customer's email, phone, name or id link in a post, reply, issue or email is refused, not only
+  flagged; a grant agreed here and not yet given in the product counts against the product's own places; a tap on
+  the batch row approves only the drafts it showed (its answer carries a fingerprint of them); a spend or grant
+  agreed just before the background stopped is written to the ledger on the next start; a yes that a limit
+  stopped is said in the Inbox. Known and left: the daily item caps are counted outside a transaction, so two
+  proposals landing together can pass them by one.
+- The workspace screen shows the ledger: spent of budget, beta places this week, waiting and held.
+- Tests: `background/growth-team/__tests__` (rules, queue), `e2e/team-approvals.e2e.mjs`.
+
+### Three personalities for the growth team (2026-11-21, #73, docs/growth-team.md Part 8)
+
+- Built-ins `growth` (inspired by Sean Ellis), `positioning` (April Dunford, with the channel tests from
+  *Traction*) and `build_in_public` (Arvid Kahl) in `src/storage/lib/personalities/builtins.ts`. Each one's
+  instructions hold, in order, five beliefs, "When …" rules, first questions and what to avoid, in our own words,
+  under 2,000 characters. Sources: `docs/personas/<id>.md`.
+- Inspired by, never the person: the instructions say so, and code makes it hold. `PERSONA_SOURCE_NAMES` lists
+  the people and their books; `growth-team/persona.ts` refuses a post, reply, email, listing or issue that names
+  one (or speaks as one) before it reaches the Inbox. The operator's Bezos is on the list too.
+- The local voice engines have seven voices besides Ava's, so two of the nine built-ins share one there; the test
+  now says every voice is used before one is shared.
+- Eval kind `draft` (`evals/runner/draft.ts`): four cases, three refused drafts and one clean one.
+
+### The Growth Lead (2026-11-21, #74, docs/growth-team.md Part 8)
+
+- Template `growth_lead` in a new "Growth team" group of the team setup, off until turned on, `executor:
+  'browser'`, personality `growth`. It needs a workspace with a product (`growth-team/setup.ts`); with a Claude key
+  it gets Sonnet 5.5 for `smart` and Haiku 5.5 for `fast`, without one the Inbox says once that it uses the user's
+  own roles. The Monday plan's Opus comes with #77.
+- Feedback: `read_feedback` reads the product's `GET /feedback` for yesterday and today, drops what was sorted
+  (Dexie v10 `teamFeedback`), and fences the customers' text as data. `sort_feedback` takes the model's sort and
+  the facts of what broke; code does the rest (`lead/feedback.ts`): the priority from the rule (`lead/priority.ts`),
+  one `customer_issue` per feedback through the approval queue, labelled `from-customer` with the super admin link,
+  feature requests counted by topic until the third ask opens one issue, praise put on the bus as `growth.praise`
+  with no name. A summary that holds an email or phone is refused, and a refused issue unsorts the feedback.
+- `request_beta_grant` proposes a `beta_grant` on the product's rule; the limits are #72's code.
+- Signals: a 07:40 job (`growth-signals`) puts `growth.signal` on the bus for each channel whose sign-ups moved
+  yesterday against the 7 days before (`lead/signals.ts`), only on days that were read.
+- Not in this phase: filing the approved issue on GitHub, granting the beta place, and the Slack line for each
+  filed issue. Approved items stay held with their text ready until an executor lands (after #43).
+- Eval kind `lead` (`evals/runner/lead.ts`): recorded tool calls through this code, five cases (priority by rule,
+  duplicates, customer details blocked, a grant past the rule, a grant inside it).
+- After review: the signals job is scheduled once (a restart no longer pushes a due run to tomorrow); a proposal
+  or a praise hand-off that throws unsorts the feedback; every angle bracket in a customer's text is escaped and
+  the tag's attributes keep plain characters only; one malformed feedback row is left out instead of the day; a
+  team setup with a growth agent checks the product before making any draft. Left as they are, and why: a
+  sort of an id the model was never shown is not refused (a read id can be mis-sorted just the same; the user
+  approves every issue); a P0 that arrives after the day's 10 issues waits for tomorrow; feedback older than
+  yesterday is not read again; the 07:40 job reads the UTC day before.
+- E2E `e2e/growth-lead.e2e.mjs`: the Growth team group, the product check, and a sort that ends as "[P0] …"
+  waiting in the Inbox while a customer's email is sent back.
+
+### The Product Marketing Manager (2026-11-21, #75, docs/growth-team.md Parts 8 and 12)
+
+- Template `growth_marketing` in the Growth team group, personality `positioning`, `executor: 'browser'`,
+  weekdays at 10:00 and on `growth.signal`. Positioning goes through `update_product_profile`, which shows the
+  change first; the instructions say positioning comes before channels.
+- Channels (`marketing/channels.ts`, Dexie v11 `teamChannels`): `add_channel` keeps ideas with who is there and
+  a test's cost; `rank_channels` ranks by sign-ups a week over the last 28 read days, then the untested cheapest
+  first, and marks three "test next". `propose_channel_test` asks only for those (a `new_channel` request, always
+  asked); the user's yes starts the 7-day week through `registerAgreedHook` in the queue, which changes only
+  Ava's own list. After the week code keeps or drops it by the rounds' test against the week before; a day not
+  read leaves it testing.
+- Outreach (`marketing/outreach.ts`, Dexie v11 `teamContacts` and the shared `teamSuppressed`): drafts only.
+  Code refuses a suppressed address or a personal mailbox, a person already written to, more than 20 new people a
+  day per product, and a follow-up before 3 whole working days or after the first one. Every draft ends with the
+  sender, the postal address, why this person and how to opt out; a missing sender or address reads "not set" and
+  the agent is told to say so. `stop_contact` puts an address on the list for every product.
+- Eval kind `lead` is now `team` in `evals/runner/team.ts` (kinds `lead` and `marketing`): four new cases
+  (suppressed address, the daily limit, one follow-up, ranking from numbers).
+- E2E in `e2e/growth-lead.e2e.mjs`: the draft waits in the Inbox with "sender: not set", and the unsubscribed
+  address is refused.
+- Not yet: sending (Nex Mail, Part 12, after #43), and finding people (the agent browses public pages itself).
+- After review: the address rules live in `propose` itself (`growth-team/addresses.ts`), so no tool goes around
+  them, and `queue_for_approval` no longer takes emails; addresses are kept in one form (lower case, no "+tag");
+  personal mailboxes are matched by name whatever the country ending; the footer is added after the checks, so a
+  postal code is not taken for a phone number; a follow-up counts from the user's yes to the first email and
+  never follows a declined one; a person takes the day's place in one transaction; an address stopped while its
+  email waited is not carried out; a declined channel test may be asked for again; `startTest` keeps the three-at-
+  once cap in a transaction; a test unread two weeks after its week is dropped; "no reading" is never shown as 0.
+  The send executor (after #43) must check the do-not-write list again right before sending. Also: the queue
+  takes extra draft checks (`registerProposalCheck`), used by #76.
+
+### The Product Social Manager (2026-11-21, #76, docs/growth-team.md Part 8)
+
+- Template `growth_social` in the Growth team group, personality `build_in_public`, `executor: 'browser'` on
+  x.com and linkedin.com with the account-switching skill, weekdays at 11:00 and on `growth.signal` and
+  `growth.praise`. It is built on `team_social`, which stays as it is.
+- Facts (`social/facts.ts`): every agent's post, reply, listing or email goes through a draft check registered in
+  the queue. Code refuses a number that neither the product profile nor the metrics store holds (sums over 7, 28
+  and 35 days ending today or yesterday, read days only; a day with no reading counts for nothing), and any
+  quote of four words or more. Links, handles, times, years and counts up to 10 pass. The user's own chat is
+  never checked.
+- `post_results` (`social/posts.ts`) sums what each post brought over 14 read days; with none it says "no
+  reading".
+- Evals: three `social` cases (an invented number, a customer quote, the product's voice and the approval step).
+- E2E: the Product Social Manager is in the Growth team group and starts with its own personality.
+- Not yet: posting (after #43). The product's social accounts are "not set" in the profile until someone sets
+  them, and the agent says so instead of posting from another account.
+- After review: "12k", "1.5m", "100x" and "1.200" are read as the numbers they say (a rounded "12k" matches a
+  known 12,345); every window metrics_query can total (up to 92 days ending today or yesterday), whole months,
+  and the change on the week or four weeks before (matched only by a number written with "%") are known, as is
+  any number metrics_query or rank_channels showed in the last day; single, curly and corner quotation marks and
+  Markdown quote lines count as quotes, apostrophes do not; a routine's or agent-started chat is checked even
+  with no agent id, and the draft's fields are checked with its text.
+
+### Weekly plan and daily standup (2026-11-21, #77, docs/growth-team.md Part 10)
+
+- `src/background/growth-team/standup`: `plan.ts` (the clock, the word limits, the off-plan check; no model),
+  `run.ts` (the plan and the standup, with the model calls behind a `StandupWriter`), `writer.ts` (the real
+  calls). State: `standupStore` (`storage.local`, `src/storage/lib/standup`), last three weeks kept.
+- Monday 07:30 (job `growth-plan`, caught up through the week): the Growth Lead sets one focus and at most three
+  experiments (E1-E3, an owner off the team becomes the Lead) on Opus when a Claude key is set, then each agent
+  writes its week against them. A week that has no plan gets one before its first standup.
+- Every day 07:45 (job `growth-standup`): code reads yesterday and the last 7 days (a number never read is listed
+  once as "no reading"); each switched-on growth agent writes a note, cut by code to 80 words; a "today" item that
+  names no experiment is marked off plan with the agent's reason; the Lead's summary is cut to 200 words, and
+  with more than one off-plan item code adds "Off plan (n): <agent>: <item> (<reason>)". A number in the summary
+  no reading holds is flagged. Four model calls a day. The result goes to the Inbox ("Growth standup · <product>
+  · <day>") and to `growth.standup` on the bus.
+- A missed standup runs once if the browser opens before noon (also checked at startup); after noon it is skipped
+  and says "Standup did not run: the browser was not open between 07:45 and 12:00". Over the spending cap it
+  fails with that reason.
+- The Growth Lead's page has "Run today's standup" (`gteam_standup_run`), still once a day.
+- Tests: `standup.test.ts` (three mornings on a fake clock, the off-plan items named, late and skipped mornings);
+  evals: `standup` kind, two cases; E2E: the three agents switched on, the standup run, opened in the Inbox.
+- After review: a start older than 15 minutes (the browser closed mid-run) is taken over, so a lost run never
+  holds the day; the button runs a skipped or failed day again; at most three "today" items per note, reasons
+  cut, the off-plan line lists five by name and the rest as "and n more", and the whole summary, flagged numbers
+  included, stays within 200 words; on Monday before 07:30 a click writes this week's plan; a team switched on
+  after the standup's hours gets no "did not run" item; the plan in prompts is quoted as data; a failed standup
+  shows a model error by its kind only. "Yesterday" is the last whole UTC day, as the product's numbers are kept.
+
+### The Team section of the morning brief (2026-11-21, #78, docs/growth-team.md Part 5b)
+
+- `src/background/brief/extras.ts`: other features add brief sections through `registerBriefExtra` (`pending`,
+  `sections`); the brief waits while one is pending and shows each section under its bold title.
+- `src/background/growth-team/standup/brief.ts` registers "Team · <product>" for each workspace whose Growth Lead
+  is on: the Lead's standup summary (at most 200 words), or "Standup did not run: <reason>" (it starts at 07:45,
+  after this brief; still running, added when it ends; the browser was not open at 07:45, it runs now; the
+  browser was not open between 07:45 and 12:00; or the recorded reason). The brief waits for a running standup
+  until 07:58, or 13 minutes after a late one started.
+- A standup that ends after the brief adds its section to the brief's chat (`addSection`) and lets a waiting brief
+  come (`check`).
+- Tests: `team-brief.test.ts` (every wording, the waiting rule, a ran day and a skipped day on a fake clock) and
+  `brief/__tests__/manager.test.ts` (the brief waits, then shows the section); E2E: the brief made after the
+  standup shows the Team section with the off-plan line.
+- After review: a section that ends while a brief is being made is added once that brief is saved, not dropped; a
+  standup that ends before the background has started leaves its record for the brief to read; an empty summary
+  says the standup ran and the notes are in the Inbox. Not changed: a standup re-run by hand after the brief adds a
+  second Team section to the chat, under the first.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

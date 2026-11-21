@@ -9,6 +9,14 @@ import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
+import type {
+  FeedbackRecord,
+  LedgerEntry,
+  SuppressedAddress,
+  TeamChannel,
+  TeamContact,
+  TeamItem,
+} from '../growth-team/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
@@ -368,6 +376,14 @@ export class AviCopilotDb extends Dexie {
   growthReadings!: Table<GrowthReading, string>;
   growthSources!: Table<GrowthSourceState, string>;
   growthLinks!: Table<GrowthLink, string>;
+  // The growth team (../growth-team): what its agents proposed, and the ledger of money and beta places
+  teamItems!: Table<TeamItem, string>;
+  teamLedger!: Table<LedgerEntry, string>;
+  // How the Growth Lead sorted each piece of customer feedback (one issue per feedback, three asks open one)
+  teamFeedback!: Table<FeedbackRecord, string>;
+  teamContacts!: Table<TeamContact, string>;
+  teamSuppressed!: Table<SuppressedAddress, string>;
+  teamChannels!: Table<TeamChannel, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -425,6 +441,21 @@ export class AviCopilotDb extends Dexie {
       growthReadings: 'id, productId, [productId+metric+date]',
       growthSources: 'id, productId',
       growthLinks: 'id, productId',
+    });
+    // The growth team's approvals and ledger (docs/growth-team.md, Part 9): only added
+    this.version(9).stores({
+      teamItems: 'id, workspaceId, agentId, status, batchId',
+      teamLedger: 'id, workspaceId, itemId',
+    });
+    // v10: the Growth Lead's sorted feedback (#74). Additive
+    this.version(10).stores({
+      teamFeedback: 'id, workspaceId, topic',
+    });
+    // v11: the Product Marketing Manager's contacts, the shared suppression list and its channels (#75). Additive
+    this.version(11).stores({
+      teamContacts: 'id, workspaceId, firstAt',
+      teamSuppressed: 'email',
+      teamChannels: 'id, workspaceId',
     });
   }
 }

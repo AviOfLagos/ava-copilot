@@ -13,7 +13,7 @@ export interface InboxDetailProps {
   item: InboxItem;
   api: PanelApi;
   onBack: () => void;
-  onAnswer: (approved: boolean) => Promise<void>;
+  onAnswer: (approved: boolean, always?: boolean) => Promise<void>;
   onMarkDone: () => void;
   onMarkUnread: () => void;
   onSnooze: (until: number) => void;
@@ -51,10 +51,10 @@ export default function InboxDetail({
   const needsApproval = item.kind === 'approval' && item.status !== 'done' && item.approval;
   const threadId = openThreadId(item);
 
-  const answer = async (approved: boolean) => {
+  const answer = async (approved: boolean, always = false) => {
     setBusy(true);
     try {
-      await onAnswer(approved);
+      await onAnswer(approved, always);
     } finally {
       setBusy(false);
     }
@@ -98,6 +98,13 @@ export default function InboxDetail({
               <Check className="size-3.5" aria-hidden />
               {t('inbox_action_approve')}
             </Button>
+            {/* Only an item that may be remembered offers it; the background decides again when it is answered */}
+            {item.approval?.always && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => void answer(true, true)}>
+                <Check className="size-3.5" aria-hidden />
+                {t('gate_card_allowAlways')}
+              </Button>
+            )}
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void answer(false)}>
               <X className="size-3.5" aria-hidden />
               {t('inbox_action_decline')}

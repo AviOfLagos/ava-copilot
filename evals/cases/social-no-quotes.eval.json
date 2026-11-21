@@ -1,0 +1,37 @@
+{
+  "kind": "social",
+  "name": "The Social Manager never quotes a customer, even from praise it was passed",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#76",
+    "spec": "docs/growth-team.md, Part 8 and Evals"
+  },
+  "replay": [
+    {
+      "tool": "queue_for_approval",
+      "kind": "post",
+      "title": "Kind words",
+      "text": "A team lead told us “Suture saved our launch day completely”.",
+      "where": "linkedin"
+    },
+    {
+      "tool": "queue_for_approval",
+      "kind": "post",
+      "title": "Kind words, our way",
+      "text": "A team told us the fix loop saved their launch day. That is why we built it.",
+      "where": "linkedin"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "state": "refused",
+        "matches": ["quotes someone", "written yes"]
+      },
+      {
+        "state": "queued"
+      }
+    ],
+    "queued": ["Kind words, our way"]
+  }
+}

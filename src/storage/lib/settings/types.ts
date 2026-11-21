@@ -29,7 +29,13 @@ export enum ProviderTypeEnum {
  */
 export const llmProviderModelNames = {
   [ProviderTypeEnum.OpenAI]: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'],
-  [ProviderTypeEnum.Anthropic]: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+  [ProviderTypeEnum.Anthropic]: [
+    'claude-sonnet-5-5',
+    'claude-opus-5-5',
+    'claude-haiku-5-5',
+    'claude-fable-5-1',
+    'claude-haiku-4-5',
+  ],
   [ProviderTypeEnum.DeepSeek]: ['deepseek-flash', 'deepseek-v4-pro'],
   [ProviderTypeEnum.Gemini]: ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite'],
   [ProviderTypeEnum.Grok]: ['grok-4.7'],

@@ -10775,5 +10775,209 @@
   },
   "rounds_slack_failed": {
     "message": "無法讀取 Slack。"
+  },
+  "team_action_post": {
+    "message": "貼文"
+  },
+  "team_action_reply": {
+    "message": "回覆"
+  },
+  "team_action_outreach": {
+    "message": "開發信"
+  },
+  "team_action_followUp": {
+    "message": "後續跟進"
+  },
+  "team_action_listing": {
+    "message": "上架刊登"
+  },
+  "team_action_issue": {
+    "message": "來自客戶的 issue"
+  },
+  "team_action_beta": {
+    "message": "Beta 資格"
+  },
+  "team_action_spend": {
+    "message": "花費申請"
+  },
+  "team_action_channel": {
+    "message": "新通路"
+  },
+  "team_action_account": {
+    "message": "新帳號"
+  },
+  "team_action_plan": {
+    "message": "方案變更"
+  },
+  "team_action_tool": {
+    "message": "待連接的工具"
+  },
+  "team_item_title": {
+    "message": "$1 · $2：$3"
+  },
+  "team_item_where": {
+    "message": "位置"
+  },
+  "team_item_why": {
+    "message": "原因"
+  },
+  "team_item_namesCustomer": {
+    "message": "內容提到客戶，因此一律單獨詢問。"
+  },
+  "team_spend_amount": {
+    "message": "金額"
+  },
+  "team_spend_buys": {
+    "message": "買到什麼"
+  },
+  "team_spend_triedFree": {
+    "message": "先試過的免費做法"
+  },
+  "team_spend_expected": {
+    "message": "預期成果"
+  },
+  "team_batch_title": {
+    "message": "核准 $2 的全部 $1 份草稿"
+  },
+  "team_batch_body": {
+    "message": "點一下即可核准下列所有草稿。若要逐一決定，請在各自的列上回覆。目前不會發布或寄出任何內容：核准的草稿會保留到帳號檢查完成為止。"
+  },
+  "team_auto_done": {
+    "message": "$1 已完成：$2"
+  },
+  "team_auto_failed": {
+    "message": "$1 未能完成：$2"
+  },
+  "team_note_spendAgreed": {
+    "message": "你已同意 $1。付款由你自己進行；預算已計入這筆金額。"
+  },
+  "team_note_yours": {
+    "message": "你已同意。步驟由你自己進行，已寫在申請裡。"
+  },
+  "team_note_held": {
+    "message": "已核准。尚未送出任何內容：發布與寄送要等帳號檢查（#43）完成。"
+  },
+  "team_note_unknownOutcome": {
+    "message": "執行到一半中斷，可能已完成也可能沒有。不會自動重試：請確認後再提出。"
+  },
+  "team_note_declined": {
+    "message": "你已拒絕。"
+  },
+  "team_rule_label": {
+    "message": "$1：$2（在限額內）"
+  },
+  "team_ledger_title": {
+    "message": "預算與 Beta 名額"
+  },
+  "team_ledger_budget": {
+    "message": "行銷預算：已用 $1／$2，剩餘 $3。代理只能提出申請，由你付款。"
+  },
+  "team_ledger_noBudget": {
+    "message": "行銷預算：尚未設定。"
+  },
+  "team_ledger_beta": {
+    "message": "Beta 名額：過去 7 天已發出 $1／$2。"
+  },
+  "team_ledger_noBeta": {
+    "message": "Beta 規則：尚未設定，因此沒有你的決定不會發出任何名額。"
+  },
+  "team_ledger_waiting": {
+    "message": "$1 項等待你核准，$2 項已核准並保留中。"
+  },
+  "team_auto_held": {
+    "message": "$1 依「每次都允許」已核准並保留：$2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "成長負責人"
+  },
+  "persona_builtin_growth_description": {
+    "message": "靈感來自 Sean Ellis 公開的作品：先做出人們會捨不得的產品，一個北極星指標，排序過的實驗。"
+  },
+  "persona_builtin_positioning_name": {
+    "message": "定位與開發"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "靈感來自 April Dunford 公開的定位作品，加上《Traction》的通路測試：先問給誰，再問在哪裡。"
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "公開打造者"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "靈感來自 Arvid Kahl 公開分享的「公開打造」：找到人們已經在聊的地方，先幫忙，展示真實的工作。"
+  },
+  "agents_growth_title": {
+    "message": "成長團隊"
+  },
+  "agents_growth_intro": {
+    "message": "為下方所選工作區的產品工作。只會起草與規劃；沒有你的點擊，不會發文、寄送、授予或花錢。"
+  },
+  "agents_growth_lead": {
+    "message": "成長負責人"
+  },
+  "agents_growth_lead_hint": {
+    "message": "整理客戶回饋、提出 issue、追蹤各通路的註冊數，並維持每週計畫。"
+  },
+  "growth_setup_needsProduct": {
+    "message": "成長團隊只為一個產品工作：請選擇有產品的工作區（工作區 › 該工作區 › 新增產品）。"
+  },
+  "growth_models_fallback_title": {
+    "message": "成長團隊使用你自己的模型"
+  },
+  "growth_models_fallback_body": {
+    "message": "模型設定中沒有 Claude 金鑰，因此成長代理使用你的「smart」與「fast」模型。加入 Claude 金鑰後，日常工作用 Sonnet、整理用 Haiku、週一計畫用 Opus。"
+  },
+  "agents_growth_marketing": {
+    "message": "產品行銷經理"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "定位、依實際註冊數排序的管道清單，以及等待你點擊的開發信草稿。"
+  },
+  "agents_growth_social": {
+    "message": "產品社群經理"
+  },
+  "agents_growth_social_hint": {
+    "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
+  },
+  "agents_standup_run": {
+    "message": "執行今天的站會"
+  },
+  "agents_standup_hint": {
+    "message": "每週一 07:30 訂計畫，每天 07:45 站會。讀取數字，每個代理寫一段短筆記，由 Growth Lead 在收件匣總結。"
+  },
+  "agents_standup_done": {
+    "message": "完成。已放在收件匣的「Growth standup」。"
+  },
+  "agents_standup_already": {
+    "message": "今天的站會已執行過，在收件匣的「Growth standup」。"
+  },
+  "agents_standup_running": {
+    "message": "今天的站會正在進行。"
+  },
+  "agents_standup_notRun": {
+    "message": "站會未執行：$1"
+  },
+  "brief_team_title": {
+    "message": "團隊 · $1"
+  },
+  "brief_team_notRun": {
+    "message": "站會未執行：$1。"
+  },
+  "brief_team_noReason": {
+    "message": "沒有記錄原因"
+  },
+  "brief_team_running": {
+    "message": "$1 時仍在進行，結束後會加到這裡"
+  },
+  "brief_team_later": {
+    "message": "站會 07:45 開始，晚於這份簡報"
+  },
+  "brief_team_notOpen": {
+    "message": "07:45 時瀏覽器沒有開啟；現在執行，結束後會加到這裡"
+  },
+  "brief_team_skipped": {
+    "message": "07:45 到 12:00 之間瀏覽器沒有開啟"
+  },
+  "brief_team_empty": {
+    "message": "站會已執行，但 Growth Lead 沒有寫摘要。筆記在收件匣中。"
   }
 }
