@@ -65,6 +65,7 @@ import {
   ROLLING_SUMMARY_INSTRUCTIONS,
   TRANSCRIBE_INSTRUCTIONS,
 } from './notes';
+import { withMeetingTasks } from '../tasks/sources';
 import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, transcriptText } from './segments';
 
 const logger = createLogger('Meetings');
@@ -913,7 +914,12 @@ export class MeetingManager {
     }
     try {
       const segments = await this.meetings.segments(meetingId);
-      const note = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      const written = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      // Each action item goes on the task board, keeping its due date, and carries its task's id
+      const note = await withMeetingTasks(meeting, written).catch(error => {
+        logger.warning('Could not put the action items on the task board', error);
+        return written;
+      });
       const markdown = noteToMarkdown(meeting, note, segments);
       await this.meetings.update(meetingId, { note, markdown, status: 'done', error: null });
       if (meeting.warnings.includes('note_failed')) {

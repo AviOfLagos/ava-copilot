@@ -1,5 +1,6 @@
 import { graphStore, kbSettingsStore, kbStore, meetingStore, threadStore } from '@extension/storage';
-import type { GraphStore, KbStore, KnowledgeItem, MeetingStore, ThreadStore } from '@extension/storage';
+import type { GraphSlice, GraphStore, KbStore, KnowledgeItem, MeetingStore, ThreadStore } from '@extension/storage';
+import { withGraphTasks } from '../tasks/sources';
 import { wrapUntrustedContent } from '../agent/messages/utils';
 import type { KbChange } from '../kb/manager';
 import { KB_SESSION } from '../kb/manager';
@@ -28,6 +29,8 @@ export interface GraphDeps {
   model: () => Promise<ChatModel>;
   overCap: () => Promise<boolean>;
   enabled: () => Promise<boolean>;
+  // Puts the slice's actions on the task board (../tasks/sources.ts)
+  tasks: (item: KnowledgeItem, slice: GraphSlice) => Promise<GraphSlice>;
 }
 
 const defaultDeps: GraphDeps = {
@@ -40,6 +43,7 @@ const defaultDeps: GraphDeps = {
   // The cost cap, and the token cap when models with no known price are in use
   overCap: () => isOverDailyBudget(),
   enabled: async () => (await kbSettingsStore.getSettings()).buildGraph,
+  tasks: (item, slice) => withGraphTasks(item, slice),
 };
 
 /**
@@ -128,7 +132,13 @@ export class GraphBuilder {
     } else if (!existing && reading === EMPTY && !text.trim()) {
       return;
     }
-    await this.deps.graph.replace(sliceFrom(item, reading, hash));
+    const slice = sliceFrom(item, reading, hash);
+    // Each action goes on the task board, and its node carries the task's id
+    const withTasks = await this.deps.tasks(item, slice).catch(error => {
+      logger.warning('Could not put the actions on the task board', error);
+      return slice;
+    });
+    await this.deps.graph.replace(withTasks);
   }
 
   /** The words of a source, as the graph reads them. */
