@@ -16,6 +16,7 @@ describe('settings port', () => {
       'memory_set_scope',
       'history_forget',
       'inbox_watch_now',
+      'vocab_save',
     ]) {
       expect(allowedOnSettingsPort(type), type).toBe(true);
     }

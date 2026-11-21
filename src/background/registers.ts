@@ -35,3 +35,4 @@ import './products/register';
 import './growth/register';
 import './rounds/register';
 import './growth-team/register';
+import './voice/vocabulary/register';

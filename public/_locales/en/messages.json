@@ -1818,6 +1818,12 @@
   "chat_input_attach": {
     "message": "Attach a text file"
   },
+  "chat_input_expand": {
+    "message": "Expand the text box"
+  },
+  "chat_input_collapse": {
+    "message": "Shrink the text box"
+  },
   "chat_input_attachments": {
     "message": "Attached files"
   },
@@ -10979,5 +10985,137 @@
   },
   "brief_team_empty": {
     "message": "The standup ran, but the Growth Lead wrote no summary. The notes are in the Inbox."
+  },
+  "vocab_section": {
+    "message": "Vocabulary"
+  },
+  "vocab_hint": {
+    "message": "Names and terms Ava mishears. When she hears one of the words on the right, she writes the one on the left, in dictation, voice notes and meeting notes. Words from your workspaces and products are added by themselves."
+  },
+  "vocab_write_label": {
+    "message": "Write"
+  },
+  "vocab_heard_label": {
+    "message": "Heard as (separate with commas)"
+  },
+  "vocab_scope_label": {
+    "message": "Where"
+  },
+  "vocab_scope_all": {
+    "message": "Everywhere"
+  },
+  "vocab_add": {
+    "message": "Add"
+  },
+  "vocab_edit": {
+    "message": "Edit"
+  },
+  "vocab_save": {
+    "message": "Save"
+  },
+  "vocab_cancel": {
+    "message": "Cancel"
+  },
+  "vocab_delete": {
+    "message": "Remove"
+  },
+  "vocab_empty": {
+    "message": "Nothing yet. Add a name Ava gets wrong, or correct one in the text box after dictating."
+  },
+  "vocab_uses": {
+    "message": "Used $COUNT$ times",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "vocab_from_seed": {
+    "message": "from your workspaces"
+  },
+  "vocab_from_correction": {
+    "message": "learned from a correction"
+  },
+  "vocab_never_title": {
+    "message": "Never changed"
+  },
+  "vocab_refused": {
+    "message": "Not kept: $WORDS$. An ordinary word, a single letter or the same spelling would change words you meant.",
+    "placeholders": {
+      "words": {
+        "content": "$1",
+        "example": "\"album\""
+      }
+    }
+  },
+  "vocab_chip_rule": {
+    "message": "Always write “$TO$” for “$FROM$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      },
+      "from": {
+        "content": "$2",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_yes": {
+    "message": "Always"
+  },
+  "vocab_chip_no": {
+    "message": "Not now"
+  },
+  "vocab_chip_saved": {
+    "message": "Saved: from now on “$FROM$” becomes “$TO$”. You can change it in Settings › Voice › Vocabulary.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_unsure": {
+    "message": "Did you mean “$TO$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_use": {
+    "message": "Use it"
+  },
+  "vocab_chip_undo": {
+    "message": "Put back “$FROM$”",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_never": {
+    "message": "Never change this word"
+  },
+  "vocab_chip_changed": {
+    "message": "Changed “$FROM$” to “$TO$”.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
   }
 }

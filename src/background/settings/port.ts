@@ -40,6 +40,8 @@ export const SETTINGS_COMMAND_PREFIXES = [
   'setup_',
   // Voice › Ambient: the mode, off the record, the cloud permission, forgetting
   'ambient_',
+  // Voice › Vocabulary: add, change and remove the words Ava mishears
+  'vocab_',
 ] as const;
 
 export function allowedOnSettingsPort(type: unknown): boolean {

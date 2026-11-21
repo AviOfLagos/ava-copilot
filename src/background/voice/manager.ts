@@ -1,3 +1,4 @@
+import { correctedText } from './vocabulary';
 import { t } from '@extension/i18n';
 import {
   db,
@@ -401,8 +402,10 @@ export class VoiceManager {
   }
 
   /** One exchange of the conversation, kept in its thread. */
-  async onTurn(heard: string, said: string): Promise<void> {
+  async onTurn(spoken: string, said: string): Promise<void> {
     this.lastActivity = Date.now();
+    // What the recogniser wrote of the user's words, with the user's vocabulary applied
+    const heard = spoken ? await correctedText(spoken, { workspaceId: this.workspaceId }) : spoken;
     if (heard) this.recentHeard = [...this.recentHeard, heard].slice(-RECENT_TURNS);
     if (heard || said) this.turns += 1;
     if (!this.threadId) return;
