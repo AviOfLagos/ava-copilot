@@ -70,6 +70,16 @@ let mock;
 let extension;
 let session;
 
+// E2E_SNAPS=<folder>: saves the panel at each step, for the short recording of the feature
+let snapCount = 0;
+async function snap(name) {
+  const folder = process.env.E2E_SNAPS;
+  if (!folder) return;
+  await sleep(400);
+  snapCount += 1;
+  await session.panel.screenshot({ path: `${folder}/${String(snapCount).padStart(2, '0')}-${name}.png` });
+}
+
 before(async () => {
   mock = await startMockLlm(scenarios);
   extension = await launchExtension(mock);
@@ -199,6 +209,7 @@ test('a product gets a budget, and the ledger shows nothing spent', async () => 
     /\$0\.00 of \$100\.00 spent, \$100\.00 left/,
   );
   assert.match(await textOf('ledger-beta'), /Beta rule: not set/);
+  await snap('budget');
 });
 
 test('drafts land in the Inbox as a batch, and code refuses a request past the budget', async () => {
@@ -243,6 +254,7 @@ test('one tap approves the batch, and the approved drafts are held, not posted',
   assert.match(before, /Ava · Post: Show the fix loop/);
   assert.match(before, /Ava · Spending request: A paid critique of the landing page/);
   assert.match(before, /Ava · New account: Open a free Buffer account/);
+  await snap('inbox-batch');
 
   assert.ok(await clickInRow('Approve all 3 drafts from Ava', 'Approve'));
   await until(
@@ -256,6 +268,7 @@ test('one tap approves the batch, and the approved drafts are held, not posted',
     async () => (await table('inbox')).filter(item => item.kind === 'approval' && item.status !== 'done').length === 2,
     'two open approvals',
   );
+  await snap('batch-approved');
 });
 
 test('the spending request shows its four answers, and the ledger counts it only after the yes', async () => {
@@ -275,6 +288,7 @@ test('the spending request shows its four answers, and the ledger counts it only
   assert.match(detail, /Result expected: Sign-up rate from 2% to 3%/);
   // Spending is never remembered: there is no "Allow every time" on it
   assert.doesNotMatch(detail, /Allow every time/);
+  await snap('spend-request');
 
   assert.ok(await clickByName('Approve'));
   await until(async () => (await table('teamLedger')).length === 1, 'the ledger line');
@@ -290,4 +304,5 @@ test('the spending request shows its four answers, and the ledger counts it only
     /\$30\.00 of \$100\.00 spent, \$70\.00 left/,
   );
   assert.match(await textOf('ledger-waiting'), /1 waiting for your approval, 3 approved and held/);
+  await snap('ledger-after');
 });
