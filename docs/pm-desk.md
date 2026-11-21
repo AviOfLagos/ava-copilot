@@ -6,6 +6,8 @@ folded in. Each numbered part maps to one GitHub issue (see "Build order"). Ever
 names the model level that should build it: the spec was drafted on the
 largest model so the building does not have to be.
 
+Tracking: epic #112 (issues #103 to #111, in part order).
+
 ## What Avi asked for, in one paragraph
 
 A product owner should not chase people by hand. On a call Avi says "Ava,
