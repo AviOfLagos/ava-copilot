@@ -36,6 +36,14 @@ export interface CallDom {
   leaveSelectors: string[];
   // Buttons that only show once the user has left (Meet's "You left the meeting" screen)
   leftNames: string;
+  // Who is on the call (docs/pm-desk.md 5.3): each video tile and its name label, read always; the People panel
+  // (a list with this accessible name) and its rows, read only while the user has it open. Nothing is clicked.
+  rosterTileSelectors: string[];
+  rosterNameSelectors: string[];
+  peoplePanelNames: string;
+  peopleRowSelectors: string[];
+  // The user's own tile or row: "You", or a name marked "(You)" (regex source, any language)
+  selfNames: string;
 }
 
 export const CALL_DOM: CallDom = {
@@ -57,6 +65,12 @@ export const CALL_DOM: CallDom = {
   leaveSelectors: ['#hangup-button', '[data-tid="hangup-main-btn"]'],
   leftNames:
     '^(rejoin|return to home screen|participar novamente|voltar para a tela inicial|volver a unirse|rejoindre|erneut teilnehmen|重新加入|返回主畫面|返回主屏幕)$',
+  rosterTileSelectors: ['[data-participant-id]', '[data-requested-participant-id]'],
+  rosterNameSelectors: ['[data-self-name]', '.notranslate', '.zWGUib', '.XEazBc'],
+  peoplePanelNames:
+    '^(participants|people|in call|in the meeting|participantes|pessoas|personas|personnes|teilnehmer|personen|partecipanti|persone|参与者|參與者|参加者|참여자)$',
+  peopleRowSelectors: ['[role="listitem"]'],
+  selfNames: '^(you|você|tú|vous|du|tu|您|你|あなた|나)$|[(（](you|você|tú|vous|du|tu|您|你|あなた|나)[)）]',
 };
 
 // Kept for pages other than calls that show captions (any of the line or block selectors)
@@ -330,6 +344,46 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
     },
   };
   return true;
+}
+
+export interface RosterReading {
+  names: string[];
+  // The People panel was open, so the list is everyone, not only the tiles in view
+  panelOpen: boolean;
+}
+
+/**
+ * Runs in the meeting page: the display names of the people on the call, from each video tile's name label and,
+ * only while the user has it open, the People panel. Never clicks, never opens anything. The user's own tile and
+ * row are left out. These names are stored on this computer only (docs/pm-desk.md, rule 5).
+ */
+export function readRoster(dom: CallDom): RosterReading {
+  const MAX = 100;
+  const clean = (value: string | null | undefined) => (value || '').replace(/\s+/g, ' ').trim();
+  const self = new RegExp(dom.selfNames, 'i');
+  const names: string[] = [];
+  const add = (value: string | null | undefined) => {
+    const name = clean(value);
+    if (!name || name.length > 80 || self.test(name) || names.length >= MAX) return;
+    if (!names.some(other => other.toLowerCase() === name.toLowerCase())) names.push(name);
+  };
+  for (const tile of Array.from(document.querySelectorAll(dom.rosterTileSelectors.join(',')))) {
+    // The user's own tile carries their name in data-self-name: left out
+    if (tile.matches('[data-self-name]') || tile.querySelector('[data-self-name]')) continue;
+    const label = tile.querySelector(dom.rosterNameSelectors.join(','));
+    if (label) add(label.textContent);
+  }
+  const panelPattern = new RegExp(dom.peoplePanelNames, 'i');
+  const panel = Array.from(document.querySelectorAll('[role="list"][aria-label], [role="region"][aria-label]')).find(
+    element => panelPattern.test(clean(element.getAttribute('aria-label'))),
+  );
+  if (panel) {
+    for (const row of Array.from(panel.querySelectorAll(dom.peopleRowSelectors.join(',')))) {
+      const label = row.getAttribute('aria-label') || row.querySelector(dom.rosterNameSelectors.join(','))?.textContent;
+      add(label);
+    }
+  }
+  return { names, panelOpen: !!panel };
 }
 
 /** Runs in the meeting page: stops watching captions and the call. */

@@ -40,11 +40,13 @@ import {
   CAPTION_SELECTORS,
   pageHasCaptions,
   readCallState,
+  readRoster,
   stopWatchingCaptions,
   turnOnCaptions,
   watchCaptions,
 } from './captions';
-import type { CallState } from './captions';
+import type { CallState, RosterReading } from './captions';
+import { addMarks, mergeRoster, nameSegments, speakerMarks } from './speakers';
 import { afterAudioEnded, keepPlan, localClip, transcriptionRoute } from './capture';
 import { deliverMeetingEvent } from './alerts';
 import type { MeetingEvent } from './join-flow';
@@ -68,6 +70,7 @@ import {
 } from './notes';
 import { withMeetingTasks } from '../tasks/sources';
 import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, transcriptText } from './segments';
+import { learnFromMeeting } from '../people/meet';
 
 const logger = createLogger('Meetings');
 
@@ -170,8 +173,8 @@ export class MeetingManager {
     try {
       if (streamId) {
         await this.startRecorder(meeting.id, streamId, withMic, settings, 0);
-        // The call is watched too, so leaving it ends the notes at once
-        if (isCallUrl(tab.url ?? '')) await this.watchPage(tab.id, meeting.id, false).catch(() => {});
+        // The call is watched too, so leaving it ends the notes at once; its captions, when shown, name the speakers
+        if (isCallUrl(tab.url ?? '')) await this.watchPage(tab.id, meeting.id, true).catch(() => {});
       } else {
         await this.startCaptions(tab.id, meeting.id);
       }
@@ -239,8 +242,8 @@ export class MeetingManager {
     }
     const settings = await meetingSettingsStore.getSettings();
     await this.startRecorder(meeting.id, streamId, meeting.withMic, settings, (Date.now() - meeting.startedAt) / 1000);
-    // Captions stop being read (the audio has the same words); the call is still watched for leaving
-    await this.watchPage(tabId, meeting.id, false).catch(() => {});
+    // Captions stop being the words (the audio has them) and only name the speakers; the call is still watched
+    await this.watchPage(tabId, meeting.id, true).catch(() => {});
     await this.meetings.update(meeting.id, { source: 'audio' });
     await this.meetings.clearWarning(meeting.id, 'nothing_captured');
     await this.meetings.clearWarning(meeting.id, 'captions_off');
@@ -300,6 +303,7 @@ export class MeetingManager {
       );
       await closeOffscreenIfIdle();
     }
+    if (meeting.tabId !== null) await this.readRosterInto(meeting.tabId, meetingId);
     if (meeting.tabId !== null) {
       await chrome.scripting
         .executeScript({ target: { tabId: meeting.tabId }, func: stopWatchingCaptions })
@@ -380,6 +384,11 @@ export class MeetingManager {
       return;
     }
     const now = (Date.now() - meeting.startedAt) / 1000;
+    if (meeting.source === 'audio') {
+      // The audio has the words; the captions only say who spoke when
+      await this.addSpeakerMarks(meetingId, speakerMarks(lines, now, CHARS_PER_SECOND));
+      return;
+    }
     await this.meetings.addSegments(
       await this.corrected(
         meeting,
@@ -447,6 +456,7 @@ export class MeetingManager {
     const tabId = meeting.tabId;
     const state = await this.callState(tabId, meetingId);
     if (!state) return null;
+    if (state.inCall) await this.readRosterInto(tabId, meetingId);
     const plan = keepPlan(meeting, state);
     if (plan.turnOnCaptions) {
       await this.ensureCaptionsOn(tabId, meetingId);
@@ -455,7 +465,7 @@ export class MeetingManager {
     }
     if (plan.reinject) {
       logger.info('Watching the call page again');
-      await this.watchPage(tabId, meetingId, meeting.source === 'captions').catch(() => {});
+      await this.watchPage(tabId, meetingId, meeting.source === 'captions' || isCallUrl(meeting.url)).catch(() => {});
     }
     return state;
   }
@@ -588,6 +598,47 @@ export class MeetingManager {
       func: watchCaptions,
       args: [meetingId, CALL_DOM, readCaptions],
     });
+  }
+
+  /**
+   * Who is on the call, read from Google Meet's page: the tile names always, the People panel only while the user
+   * has it open. Nothing is clicked. The names stay on this computer (docs/pm-desk.md, rule 5).
+   */
+  private async readRosterInto(tabId: number, meetingId: string): Promise<void> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.platform !== 'Google Meet') return;
+    const [found] = await chrome.scripting
+      .executeScript({ target: { tabId }, func: readRoster, args: [CALL_DOM] })
+      .catch(() => []);
+    const names = (found?.result as RosterReading | undefined)?.names ?? [];
+    const roster = mergeRoster(meeting.roster ?? [], names);
+    if (roster.length !== (meeting.roster ?? []).length) await this.meetings.update(meetingId, { roster });
+  }
+
+  // Caption marks are added one batch at a time, so two batches arriving together both land
+  private marking: Promise<unknown> = Promise.resolve();
+
+  private addSpeakerMarks(meetingId: string, marks: ReturnType<typeof speakerMarks>): Promise<void> {
+    if (marks.length === 0) return Promise.resolve();
+    const next = this.marking.then(async () => {
+      const meeting = await this.meetings.get(meetingId);
+      if (!meeting) return;
+      await this.meetings.update(meetingId, { speakerMarks: addMarks(meeting.speakerMarks ?? [], marks) });
+    });
+    this.marking = next.catch(error => logger.warning('Could not keep who spoke when', error));
+    return next.catch(() => {});
+  }
+
+  /** Gives each audio segment the caption speaker it overlaps most; a segment no caption overlaps keeps its own. */
+  private async nameSpeakers(
+    meeting: MeetingRecord,
+    segments: Awaited<ReturnType<MeetingStore['segments']>>,
+  ): Promise<Awaited<ReturnType<MeetingStore['segments']>>> {
+    const changes = nameSegments(segments, meeting.speakerMarks ?? []);
+    if (changes.length === 0) return segments;
+    const named = new Map(changes.map(change => [change.id, change.speaker]));
+    for (const change of changes) await this.meetings.updateSegment(change.id, { speaker: change.speaker });
+    return segments.map(segment => (named.has(segment.id) ? { ...segment, speaker: named.get(segment.id)! } : segment));
   }
 
   private toOffscreen(message: Record<string, unknown>) {
@@ -914,7 +965,7 @@ export class MeetingManager {
       return;
     }
     try {
-      const segments = await this.meetings.segments(meetingId);
+      const segments = await this.nameSpeakers(meeting, await this.meetings.segments(meetingId));
       const written = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
       // Each action item goes on the task board, keeping its due date, and carries its task's id
       const note = await withMeetingTasks(meeting, written).catch(error => {
@@ -938,6 +989,8 @@ export class MeetingManager {
         await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly, { taskIds: taskIdsOf(note) });
         await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${note.title}`);
       }
+      // Who was there and who was named: learned for the meeting's workspace, and asked about on one card
+      void learnFromMeeting(meetingId).catch(error => logger.warning('Could not learn the names of a call', error));
     } catch (error) {
       logger.error('Could not write the meeting note', error);
       const reason = toAppError(error).message;
@@ -1007,7 +1060,12 @@ function emptyNote(title: string): MeetingNote {
 
 /**
  * Runs in a Google Meet page: the signed-in account's address, from Google's own account button, a link
- * to accounts.google.com. Names and text that participants choose are never read.
+ * to accounts.google.com.
+ *
+ * Participants' display names were once never read. They are now (`readRoster` in ./captions.ts, and caption
+ * speakers), because Ava keeps who is who (docs/pm-desk.md, Part 5). What makes that acceptable is rule 5: the
+ * names stay on this computer, leave only inside a prompt that needs them, a message to the owner himself, or
+ * an export he starts, and are never looked up anywhere. Nothing in Meet is clicked to get them.
  */
 export const meetAccountEmail = (): string | null => {
   const links = Array.from(document.querySelectorAll('a[href^="https://accounts.google.com/"][aria-label]'));

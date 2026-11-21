@@ -106,7 +106,7 @@ describe('every settings card can reach the background', () => {
         const path = join(dir, name);
         if (statSync(path).isDirectory()) {
           // Places that live only in the side panel, whose port takes every command
-          if (!['__tests__', 'agents', 'inbox', 'workflows'].includes(name)) walk(path);
+          if (!['__tests__', 'agents', 'inbox', 'people', 'workflows'].includes(name)) walk(path);
         } else if (/\.tsx?$/.test(name)) files.push(path);
       }
     };
