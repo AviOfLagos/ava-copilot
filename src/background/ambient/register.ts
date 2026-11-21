@@ -14,6 +14,7 @@ import { registerCommand, registerOffscreenBusy, registerVoiceTool } from '../re
 import { services } from '../registry/services';
 import { installedVoiceModels } from '../voice/engines/models';
 import { showIndicator } from './indicator';
+import { correctedText } from '../voice/vocabulary';
 import { AmbientManager } from './manager';
 import { plainSpeech } from './phrases';
 
@@ -75,6 +76,7 @@ export const ambient = new AmbientManager({
   stt: sttChoices,
   nameWords,
   indicate: state => void showIndicator(state),
+  correct: text => correctedText(text),
 });
 
 // Every change in Settings › Ambient (the panel, a spoken switch, the voice tool) is applied from here

@@ -8,6 +8,7 @@ import type { JobRecord } from '../jobs/types';
 import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
+import type { VocabEntry } from '../vocabulary/types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
 import type {
   FeedbackRecord,
@@ -244,6 +245,8 @@ export interface TranscriptSegment {
   tEnd: number;
   speaker: string;
   text: string;
+  // What the recogniser wrote, kept when the vocabulary changed the text (docs/pm-desk.md, Part 4)
+  textRaw?: string;
   chunkIndex: number;
 }
 
@@ -370,6 +373,8 @@ export class AviCopilotDb extends Dexie {
   logs!: Table<LogEntry, string>;
   ambientSessions!: Table<AmbientSession, string>;
   ambientUtterances!: Table<AmbientUtterance, string>;
+  // Words the recogniser mishears and how to write them (../vocabulary)
+  vocabulary!: Table<VocabEntry, string>;
   doOnce!: Table<OnceRecord, string>;
   // The growth numbers (../growth): what was read, whether each day was read, each source's state, links made
   growthMetrics!: Table<GrowthMetric, string>;
@@ -456,6 +461,11 @@ export class AviCopilotDb extends Dexie {
       teamContacts: 'id, workspaceId, firstAt',
       teamSuppressed: 'email',
       teamChannels: 'id, workspaceId',
+    });
+    // v12: the vocabulary (docs/pm-desk.md, Part 4). Additive. Parts 2 and 5 add tables too: whoever merges second
+    // takes the next free number
+    this.version(12).stores({
+      vocabulary: 'id, workspaceId, learnedFrom',
     });
   }
 }

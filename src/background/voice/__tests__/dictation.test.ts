@@ -23,6 +23,7 @@ const {
   isChannelError,
   releaseDictation,
   sttErrorMessage,
+  transcribeAndCorrect,
   transcribeSpeech,
 } = await import('../dictation');
 const { AppError } = await import('@extension/shared');
@@ -79,6 +80,44 @@ describe('dictation: writing the words down', () => {
     d.local.mockClear();
     await expect(transcribeSpeech('BBBB', 'audio/wav', d, gemini)).rejects.toThrow('no network');
     expect(d.local).not.toHaveBeenCalled();
+  });
+
+  it('corrects the words once with the vocabulary, whichever recogniser wrote them', async () => {
+    const correct = vi.fn(async (text: string) => ({ text: text.replace('Illum', 'Ellum'), changes: [], unsure: [] }));
+    const local = deps();
+    local.local.mockResolvedValue('Illum AI is up');
+    expect(await transcribeSpeech('AAAA', 'audio/webm', { ...local, correct }, null, 'ws-1')).toBe('Ellum AI is up');
+    expect(correct).toHaveBeenCalledWith('Illum AI is up', 'ws-1');
+
+    const gemini = deps();
+    gemini.geminiReady.mockResolvedValue(true);
+    gemini.gemini.mockResolvedValue('Illum AI is up');
+    correct.mockClear();
+    expect(await transcribeSpeech('AAAA', 'audio/webm', { ...gemini, correct })).toBe('Ellum AI is up');
+    expect(correct).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives Gemini the user's own words as a hint, and keeps what was changed for the panel", async () => {
+    const d = deps();
+    d.geminiReady.mockResolvedValue(true);
+    const hint = 'These names may be spoken: Ellum.';
+    const change = { from: 'Illum', to: 'Ellum', at: 0, stage: 'known' as const, entryId: 'x' };
+    const result = await transcribeAndCorrect(
+      'BBBB',
+      'audio/wav',
+      { ...d, hint: async () => hint, correct: async text => ({ text: 'Ellum', changes: [change], unsure: [] }) },
+      null,
+      'ws-1',
+    );
+    expect(d.gemini).toHaveBeenCalledWith('BBBB', 'audio/wav', null, hint);
+    expect(result.changes).toEqual([change]);
+  });
+
+  it('a recogniser that wrote nothing is not corrected into something', async () => {
+    const d = deps();
+    d.local.mockResolvedValue('');
+    const correct = vi.fn(async (text: string) => ({ text, changes: [], unsure: [] }));
+    expect(await transcribeSpeech('AAAA', 'audio/webm', { ...d, correct })).toBe('');
   });
 
   it('keeps the offscreen document open while it writes the words down', async () => {

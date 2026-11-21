@@ -39,7 +39,13 @@ export class SpeechToTextService {
     }
   }
 
-  async transcribeAudio(base64Audio: string, mediaType = 'audio/webm', spoken?: string | null): Promise<string> {
+  async transcribeAudio(
+    base64Audio: string,
+    mediaType = 'audio/webm',
+    spoken?: string | null,
+    // The user's own names and terms, from the vocabulary
+    vocabularyHint?: string,
+  ): Promise<string> {
     try {
       logger.info('Starting audio transcription...');
       // The chat's language, else the user's own language and accent (Settings › Voice and language), so an accent is never heard as another
@@ -49,7 +55,7 @@ export class SpeechToTextService {
       // Create transcription message with audio data
       const transcriptionMessage = userMessage([
         textPart(
-          `Transcribe this audio. ${listeningHint(voiceLanguageOf(language))} Write it in that language as it was said. Return only the transcribed text without any additional formatting or explanations.`,
+          `Transcribe this audio. ${listeningHint(voiceLanguageOf(language))}${vocabularyHint ? ` ${vocabularyHint}` : ''} Write it in that language as it was said. Return only the transcribed text without any additional formatting or explanations.`,
         ),
         { type: 'file', mediaType, data: base64Audio },
       ]);

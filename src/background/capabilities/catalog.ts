@@ -114,6 +114,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   read_inbox: 'inbox',
   manage_inbox: 'inbox',
   read_confirm_cards: 'inbox',
+  vocab_add: 'memory',
   what_can_you_do: 'settings',
   open_place: 'settings',
   check_audio: 'settings',

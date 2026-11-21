@@ -2,7 +2,7 @@ import 'webextension-polyfill';
 import { db, generalSettingsStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
-import { holdForDictation, releaseDictation, sttErrorMessage, transcribeSpeech } from './voice/dictation';
+import { holdForDictation, releaseDictation, sttErrorMessage, transcribeAndCorrect } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
 import { runEndings } from './retry/register';
@@ -297,10 +297,34 @@ async function teach(threadId: string): Promise<string> {
   return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
 }
 
-/** Gemini when there is a key, else the recogniser on this computer, or as the chat says (see voice/dictation.ts). */
-async function transcribe(audio: string, threadId?: string): Promise<string> {
+/**
+ * Gemini when there is a key, else the recogniser on this computer, or as the chat says (see voice/dictation.ts). The
+ * words come back corrected with the user's vocabulary, with what was changed and what is left unsure.
+ */
+async function transcribeWords(
+  audio: string,
+  threadId?: string | null,
+  mediaType = 'audio/webm',
+  workspaceId: string | null = null,
+) {
   const thread = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
-  return transcribeSpeech(audio, undefined, undefined, thread?.voice ?? null);
+  return transcribeAndCorrect(
+    audio,
+    mediaType,
+    undefined,
+    thread?.voice ?? null,
+    thread ? (thread.workspaceId ?? null) : workspaceId,
+  );
+}
+
+/** The words only: for a video's sound, which is attached to a chat that may not exist yet. */
+async function transcribe(
+  audio: string,
+  threadId?: string | null,
+  mediaType = 'audio/webm',
+  workspaceId: string | null = null,
+): Promise<string> {
+  return (await transcribeWords(audio, threadId, mediaType, workspaceId)).text;
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -329,7 +353,14 @@ chrome.runtime.onConnect.addListener(port => {
             text: String(message.text ?? ''),
             windowId: message.windowId,
             workspaceId: typeof message.workspaceId === 'string' ? message.workspaceId : null,
-            attachments: await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
+            attachments: await prepareAttachments(message.attachments, wav =>
+              transcribe(
+                wav,
+                threadId,
+                'audio/wav',
+                typeof message.workspaceId === 'string' ? message.workspaceId : null,
+              ),
+            ),
           });
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
@@ -406,7 +437,7 @@ chrome.runtime.onConnect.addListener(port => {
         case 'voice_text':
           await voice.sendText(
             String(message.text ?? '').slice(0, 20_000),
-            await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
+            await prepareAttachments(message.attachments, wav => transcribe(wav, threadId, 'audio/wav')),
           );
           return port.postMessage({ type: 'voice_text_sent', clientId: message.clientId });
 
@@ -467,9 +498,17 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
           }
           try {
+            const words = await transcribeWords(
+              message.audio,
+              message.threadId,
+              'audio/webm',
+              typeof message.workspaceId === 'string' ? message.workspaceId : null,
+            );
             return port.postMessage({
               type: 'speech_to_text_result',
-              text: await transcribe(message.audio, message.threadId),
+              text: words.text,
+              changes: words.changes,
+              unsure: words.unsure,
             });
           } catch (error) {
             logger.error('Speech-to-text failed:', error);

@@ -16,6 +16,7 @@ export { default as favoritesStorage } from './prompt/favorites';
 export * from './workspaces';
 export * from './products';
 export * from './growth';
+export * from './vocabulary';
 export * from './growth-team';
 export * from './graph';
 export * from './agents';
