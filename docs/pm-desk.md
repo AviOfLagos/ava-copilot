@@ -344,20 +344,36 @@ and no test relies on a live model.
 
 *Model level: Opus. Independent of Part 2 except for the owner link.*
 
+People are learned per workspace from every place Ava already reads, not
+from Meet alone: calls, calendar invites, WhatsApp, Slack, Gmail, GitHub,
+chats, notes and tasks. Each place adds to the same person, and what is
+learned in one place is used in all the others. Avi's correction (2026-11-21):
+"Everything is interwoven, the system needs to learn."
+
 ### 5.1 The store
 
 ```ts
+type PersonSource =
+  | 'meet' | 'spoken' | 'calendar' | 'whatsapp' | 'slack' | 'gmail'
+  | 'github' | 'chat' | 'note' | 'task' | 'avi';
+
 interface Person {
   id: string;                  // 'per_' + 10 random base32 chars
   name: string;                // what Avi calls them
   aliases: {
     text: string;
     workspaceId: string | null;   // null means everywhere
-    from: 'meet' | 'spoken' | 'whatsapp' | 'calendar' | 'avi';
+    from: PersonSource;
+  }[];
+  handles: {                   // how they appear in a tool
+    kind: 'slack' | 'github' | 'whatsapp' | 'x' | 'linkedin';
+    value: string;             // a user id, a login, a number
+    workspaceId: string | null;
   }[];
   emails: string[];            // a person's own addresses: the same in every workspace
   phones: string[];
   workspaceIds: string[];
+  seen: { source: PersonSource; workspaceId: string | null; at: number }[];  // latest per source, at most 20
   about?: string;              // role, one line
   lastSeenAt?: number;
   createdAt: number;
@@ -375,7 +391,54 @@ saved for one workspace never resolves in another.
 
 Graph `person` nodes carry the person id once one is known.
 
-### 5.2 Names from Google Meet
+### 5.2 One way in, from everywhere
+
+Every place that meets a name calls one function:
+
+```ts
+people.observe({
+  text,            // the name as seen: "dev.kunle", "Kunle A.", "Ada"
+  source,          // PersonSource
+  workspaceId,     // the workspace of the thing it was seen in, or null
+  email?, phone?, handle?,   // when the source gives one
+  context?,        // one line: "sent a message in #launch", "given 2 tasks"
+})
+```
+
+`observe` is plain code. It resolves the name (5.1). If it finds one person,
+it records the sighting, adds any new email, phone or handle, adds the
+workspace to `workspaceIds`, and adds the text as an alias for that workspace
+when it is new. An email, phone or handle that already belongs to a person
+identifies them whatever name was used; that is how "dev.kunle" on Meet and
+"Kunle A." in Gmail become one person without asking. If it finds nobody, or
+more than one, the name goes to "Who's who" (5.4). `observe` never creates a
+person from a name alone: one bare sighting of an unknown name is kept as a
+candidate and only becomes a question after it is seen twice, or once with a
+task attached.
+
+| Where | What is observed | Hook |
+|---|---|---|
+| Google Meet | Roster names, caption speakers (5.3) | `meetings/captions.ts`, `meetings/manager.ts` |
+| Words in a call | Owners of action items, people addressed, updates (Part 9) | `meetings/notes.ts` after the note is written |
+| Calendar | `ATTENDEE` and `ORGANIZER` names with emails | `calendar/ics.ts`, the Mac calendar reader |
+| WhatsApp | The chat name and number of a chat Avi drafts into or reads in his WhatsApp Web tab; names Avi writes to Ava ("ada says…") | `whatsapp/actions.ts`, `whatsapp-remote/bridge.ts` |
+| Slack | Sender names and user ids from the Slack watcher | `inbox/watchers/` |
+| Gmail | Sender and recipient names with addresses from the Gmail watcher | `inbox/watchers/` |
+| GitHub | Logins of authors and assignees on issues and PRs Ava reads in a workspace's repos | the GitHub connector results |
+| Chats, notes, AI sessions | `person` readings from the knowledge graph | `graph/builder.ts` |
+| Tasks | Owner names (Part 2) | `recordTask` |
+| Avi | Anything he types or says about a person, and every "Who's who" answer | People page, voice tool `person_note` |
+
+Only names from Avi's own accounts and tools are observed. Ava does not look
+people up on the web, and does not read a tool she was not already reading.
+
+What is learned flows back out: names and aliases seed the vocabulary
+(Part 4), so a name Ava mishears is corrected; people who belong to one
+workspace help place meetings and items in it (Part 3); a resolved owner
+links tasks (Part 2), follow-ups and drafts (Part 9) to the right person and
+the right chat.
+
+### 5.3 Names from Google Meet
 
 - **Who is on the call.** Read the participant list from Meet's page, in
   `captions.ts` beside `CALL_DOM`: the tile labels always, and the People
@@ -394,32 +457,47 @@ Graph `person` nodes carry the person id once one is known.
   works today; the Mac calendar path waits on issue #32 (it has answered 403
   since 26 October).
 
-### 5.3 "Who's who" after the call
+### 5.4 "Who's who": the questions Ava asks
 
-When notes are written, Ava compares three sets: roster names, speaker
-names, and names used in speech (owners of action items, people addressed).
-Anything that does not resolve to a known person goes on one card in the
-meeting's chat and the Inbox:
+Names that `observe` could not settle are asked about, in two places.
+
+**After a call.** When notes are written, Ava compares three sets: roster
+names, speaker names, and names used in speech (owners of action items,
+people addressed). Anything unresolved goes on one card in the meeting's
+chat and the Inbox:
 
 > I heard some names I am not sure of.
-> "Omah" was given 2 tasks. Is that **Omarachi N.** from the call? [Yes] [Someone else] [New person]
-> **dev.tunde** was on the call. What do you call them? [Tunde] [type a name]
+> "Ada" was given 2 tasks. Is that **Adaeze O.** from the call? [Yes] [Someone else] [New person]
+> **dev.kunle** was on the call. What do you call them? [Kunle] [type a name]
 
-Each answer saves an alias for that workspace. A name answered once is never
-asked again. A card has at most six questions; the rest wait for the People
-page. Tasks whose owner was unresolved are updated when the answer comes.
+**Once a day, for everything else.** Unsettled names from Slack, Gmail,
+WhatsApp, GitHub, chats and tasks are gathered into one Inbox card a day,
+most-seen first, each with where it was seen ("sent 4 messages in #launch",
+"assigned 2 issues"). When Ava has a likely match she offers it: "Is
+**kunle-dev** on GitHub the same person as **Kunle A.**?"
 
-### 5.4 The People page
+Each answer saves an alias, handle or email for that workspace and is never
+asked again; "Not a person" stops a name being asked about. A card has at
+most six questions; the rest wait for the People page. Tasks, updates and
+sightings that were waiting on a name are linked when the answer comes.
 
-People by workspace: name, aliases, email, last seen, open tasks. Edit, merge
-two people, remove. A person's page shows their status (Part 9).
+### 5.5 The People page
+
+People by workspace: name, aliases, handles, email, where they were last
+seen, open tasks. Edit, merge two people, remove. A "To sort" tab lists the
+unsettled names. A person's page shows their status (Part 9) and every place
+they have been seen.
 
 **Done when.** After a Meet call taken from audio, at least the lines that
 had captions carry real names; a second call with the same people asks no
-questions; "Omah" resolves to the right person in that workspace and to
-nobody in another; merging two people moves their tasks and aliases; tests
-use saved Meet page fixtures for the roster and captions, and no test reads a
-live call.
+questions; "Ada" resolves to the right person in that workspace and to
+nobody in another; a Gmail sender whose address matches a calendar attendee
+is the same person with no question asked; a Slack name seen twice appears
+on the daily card with where it was seen, and the answer is remembered; a
+bare name seen once creates no person and no question; a new person's name
+is in the vocabulary seeds; merging two people moves their tasks, aliases
+and handles; tests use saved page fixtures for Meet, Slack and Gmail, and no
+test reads a live call or a live inbox.
 
 ## Part 6. "Ava, note a task for Ada" during a call
 
@@ -454,7 +532,7 @@ live call.
   "Ava," are added to it. It closes after a four-second pause following any
   other sentence, or when Avi says "Ava, note a task for…" again, which
   starts a new task rather than extending the old one. An unresolved name is
-  kept as said and asked about after the call (Part 5.3).
+  kept as said and asked about after the call (Part 5.4).
 - **Showing it.** No sound in the call. With the panel open, it shows a small
   card, "Task for Ada: …", with Edit and Discard, and "Record the screen for
   this?" with Yes and No (Part 7). The click on Yes is what allows the
