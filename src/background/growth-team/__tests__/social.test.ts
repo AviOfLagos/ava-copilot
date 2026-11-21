@@ -147,6 +147,7 @@ describe('numbers written the way people write them', () => {
     expect(inventedNumbers('1.200 teams use it', new Set([1200]))).toEqual([]);
     expect(inventedNumbers('1.250,50 euros', new Set([1250.5]))).toEqual([]);
     expect(inventedNumbers('Version 1.5 is out', new Set())).toEqual([]);
+    expect(inventedNumbers('1.2.34 people', new Set())).toEqual(['1.2.34']);
   });
 
   it('knows a 14-day total, a whole month, the change on the week before, and what a tool showed', async () => {
@@ -172,6 +173,8 @@ describe('numbers written the way people write them', () => {
     expect(inventedNumbers('40 teams', known)).toEqual(['40']);
     expect(inventedNumbers('Up 40% on last week, 72 in two weeks, 317 in all', known)).toEqual([]);
     expect(inventedNumbers('Up 55% on last week', known)).toEqual(['55%']);
+    // A rise is never stated as a fall
+    expect(inventedNumbers('Sign-ups fell 40% on last week', known)).toEqual(['40%']);
     // Shown numbers last a day
     expect((await knownNumbers(suture(), NOW + 25 * 60 * 60_000, rising)).has(317)).toBe(false);
   });

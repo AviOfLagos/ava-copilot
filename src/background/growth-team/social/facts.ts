@@ -36,7 +36,11 @@ interface NumberToken {
   // How far from the value a known number may be and still be this one: "12k" is 11,500 to 12,499
   tolerance: number;
   percent: boolean;
+  // For a change in per cent: -1 when the words before it say it went down
+  sign: 1 | -1;
 }
+
+const FELL = /(?:down|fell|fall|drop|dropped|declin\w*|lower|less|fewer|lost|minus|−|-)\s*(?:by\s*)?$/i;
 
 /**
  * The numbers in a text, with "12k", "1.5m" and "100x" read as what they say. A number glued to letters
@@ -50,7 +54,9 @@ function numberTokens(text: string): NumberToken[] {
     const scale = unit ? UNITS[unit.toLowerCase()]! : 1;
     const readings = readingsOf(raw!);
     if (!readings.length) continue;
+    const before = text.slice(Math.max(0, match.index - 24), match.index);
     tokens.push({
+      sign: percent && FELL.test(before) ? -1 : 1,
       text: whole!.trim(),
       values: readings.map(reading => reading.value * scale),
       tolerance: unit ? (0.5 * scale) / 10 ** Math.min(...readings.map(reading => reading.decimals)) : 0,
@@ -76,7 +82,8 @@ function readingsOf(raw: string): { value: number; decimals: number }[] {
   } else {
     const groups = raw.split(/[.,]/);
     const grouped = groups.slice(1).every(group => group.length === 3);
-    if (separators.length > 1) readings = grouped ? [reading(raw)] : [];
+    // A run code cannot read (1.2.34) is checked as all its digits, never let through
+    if (separators.length > 1) readings = [reading(raw)];
     else if (grouped) readings = [reading(raw), reading(groups[0]!, groups[1])];
     else readings = [reading(groups[0]!, groups[1])];
   }
@@ -167,8 +174,9 @@ export async function knownNumbers(
         for (const span of [7, 28]) {
           const change = percentChange(sumOf(end, span), sumOf(shiftDay(end, -span), span));
           if (change !== null) {
-            add(percents, Math.abs(Math.round(change)));
-            add(percents, Math.abs(Math.round(change * 10) / 10));
+            // Signed: a fall never stands for a rise
+            add(percents, Math.round(change));
+            add(percents, Math.round(change * 10) / 10);
           }
         }
       }
@@ -205,7 +213,7 @@ export function inventedNumbers(text: string, known: KnownNumbers): string[] {
     // Fine when one reading is known, or when every reading is a small count or a year; "1.200" is checked as 1200
     const matches = (value: number) =>
       isKnown(value, token.tolerance, known) ||
-      (token.percent && known.percents !== undefined && isKnown(value, token.tolerance, known.percents));
+      (token.percent && known.percents !== undefined && isKnown(value * token.sign, token.tolerance, known.percents));
     if (token.values.some(value => !notAFact(value, token) && matches(value))) continue;
     if (token.values.every(value => notAFact(value, token))) continue;
     if (!found.includes(token.text)) found.push(token.text);

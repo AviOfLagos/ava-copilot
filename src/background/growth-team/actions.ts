@@ -90,7 +90,9 @@ export async function whoAsks(
     workspaceId: workspace.id,
     agentId: agent?.id ?? null,
     agentName: agent?.name ?? 'Ava',
-    automated: Boolean(agent) || thread?.origin === 'agent' || thread?.origin === 'workflow',
+    // Only the user's own words (typed, spoken, or sent from their phone) skip the draft checks
+    automated:
+      Boolean(agent) || (thread?.origin !== undefined && !['user', 'voice', 'whatsapp'].includes(thread.origin)),
   };
 }
 
