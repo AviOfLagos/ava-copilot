@@ -9,6 +9,7 @@ import { wrapUntrustedContent } from '../agent/messages/utils';
 import { PRODUCT_METRICS } from './collect';
 import { makeLink } from './links';
 import { answerText, MAX_RANGE_DAYS, queryMetric, rangeProblem } from './query';
+import { rememberShown } from '../growth-team/social/facts';
 
 /**
  * The two growth tools of the browser agent: `metrics_query`, the only way an agent reads numbers, and
@@ -105,6 +106,12 @@ export async function metricsQueryAction(
     to,
     by: input.by,
   });
+  // A number shown to the agent is one its drafts may state (growth-team/social/facts.ts)
+  rememberShown(profile.workspaceId, [
+    answer.total,
+    ...answer.byDay.map(day => day.value),
+    ...answer.parts.map(part => part.value),
+  ]);
   let text = answerText(answer, profile.name);
   if (answer.total === null && !known.some(item => item.metric === metric)) {
     text += `\nNo collector has ever read "${metric}" for ${profile.name}. Known numbers: ${known.map(item => item.metric).join(', ') || 'none yet'}.`;

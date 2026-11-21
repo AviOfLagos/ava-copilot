@@ -13,7 +13,7 @@
       "email": "p1@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 1",
+      "subject": "Note p1",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -22,7 +22,7 @@
       "email": "p2@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 2",
+      "subject": "Note p2",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -31,7 +31,7 @@
       "email": "p3@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 3",
+      "subject": "Note p3",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -40,7 +40,7 @@
       "email": "p4@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 4",
+      "subject": "Note p4",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -49,7 +49,7 @@
       "email": "p5@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 5",
+      "subject": "Note p5",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -58,7 +58,7 @@
       "email": "p6@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 6",
+      "subject": "Note p6",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -67,7 +67,7 @@
       "email": "p7@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 7",
+      "subject": "Note p7",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -76,7 +76,7 @@
       "email": "p8@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 8",
+      "subject": "Note p8",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -85,7 +85,7 @@
       "email": "p9@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 9",
+      "subject": "Note p9",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -94,7 +94,7 @@
       "email": "p10@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 10",
+      "subject": "Note p10",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -103,7 +103,7 @@
       "email": "p11@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 11",
+      "subject": "Note p11",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -112,7 +112,7 @@
       "email": "p12@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 12",
+      "subject": "Note p12",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -121,7 +121,7 @@
       "email": "p13@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 13",
+      "subject": "Note p13",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -130,7 +130,7 @@
       "email": "p14@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 14",
+      "subject": "Note p14",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -139,7 +139,7 @@
       "email": "p15@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 15",
+      "subject": "Note p15",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -148,7 +148,7 @@
       "email": "p16@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 16",
+      "subject": "Note p16",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -157,7 +157,7 @@
       "email": "p17@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 17",
+      "subject": "Note p17",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -166,7 +166,7 @@
       "email": "p18@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 18",
+      "subject": "Note p18",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -175,7 +175,7 @@
       "email": "p19@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 19",
+      "subject": "Note p19",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -184,7 +184,7 @@
       "email": "p20@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 20",
+      "subject": "Note p20",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -193,7 +193,7 @@
       "email": "p21@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 21",
+      "subject": "Note p21",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     },
     {
@@ -202,7 +202,7 @@
       "email": "p22@acme.dev",
       "source": "https://github.com/example/evals",
       "why": "You maintain an open-source eval runner.",
-      "subject": "Note 22",
+      "subject": "Note p22",
       "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
     }
   ],
@@ -232,27 +232,27 @@
       { "state": "queued" }
     ],
     "queued": [
-      "Note 1",
-      "Note 2",
-      "Note 3",
-      "Note 4",
-      "Note 5",
-      "Note 6",
-      "Note 7",
-      "Note 8",
-      "Note 9",
-      "Note 10",
-      "Note 11",
-      "Note 12",
-      "Note 13",
-      "Note 14",
-      "Note 15",
-      "Note 16",
-      "Note 17",
-      "Note 18",
-      "Note 19",
-      "Note 20",
-      "Note 22"
+      "Note p1",
+      "Note p2",
+      "Note p3",
+      "Note p4",
+      "Note p5",
+      "Note p6",
+      "Note p7",
+      "Note p8",
+      "Note p9",
+      "Note p10",
+      "Note p11",
+      "Note p12",
+      "Note p13",
+      "Note p14",
+      "Note p15",
+      "Note p16",
+      "Note p17",
+      "Note p18",
+      "Note p19",
+      "Note p20",
+      "Note p22"
     ]
   }
 }

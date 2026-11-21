@@ -9,7 +9,7 @@ import { addChannel, rankChannels, rankedText } from '@src/background/growth-tea
 import type { ChannelStore } from '@src/background/growth-team/marketing/channels';
 import { draftFollowUp, draftOutreach, stopContact } from '@src/background/growth-team/marketing/outreach';
 import type { OutreachResult } from '@src/background/growth-team/marketing/outreach';
-import { resultText } from '@src/background/growth-team/queue';
+import { propose, resultText } from '@src/background/growth-team/queue';
 import type { TeamCase } from './cases';
 
 const WORKSPACE = 'eval-product';
@@ -59,11 +59,17 @@ export async function runTeamCase(evalCase: TeamCase): Promise<void> {
     betaRule: evalCase.beta?.rule ?? null,
     email: sender ? { from: sender, replyTo: sender, via: 'nexmail' } : null,
     postalAddress: evalCase.profile?.postal_address ?? '1 Example Street, Lagos',
+    pricing: evalCase.profile?.pricing ?? '',
   };
   const who = {
     workspaceId: WORKSPACE,
     agentId: evalCase.kind,
-    agentName: evalCase.kind === 'lead' ? 'Growth Lead' : 'Product Marketing Manager',
+    agentName:
+      evalCase.kind === 'lead'
+        ? 'Growth Lead'
+        : evalCase.kind === 'social'
+          ? 'Product Social Manager'
+          : 'Product Marketing Manager',
   };
   const forWorkspace = vi
     .spyOn(productStore, 'forWorkspace')
@@ -130,6 +136,14 @@ export async function runTeamCase(evalCase: TeamCase): Promise<void> {
         );
         state = added.ok ? 'ok' : 'refused';
         text = added.ok ? `${added.channel.key} added` : added.why;
+      } else if (call.tool === 'queue_for_approval') {
+        // Through the queue with every check registered at startup, as the agent's own tool does
+        const result = await propose(
+          { ...who, action: call.kind, title: call.title, body: call.text, target: call.where, why: 'eval' },
+          deps,
+        );
+        state = result.state === 'refused' ? 'refused' : result.state === 'queued' ? 'queued' : 'ok';
+        text = resultText(result);
       } else if (call.tool === 'user_approves') {
         const item = (await teamStore.forWorkspace(WORKSPACE)).find(
           entry => entry.title === call.title && entry.status === 'queued',

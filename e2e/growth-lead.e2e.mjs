@@ -183,6 +183,7 @@ test('the team setup has a Growth team group, and a growth agent needs a workspa
   assert.match(group, /Growth team/);
   assert.match(group, /Growth Lead/);
   assert.match(group, /Product Marketing Manager/);
+  assert.match(group, /Product Social Manager/);
   assert.match(group, /nothing is posted, sent, granted or spent without your click/);
   await session.panel.evaluate(() => document.querySelector('[data-team-template="growth_lead"]').click());
   await snap('growth-group');
@@ -211,6 +212,31 @@ test('the team setup has a Growth team group, and a growth agent needs a workspa
   assert.equal(lead.executor, 'browser');
   assert.equal(lead.personalityId, 'growth');
   await snap('lead-draft');
+});
+
+test('the other two start the same way, each with its own personality', async () => {
+  await openSetup();
+  await session.panel.evaluate(() => {
+    document.querySelector('[data-team-template="growth_marketing"]').click();
+    document.querySelector('[data-team-template="growth_social"]').click();
+    const select = document.querySelector('form select');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'rocket-shop');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await session.panel.evaluate(() => document.querySelector('[data-team-create]').click());
+  const made = await until(async () => {
+    const agents = (await table('agents')).filter(agent => ['growth_marketing', 'growth_social'].includes(agent.template));
+    return agents.length === 2 ? agents : null;
+  }, 'the two drafts');
+  const by = Object.fromEntries(made.map(agent => [agent.template, agent]));
+  assert.equal(by.growth_marketing.personalityId, 'positioning');
+  assert.equal(by.growth_social.personalityId, 'build_in_public');
+  for (const agent of made) {
+    assert.equal(agent.status, 'draft');
+    assert.equal(agent.workspaceId, 'rocket-shop');
+    assert.equal(agent.executor, 'browser');
+  }
+  await snap('team-drafts');
 });
 
 test('a sorted bug waits in the Inbox as a P0 issue, and a customer email is sent back by code', async () => {
@@ -296,4 +322,97 @@ test('the Marketing Manager drafts outreach that waits, says "not set" for the s
     'the draft opened',
   );
   await snap('outreach-open');
+});
+
+test("the Growth Lead's standup: each agent's note, the off-plan work named, in the Inbox as Growth standup", async () => {
+  // Switch the three on: each waits for review as a draft until the user creates it
+  await openMenuItem('Agents', 'Set up my team');
+  for (const name of ['Product Marketing Manager', 'Product Social Manager', 'Growth Lead']) {
+    await until(() => session.panel.evaluate(() => document.body.innerText.includes('Set up my team')), 'the list');
+    await until(
+      () =>
+        session.panel.evaluate(name => {
+          const row = [...document.querySelectorAll('button')].find(button => button.innerText.includes(name));
+          row?.click();
+          return Boolean(row);
+        }, name),
+      `the ${name} row`,
+    );
+    await until(() => clickByName('Create'), `Create for ${name}`);
+    await until(
+      async () => (await table('agents')).find(agent => agent.name === name && agent.status === 'active'),
+      `${name} switched on`,
+    );
+    // Back to the list, except after the Lead: its page has the standup
+    if (name !== 'Growth Lead') await until(() => clickByName('Back to agents'), 'back');
+  }
+
+  // The Lead's page has the button; the standup runs now, through the scripted models
+  await session.panel.waitForSelector('[data-standup-run]', { timeout: 10000 }).catch(async () => {
+    await openMenuItem('Agents', 'Set up my team');
+    await session.panel.evaluate(() =>
+      [...document.querySelectorAll('button')].find(button => button.innerText.includes('Growth Lead'))?.click(),
+    );
+    await session.panel.waitForSelector('[data-standup-run]', { timeout: 10000 });
+  });
+  await session.panel.evaluate(() => document.querySelector('[data-standup-run]').click());
+  await until(
+    () =>
+      session.panel.evaluate(() =>
+        document.querySelector('[data-standup-message]')?.textContent.includes('in the Inbox as "Growth standup"'),
+      ),
+    'the standup to finish',
+    60000,
+  );
+  await snap('standup-done');
+
+  // Once a day: a second click says it already ran
+  await session.panel.evaluate(() => document.querySelector('[data-standup-run]').click());
+  await until(
+    () =>
+      session.panel.evaluate(() =>
+        document.querySelector('[data-standup-message]')?.textContent.includes('already ran'),
+      ),
+    'already ran',
+  );
+
+  await openMenuItem('Inbox', 'Approvals');
+  await until(() => session.panel.evaluate(() => document.body.innerText.includes('Growth standup')), 'the standup');
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('button[aria-label]')]
+      .find(button => button.getAttribute('aria-label').includes('Growth standup'))
+      ?.click(),
+  );
+  await until(
+    () => session.panel.evaluate(() => document.body.innerText.includes('Off plan (2)')),
+    'the standup opened',
+  );
+  const text = await session.panelText();
+  assert.match(text, /Growth Lead: "Tidy the issue labels" \(labels are a mess\)/);
+  assert.match(text, /Product Social Manager: "Reply on Hacker News threads"/);
+  assert.match(text, /No reading yesterday or in the last 7 days: signups/);
+  await snap('standup-open');
+
+  const inbox = await table('inbox');
+  assert.ok(inbox.some(item => item.title.startsWith('Growth plan · Rocket Shop · week of')));
+});
+
+test("the morning brief has a Team section from the morning's standup", async () => {
+  const reply = await session.panel.evaluate(() => chrome.runtime.sendMessage({ type: 'brief_make' }));
+  assert.ok(reply?.threadId, `the brief was made: ${JSON.stringify(reply)}`);
+  const said = (await table('messages'))
+    .filter(message => message.threadId === reply.threadId)
+    .map(message => message.content)
+    .join('\n');
+  assert.match(said, /\*\*Team · Rocket Shop\*\*\nYesterday was quiet/);
+  assert.match(said, /Off plan \(2\): Growth Lead: "Tidy the issue labels"/);
+
+  // The brief as the user opens it
+  await session.panel.evaluate(threadId => chrome.storage.session.set({ 'open-thread': threadId }), reply.threadId);
+  await session.panel.reload();
+  await until(() => session.panel.evaluate(() => document.body.innerText.includes('Team · Rocket Shop')), 'the brief');
+  await session.panel.evaluate(() =>
+    [...document.querySelectorAll('strong, b, p')].find(el => el.textContent.includes('Team · Rocket Shop'))?.scrollIntoView(),
+  );
+  await snap('brief-team');
 });

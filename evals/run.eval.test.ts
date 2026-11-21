@@ -13,6 +13,7 @@ import { enT } from '@src/background/skills/__tests__/en';
 import { loadCases } from './runner/cases';
 import { runDraftCase } from './runner/draft';
 import { runTeamCase } from './runner/team';
+import { runStandupCase } from './runner/standup';
 import { LIVE_MODEL, runPlannerCase } from './runner/planner';
 import { runSkillsCase } from './runner/skills';
 import { runVoiceCase } from './runner/voice';
@@ -48,6 +49,7 @@ describe(LIVE_MODEL ? `evals (live: ${LIVE_MODEL})` : 'evals', () => {
       else if (evalCase.kind === 'skills') await runSkillsCase(evalCase);
       else if (evalCase.kind === 'draft') runDraftCase(evalCase);
       else if (evalCase.kind === 'voice') await runVoiceCase(evalCase);
+      else if (evalCase.kind === 'standup') await runStandupCase(evalCase);
       else await runTeamCase(evalCase);
     });
   }

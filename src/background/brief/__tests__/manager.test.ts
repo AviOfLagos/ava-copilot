@@ -38,6 +38,7 @@ vi.mock('../../history/summaries', () => ({
 const { briefSettingsStore, db, threadStore } = await import('@extension/storage');
 const { asOfText, MorningBrief } = await import('../manager');
 const { registerNoticeSink } = await import('../../notices');
+const { registerBriefExtra } = await import('../extras');
 import type { CalendarReading, CalendarWatcher } from '../../calendar/watcher';
 import type { Notice } from '../../notices';
 
@@ -229,5 +230,58 @@ describe('the morning brief', () => {
     expect(said).toContain('**Waiting on you (1)**\n- "Weekly numbers" stopped: The page did not load');
     expect(said).not.toContain('Daily check');
     expect(line).toBe('brief_line_noMeetings brief_line_waiting|1|brief_item_failed|Weekly numbers');
+  });
+
+  it('includes the sections other features add, and waits while one is still being made', async () => {
+    let pending = true;
+    registerBriefExtra({
+      id: 'test-team',
+      pending: async () => pending,
+      sections: async () => [
+        { title: 'Team · Suture', markdown: 'Standup did not run: it starts at 07:45.', workspaceId: null },
+      ],
+    });
+    // Due, but a section is still being made: no brief yet
+    await briefSettingsStore.updateSettings({ enabled: true, hour: 0, minute: 0, lastDay: '' });
+    const brief = new MorningBrief({ reading: async () => reading } as unknown as CalendarWatcher);
+    await brief.check();
+    expect((await briefSettingsStore.getSettings()).lastDay).toBe('');
+    pending = false;
+    await brief.check();
+    const { lastThreadId } = await briefSettingsStore.getSettings();
+    const said = (await threadStore.messages(lastThreadId!)).map(message => message.content).join('\n');
+    expect(said).toContain('**Team · Suture**\nStandup did not run: it starts at 07:45.');
+    registerBriefExtra({ id: 'test-team', pending: async () => false, sections: async () => [] });
+  });
+
+  it('adds a section that ends while the brief is being made, once the brief is saved', async () => {
+    // The brief reads its sources, then waits on a slow source while the standup ends
+    let release: () => void = () => undefined;
+    const slow = new Promise<void>(resolve => (release = resolve));
+    registerBriefExtra({
+      id: 'test-team',
+      pending: async () => false,
+      sections: async () => {
+        await slow;
+        return [];
+      },
+    });
+    const brief = new MorningBrief({ reading: async () => reading } as unknown as CalendarWatcher);
+    const making = brief.make({ notify: false });
+    const added = brief.addSection({
+      workflowId: 'growth-team',
+      workflowName: 'Team · Suture',
+      title: 'Team · Suture',
+      markdown: 'Quiet day. Needed from you: nothing.',
+      workspaceId: null,
+      at: Date.now(),
+    });
+    release();
+    await making;
+    expect(await added).toBe(true);
+    const { lastThreadId } = await briefSettingsStore.getSettings();
+    const said = (await threadStore.messages(lastThreadId!)).map(message => message.content).join('\n');
+    expect(said).toContain('Quiet day. Needed from you: nothing.');
+    registerBriefExtra({ id: 'test-team', pending: async () => false, sections: async () => [] });
   });
 });

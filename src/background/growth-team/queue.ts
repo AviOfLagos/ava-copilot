@@ -42,6 +42,8 @@ export interface Proposal {
   workspaceId: string;
   agentId: string | null;
   agentName: string;
+  // An agent's or a routine's chat asks, not the user typing: drafts get the fact check even with no agentId
+  automated?: boolean;
   action: TeamAction;
   title: string;
   body: string;
