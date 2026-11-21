@@ -67,6 +67,8 @@ export interface StandupState {
   started: Record<string, number>;
 }
 
+// A start older than this is from a run the background lost
+export const STALE_START_MS = 15 * 60_000;
 // Standups older than this are forgotten
 const KEEP_DAYS = 21;
 
@@ -120,12 +122,25 @@ export const standupStore = {
     return (await read()).started[standupKey(workspaceId, day)] ?? null;
   },
 
-  /** Marks today's standup as started; false when it already started or finished, so it runs once. */
-  async start(workspaceId: string, day: string, now: number): Promise<boolean> {
+  /**
+   * Marks today's standup as started; false when it already started or finished, so it runs once. A start older
+   * than `staleMs` is from a run the background lost (closed, restarted) and is taken over. With `replace`, a day
+   * that was skipped or failed may run again.
+   */
+  async start(
+    workspaceId: string,
+    day: string,
+    now: number,
+    options: { staleMs?: number; replace?: boolean } = {},
+  ): Promise<boolean> {
     let fresh = false;
+    const staleMs = options.staleMs ?? STALE_START_MS;
     await change(state => {
       const key = standupKey(workspaceId, day);
-      if (state.days[key] || state.started[key]) return;
+      const record = state.days[key];
+      if (record && !(options.replace && record.status !== 'done')) return;
+      const started = state.started[key];
+      if (started !== undefined && now - started < staleMs) return;
       state.started[key] = now;
       fresh = true;
     });

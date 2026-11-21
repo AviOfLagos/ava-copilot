@@ -114,7 +114,7 @@ describe('the clock', () => {
     expect(plan.standupDecision(null, null, at(23, 7, 44))).toEqual({ run: false, skip: null });
     expect(plan.standupDecision(null, null, at(23, 7, 45))).toEqual({ run: true });
     expect(plan.standupDecision(null, null, at(23, 11, 59))).toEqual({ run: true });
-    expect(plan.standupDecision(null, at(23, 7, 45), at(23, 8))).toEqual({ run: false, skip: null });
+    expect(plan.standupDecision(null, at(23, 7, 45), at(23, 7, 55))).toEqual({ run: false, skip: null });
     expect(plan.standupDecision(null, null, at(23, 12))).toEqual({
       run: false,
       skip: 'the browser was not open between 07:45 and 12:00',
@@ -165,7 +165,6 @@ describe('notes and summaries within their limits', () => {
             { text: 'Draft today', experiment: 'e1', reason: '' },
             { text: 'Post a daily thread on X', experiment: null, reason: '' },
             { text: 'Tidy labels', experiment: 'E9', reason: 'they are a mess' },
-            { text: 'Something', experiment: null, reason: '' },
           ],
           experiments,
         )
@@ -174,8 +173,10 @@ describe('notes and summaries within their limits', () => {
       [false, ''],
       [false, ''],
       [true, 'they are a mess'],
-      [true, 'no reason given'],
     ]);
+    expect(plan.markOffPlan([{ text: 'Something', experiment: null, reason: '' }], experiments)[0]!.reason).toBe(
+      'no reason given',
+    );
   });
 
   it('holds the summary to 200 words with the off-plan line, which names each item when more than one', () => {
@@ -189,6 +190,70 @@ describe('notes and summaries within their limits', () => {
       /Off plan \(2\): Product Social Manager: "Reply on Hacker News".*Growth Lead: "Tidy the labels"/,
     );
     expect(plan.composeSummary('Fine.', offPlan.slice(0, 1))).toBe('Fine.');
+  });
+});
+
+describe('after review', () => {
+  it('takes over a start the background lost, and the button runs a skipped day again', async () => {
+    const { writer } = scripted(() => onPlan('E1'));
+    // A run that started at 08:00 and never ended (the browser closed): at 08:20 the standup runs again
+    await standupStore.start('suture', '2026-11-30', at(30, 8));
+    expect(plan.standupDecision(null, at(30, 8), at(30, 8, 10))).toEqual({ run: false, skip: null });
+    expect(await runStandup('suture', { writer, now: () => at(30, 8, 20) })).toMatchObject({ status: 'done' });
+
+    // Skipped after noon, then the user's click runs it
+    expect(await runStandup('suture', { writer, now: () => at(31, 13) })).toMatchObject({ status: 'skipped' });
+    expect(await runStandupNow('suture', { writer, now: () => at(31, 13, 5) })).toMatchObject({
+      state: 'done',
+      record: { status: 'done' },
+    });
+    expect(await runStandupNow('suture', { writer, now: () => at(31, 13, 10) })).toMatchObject({ state: 'already' });
+  });
+
+  it('says nothing about a missed standup for a team switched on after it', async () => {
+    await db.agents.update('lead', { createdAt: at(32, 12, 30) });
+    const { writer } = scripted(() => onPlan('E1'));
+    expect(await runStandup('suture', { writer, now: () => at(32, 13) })).toBeNull();
+  });
+
+  it('keeps at most three "today" items, cuts long reasons, and holds the summary to 200 words with many off plan', () => {
+    const experiments = [{ id: 'E1', what: 'x', metric: 'signups', howWeKnow: '', owner: '' }];
+    const items = plan.markOffPlan(
+      Array.from({ length: 6 }, (_, index) => ({
+        text: `item ${index}`,
+        experiment: null,
+        reason: Array.from({ length: 40 }, () => 'because').join(' '),
+      })),
+      experiments,
+    );
+    expect(items).toHaveLength(3);
+    expect(plan.wordsIn(items[0]!.reason)).toBeLessThanOrEqual(15);
+    const offPlan = Array.from({ length: 12 }, (_, index) => ({
+      agentName: `Agent ${index}`,
+      text: Array.from({ length: 20 }, () => 'word').join(' '),
+      reason: Array.from({ length: 20 }, () => 'why').join(' '),
+    }));
+    const summary = plan.composeSummary(Array.from({ length: 300 }, () => 'word').join(' '), offPlan, [
+      'No reading holds: 500.',
+    ]);
+    expect(plan.wordsIn(summary)).toBeLessThanOrEqual(200);
+    expect(summary).toMatch(/and 7 more/);
+  });
+
+  it("on Monday before 07:30, a click writes this week's plan, not last week's", async () => {
+    const { writer, calls } = scripted(() => onPlan('E1'));
+    await standupStore.savePlan({
+      workspaceId: 'suture',
+      weekOf: '2026-11-23',
+      focus: 'old',
+      experiments: [],
+      agentWeeks: {},
+      at: at(23, 7, 30),
+      model: 'plan',
+    });
+    await runStandupNow('suture', { writer, now: () => at(30, 7, 10) });
+    expect(calls[0]!.task).toBe('plan');
+    expect((await standupStore.plan('suture'))?.weekOf).toBe('2026-11-30');
   });
 });
 

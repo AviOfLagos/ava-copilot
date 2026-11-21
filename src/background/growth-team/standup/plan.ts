@@ -1,3 +1,4 @@
+import { STALE_START_MS } from '@extension/storage';
 import type { StandupExperiment, StandupNote, StandupRecord, StandupTodayItem, WeekPlan } from '@extension/storage';
 
 /**
@@ -18,6 +19,9 @@ export const BRIEF_WAITS_MS = (BRIEF_WAITS_MINUTE - STANDUP_MINUTE) * 60_000;
 export const NOTE_WORDS = 80;
 export const SUMMARY_WORDS = 200;
 export const MAX_EXPERIMENTS = 3;
+// "Today" items a note may have, and how many off-plan items the summary's line lists by name
+export const MAX_TODAY = 3;
+const MAX_LISTED = 5;
 
 /** Local date, YYYY-MM-DD. */
 export function localDay(at: number): string {
@@ -54,6 +58,8 @@ export type StandupDecision = { run: true } | { run: false; skip: string | null 
  */
 export function standupDecision(record: StandupRecord | null, started: number | null, now: number): StandupDecision {
   if (record) return { run: false, skip: null };
+  // A start the background lost (closed mid-run) does not hold the day
+  if (started !== null && now - started >= STALE_START_MS) started = null;
   const minute = minuteOfDay(now);
   if (minute < STANDUP_MINUTE) return { run: false, skip: null };
   if (started !== null) return { run: false, skip: null };
@@ -136,7 +142,7 @@ export function markOffPlan(
   items: { text: string; experiment?: string | null; reason?: string | null }[],
   experiments: StandupExperiment[],
 ): StandupTodayItem[] {
-  return items.map(item => {
+  return items.slice(0, MAX_TODAY).map(item => {
     const named = experiments.find(
       experiment =>
         (item.experiment ?? '').trim().toUpperCase() === experiment.id.toUpperCase() ||
@@ -149,7 +155,7 @@ export function markOffPlan(
           text: item.text,
           experiment: null,
           offPlan: true,
-          reason: item.reason?.trim() || 'no reason given',
+          reason: cutTo(item.reason?.trim() || 'no reason given', 15),
         };
   });
 }
@@ -166,16 +172,19 @@ export function offPlanItems(notes: StandupNote[]): StandupRecord['offPlan'] {
 /** What code adds to the Growth Lead's summary when more than one item is off plan: each, by name. */
 export function offPlanLine(offPlan: StandupRecord['offPlan']): string {
   if (offPlan.length <= 1) return '';
+  const more = offPlan.length - MAX_LISTED;
   return `Off plan (${offPlan.length}): ${offPlan
+    .slice(0, MAX_LISTED)
     .map(item => `${item.agentName}: "${cutTo(item.text, 12)}" (${cutTo(item.reason, 12)})`)
-    .join('; ')}.`;
+    .join('; ')}${more > 0 ? `; and ${more} more` : ''}.`;
 }
 
 /** The summary as it is kept and shown: the Lead's words within 200 words, the off-plan line included. */
-export function composeSummary(written: string, offPlan: StandupRecord['offPlan']): string {
-  const line = offPlanLine(offPlan);
-  const room = SUMMARY_WORDS - wordsIn(line);
-  return [fitWords(written, Math.max(room, 40)), line].filter(Boolean).join('\n\n');
+export function composeSummary(written: string, offPlan: StandupRecord['offPlan'], notes: string[] = []): string {
+  // Lines code adds (the off-plan items, numbers no reading holds) keep their room; the whole stays within 200
+  const added = [offPlanLine(offPlan), ...notes].filter(Boolean);
+  const room = SUMMARY_WORDS - added.reduce((sum, line) => sum + wordsIn(line), 0);
+  return fitWords([fitWords(written, Math.max(room, 40)), ...added].join('\n\n'), SUMMARY_WORDS);
 }
 
 /** A note as the Inbox shows it. */

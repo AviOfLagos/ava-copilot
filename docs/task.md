@@ -2841,6 +2841,12 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - The Growth Lead's page has "Run today's standup" (`gteam_standup_run`), still once a day.
 - Tests: `standup.test.ts` (three mornings on a fake clock, the off-plan items named, late and skipped mornings);
   evals: `standup` kind, two cases; E2E: the three agents switched on, the standup run, opened in the Inbox.
+- After review: a start older than 15 minutes (the browser closed mid-run) is taken over, so a lost run never
+  holds the day; the button runs a skipped or failed day again; at most three "today" items per note, reasons
+  cut, the off-plan line lists five by name and the rest as "and n more", and the whole summary, flagged numbers
+  included, stays within 200 words; on Monday before 07:30 a click writes this week's plan; a team switched on
+  after the standup's hours gets no "did not run" item; the plan in prompts is quoted as data; a failed standup
+  shows a model error by its kind only. "Yesterday" is the last whole UTC day, as the product's numbers are kept.
 
 ## 5. Risks, in order
 
