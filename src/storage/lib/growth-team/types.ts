@@ -98,3 +98,85 @@ export interface LedgerEntry {
 }
 
 export const teamItemId = (workspaceId: string, onceKey: string): string => `${workspaceId}|${onceKey}`;
+
+/** How the Growth Lead sorted one piece of customer feedback (docs/growth-team.md, Part 8). */
+export const FEEDBACK_SORTS = ['bug', 'confusion', 'feature', 'billing', 'praise'] as const;
+export type FeedbackSort = (typeof FEEDBACK_SORTS)[number];
+
+export interface FeedbackRecord {
+  // `${workspaceId}|${feedbackId}`: one feedback item is sorted once
+  id: string;
+  workspaceId: string;
+  feedbackId: string;
+  sort: FeedbackSort;
+  // For a feature request: what is asked for, in a few plain words, so three asks for the same thing are counted
+  topic: string;
+  // P0–P3 for a bug, confusion or billing problem; '' otherwise
+  priority: string;
+  // The team item it became, if any (an issue waiting for approval)
+  itemId: string | null;
+  at: number;
+}
+
+export const feedbackRecordId = (workspaceId: string, feedbackId: string) => `${workspaceId}|${feedbackId}`;
+
+/**
+ * A person the Product Marketing Manager drafted outreach for (docs/growth-team.md, Parts 8 and 12): found through
+ * a public, relevant source, recorded with why. One first email and at most one follow-up, then stop.
+ */
+export interface TeamContact {
+  // `${workspaceId}|${canonical email}`
+  id: string;
+  workspaceId: string;
+  email: string;
+  // The public page where the person was found, and why they are relevant
+  source: string;
+  why: string;
+  firstAt: number;
+  followUps: number;
+  lastAt: number;
+  // The first email's item: a follow-up waits until the user said yes to it, and counts from then
+  itemId: string | null;
+}
+
+/** An address in the one form it is kept and compared in: lower case, without a "+tag". */
+export const canonicalEmail = (email: string): string => {
+  const address = email.trim().toLowerCase();
+  const at = address.lastIndexOf('@');
+  if (at <= 0) return address;
+  return `${address.slice(0, at).replace(/\+.*$/, '')}${address.slice(at)}`;
+};
+
+export const teamContactId = (workspaceId: string, email: string) => `${workspaceId}|${canonicalEmail(email)}`;
+
+/** An address no agent writes to again, for any product: a reply, an unsubscribe or a bounce. */
+export interface SuppressedAddress {
+  // lower case
+  email: string;
+  why: 'replied' | 'unsubscribed' | 'bounced' | 'asked';
+  at: number;
+}
+
+/** A channel on the Product Marketing Manager's list, and its one-week test. */
+export const CHANNEL_STATES = ['idea', 'testing', 'kept', 'dropped'] as const;
+export type ChannelState = (typeof CHANNEL_STATES)[number];
+
+export interface TeamChannel {
+  // `${workspaceId}|${key}`; key is the channel as sign-ups name it (utm source), lower case
+  id: string;
+  workspaceId: string;
+  key: string;
+  // Who is there, in a few words
+  reach: string;
+  // What a week's test would cost, in US dollars (0 for free)
+  costUsd: number;
+  state: ChannelState;
+  // The test week, as UTC days, when it was started
+  testFrom: string | null;
+  testTo: string | null;
+  // The verdict in plain words, set by code after the week
+  verdict: string;
+  updatedAt: number;
+}
+
+export const teamChannelId = (workspaceId: string, key: string) => `${workspaceId}|${key.trim().toLowerCase()}`;

@@ -1,0 +1,66 @@
+{
+  "kind": "lead",
+  "name": "Feedback sorted twice files one issue, and the third ask for a feature opens one",
+  "source": { "found": "2026-11-21", "issue": "AviOfLagos/ava-copilot#74", "spec": "docs/growth-team.md, Part 8" },
+  "replay": [
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-201",
+      "sort": "bug",
+      "title": "Trace export is empty",
+      "summary": "Exporting a trace returns an empty file.",
+      "facts": { "main_flow_broken": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-201",
+      "sort": "bug",
+      "title": "Export broken",
+      "summary": "Export returns nothing.",
+      "facts": { "main_flow_broken": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-202",
+      "sort": "feature",
+      "title": "Slack alerts",
+      "summary": "Asks for alerts in Slack when a trace fails.",
+      "topic": "Slack alerts"
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-203",
+      "sort": "feature",
+      "title": "Alerts in Slack",
+      "summary": "Wants failing traces posted to Slack.",
+      "topic": "slack-alerts"
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-204",
+      "sort": "feature",
+      "title": "Slack alerts please",
+      "summary": "Would pay for Slack alerts.",
+      "topic": "Slack alerts, please"
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-205",
+      "sort": "feature",
+      "title": "Slack alerts",
+      "summary": "Another ask for Slack alerts.",
+      "topic": "the Slack alerts"
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "sorted", "matches": ["P2"] },
+      { "state": "already", "matches": ["sorted before"] },
+      { "state": "sorted", "matches": ["1 of 3"] },
+      { "state": "sorted", "matches": ["2 of 3"] },
+      { "state": "sorted", "matches": ["3 asks", "issue was proposed"] },
+      { "state": "sorted", "matches": ["4 asks", "issue was proposed"] }
+    ],
+    "queued": ["[P2] Trace export is empty", "[P3] Feature request: Slack alerts please"]
+  }
+}

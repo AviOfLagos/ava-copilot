@@ -10904,5 +10904,80 @@
   },
   "persona_builtin_buildInPublic_description": {
     "message": "靈感來自 Arvid Kahl 公開分享的「公開打造」：找到人們已經在聊的地方，先幫忙，展示真實的工作。"
+  },
+  "agents_growth_title": {
+    "message": "成長團隊"
+  },
+  "agents_growth_intro": {
+    "message": "為下方所選工作區的產品工作。只會起草與規劃；沒有你的點擊，不會發文、寄送、授予或花錢。"
+  },
+  "agents_growth_lead": {
+    "message": "成長負責人"
+  },
+  "agents_growth_lead_hint": {
+    "message": "整理客戶回饋、提出 issue、追蹤各通路的註冊數，並維持每週計畫。"
+  },
+  "growth_setup_needsProduct": {
+    "message": "成長團隊只為一個產品工作：請選擇有產品的工作區（工作區 › 該工作區 › 新增產品）。"
+  },
+  "growth_models_fallback_title": {
+    "message": "成長團隊使用你自己的模型"
+  },
+  "growth_models_fallback_body": {
+    "message": "模型設定中沒有 Claude 金鑰，因此成長代理使用你的「smart」與「fast」模型。加入 Claude 金鑰後，日常工作用 Sonnet、整理用 Haiku、週一計畫用 Opus。"
+  },
+  "agents_growth_marketing": {
+    "message": "產品行銷經理"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "定位、依實際註冊數排序的管道清單，以及等待你點擊的開發信草稿。"
+  },
+  "agents_growth_social": {
+    "message": "產品社群經理"
+  },
+  "agents_growth_social_hint": {
+    "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
+  },
+  "agents_standup_run": {
+    "message": "執行今天的站會"
+  },
+  "agents_standup_hint": {
+    "message": "每週一 07:30 訂計畫，每天 07:45 站會。讀取數字，每個代理寫一段短筆記，由 Growth Lead 在收件匣總結。"
+  },
+  "agents_standup_done": {
+    "message": "完成。已放在收件匣的「Growth standup」。"
+  },
+  "agents_standup_already": {
+    "message": "今天的站會已執行過，在收件匣的「Growth standup」。"
+  },
+  "agents_standup_running": {
+    "message": "今天的站會正在進行。"
+  },
+  "agents_standup_notRun": {
+    "message": "站會未執行：$1"
+  },
+  "brief_team_title": {
+    "message": "團隊 · $1"
+  },
+  "brief_team_notRun": {
+    "message": "站會未執行：$1。"
+  },
+  "brief_team_noReason": {
+    "message": "沒有記錄原因"
+  },
+  "brief_team_running": {
+    "message": "$1 時仍在進行，結束後會加到這裡"
+  },
+  "brief_team_later": {
+    "message": "站會 07:45 開始，晚於這份簡報"
+  },
+  "brief_team_notOpen": {
+    "message": "07:45 時瀏覽器沒有開啟；現在執行，結束後會加到這裡"
+  },
+  "brief_team_skipped": {
+    "message": "07:45 到 12:00 之間瀏覽器沒有開啟"
+  },
+  "brief_team_empty": {
+    "message": "站會已執行，但 Growth Lead 沒有寫摘要。筆記在收件匣中。"
   }
 }

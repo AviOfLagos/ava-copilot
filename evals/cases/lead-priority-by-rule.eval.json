@@ -1,0 +1,52 @@
+{
+  "kind": "lead",
+  "name": "The Growth Lead's sorted bugs get their priority from the rule, not from the model",
+  "source": { "found": "2026-11-21", "issue": "AviOfLagos/ava-copilot#74", "spec": "docs/growth-team.md, Part 8" },
+  "replay": [
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-101",
+      "sort": "bug",
+      "title": "Magic link sign-in never arrives",
+      "summary": "A customer cannot sign in: the magic link email never arrives.",
+      "facts": { "cannot_sign_in": true, "has_workaround": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-102",
+      "sort": "bug",
+      "title": "Trace export is empty",
+      "summary": "Exporting a trace returns an empty file for a paying team.",
+      "facts": { "main_flow_broken": true, "paying_customer": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-103",
+      "sort": "bug",
+      "title": "Fix button fails on long traces",
+      "summary": "The fix button errors on traces over 500 spans; re-running from the list works.",
+      "facts": { "main_flow_broken": true, "paying_customer": true, "has_workaround": true }
+    },
+    {
+      "tool": "sort_feedback",
+      "feedback_id": "fb-104",
+      "sort": "confusion",
+      "title": "Unclear what the eval badge means",
+      "summary": "A customer did not know what the green eval badge stands for."
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "sorted", "matches": ["P0", "cannot sign in"] },
+      { "state": "sorted", "matches": ["P1"] },
+      { "state": "sorted", "matches": ["P2"] },
+      { "state": "sorted", "matches": ["P3"] }
+    ],
+    "queued": [
+      "[P0] Magic link sign-in never arrives",
+      "[P1] Trace export is empty",
+      "[P2] Fix button fails on long traces",
+      "[P3] Unclear what the eval badge means"
+    ]
+  }
+}

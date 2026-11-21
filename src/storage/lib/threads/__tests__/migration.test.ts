@@ -47,7 +47,7 @@ describe('database upgrade to version 5', () => {
     await expect(db.jobs.add({ ...(await db.jobs.get('j1'))!, id: 'j2' })).rejects.toThrow();
     // Later versions only add tables (version 6: ambient listening; version 7: do-once keys; version 8: the
     // growth numbers; version 9: the growth team's approvals and ledger)
-    expect(db.verno).toBe(9);
+    expect(db.verno).toBe(11);
     expect(await db.doOnce.count()).toBe(0);
     expect(await db.growthMetrics.count()).toBe(0);
     expect(await db.growthReadings.count()).toBe(0);
