@@ -10931,5 +10931,11 @@
   },
   "agents_growth_marketing_hint": {
     "message": "定位、依實際註冊數排序的管道清單，以及等待你點擊的開發信草稿。"
+  },
+  "agents_growth_social": {
+    "message": "產品社群經理"
+  },
+  "agents_growth_social_hint": {
+    "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
   }
 }

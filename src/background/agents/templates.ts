@@ -15,7 +15,7 @@ export type TeamTemplateId = (typeof TEAM_TEMPLATE_IDS)[number];
 
 // The growth team (docs/growth-team.md, Part 8): agents that work for one product, the workspace's. Off until the
 // user creates them, each with its personality
-export const GROWTH_TEMPLATE_IDS = ['growth_lead', 'growth_marketing'] as const;
+export const GROWTH_TEMPLATE_IDS = ['growth_lead', 'growth_marketing', 'growth_social'] as const;
 export type GrowthTemplateId = (typeof GROWTH_TEMPLATE_IDS)[number];
 
 export const AGENT_TEMPLATE_IDS = [
@@ -231,6 +231,27 @@ function baseTemplate(id: AgentTemplateId, timezone: string): AgentProfileFields
         charter:
           'Owns who the product is for and where to find them: positioning, the channel list and its tests, outreach drafts; never sends an email itself.',
       };
+    case 'growth_social':
+      return {
+        name: 'Product Social Manager',
+        avatar: '🎙️',
+        instructions: `You sell this workspace's product in public, as drafts. On Monday, write the week's content plan: one line per post, each tied to the week's experiment, with the day and the place. Every day: replies and comments first, where people already talk about the problem; then the day's post. Show the product working with real screens and real numbers, and teach what was learned building it. Read post_results before planning, and do more of what worked. Every number comes from metrics_query or the product profile, and you never quote anyone: code refuses a draft that does. Links to the product come from make_link. Every post and reply goes through queue_for_approval and waits for the user's click; you stop there. ${SOCIAL_CONNECTOR} You cannot create accounts: when a channel needs one, prepare the handle, the bio and the image, and ask with queue_for_approval (kind new_account) giving the user the exact clicks. The product's own accounts are in the profile; when none is set for a place, say so and never post from another account. When a growth.signal or growth.praise arrives, act on it the same day; praise is never quoted or named without the customer's written yes. Answer with what you drafted, what waits for the user, and what the posts brought. ${GROWTH_RULES} ${NEVER_COMMITS}`,
+        skills: ['account-switching'],
+        connectors: [],
+        domains: ['x.com', 'linkedin.com'],
+        modelRole: 'smart',
+        workspaceId: null,
+        executor: 'browser',
+        triggers: [{ type: 'schedule', cron: '0 11 * * 1-5', timezone }, { type: 'manual' }],
+        subscribes: ['growth.signal', 'growth.praise'],
+        publishes: [],
+        budget: { dailyUsd: 1, maxStepsPerRun: 40, runsPerDay: 4 },
+        startUrl: null,
+        inboxResults: true,
+        owns: ['content plan', 'product posts', 'community replies', 'post results'],
+        charter:
+          "Sells the product in public: the week's content plan, posts and replies in its voice, what each post brought; posting always waits for your click.",
+      };
   }
 }
 
@@ -273,6 +294,7 @@ export const TEMPLATE_PERSONAS: Record<AgentTemplateId, Pick<AgentProfileFields,
   // The growth team sounds like its personalities (docs/personas)
   growth_lead: { personalityId: 'growth', voices: {} },
   growth_marketing: { personalityId: 'positioning', voices: {} },
+  growth_social: { personalityId: 'build_in_public', voices: {} },
 };
 
 export function agentTemplate(id: AgentTemplateId, timezone: string): AgentProfileFields {

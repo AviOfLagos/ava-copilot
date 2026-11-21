@@ -35,6 +35,7 @@ import {
   stopContactSchema,
 } from './marketing/actions';
 import type { MarketingDeps } from './marketing/actions';
+import { postResultsAction, postResultsSchema, SOCIAL_PROMPT, socialDraftCheck } from './social/actions';
 import {
   readFeedbackAction,
   readFeedbackSchema,
@@ -48,7 +49,15 @@ import type { LeadDeps } from './lead/feedback';
 import { channelSignals } from './lead/signals';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { budgetState, grantsInWeek } from './ledger';
-import { answerBatch, answerItem, BATCH_PREFIX, ITEM_PREFIX, recoverAgreed, registerAgreedHook } from './queue';
+import {
+  answerBatch,
+  answerItem,
+  BATCH_PREFIX,
+  ITEM_PREFIX,
+  recoverAgreed,
+  registerAgreedHook,
+  registerProposalCheck,
+} from './queue';
 import type { QueueDeps } from './queue';
 
 const logger = createLogger('GrowthTeam');
@@ -162,6 +171,19 @@ registerAgentAction({
 });
 // The user's yes to a channel test starts its week (Ava's own list; nothing goes out)
 registerAgreedHook('new_channel', item => channelTestAgreed(item));
+
+// ── The Product Social Manager (#76) ──────────────────────────────────────────────────────────────
+
+registerAgentAction({
+  prompt: SOCIAL_PROMPT,
+  create: context =>
+    new Action(
+      (input: z.infer<typeof postResultsSchema.schema>) => postResultsAction(context, input),
+      postResultsSchema,
+    ),
+});
+// Every agent's draft for other people: no number code does not hold, no quote
+registerProposalCheck((proposal, profile, now) => socialDraftCheck(proposal, profile, now));
 
 // Every morning, after the night's numbers are in: a channel whose sign-ups moved goes on the bus as
 // `growth.signal`, for each workspace whose Growth Lead is switched on. Plain code, no model.

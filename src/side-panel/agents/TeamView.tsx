@@ -32,6 +32,7 @@ export const TEAM_META: Record<TeamTemplateId, { name: MessageKey; hint: Message
 export const GROWTH_META: Record<GrowthTemplateId, { name: MessageKey; hint: MessageKey }> = {
   growth_lead: { name: 'agents_growth_lead', hint: 'agents_growth_lead_hint' },
   growth_marketing: { name: 'agents_growth_marketing', hint: 'agents_growth_marketing_hint' },
+  growth_social: { name: 'agents_growth_social', hint: 'agents_growth_social_hint' },
 };
 
 type SetupTemplateId = TeamTemplateId | GrowthTemplateId;

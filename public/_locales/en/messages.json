@@ -10931,5 +10931,11 @@
   },
   "agents_growth_marketing_hint": {
     "message": "Positioning, a channel list ranked from real sign-ups, and outreach drafts that wait for your click."
+  },
+  "agents_growth_social": {
+    "message": "Product Social Manager"
+  },
+  "agents_growth_social_hint": {
+    "message": "The week's content plan, posts and replies in the product's voice, and what each post brought. Posting waits for your click."
   }
 }

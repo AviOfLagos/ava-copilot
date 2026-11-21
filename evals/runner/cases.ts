@@ -142,6 +142,14 @@ const marketingChannel = z.object({
 });
 const marketingRank = z.object({ tool: z.literal('rank_channels') });
 // The user's yes to the item with this title, on that day: not a model call, the click the agent waits for
+// A draft for other people, as the agent leaves it with queue_for_approval
+const queueDraft = z.object({
+  tool: z.literal('queue_for_approval'),
+  kind: z.enum(['post', 'reply', 'listing', 'new_account']),
+  title: z.string(),
+  text: z.string(),
+  where: z.string(),
+});
 const userApproves = z.object({ tool: z.literal('user_approves'), at_day: atDay, title: z.string() });
 
 /**
@@ -150,7 +158,7 @@ const userApproves = z.object({ tool: z.literal('user_approves'), at_day: atDay,
  * what reached the approval queue.
  */
 export const teamCase = z.object({
-  kind: z.enum(['lead', 'marketing']),
+  kind: z.enum(['lead', 'marketing', 'social']),
   name: z.string(),
   // The product's beta rule, and what the product says is left this week (absent: the product was not asked)
   beta: z
@@ -160,7 +168,7 @@ export const teamCase = z.object({
     })
     .optional(),
   // The profile's sender and postal address; both are set unless the case says otherwise
-  profile: z.object({ sender: z.string(), postal_address: z.string() }).partial().optional(),
+  profile: z.object({ sender: z.string(), postal_address: z.string(), pricing: z.string() }).partial().optional(),
   // Sign-ups a day per channel over the 28 days before the case's Monday, every day read
   signups_per_day: z.record(z.string(), z.number()).optional(),
   replay: z
@@ -174,6 +182,7 @@ export const teamCase = z.object({
         marketingChannel,
         marketingRank,
         userApproves,
+        queueDraft,
       ]),
     )
     .min(1),
@@ -240,7 +249,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'skills') return skillsCase.parse(raw);
   if (kind === 'voice') return voiceCase.parse(raw);
   if (kind === 'draft') return draftCase.parse(raw);
-  if (kind === 'lead' || kind === 'marketing') return teamCase.parse(raw);
+  if (kind === 'lead' || kind === 'marketing' || kind === 'social') return teamCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

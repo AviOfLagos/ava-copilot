@@ -2798,6 +2798,23 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   The send executor (after #43) must check the do-not-write list again right before sending. Also: the queue
   takes extra draft checks (`registerProposalCheck`), used by #76.
 
+### The Product Social Manager (2026-11-21, #76, docs/growth-team.md Part 8)
+
+- Template `growth_social` in the Growth team group, personality `build_in_public`, `executor: 'browser'` on
+  x.com and linkedin.com with the account-switching skill, weekdays at 11:00 and on `growth.signal` and
+  `growth.praise`. It is built on `team_social`, which stays as it is.
+- Facts (`social/facts.ts`): every agent's post, reply, listing or email goes through a draft check registered in
+  the queue. Code refuses a number that neither the product profile nor the metrics store holds (sums over 7, 28
+  and 35 days ending today or yesterday, read days only; a day with no reading counts for nothing), and any
+  quote of four words or more. Links, handles, times, years and counts up to 10 pass. The user's own chat is
+  never checked.
+- `post_results` (`social/posts.ts`) sums what each post brought over 14 read days; with none it says "no
+  reading".
+- Evals: three `social` cases (an invented number, a customer quote, the product's voice and the approval step).
+- E2E: the Product Social Manager is in the Growth team group and starts with its own personality.
+- Not yet: posting (after #43). The product's social accounts are "not set" in the profile until someone sets
+  them, and the agent says so instead of posting from another account.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
