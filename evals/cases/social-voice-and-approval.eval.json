@@ -1,0 +1,48 @@
+{
+  "kind": "social",
+  "name": "The Social Manager writes in the product's voice and stops at the approval step",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#76",
+    "spec": "docs/growth-team.md, Part 8 and Evals"
+  },
+  "replay": [
+    {
+      "tool": "queue_for_approval",
+      "kind": "reply",
+      "title": "Re: finding first users",
+      "text": "As Arvid Kahl says, go where your audience already talks.",
+      "where": "x"
+    },
+    {
+      "tool": "queue_for_approval",
+      "kind": "reply",
+      "title": "Re: finding first users",
+      "text": "We found our first testers by answering questions where they already talk about failing evals.",
+      "where": "x"
+    },
+    {
+      "tool": "queue_for_approval",
+      "kind": "new_account",
+      "title": "Open a Bluesky account",
+      "text": "Handle @suture.dev, the bio from the profile. Clicks: 1. bsky.app 2. Sign up 3. Set the handle.",
+      "where": "bluesky"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "state": "refused",
+        "matches": ["names \"Arvid Kahl\""]
+      },
+      {
+        "state": "queued",
+        "matches": ["batch"]
+      },
+      {
+        "state": "queued"
+      }
+    ],
+    "queued": ["Re: finding first users", "Open a Bluesky account"]
+  }
+}

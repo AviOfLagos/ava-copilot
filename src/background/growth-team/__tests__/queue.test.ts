@@ -318,6 +318,7 @@ describe('always asked', () => {
       { action: 'customer_issue' as const, body: 'See https://app.trysuture.com/users/8431/settings' },
       {
         action: 'outreach_email' as const,
+        target: 'dev@someco.io',
         body: 'Ada from Acme Corp told us you might like it',
         customerNames: ['Ada'],
       },

@@ -1,0 +1,48 @@
+{
+  "kind": "marketing",
+  "name": "The Marketing Manager never drafts an email to an address that unsubscribed, or to a personal mailbox",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#75",
+    "spec": "docs/growth-team.md, Parts 8 and 12"
+  },
+  "replay": [
+    { "tool": "stop_contact", "email": "ada@acme.dev", "why": "unsubscribed" },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "Ada@Acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Your eval runner",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "someone@gmail.com",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Your eval runner",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    },
+    {
+      "tool": "draft_outreach",
+      "at_day": 0,
+      "email": "bo@acme.dev",
+      "source": "https://github.com/example/evals",
+      "why": "You maintain an open-source eval runner.",
+      "subject": "Your eval runner, Bo",
+      "body": "Suture turns a failing agent trace into an eval and a fix. Worth a look for your runner?"
+    }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "ok", "matches": ["do-not-write list"] },
+      { "state": "refused", "matches": ["asked not to be written to \\(unsubscribed\\)"] },
+      { "state": "refused", "matches": ["personal mailbox"] },
+      { "state": "queued", "matches": ["nothing was sent"] }
+    ],
+    "queued": ["Your eval runner, Bo"]
+  }
+}

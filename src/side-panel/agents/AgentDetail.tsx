@@ -32,6 +32,7 @@ import {
 } from './meta';
 import { AgentMemory } from '../kb/MemoryScope';
 import { RunLog } from './RunLog';
+import { StandupButton } from './StandupButton';
 
 type MessageKey = Parameters<typeof t>[0];
 
@@ -352,6 +353,8 @@ export default function AgentDetail({ id, api, onBack }: AgentDetailProps) {
           </Button>
         </div>
       )}
+
+      <StandupButton agent={agent} />
 
       {error && (
         <div role="alert" className="border-destructive/40 bg-destructive/10 rounded-xl border px-3 py-2 text-[12.5px]">
