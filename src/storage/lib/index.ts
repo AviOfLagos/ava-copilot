@@ -33,3 +33,4 @@ export * from './whatsapp';
 export * from './personalities';
 export * from './identity';
 export * from './rounds';
+export * from './standup';

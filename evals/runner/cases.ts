@@ -201,6 +201,48 @@ export const teamCase = z.object({
 });
 
 /**
+ * The growth team's standup (src/background/growth-team/standup): the week's plan and each morning's notes and
+ * summary as the models wrote them, replayed through the code that keeps the clock, the word limits and the
+ * off-plan check.
+ */
+const standupNote = z.object({
+  did: z.string(),
+  learned: z.string(),
+  today: z.array(z.object({ text: z.string(), experiment: z.string().nullable(), reason: z.string() })),
+  blocked: z.string(),
+});
+export const standupCase = z.object({
+  kind: z.literal('standup'),
+  name: z.string(),
+  plan: z.object({
+    focus: z.string(),
+    experiments: z.array(z.object({ what: z.string(), metric: z.string(), howWeKnow: z.string(), owner: z.string() })),
+  }),
+  // Each morning: days after Monday 23 November 2026, the local hour the browser opened, and what the models wrote
+  mornings: z
+    .array(
+      z.object({
+        day: z.number().int().min(0),
+        hour: z.number().min(0).max(23),
+        notes: z.record(z.string(), standupNote),
+        summary: z.string(),
+      }),
+    )
+    .min(1),
+  expect: z.object({
+    mornings: z.array(
+      z.object({
+        status: z.enum(['done', 'skipped', 'failed']),
+        // The agents whose work is off plan, in order
+        off_plan: z.array(z.string()),
+        matches: z.array(z.string()).optional(),
+      }),
+    ),
+  }),
+  source: z.unknown().optional(),
+});
+
+/**
  * What Suture writes for a failing trace (evals/suture/<issue>/<trace>.eval.json): the user's message, the answer
  * that failed, and the model's recorded replies when the trace has them. Replayed as a planner case: the user must
  * not get the failing answer again, nor an empty one.
@@ -223,7 +265,8 @@ export type SkillsCase = z.infer<typeof skillsCase>;
 export type VoiceCase = z.infer<typeof voiceCase>;
 export type DraftCase = z.infer<typeof draftCase>;
 export type TeamCase = z.infer<typeof teamCase>;
-export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | TeamCase;
+export type StandupCase = z.infer<typeof standupCase>;
+export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | TeamCase | StandupCase;
 export type VoiceStep = z.infer<typeof voiceStep>;
 
 const CHANNELS = new Set(plannerCase.shape.channel.unwrap().options as readonly string[]);
@@ -250,6 +293,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'voice') return voiceCase.parse(raw);
   if (kind === 'draft') return draftCase.parse(raw);
   if (kind === 'lead' || kind === 'marketing' || kind === 'social') return teamCase.parse(raw);
+  if (kind === 'standup') return standupCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

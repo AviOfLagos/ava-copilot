@@ -2821,6 +2821,52 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   Markdown quote lines count as quotes, apostrophes do not; a routine's or agent-started chat is checked even
   with no agent id, and the draft's fields are checked with its text.
 
+### Weekly plan and daily standup (2026-11-21, #77, docs/growth-team.md Part 10)
+
+- `src/background/growth-team/standup`: `plan.ts` (the clock, the word limits, the off-plan check; no model),
+  `run.ts` (the plan and the standup, with the model calls behind a `StandupWriter`), `writer.ts` (the real
+  calls). State: `standupStore` (`storage.local`, `src/storage/lib/standup`), last three weeks kept.
+- Monday 07:30 (job `growth-plan`, caught up through the week): the Growth Lead sets one focus and at most three
+  experiments (E1-E3, an owner off the team becomes the Lead) on Opus when a Claude key is set, then each agent
+  writes its week against them. A week that has no plan gets one before its first standup.
+- Every day 07:45 (job `growth-standup`): code reads yesterday and the last 7 days (a number never read is listed
+  once as "no reading"); each switched-on growth agent writes a note, cut by code to 80 words; a "today" item that
+  names no experiment is marked off plan with the agent's reason; the Lead's summary is cut to 200 words, and
+  with more than one off-plan item code adds "Off plan (n): <agent>: <item> (<reason>)". A number in the summary
+  no reading holds is flagged. Four model calls a day. The result goes to the Inbox ("Growth standup · <product>
+  · <day>") and to `growth.standup` on the bus.
+- A missed standup runs once if the browser opens before noon (also checked at startup); after noon it is skipped
+  and says "Standup did not run: the browser was not open between 07:45 and 12:00". Over the spending cap it
+  fails with that reason.
+- The Growth Lead's page has "Run today's standup" (`gteam_standup_run`), still once a day.
+- Tests: `standup.test.ts` (three mornings on a fake clock, the off-plan items named, late and skipped mornings);
+  evals: `standup` kind, two cases; E2E: the three agents switched on, the standup run, opened in the Inbox.
+- After review: a start older than 15 minutes (the browser closed mid-run) is taken over, so a lost run never
+  holds the day; the button runs a skipped or failed day again; at most three "today" items per note, reasons
+  cut, the off-plan line lists five by name and the rest as "and n more", and the whole summary, flagged numbers
+  included, stays within 200 words; on Monday before 07:30 a click writes this week's plan; a team switched on
+  after the standup's hours gets no "did not run" item; the plan in prompts is quoted as data; a failed standup
+  shows a model error by its kind only. "Yesterday" is the last whole UTC day, as the product's numbers are kept.
+
+### The Team section of the morning brief (2026-11-21, #78, docs/growth-team.md Part 5b)
+
+- `src/background/brief/extras.ts`: other features add brief sections through `registerBriefExtra` (`pending`,
+  `sections`); the brief waits while one is pending and shows each section under its bold title.
+- `src/background/growth-team/standup/brief.ts` registers "Team · <product>" for each workspace whose Growth Lead
+  is on: the Lead's standup summary (at most 200 words), or "Standup did not run: <reason>" (it starts at 07:45,
+  after this brief; still running, added when it ends; the browser was not open at 07:45, it runs now; the
+  browser was not open between 07:45 and 12:00; or the recorded reason). The brief waits for a running standup
+  until 07:58, or 13 minutes after a late one started.
+- A standup that ends after the brief adds its section to the brief's chat (`addSection`) and lets a waiting brief
+  come (`check`).
+- Tests: `team-brief.test.ts` (every wording, the waiting rule, a ran day and a skipped day on a fake clock) and
+  `brief/__tests__/manager.test.ts` (the brief waits, then shows the section); E2E: the brief made after the
+  standup shows the Team section with the off-plan line.
+- After review: a section that ends while a brief is being made is added once that brief is saved, not dropped; a
+  standup that ends before the background has started leaves its record for the brief to read; an empty summary
+  says the standup ran and the notes are in the Inbox. Not changed: a standup re-run by hand after the brief adds a
+  second Team section to the chat, under the first.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

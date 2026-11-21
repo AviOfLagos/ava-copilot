@@ -59,6 +59,14 @@ import {
   registerProposalCheck,
 } from './queue';
 import type { QueueDeps } from './queue';
+import { PLAN_CRON, STANDUP_CRON } from './standup/plan';
+import { runStandupNow, runStandups, runWeeklyPlans } from './standup/run';
+import type { StandupDeps } from './standup/run';
+import { modelWriter } from './standup/writer';
+import { teamPending, teamSectionOf, teamSections } from './standup/brief';
+import { registerBriefExtra } from '../brief/extras';
+import { services } from '../registry/services';
+import { isOverDailyBudget } from '../usage/budget';
 
 const logger = createLogger('GrowthTeam');
 
@@ -213,6 +221,59 @@ registerJobHandler(SIGNALS_JOB, async () => {
   if (posted) logger.info(`Posted ${posted} growth signal(s)`);
 });
 
+// ── The weekly plan and the daily standup (#77) ───────────────────────────────────────────────────
+
+const PLAN_JOB = 'growth-plan';
+const STANDUP_JOB = 'growth-standup';
+
+// ── The Team section of the morning brief (#78) ─────────────────────────────────────────────────
+
+registerBriefExtra({ id: 'growth-team', pending: teamPending, sections: teamSections });
+
+/** A standup that ended: its section joins today's brief if that was made already, and a waiting brief comes. */
+async function standupFinished(record: Parameters<NonNullable<StandupDeps['finished']>>[0]): Promise<void> {
+  let brief: ReturnType<typeof services>['brief'];
+  try {
+    brief = services().brief;
+  } catch {
+    // The background is still starting: no brief is made yet, and when it is, it reads the saved record
+    return;
+  }
+  const section = await teamSectionOf(record);
+  await brief.addSection({
+    workflowId: 'growth-team',
+    workflowName: section.title,
+    title: section.title,
+    markdown: section.markdown,
+    workspaceId: section.workspaceId,
+    at: record.at,
+  });
+  await brief.check();
+}
+
+export const STANDUP_DEPS: StandupDeps = {
+  writer: modelWriter,
+  publish: publishOnBus,
+  overCap: () => isOverDailyBudget(),
+  finished: standupFinished,
+};
+
+registerJobHandler(PLAN_JOB, async () => {
+  const plans = await runWeeklyPlans(STANDUP_DEPS);
+  if (plans.length) logger.info(`Wrote ${plans.length} weekly plan(s)`);
+});
+registerJobHandler(STANDUP_JOB, async () => {
+  const records = await runStandups(STANDUP_DEPS);
+  if (records.length) logger.info(`Ran ${records.length} standup(s)`);
+});
+
+async function scheduleOnce(key: string, cron: string, catchUpMs: number): Promise<void> {
+  const existing = await db.jobs.where('key').equals(key).first();
+  if (!existing || existing.cron !== cron || existing.status === 'failed') {
+    await jobs.schedule({ kind: key, key, cron, catchUpMs });
+  }
+}
+
 // The user's click in the Inbox. Only this, and a rule the user saved, ever carries an item out.
 registerApprovalHandler(ITEM_PREFIX, async (requestId, approved, options) => {
   const item = await answerItem(requestId.slice(ITEM_PREFIX.length), approved, { always: options?.always }, QUEUE_DEPS);
@@ -232,6 +293,11 @@ registerRecovery('growth-team', async () => {
   if (!existing || existing.cron !== SIGNALS_CRON || existing.status === 'failed') {
     await jobs.schedule({ kind: SIGNALS_JOB, key: SIGNALS_JOB, cron: SIGNALS_CRON, catchUpMs: 2 * 60 * 60 * 1000 });
   }
+  // The Monday plan is caught up through the week; a standup until noon (later it is skipped, below)
+  await scheduleOnce(PLAN_JOB, PLAN_CRON, 4 * 24 * 60 * 60 * 1000);
+  await scheduleOnce(STANDUP_JOB, STANDUP_CRON, (4 * 60 + 15) * 60 * 1000);
+  // Opened late: a standup due before noon runs now, and one missed past noon is skipped and says so
+  void runStandups(STANDUP_DEPS).catch(error => logger.warning('The standup check failed', error));
   const recovered = await recoverAgreed(QUEUE_DEPS);
   if (recovered) logger.info(`Carried out ${recovered} agreed item(s) left unfinished`);
 });
@@ -258,6 +324,22 @@ registerCommand('gteam_ledger', z.object({ workspaceId: z.string().min(1).max(80
   } catch (error) {
     const appError = toAppError(error);
     logger.warning(`gteam_ledger failed (${appError.kind})`);
+    context.reply({ type: 'error', requestId: context.requestId, error: appError.message });
+  }
+});
+
+// The Growth Lead's "Run today's standup"
+registerCommand('gteam_standup_run', z.object({ workspaceId: z.string().min(1).max(80) }), async (input, context) => {
+  try {
+    const outcome = await runStandupNow(input.workspaceId, STANDUP_DEPS);
+    const result =
+      outcome.state === 'done' || outcome.state === 'already'
+        ? { state: outcome.state, status: outcome.record.status, reason: outcome.record.reason }
+        : outcome;
+    context.reply({ type: 'gteam_ok', requestId: context.requestId, result });
+  } catch (error) {
+    const appError = toAppError(error);
+    logger.warning(`gteam_standup_run failed (${appError.kind})`);
     context.reply({ type: 'error', requestId: context.requestId, error: appError.message });
   }
 });

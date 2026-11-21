@@ -10937,5 +10937,47 @@
   },
   "agents_growth_social_hint": {
     "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
+  },
+  "agents_standup_run": {
+    "message": "執行今天的站會"
+  },
+  "agents_standup_hint": {
+    "message": "每週一 07:30 訂計畫，每天 07:45 站會。讀取數字，每個代理寫一段短筆記，由 Growth Lead 在收件匣總結。"
+  },
+  "agents_standup_done": {
+    "message": "完成。已放在收件匣的「Growth standup」。"
+  },
+  "agents_standup_already": {
+    "message": "今天的站會已執行過，在收件匣的「Growth standup」。"
+  },
+  "agents_standup_running": {
+    "message": "今天的站會正在進行。"
+  },
+  "agents_standup_notRun": {
+    "message": "站會未執行：$1"
+  },
+  "brief_team_title": {
+    "message": "團隊 · $1"
+  },
+  "brief_team_notRun": {
+    "message": "站會未執行：$1。"
+  },
+  "brief_team_noReason": {
+    "message": "沒有記錄原因"
+  },
+  "brief_team_running": {
+    "message": "$1 時仍在進行，結束後會加到這裡"
+  },
+  "brief_team_later": {
+    "message": "站會 07:45 開始，晚於這份簡報"
+  },
+  "brief_team_notOpen": {
+    "message": "07:45 時瀏覽器沒有開啟；現在執行，結束後會加到這裡"
+  },
+  "brief_team_skipped": {
+    "message": "07:45 到 12:00 之間瀏覽器沒有開啟"
+  },
+  "brief_team_empty": {
+    "message": "站會已執行，但 Growth Lead 沒有寫摘要。筆記在收件匣中。"
   }
 }

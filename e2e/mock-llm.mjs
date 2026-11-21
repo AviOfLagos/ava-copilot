@@ -57,6 +57,32 @@ const BRIEF_PROMPT = "From the morning brief's data, pick at most three things";
 const SUMMARY_PROMPT = 'You keep a running "where we are" note';
 // The system prompt of teach mode, in src/background/skills/teach.ts
 const TEACH_PROMPT = 'You write a skill: a short page of tips';
+// The growth team's weekly plan and standup, in src/background/growth-team/standup/run.ts
+const PLAN_PROMPT = "Set this week's plan";
+const WEEK_PROMPT = 'Write your week against the plan';
+const NOTE_PROMPT = "in this morning's standup";
+const STANDUP_SUMMARY_PROMPT = 'Sum up the standup';
+
+/** What the growth team writes in the e2e standup: the Social Manager and the Lead each have one item off plan. */
+function standupReply(system) {
+  if (system.includes(PLAN_PROMPT))
+    return {
+      focus: 'First sign-ups from developers who run evals',
+      experiments: [
+        { what: 'A daily build-in-public thread', metric: 'signups', howWeKnow: '10 sign-ups by Friday', owner: 'Product Social Manager' },
+        { what: 'Outreach to eval engineers', metric: 'signups', howWeKnow: '5 replies by Friday', owner: 'Product Marketing Manager' },
+      ],
+    };
+  if (system.includes(WEEK_PROMPT)) return 'E1 and E2 all week.';
+  if (system.includes(STANDUP_SUMMARY_PROMPT))
+    return 'Yesterday was quiet: no sign-ups were read. Double down on E1. The one goal today: ship the first thread. Needed from you: approve the drafts.';
+  const offPlan = system.startsWith('You are Product Social Manager')
+    ? { text: 'Reply on Hacker News threads', experiment: null, reason: 'an evals thread is trending' }
+    : system.startsWith('You are Growth Lead')
+      ? { text: 'Tidy the issue labels', experiment: null, reason: 'labels are a mess' }
+      : { text: 'Find 20 eval engineers', experiment: 'E2', reason: '' };
+  return { did: 'Set up the week.', learned: 'Nothing new yet.', today: [offPlan], blocked: '' };
+}
 
 // Lowercase words hashed into 64 buckets, as a unit vector; the task prefixes are left out
 function bagOfWords(text) {
@@ -208,6 +234,15 @@ export async function startMockLlm(scenarios) {
         kb.taught.push(textOf(request.messages[request.messages.length - 1]));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify(completion(request, kb.skillDraft)));
+      }
+
+      // The growth team's plan and standup
+      if ([PLAN_PROMPT, WEEK_PROMPT, NOTE_PROMPT, STANDUP_SUMMARY_PROMPT].some(prompt => system.includes(prompt))) {
+        const reply = standupReply(system);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(
+          JSON.stringify(typeof reply === 'string' ? textCompletion(request, reply) : completion(request, reply)),
+        );
       }
 
       // The morning brief's priorities
