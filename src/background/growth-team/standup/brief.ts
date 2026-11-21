@@ -23,7 +23,7 @@ const clock = (at: number) => new Date(at).toLocaleTimeString(undefined, { hour:
 
 /** What the section says, from today's record, when the standup started, and the time. */
 export function teamSectionText(record: StandupRecord | null, started: number | null, now: number): string {
-  if (record?.status === 'done') return fitWords(record.summary, SUMMARY_WORDS);
+  if (record?.status === 'done') return fitWords(record.summary, SUMMARY_WORDS) || t('brief_team_empty');
   if (record) return t('brief_team_notRun', [record.reason ?? t('brief_team_noReason')]);
   // A start the background lost says nothing about now
   if (started !== null && now - started >= STALE_START_MS) started = null;

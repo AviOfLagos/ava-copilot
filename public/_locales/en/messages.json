@@ -10976,5 +10976,8 @@
   },
   "brief_team_skipped": {
     "message": "the browser was not open between 07:45 and 12:00"
+  },
+  "brief_team_empty": {
+    "message": "The standup ran, but the Growth Lead wrote no summary. The notes are in the Inbox."
   }
 }

@@ -10976,5 +10976,8 @@
   },
   "brief_team_skipped": {
     "message": "07:45 到 12:00 之間瀏覽器沒有開啟"
+  },
+  "brief_team_empty": {
+    "message": "站會已執行，但 Growth Lead 沒有寫摘要。筆記在收件匣中。"
   }
 }

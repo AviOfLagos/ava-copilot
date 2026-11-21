@@ -95,6 +95,8 @@ export class MorningBrief {
    * brief is not made yet; it will include the section when it is.
    */
   async addSection(section: WorkflowBriefSection): Promise<boolean> {
+    // A brief being made may have read its sources before this section existed: add to it once it is saved
+    if (this.making) await this.making.catch(() => undefined);
     const settings = await briefSettingsStore.getSettings();
     if (settings.lastDay !== localDate(Date.now()) || !settings.lastThreadId) return false;
     const text = sectionMarkdown(section);

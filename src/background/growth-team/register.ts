@@ -232,7 +232,13 @@ registerBriefExtra({ id: 'growth-team', pending: teamPending, sections: teamSect
 
 /** A standup that ended: its section joins today's brief if that was made already, and a waiting brief comes. */
 async function standupFinished(record: Parameters<NonNullable<StandupDeps['finished']>>[0]): Promise<void> {
-  const brief = services().brief;
+  let brief: ReturnType<typeof services>['brief'];
+  try {
+    brief = services().brief;
+  } catch {
+    // The background is still starting: no brief is made yet, and when it is, it reads the saved record
+    return;
+  }
   const section = await teamSectionOf(record);
   await brief.addSection({
     workflowId: 'growth-team',

@@ -2862,6 +2862,10 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `team-brief.test.ts` (every wording, the waiting rule, a ran day and a skipped day on a fake clock) and
   `brief/__tests__/manager.test.ts` (the brief waits, then shows the section); E2E: the brief made after the
   standup shows the Team section with the off-plan line.
+- After review: a section that ends while a brief is being made is added once that brief is saved, not dropped; a
+  standup that ends before the background has started leaves its record for the brief to read; an empty summary
+  says the standup ran and the notes are in the Inbox. Not changed: a standup re-run by hand after the brief adds a
+  second Team section to the chat, under the first.
 
 ## 5. Risks, in order
 

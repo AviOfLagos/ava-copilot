@@ -10976,5 +10976,8 @@
   },
   "brief_team_skipped": {
     "message": "o navegador não estava aberto entre 07:45 e 12:00"
+  },
+  "brief_team_empty": {
+    "message": "A reunião diária aconteceu, mas o Growth Lead não escreveu um resumo. As notas estão na Caixa de entrada."
   }
 }

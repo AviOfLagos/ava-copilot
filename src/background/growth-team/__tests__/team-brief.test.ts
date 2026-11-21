@@ -90,6 +90,8 @@ describe('what the Team section says', () => {
     expect(teamSectionText(record({}), null, at(23, 8))).toMatch(/^Sign-ups held\. Double down on E1/);
     const long = record({ summary: Array.from({ length: 260 }, () => 'word').join(' ') });
     expect(teamSectionText(long, null, at(23, 8)).split(/\s+/).length).toBeLessThanOrEqual(200);
+    // A summary the model left empty still says something
+    expect(teamSectionText(record({ summary: '  ' }), null, at(23, 8))).toBe('brief_team_empty');
   });
 
   it('says the standup did not run, and why, on every other day', () => {
