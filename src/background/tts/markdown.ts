@@ -1,3 +1,4 @@
+import { stripTaskMarkers } from '@extension/storage';
 // Emoji and pictographs: not CJK, which the model may answer in, so the ranges stay well clear of it.
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu;
 // The emoji variation selector, kept out of the class above since a lone modifier inside one reads as
@@ -11,7 +12,8 @@ const VARIATION_SELECTOR = /\u{FE0F}/gu;
  * enough to stop a voice reading out "asterisk asterisk" or a URL.
  */
 export function toSpeakableText(markdown: string): string {
-  let text = markdown;
+  // A task's marker is for the panel's checkbox, never for reading out
+  let text = stripTaskMarkers(markdown);
 
   // Fenced code blocks: reading source code aloud helps no one
   text = text.replace(/```[\s\S]*?```/g, '\n');

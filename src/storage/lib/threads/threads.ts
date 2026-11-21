@@ -134,7 +134,8 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
       threadId: string,
       actor: MessageActor,
       content: string,
-      extra: { attachments?: MessageAttachment[] } = {},
+      // taskIds: only code that wrote task markers into `content` passes them, never a model's answer
+      extra: { attachments?: MessageAttachment[]; taskIds?: string[] } = {},
     ): Promise<ThreadMessage> {
       return db.transaction('rw', db.threads, db.messages, async () => {
         const last = await messagesOf(threadId).last();
@@ -146,6 +147,7 @@ export function createThreadStore(db: AviCopilotDb = defaultDb) {
           content,
           ts: Date.now(),
           ...(extra.attachments?.length ? { attachments: extra.attachments } : {}),
+          ...(extra.taskIds?.length ? { taskIds: [...new Set(extra.taskIds)] } : {}),
         };
         await db.messages.add(message);
         const thread = await db.threads.get(threadId);

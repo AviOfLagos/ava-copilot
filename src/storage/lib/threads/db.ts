@@ -115,6 +115,9 @@ export interface ThreadMessage {
   ts: number;
   // Images and videos the user attached to this message (see ./attachments.ts)
   attachments?: MessageAttachment[];
+  // The tasks the code that built this message wrote into it (the brief, a meeting note). Only a task marker whose
+  // id is here gets a live checkbox; a marker a model wrote is plain text (src/storage/lib/tasks/markers.ts)
+  taskIds?: string[];
 }
 
 /**

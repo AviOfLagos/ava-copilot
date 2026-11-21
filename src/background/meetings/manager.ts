@@ -61,6 +61,7 @@ import {
   QA_INSTRUCTIONS,
   NOTE_INSTRUCTIONS,
   noteToMarkdown,
+  taskIdsOf,
   noteSchema,
   ROLLING_SUMMARY_INSTRUCTIONS,
   TRANSCRIBE_INSTRUCTIONS,
@@ -929,8 +930,12 @@ export class MeetingManager {
 
       if (meeting.threadId) {
         // The thread gets the note without the transcript, which stays in the meeting
-        const summaryOnly = noteToMarkdown(meeting, note, []).replace(/\n\n## Transcript[\s\S]*$/, '');
-        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly);
+        // Its action items are live checkboxes: the message vouches for the tasks it names
+        const summaryOnly = noteToMarkdown(meeting, note, [], { markers: true }).replace(
+          /\n\n## Transcript[\s\S]*$/,
+          '',
+        );
+        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly, { taskIds: taskIdsOf(note) });
         await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${note.title}`);
       }
     } catch (error) {

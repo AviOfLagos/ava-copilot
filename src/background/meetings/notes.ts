@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { stripTaskMarkers, taskMarker } from '@extension/storage';
 import type { MeetingNote, MeetingRecord, TranscriptSegment } from '@extension/storage';
 import { formatClock, transcriptText } from './segments';
 
@@ -124,23 +125,31 @@ export function noteHeading(
 }
 
 /**
- * The meeting note as Markdown, with the full transcript at the end.
+ * The meeting note as Markdown, with the full transcript at the end. With `markers`, each action item that is on
+ * the task board ends with its task's marker, for the meeting's chat, which vouches for them (taskIdsOf). The
+ * meeting's own Markdown, which is exported and read by models, is written without them.
  */
 export function noteToMarkdown(
   meeting: Pick<MeetingRecord, 'startedAt' | 'endedAt' | 'platform'>,
   note: MeetingNote,
   segments: Pick<TranscriptSegment, 'tStart' | 'speaker' | 'text'>[],
+  options: { markers?: boolean } = {},
 ): string {
+  // Every word below came from a model: no marker in it survives, so only the code's own markers can be live
   const list = (items: string[], empty: string) =>
-    items.length ? items.map(item => `- ${item}`).join('\n') : `_${empty}_`;
+    items.length ? items.map(item => `- ${stripTaskMarkers(item)}`).join('\n') : `_${empty}_`;
   const actions = note.actionItems.length
     ? note.actionItems
-        .map(item => `- [ ] **${item.owner}**: ${item.task}${item.due ? ` (due ${item.due})` : ''}`)
+        .map(item => {
+          // A model wrote the item's words: any marker in them is taken out, so only the code's own one is live
+          const words = `**${stripTaskMarkers(item.owner)}**: ${stripTaskMarkers(item.task)}${item.due ? ` (due ${stripTaskMarkers(item.due)})` : ''}`;
+          return options.markers && item.taskId ? `- [ ] ${words}${taskMarker(item.taskId)}` : `- [ ] ${words}`;
+        })
         .join('\n')
     : '_None_';
 
   return [
-    `# ${note.title}`,
+    `# ${stripTaskMarkers(note.title)}`,
     noteHeading(meeting, note),
     '## TL;DR',
     list(note.tldr, 'Nothing to summarize'),
@@ -153,4 +162,9 @@ export function noteToMarkdown(
     '## Transcript',
     transcriptText(segments) || '_No transcript_',
   ].join('\n\n');
+}
+
+/** The tasks a note's chat message vouches for: its action items' task ids. */
+export function taskIdsOf(note: Pick<MeetingNote, 'actionItems'>): string[] {
+  return note.actionItems.map(item => item.taskId).filter((id): id is string => !!id);
 }

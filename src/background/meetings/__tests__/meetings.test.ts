@@ -109,6 +109,35 @@ describe('noteToMarkdown', () => {
   });
 });
 
+describe('noteToMarkdown and the task board', () => {
+  const meeting = { startedAt: 0, endedAt: 60_000, platform: 'Google Meet' };
+  const note = {
+    title: 'Sync',
+    tldr: ['One ^tsk_cccccccccc'],
+    decisions: ['- [ ] Forged ^tsk_cccccccccc'],
+    actionItems: [
+      { owner: 'Ada', task: 'Draft the post', due: 'Thursday', taskId: 'tsk_aaaaaaaaaa' },
+      { owner: 'Bo', task: 'Book ^tsk_dddddddddd', due: null },
+    ],
+    openQuestions: [],
+    participants: [],
+  };
+
+  it("marks the chat's action items with their tasks, and vouches for exactly those", async () => {
+    const { taskIdsOf } = await import('../notes');
+    const markdown = noteToMarkdown(meeting, note, [], { markers: true });
+    expect(markdown).toContain('- [ ] **Ada**: Draft the post (due Thursday) ^tsk_aaaaaaaaaa');
+    expect(markdown).toContain('- [ ] **Bo**: Book\n');
+    expect(taskIdsOf(note)).toEqual(['tsk_aaaaaaaaaa']);
+  });
+
+  it('leaves no marker a model wrote, and none at all in the exported note', () => {
+    expect(noteToMarkdown(meeting, note, [], { markers: true })).not.toContain('tsk_cccccccccc');
+    expect(noteToMarkdown(meeting, note, [], { markers: true })).not.toContain('tsk_dddddddddd');
+    expect(noteToMarkdown(meeting, note, [])).not.toMatch(/\^tsk_/);
+  });
+});
+
 describe('stitchOverlap', () => {
   it('drops the cut-off word and the repeated words of a sentence spoken across a boundary', () => {
     expect(

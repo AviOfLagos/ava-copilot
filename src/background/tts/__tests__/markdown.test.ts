@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { toSpeakableText } from '../markdown';
 
 describe('toSpeakableText', () => {
+  it('never reads out a task marker', () => {
+    expect(toSpeakableText('- [ ] Send the login ^tsk_abcdefghij')).not.toContain('tsk');
+  });
+
   it('drops heading marks', () => {
     expect(toSpeakableText('# Title\n\nBody text.')).toBe('Title\nBody text.');
   });
