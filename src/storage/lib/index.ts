@@ -14,6 +14,8 @@ export * from './account';
 // Re-export the favorites instance for direct use
 export { default as favoritesStorage } from './prompt/favorites';
 export * from './workspaces';
+export * from './products';
+export * from './growth';
 export * from './graph';
 export * from './agents';
 export * from './workflows';
@@ -29,3 +31,4 @@ export * from './history';
 export * from './whatsapp';
 export * from './personalities';
 export * from './identity';
+export * from './rounds';

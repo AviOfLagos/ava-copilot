@@ -10400,5 +10400,380 @@
   },
   "settings_permissions_hint": {
     "message": "Estes passos rodam sem cartão, em qualquer chat, agente ou rotina. Pagar, excluir e dar acesso sempre perguntam."
+  },
+  "product_title": {
+    "message": "Produto"
+  },
+  "product_add": {
+    "message": "Adicionar o produto que este espaço vende"
+  },
+  "product_hint": {
+    "message": "Os fatos que todo agente usa sobre o que este espaço vende. Um campo vazio aparece como “não definido”, e os agentes dizem que não sabem."
+  },
+  "product_notSet": {
+    "message": "Não definido"
+  },
+  "product_missing": {
+    "message": "Ainda não definido: $1"
+  },
+  "product_missing_audience": {
+    "message": "para quem é"
+  },
+  "product_missing_pricing": {
+    "message": "preço"
+  },
+  "product_missing_email": {
+    "message": "e-mail de contato"
+  },
+  "product_missing_postal": {
+    "message": "endereço postal"
+  },
+  "product_missing_betaRule": {
+    "message": "regra do beta"
+  },
+  "product_missing_social": {
+    "message": "contas sociais"
+  },
+  "product_missing_northStar": {
+    "message": "métrica principal"
+  },
+  "product_missing_notify": {
+    "message": "onde avisar você"
+  },
+  "product_group_facts": {
+    "message": "O produto"
+  },
+  "product_group_places": {
+    "message": "Onde ele fica"
+  },
+  "product_group_outreach": {
+    "message": "Contato"
+  },
+  "product_group_limits": {
+    "message": "Metas e limites"
+  },
+  "product_name": {
+    "message": "Nome do produto"
+  },
+  "product_url": {
+    "message": "Site"
+  },
+  "product_oneLiner": {
+    "message": "Em uma linha"
+  },
+  "product_stage": {
+    "message": "Estágio"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "No ar"
+  },
+  "product_audience": {
+    "message": "Para quem é (um por linha, o mais valioso primeiro)"
+  },
+  "product_problem": {
+    "message": "O problema que resolve"
+  },
+  "product_alternatives": {
+    "message": "O que as pessoas usam no lugar (um por linha)"
+  },
+  "product_differentiators": {
+    "message": "Por que este (um por linha, cada um comprovável)"
+  },
+  "product_pricing": {
+    "message": "Preço, exatamente como no site"
+  },
+  "product_never": {
+    "message": "Nunca dizer ou fazer (um por linha)"
+  },
+  "product_repo": {
+    "message": "Repositório (dono/nome)"
+  },
+  "product_admin": {
+    "message": "Endereço do console de administração"
+  },
+  "product_adminAccount": {
+    "message": "Login de administração"
+  },
+  "product_slack": {
+    "message": "Canais do Slack com as notificações (um por linha: #nome e depois o id do canal, se souber)"
+  },
+  "product_emailFrom": {
+    "message": "O e-mail de contato sai de"
+  },
+  "product_replyTo": {
+    "message": "As respostas vão para"
+  },
+  "product_postal": {
+    "message": "Endereço postal para o rodapé dos e-mails"
+  },
+  "product_notify": {
+    "message": "Avise-me por"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "Ambos"
+  },
+  "product_northStar": {
+    "message": "Métrica principal"
+  },
+  "product_weeklyTarget": {
+    "message": "Meta semanal"
+  },
+  "product_budget": {
+    "message": "Orçamento de marketing (USD)"
+  },
+  "product_betaTesters": {
+    "message": "Testadores beta por semana"
+  },
+  "product_betaPlan": {
+    "message": "Plano do beta"
+  },
+  "product_betaDays": {
+    "message": "Duração do beta (dias)"
+  },
+  "product_card_now": {
+    "message": "agora: $1"
+  },
+  "product_api": {
+    "message": "Endereço da API de números"
+  },
+  "growth_title": {
+    "message": "Números"
+  },
+  "growth_hint": {
+    "message": "A Ava lê os números deste produto na API dele, por código, a cada duas horas. Um número que não pôde ser lido aparece como “sem leitura”, nunca como 0."
+  },
+  "growth_token": {
+    "message": "Token da API"
+  },
+  "growth_token_saved": {
+    "message": "Salvo: $1"
+  },
+  "growth_token_placeholder": {
+    "message": "Cole o token aqui"
+  },
+  "growth_token_save": {
+    "message": "Salvar token"
+  },
+  "growth_token_remove": {
+    "message": "Remover token"
+  },
+  "growth_readNow": {
+    "message": "Ler agora"
+  },
+  "growth_reading": {
+    "message": "Lendo…"
+  },
+  "growth_connected": {
+    "message": "Conectado. Última leitura: $1."
+  },
+  "growth_connectedBut": {
+    "message": "Conectado, mas um número não pôde ser lido: $1"
+  },
+  "growth_notConnected": {
+    "message": "Não conectado: $1"
+  },
+  "growth_never": {
+    "message": "Ainda não lido."
+  },
+  "growth_signupsToday": {
+    "message": "Cadastros hoje (UTC): $1"
+  },
+  "growth_noReading": {
+    "message": "sem leitura"
+  },
+  "growth_noApi": {
+    "message": "Nenhum endereço de API de números está definido para este produto."
+  },
+  "growth_notice_title": {
+    "message": "$1: os números não estão conectados"
+  },
+  "growth_notice_noZero": {
+    "message": "Até isso ser resolvido, esses números aparecem como “sem leitura”. A Ava não mostra 0 no lugar deles."
+  },
+  "growth_reason_not_set": {
+    "message": "O endereço da API de números do produto está faltando ou não é https. Defina-o no produto do espaço de trabalho."
+  },
+  "growth_reason_no_token": {
+    "message": "Ainda não há token da API de números do produto salvo na Ava. Cole-o no produto do espaço de trabalho, em Números."
+  },
+  "growth_reason_agent_api_off": {
+    "message": "A API do produto está desligada do lado dele: ainda não há token definido lá. Defina o token no produto e cole o mesmo aqui."
+  },
+  "growth_reason_unauthorized": {
+    "message": "O produto recusou o token: está errado ou foi alterado no produto. Cole o atual."
+  },
+  "growth_reason_unreachable": {
+    "message": "A API do produto não respondeu: este computador está offline ou o endereço está errado."
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "A API do produto respondeu em um formato que a Ava não conhece, então não foi lida como números. A API pode ter mudado."
+  },
+  "growth_reason_not_available": {
+    "message": "O próprio produto não registra esse número."
+  },
+  "growth_reason_failed": {
+    "message": "A API do produto recusou o pedido."
+  },
+  "growth_reason_no_collector": {
+    "message": "Nada lê esta fonte ainda."
+  },
+  "rounds_settings_title": {
+    "message": "Rondas e ofertas de ajuda"
+  },
+  "rounds_toggle": {
+    "message": "A Ava faz suas rondas"
+  },
+  "rounds_toggle_hint": {
+    "message": "Algumas vezes por dia a Ava lê os números dos seus produtos, seu e-mail e o que está travado, e deixa um resumo curto de cada na Caixa de entrada. Nada é enviado, publicado ou alterado."
+  },
+  "rounds_name_pulse": {
+    "message": "Pulso do produto"
+  },
+  "rounds_name_mail": {
+    "message": "E-mail"
+  },
+  "rounds_name_stuck": {
+    "message": "Trabalho travado"
+  },
+  "rounds_runNow": {
+    "message": "Rodar agora"
+  },
+  "rounds_runNow_named": {
+    "message": "Rodar $1 agora"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 rodou às $2"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 perdida"
+  },
+  "rounds_offers": {
+    "message": "Ofertas de ajuda hoje: $1 feitas, $2 restantes."
+  },
+  "rounds_offers_silenced": {
+    "message": "Sem mais ofertas de ajuda hoje: você disse hoje não."
+  },
+  "rounds_pulse_title": {
+    "message": "Pulso do produto · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1: $2 hoje até agora, $3 ontem, normalmente $4 por dia"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "ainda não se sabe"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1: sem leitura. $2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 subiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 caiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "ontem"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "hoje até agora"
+  },
+  "rounds_pulse_slack": {
+    "message": "Notificações do Slack hoje: $1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Notificações do Slack: não lidas. $1"
+  },
+  "rounds_metric_signups": {
+    "message": "Cadastros"
+  },
+  "rounds_metric_waitlist": {
+    "message": "Lista de espera"
+  },
+  "rounds_metric_access_requests": {
+    "message": "Pedidos de acesso"
+  },
+  "rounds_metric_feedback": {
+    "message": "Feedback"
+  },
+  "rounds_stuck_title": {
+    "message": "Trabalho travado · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "Nada está travado e nada espera por você."
+  },
+  "rounds_stuck_approval": {
+    "message": "espera o seu clique"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "precisa de um passo seu"
+  },
+  "rounds_stuck_decision": {
+    "message": "espera a sua decisão"
+  },
+  "rounds_stuck_failed": {
+    "message": "falhou"
+  },
+  "rounds_stuck_more": {
+    "message": "e mais $1"
+  },
+  "rounds_mail_title": {
+    "message": "Ronda de e-mail · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "O e-mail não foi lido: o agente de E-mail não está configurado ou está pausado. Ative-o em Agentes para receber um resumo aqui."
+  },
+  "rounds_mail_failed": {
+    "message": "O e-mail não foi lido: $1"
+  },
+  "checkin_mail": {
+    "message": "Quer que eu organize seu e-mail? $1 não lidos."
+  },
+  "checkin_mailPlain": {
+    "message": "Quer que eu organize seu e-mail?"
+  },
+  "checkin_retry": {
+    "message": "$1 tarefas falharam: $2. Quer que eu tente de novo?"
+  },
+  "checkin_body": {
+    "message": "Aprove e eu começo agora, onde você pode ver. Recusar significa hoje não: só ofereço de novo amanhã. Nada é enviado sem o seu clique."
+  },
+  "rounds_failed_title": {
+    "message": "A ronda de $1 das $2 não rodou"
+  },
+  "rounds_failed_cut": {
+    "message": "Foi interrompida antes de terminar: o navegador ou a extensão parou. Roda de novo no próximo horário."
+  },
+  "checkin_failed": {
+    "message": "Não consegui começar o que você aprovou"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Notificações do Slack hoje, pelo menos: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "o produto não indica nenhum canal do Slack com o id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "nenhum conector do Slack está ativo neste espaço de trabalho."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "o conector do Slack precisa que você entre de novo."
+  },
+  "rounds_slack_asks_first": {
+    "message": "a ferramenta do Slack que lê um canal pede permissão antes de rodar. Deixe-a rodar sem perguntar em Conexões."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "o conector do Slack não tem ferramenta que leia um canal por um dia."
+  },
+  "rounds_slack_failed": {
+    "message": "não foi possível ler o Slack."
   }
 }

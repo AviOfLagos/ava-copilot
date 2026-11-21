@@ -2598,6 +2598,107 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `browser/__tests__/tabRegistry.test.ts`, `tabs/__tests__`, the "#68" block in
   `threads/__tests__/manager.test.ts`, and `e2e/tabs.e2e.mjs` (a second window, real tabs).
 
+### Product profile per workspace, and the Suture workspace (2026-11-20, #69, docs/growth-team.md Part 6)
+
+- `src/storage/lib/products`: `ProductProfile` (one per workspace, storage key `products`) and `productStore`.
+  `cleanProductProfile` is the one shape that is kept: a half-filled part (a beta rule with no numbers, a north
+  star with no target, a sender with no address) goes back to "not set" instead of being stored with a 0.
+- Agents read it in the state message, right after the workspace section (`background/products/section.ts`,
+  called from `workspaces/inject.ts`): "These are the only facts about this product you may state", then one line
+  per fact, and "not set" for every gap.
+- Edited in the workspace screen (`side-panel/workspaces/ProductFields.tsx`): a line under the heading names what
+  is not set yet. Ava changes it with `update_product_profile`, which shows every changed field with what it says
+  now and saves only after the user's click. That tool reaches the product's facts only: the budget, the beta
+  rule, the sender, the postal address, the accounts and the admin console are set by the user in the screen.
+- Seed (`products/seed.ts`): only when `VITE_SEED_PROFILE=avi`, once, and on an install that already had its
+  workspaces. Suture's facts come from the owner's brief and from trysuture.com as it read on 2026-11-20. Not
+  given yet, so empty: the outreach address, the postal address, the beta rule, the social accounts, the north
+  star, where to tell the owner, and the admin login.
+- **Differences from the spec's shape:** `slackChannels` holds a name and an id (the Slack connector reads by
+  id); `postalAddress` is a field of its own; `northStar`, `budget`, `notify` can be null (not set).
+- After review: number fields and the Slack rows keep what is typed (so "12.5" and a second row can be typed);
+  the stage is "not set" until picked; "spent" is only stated once something was spent; every text is kept on one
+  line, so a value cannot pass itself off as another line of the profile; Ava's change is applied to the profile
+  as it is when the user confirms, and nothing is saved for a workspace deleted meanwhile.
+- Known and left: the seed's text is in the public source and in every bundle (as the owner's other workspaces
+  already are); it only runs in the owner's build. Two extension pages saving two workspaces' products in the
+  same instant can lose one of the saves.
+- Tests: `storage/lib/products/__tests__`, `background/products/__tests__`, `e2e/products.e2e.mjs`.
+
+### Growth numbers: the store and the collectors (2026-11-20, #70, docs/growth-team.md Part 7)
+
+- Database version 8 (`src/storage/lib/growth`): `growthMetrics` (a number that was read: product, UTC day,
+  source, metric, value, and optionally channel, campaign, post), `growthReadings` (for one metric on one day:
+  read, or not and why), `growthSources` (whether a source can be reached now, and the reason last told), and
+  `growthLinks`. A day with no "ok" reading has no number: **it is "no reading", never 0.** A failed read never
+  replaces a number that was read earlier; the answer says when it was read.
+- The product collector (`background/growth/collect.ts`, `suture.ts`) reads the Suture agent API
+  (`<admin console>/api/agent/v1`, bearer token) for yesterday and today, every two hours and on "Read now":
+  sign-ups, waitlist, access requests and feedback (each with its sources and campaigns), spend, orgs, orgs
+  active in 7 days, orgs on a paid plan. Every answer is checked against the documented shape; anything else is
+  "no reading". Off (503 `agent_api_off`), a refused token (401), no token, or no answer make the source "not
+  connected" with that reason, after one request. One failure makes one Inbox item; the next comes after it
+  worked again or for another reason.
+- The token is in the vault (`product-api:<workspaceId>`), pasted in the workspace screen under Numbers, which
+  also shows the state and "Sign-ups today". It is never in source, storage.local, a log or a reply.
+- `metrics_query(metric, from/to or days, by)` is the only way an agent reads numbers, for the product of its own
+  workspace only. `make_link(url, source, medium, campaign)` tags a link to the product's own site and keeps it.
+- **Where the live API differs from Part 13** (the API wins): no emails or names come back, only counts and
+  sources; `/signups` can say it has no reading; `/payments` always does (Suture keeps no payment records), so
+  `payments` is "no reading" and `paid_orgs` is read instead; `/spend` is cost to serve, not revenue.
+- **Not built here, and why:** the page collector for the super admin (the API is live, and its rule, "check it
+  is the page you expect or record no reading", is applied to the API's answers instead); the social and email
+  collectors (their sources arrive with #76 and #79); Slack counts (they come with the product pulse, #71); link
+  clicks (nothing counts a click yet: a link's effect is read as sign-ups by campaign).
+- A new call outside the model provider: the product's own API, at the address in its profile, https only (plain
+  http on this computer for tests), with no cookies.
+- After review: a number that says how things stand (`orgs`, `active_orgs`, `paid_orgs`) is never added up over
+  days, the answer gives the latest; a day read before it was over is marked "not final" and is read again later,
+  as is a day that could not be read (up to two older days a run, within a week); a list cut at the row limit
+  never replaces a whole one; only the API's own `agent_api_off` counts as off; a notice is marked as told only
+  once the Inbox has it; the token is kept under the host it was saved for (`product-api:<workspace>@<host>`), so
+  changing the address never sends it elsewhere; `paid_orgs` is the product's own count; the collect job is
+  scheduled once, not on every start of the background.
+- Tests: `background/growth/__tests__`, `e2e/growth.e2e.mjs` with `e2e/mock-suture.mjs`.
+
+### Rounds and check-ins (2026-11-20, #71, docs/growth-team.md Part 4)
+
+- `src/background/rounds`: a job ticks every five minutes and does at most one thing, the one round that is due
+  or else one offer. Times are local: product pulse 08:30 and 16:00, mail 09:00 and 14:00, stuck work 12:00
+  (`plan.ts`, pure and tested with a fake clock). A slot is marked before its round runs. A round missed while
+  the browser was closed runs once when it opens that day: only its latest slot, the earlier ones are marked
+  missed. State is in `storage.local` (`rounds`), a new day starts clean.
+- Product pulse (plain code): collects each product's numbers, then per metric "today so far, yesterday, usually".
+  "What changed" is arithmetic (`whatChanged`): at least 50% and at least 5. **A choice beyond the spec:** a whole
+  day (yesterday) is compared with the seven before it and flagged up or down; today so far is flagged only when
+  it is already up, because a day that is not over always looks down. Slack notifications are counted by the
+  kind in square brackets, through the Slack connector's read tool when the user set it to run without asking;
+  otherwise the pulse says why they were not read. Counts are kept as `slack_<kind>` numbers.
+- Stuck work (plain code): the brief's own `waitingItems`, so the two never disagree.
+- Mail: asks the Mail agent (`team_mail`) for a run in the agents' own window, unattended, one per slot; its answer
+  in the Inbox is the digest. With no Mail agent the round says so once a day.
+- Each round is one Inbox item. A flagged change also goes to WhatsApp when the product's notify channel says so;
+  never to Slack, which would be a post.
+- Check-ins: after three quiet hours between 09:00 and 18:00 (from the user's last task, the browser opening, or
+  the last offer), not in a meeting, at most two a day: one Inbox approval built from what the rounds found
+  ("Want me to sort your mail? 14 unread.", or failed tasks to try again). Approve starts it with the user
+  there; decline is "not today" and silences offers until tomorrow. Offers left unanswered are closed when the
+  day turns. With nothing useful to offer, none is made.
+- Settings › General › Rounds and check-ins: the switch, each round's times and what ran, "Run now".
+- **Not built here:** reading Slack in the browser tab when no connector is on (it needs an agent run with a
+  skill, not plain code); the Slack count has not been run against the live Slack connector, only against a
+  stand-in with the documented tool shape.
+- After review: an offer is taken once (two clicks start the work once) and is closed in the Inbox when answered
+  or when the day turns; a retry offer only touches chats that still stand failed; an offer never counts as
+  "waiting on you" in the brief; a round that fails or was cut off by the background stopping says so in the
+  Inbox, once; "quiet" is the newest change to a chat the user started, not its creation; a yesterday read before
+  it ended is not flagged; Slack kinds count only at the start of a message, the eight most frequent; Settings
+  only looks at the state and never turns the day over.
+- Known and left: rounds are on by default; the pulse's days are UTC days (said in the digest); a Slack kind that
+  stops appearing is not flagged as a drop; only today's Slack messages are read.
+- Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers, a simulated full day),
+  `e2e/rounds.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.
