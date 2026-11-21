@@ -78,15 +78,22 @@ function fail(context: AgentContext, error: string): ActionResult {
 }
 
 /** Who is asking: the chat's workspace and, when an agent runs it, that agent. */
-async function whoAsks(
+export async function whoAsks(
   context: Pick<AgentContext, 'taskId'>,
-): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'> | { error: string }> {
+): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'automated'> | { error: string }> {
   const thread = await threadStore.get(context.taskId);
   const workspace = await workspaceStore.get(thread?.workspaceId);
   if (!workspace)
     return { error: 'This chat is in no workspace, so it has no product to act for. Ask the user to pick one.' };
   const agent = thread?.agentId ? await db.agents.get(thread.agentId) : undefined;
-  return { workspaceId: workspace.id, agentId: agent?.id ?? null, agentName: agent?.name ?? 'Ava' };
+  return {
+    workspaceId: workspace.id,
+    agentId: agent?.id ?? null,
+    agentName: agent?.name ?? 'Ava',
+    // Only the user's own words (typed, spoken, or sent from their phone) skip the draft checks
+    automated:
+      Boolean(agent) || (thread?.origin !== undefined && !['user', 'voice', 'whatsapp'].includes(thread.origin)),
+  };
 }
 
 async function run(
@@ -124,15 +131,23 @@ export function queueForApprovalAction(
   return run(
     context,
     input.intent || 'Leaving it for your approval',
-    who => ({
-      ...who,
-      action: input.kind,
-      title: input.title,
-      body: input.text,
-      target: input.where,
-      why: input.why,
-      declaredNamesCustomer: input.names_customer,
-    }),
+    who =>
+      input.kind === 'outreach_email' || input.kind === 'follow_up'
+        ? {
+            // An email goes only through the tools that keep its rules: the do-not-write list, the day's limit,
+            // one follow-up, and the footer
+            error:
+              'An email to a person is drafted with draft_outreach (a first email) or draft_follow_up (the one follow-up), which keep the rules. queue_for_approval does not take emails.',
+          }
+        : {
+            ...who,
+            action: input.kind,
+            title: input.title,
+            body: input.text,
+            target: input.where,
+            why: input.why,
+            declaredNamesCustomer: input.names_customer,
+          },
     deps,
   );
 }

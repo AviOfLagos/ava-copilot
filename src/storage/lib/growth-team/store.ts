@@ -1,6 +1,15 @@
 import { db as defaultDb } from '../threads/db';
 import type { AviCopilotDb } from '../threads/db';
-import type { LedgerEntry, TeamItem, TeamItemStatus } from './types';
+import { canonicalEmail, feedbackRecordId, teamContactId } from './types';
+import type {
+  FeedbackRecord,
+  LedgerEntry,
+  SuppressedAddress,
+  TeamChannel,
+  TeamContact,
+  TeamItem,
+  TeamItemStatus,
+} from './types';
 
 /**
  * The growth team's items and ledger, over a database that defaults to the extension's own. Tests pass their
@@ -83,6 +92,80 @@ export function createTeamStore(db: AviCopilotDb = defaultDb) {
     },
 
     ledger: (workspaceId: string) => db.teamLedger.where('workspaceId').equals(workspaceId).toArray(),
+
+    /** The feedback ids of a workspace already sorted, out of `ids`. */
+    async sortedFeedback(workspaceId: string, ids: readonly string[]): Promise<Set<string>> {
+      const found = await db.teamFeedback.bulkGet(ids.map(id => feedbackRecordId(workspaceId, id)));
+      return new Set(found.filter(Boolean).map(record => record!.feedbackId));
+    },
+
+    /**
+     * Writes how a feedback item was sorted, once: the first sort stands, and the count of feature requests on the
+     * same topic (this one included) comes back from the same transaction, so two sorts landing together count
+     * right.
+     */
+    async sortFeedback(
+      record: FeedbackRecord,
+    ): Promise<{ record: FeedbackRecord; added: boolean; topicCount: number }> {
+      return db.transaction('rw', db.teamFeedback, async () => {
+        const existing = await db.teamFeedback.get(record.id);
+        const kept = existing ?? record;
+        if (!existing) await db.teamFeedback.add(record);
+        const topicCount = kept.topic
+          ? await db.teamFeedback
+              .where('topic')
+              .equals(kept.topic)
+              .filter(row => row.workspaceId === kept.workspaceId && row.sort === 'feature')
+              .count()
+          : 0;
+        return { record: kept, added: !existing, topicCount };
+      });
+    },
+
+    linkFeedback: (id: string, itemId: string) => db.teamFeedback.update(id, { itemId }),
+    forgetFeedback: (id: string) => db.teamFeedback.delete(id),
+
+    // ── The Product Marketing Manager's contacts and channels (#75) ──
+
+    contact: (workspaceId: string, email: string) => db.teamContacts.get(teamContactId(workspaceId, email)),
+    /** People first written to since `from`, for the day's limit. */
+    contactsSince: (workspaceId: string, from: number) =>
+      db.teamContacts
+        .where('firstAt')
+        .aboveOrEqual(from)
+        .filter(row => row.workspaceId === workspaceId)
+        .count(),
+    saveContact: (contact: TeamContact) => db.teamContacts.put(contact),
+    /**
+     * Takes one of the day's places for a new person, in one transaction: refused when the person was written to
+     * before or the day is full, so two drafts at once cannot both take the last place.
+     */
+    async reserveContact(contact: TeamContact, dayStart: number, limit: number): Promise<'ok' | 'exists' | 'full'> {
+      return db.transaction('rw', db.teamContacts, async () => {
+        if (await db.teamContacts.get(contact.id)) return 'exists';
+        const today = await db.teamContacts
+          .where('firstAt')
+          .aboveOrEqual(dayStart)
+          .filter(row => row.workspaceId === contact.workspaceId)
+          .count();
+        if (today >= limit) return 'full';
+        await db.teamContacts.add(contact);
+        return 'ok';
+      });
+    },
+    forgetContact: (id: string) => db.teamContacts.delete(id),
+
+    suppressed: (email: string) => db.teamSuppressed.get(canonicalEmail(email)),
+    /** Stops all writing to an address, for good, whatever the product. The first reason stands. */
+    async suppress(email: string, why: SuppressedAddress['why'], at: number): Promise<void> {
+      const key = canonicalEmail(email);
+      await db.transaction('rw', db.teamSuppressed, async () => {
+        if (!(await db.teamSuppressed.get(key))) await db.teamSuppressed.add({ email: key, why, at });
+      });
+    },
+
+    channels: (workspaceId: string) => db.teamChannels.where('workspaceId').equals(workspaceId).toArray(),
+    saveChannel: (channel: TeamChannel) => db.teamChannels.put(channel),
   };
 }
 

@@ -17,7 +17,7 @@ import {
 import { areaKey, ownershipClash, validateProfile } from '../profile';
 import { AgentService } from '../service';
 import type { ThreadsPort, WindowPort } from '../service';
-import { agentTemplate, TEAM_TEMPLATE_IDS } from '../templates';
+import { agentTemplate, GROWTH_TEMPLATE_IDS, TEAM_TEMPLATE_IDS } from '../templates';
 import { agentsForMeeting, meetingData } from '../triggers';
 import { agentRecord, profile } from './fixtures';
 
@@ -69,6 +69,19 @@ describe('areas of work', () => {
     expect(areas.size).toBe(TEAM_TEMPLATE_IDS.length);
     expect(agentTemplate('team_meetings', 'UTC').triggers).toContainEqual({ type: 'meeting_ended' });
     expect(agentTemplate('team_mail', 'UTC').skills).toContain('gmail');
+  });
+
+  it('starts every growth template valid, in the browser, with a personality and areas no team member owns', () => {
+    const teamAreas = new Set(TEAM_TEMPLATE_IDS.flatMap(id => agentTemplate(id, 'UTC').owns ?? []).map(areaKey));
+    for (const id of GROWTH_TEMPLATE_IDS) {
+      const template = agentTemplate(id, 'UTC');
+      const check = validateProfile(template);
+      expect(check.ok, `${id}: ${check.ok ? '' : check.issues.join(' ')}`).toBe(true);
+      expect(template.executor, id).toBe('browser');
+      expect(template.personalityId, id).toBeTruthy();
+      expect(template.instructions).toMatch(/Never send, post, publish, accept, delete or buy/);
+      for (const area of template.owns ?? []) expect(teamAreas.has(areaKey(area)), `${id}: ${area}`).toBe(false);
+    }
   });
 });
 

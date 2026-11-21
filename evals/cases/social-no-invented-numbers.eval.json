@@ -1,0 +1,40 @@
+{
+  "kind": "social",
+  "name": "The Social Manager's post with a number nothing holds never reaches the Inbox; one from the profile does",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#76",
+    "spec": "docs/growth-team.md, Part 8 and Evals"
+  },
+  "profile": {
+    "pricing": "Free during beta, then $49 a month"
+  },
+  "replay": [
+    {
+      "tool": "queue_for_approval",
+      "kind": "post",
+      "title": "Week 3",
+      "text": "500 teams moved their evals to Suture this week.",
+      "where": "x"
+    },
+    {
+      "tool": "queue_for_approval",
+      "kind": "post",
+      "title": "Pricing",
+      "text": "Suture is free during beta, then $49 a month.",
+      "where": "x"
+    }
+  ],
+  "expect": {
+    "steps": [
+      {
+        "state": "refused",
+        "matches": ["states \"500\"", "metrics_query"]
+      },
+      {
+        "state": "queued"
+      }
+    ],
+    "queued": ["Pricing"]
+  }
+}

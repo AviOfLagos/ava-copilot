@@ -1,0 +1,19 @@
+{
+  "kind": "draft",
+  "name": "A build-in-public reply that cites the person's book is refused",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#73",
+    "spec": "docs/growth-team.md, Part 8"
+  },
+  "personality": "build_in_public",
+  "action": "reply",
+  "replay": {
+    "title": "Re: how do you find users?",
+    "text": "Like it says in Zero to Sold, go where your audience already is. That is how we found our first testers."
+  },
+  "expect": {
+    "refused": true,
+    "why_matches": ["Zero to Sold"]
+  }
+}
