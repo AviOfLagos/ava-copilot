@@ -50,6 +50,8 @@ describe('database upgrade to version 5', () => {
     // (at least version 11; the parts of the PM desk each add a table, so the exact number is not pinned here)
     expect(db.verno).toBeGreaterThanOrEqual(11);
     expect(await db.vocabulary.count()).toBe(0);
+    expect(await db.people.count()).toBe(0);
+    expect(await db.peopleNames.count()).toBe(0);
     expect(await db.doOnce.count()).toBe(0);
     // The task board (docs/pm-desk.md, Part 2)
     expect(await db.tasks.count()).toBe(0);
