@@ -3,6 +3,7 @@ import type { MeetingRecord, ObserveInput, TranscriptSegment, UpcomingEvent } fr
 import { isGenericSpeaker } from '../meetings/speakers';
 import { inviteeInput, inviteesOf, inviteRef } from './calendar';
 import { isNobody, isSelfName, ownerEmails } from './owner';
+import { postMeetingCard } from './cards';
 import { people } from './people';
 import type { People } from './people';
 
@@ -47,13 +48,14 @@ export function meetingInputs(
   const roster = (meeting.roster ?? []).filter(name => !isSelfName(name));
   for (const text of roster) inputs.push({ ...base, text, source: 'meet', context: 'was on the call' });
 
-  // An invitee whose name is a roster name gives that person their address: both say they were on this call
-  const rosterKeys = new Map(roster.map(name => [nameKey(name), name]));
-  for (const invitee of invite ? inviteesOf(invite, own) : []) {
-    const onCall = rosterKeys.get(nameKey(invitee.name));
+  // An invitee whose name is a roster name is told in the call's workspace, so it joins that name's question with
+  // its address: the owner's answer links them. A name match alone never gives anyone an address
+  const rosterKeys = new Set(roster.map(name => nameKey(name)));
+  const invitees = invite ? inviteesOf(invite, own) : [];
+  for (const invitee of invitees) {
     inputs.push(
-      onCall
-        ? { ...base, text: onCall, source: 'calendar', email: invitee.email, trusted: true, context: 'was invited' }
+      rosterKeys.has(nameKey(invitee.name))
+        ? { ...base, text: invitee.name, source: 'calendar', email: invitee.email, context: 'was invited' }
         : { ...inviteeInput(invitee, invite!.id), ref: inviteRef(invite!.id) },
     );
   }
@@ -68,22 +70,23 @@ export function meetingInputs(
   }
   for (const { text } of spoke.values()) inputs.push({ ...base, text, source: 'meet', context: 'spoke on the call' });
 
-  const owners = new Map<string, { text: string; tasks: number }>();
+  // Each action item's owner, with the task the board gave it: a known name links the task to its person, an
+  // unknown one is asked about at once, and the answer links every task that waited on it
+  const owners = new Map<string, { text: string; taskIds: string[]; untracked: number }>();
   for (const item of meeting.note?.actionItems ?? []) {
     const owner = item.owner?.trim() ?? '';
     if (!owner || isSelfName(owner) || isNobody(owner)) continue;
-    const entry = owners.get(nameKey(owner)) ?? { text: owner, tasks: 0 };
-    entry.tasks += 1;
+    const entry = owners.get(nameKey(owner)) ?? { text: owner, taskIds: [], untracked: 0 };
+    if (item.taskId) entry.taskIds.push(item.taskId);
+    else entry.untracked += 1;
     owners.set(nameKey(owner), entry);
   }
-  for (const { text, tasks } of owners.values()) {
-    inputs.push({
-      ...base,
-      text,
-      source: 'spoken',
-      tasks,
-      context: tasks === 1 ? 'was given a task on the call' : `was given ${tasks} tasks on the call`,
-    });
+  for (const { text, taskIds, untracked } of owners.values()) {
+    const count = taskIds.length + untracked;
+    const context = count === 1 ? 'was given a task on the call' : `was given ${count} tasks on the call`;
+    for (const taskId of taskIds) inputs.push({ ...base, text, source: 'task', taskId, context });
+    // Items the board could not take still make the name worth asking about
+    if (untracked) inputs.push({ ...base, text, source: 'task', tasks: untracked, context });
   }
   return inputs;
 }
@@ -96,6 +99,8 @@ export interface MeetDeps {
   people: Pick<People, 'observeAll'>;
   events: () => Promise<UpcomingEvent[]>;
   own: () => Promise<Set<string>>;
+  // The "Who's who" card after the call
+  card: (meetingId: string) => Promise<unknown>;
 }
 
 const defaultDeps: MeetDeps = {
@@ -103,6 +108,7 @@ const defaultDeps: MeetDeps = {
   people,
   events: async () => (await upcomingEventsStore.get().catch(() => null))?.events ?? [],
   own: ownerEmails,
+  card: meetingId => postMeetingCard(meetingId),
 };
 
 /** Learns the names of a finished call. Never throws on a missing meeting. */
@@ -112,4 +118,5 @@ export async function learnFromMeeting(meetingId: string, deps: MeetDeps = defau
   const segments = await deps.meetings.segments(meetingId);
   const invite = inviteFor(meeting, await deps.events());
   await deps.people.observeAll(meetingInputs(meeting, segments, invite, await deps.own()));
+  await deps.card(meetingId);
 }

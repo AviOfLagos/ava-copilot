@@ -2887,6 +2887,35 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: `src/storage/lib/tasks/__tests__`, `src/background/tasks/__tests__`, `src/side-panel/tasks/__tests__`,
   brief, meetings, summaries; E2E `e2e/tasks.e2e.mjs`.
 
+### People: who is who, under every name (2026-11-21, #107, docs/pm-desk.md Part 5)
+
+- Store: `src/storage/lib/people` (Dexie v14 `people`, `peopleNames`). `observe` is the one way in, plain code: a
+  known email, phone or handle is that person whatever the name; a bare name seen once is only watched; it is asked
+  about after a second sighting, at once when a task waits on it, and at once for names on a call. `resolve` goes
+  exact name in the workspace, alias for the workspace, alias for everywhere, unique first name. An alias saved for
+  one workspace never resolves in another.
+- Safety rules in code: a name match never adds an email, phone or handle (it becomes a "Yes, <name>?" question);
+  a first-name match adds nothing; an identifier only suggests on an open question; a roster/invite name pair links
+  an address only when the name is unique on both and the person has none yet.
+- Sources: Meet roster (tiles always, the People panel only while open, never a click) and caption speakers given
+  to audio segments by time overlap (`meetings/speakers.ts`); names in a finished note's action items; calendar
+  `ATTENDEE`/`ORGANIZER` (`calendar/ics.ts`); Gmail senders with their address; Slack direct messages with their id;
+  WhatsApp chats read or drafted into; GitHub connector results (authors, assignees, reviewers); the knowledge
+  graph's person readings of chats and notes. Not yet: the owner's own WhatsApp messages ("Ada says…") need names
+  read out of free text; the Mac calendar has no attendees (#32).
+- "Who's who" (`background/people/cards.ts`): a card after each call and one Inbox card a day at 17:30, at most six
+  questions, each saying where the name was seen. Answers: yes to the offered match, the other name on the card,
+  someone else, a new person, not a person. Every answer is kept for that workspace.
+- People page (`side-panel/people`): people with their names per workspace, edit, merge, remove, and "To sort".
+  `person_note` is a voice tool and an agent action; from a chat it takes only names the owner typed.
+- Task board and vocabulary (`background/people/links.ts`): action-item and graph-action owners go through
+  `observe` with source `task` and their task id; a resolved owner is linked with `taskStore.setOwner`, an unknown
+  one is asked about and linked on the answer; a merge moves the tasks, a removal unlinks them (`replaceOwner`).
+  Owners the task tools name (`task_add`, `task_assign`) are observed from the board's changes. Every person's name
+  and the other names that hold in each workspace are vocabulary seeds (`addPersonSeeds`), synced after changes.
+- Tests: store, sources, cards, note, meet and calendar unit tests; E2E `people-pages.e2e.mjs` (Meet, Gmail and
+  Slack readers on saved pages) and `people.e2e.mjs` (answer a card in the Inbox, see the name on the People page).
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

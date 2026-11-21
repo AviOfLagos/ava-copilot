@@ -5,6 +5,11 @@ export interface WatcherConversation {
   externalId: string;
   sender: string;
   snippet: string;
+  // What the page shows of who the sender is, for people (src/background/people): Gmail's address, Slack's DM id
+  senderEmail?: string;
+  senderHandle?: string;
+  // A direct message from one person, not a channel or a group
+  isPerson?: boolean;
 }
 
 export interface Watcher {

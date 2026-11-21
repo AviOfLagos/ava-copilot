@@ -10,6 +10,14 @@ import { registerAgentAction } from '../registry';
 import { openChatByName, readOpenChat, readUnreadChats, typeInComposer } from './page';
 import { whatsappSelectors } from './selectors';
 import { findWhatsappTab, probeTab, runInTab } from './tab';
+import { threadStore } from '@extension/storage';
+import { learnFromWhatsapp } from '../people/sources';
+
+/** Learns the name of a chat the user read or wrote to, in the chat's workspace (docs/pm-desk.md Part 5). */
+async function learnChat(context: AgentContext, chat: string, kind: 'read' | 'draft'): Promise<void> {
+  const thread = await threadStore.get(context.taskId).catch(() => undefined);
+  await learnFromWhatsapp(chat, thread?.workspaceId ?? null, kind);
+}
 
 /**
  * What the chat agent can do in the user's own WhatsApp Web tab: read what is unread, read one chat, and type a
@@ -114,6 +122,7 @@ export function registerWhatsappActions(): void {
         const problem = await openChat(found.tabId, found.sel, input.chat);
         if (problem) return fail(context, problem);
         const messages = (await runInTab(found.tabId, readOpenChat, { sel: found.sel, limit: MESSAGES_LIMIT })) ?? [];
+        void learnChat(context, input.chat, 'read');
         const lines = messages
           .map(message => `${message.from === 'me' ? 'Me' : input.chat}: ${message.text}`)
           .join('\n');
@@ -159,6 +168,7 @@ export function registerWhatsappActions(): void {
           );
         }
 
+        void learnChat(context, recipient, 'draft');
         // Enter in the chat box is a send: the gate shows what is in the box and waits for the user's click
         const review = await reviewAction(context, page, {
           action: 'send_keys',

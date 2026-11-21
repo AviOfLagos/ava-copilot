@@ -104,6 +104,19 @@ export function createPeople(store: PeopleStore = peopleStore) {
       return result;
     },
 
+    /**
+     * "Yes, that is the same someone as that other name on the card": the other name is settled first (as a new
+     * person named as it was seen, unless it already was), then this one as the same person.
+     */
+    async answerLike(candidateId: string, otherCandidateId: string) {
+      const other = await store.candidate(otherCandidateId);
+      if (!other) throw new Error('That question is no longer open.');
+      let personId = other.status === 'settled' ? other.personId : null;
+      if (!personId) personId = (await api.answer(otherCandidateId, { kind: 'new', name: other.text })).personId;
+      if (!personId) throw new Error('That name was marked as not a person.');
+      return api.answer(candidateId, { kind: 'same', personId });
+    },
+
     async create(fields: Parameters<PeopleStore['create']>[0]) {
       const person = await store.create(fields);
       await seed(person, fields.workspaceId);

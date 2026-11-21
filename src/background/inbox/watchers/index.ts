@@ -10,6 +10,7 @@ import { slackWatcher } from './slack';
 import type { Watcher } from './types';
 import { whatsappWatcher } from './whatsapp';
 import { toInboxDrafts } from './normalize';
+import { learnFromWatcher } from '../../people/sources';
 
 const logger = createLogger('Inbox');
 
@@ -50,6 +51,8 @@ async function runOne(watcher: Watcher, tabId: number, database: AviCopilotDb): 
   const [result] = await chrome.scripting.executeScript({ target: { tabId }, func: watcher.probe }).catch(() => []);
   const rows = Array.isArray(result?.result) ? result.result : [];
   const drafts = toInboxDrafts(watcher.source, rows);
+  // Who wrote is learned for people, on this computer only (docs/pm-desk.md Part 5)
+  void learnFromWatcher(watcher.source, rows);
   let added = 0;
   for (const draft of drafts) {
     const before = await database.inbox.get(`${draft.source}|${draft.externalId}`);

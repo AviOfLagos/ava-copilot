@@ -62,6 +62,7 @@ function deps(record: MeetingRecord, lines: string[], events: UpcomingEvent[] = 
     people,
     events: async () => events,
     own: async () => OWN,
+    card: async () => 0,
   };
 }
 
@@ -78,15 +79,15 @@ describe('the invite a call belongs to', () => {
 describe('meetingInputs', () => {
   it('tells the roster, the invite, the speakers and the task owners, never the owner himself', () => {
     const inputs = meetingInputs(meeting('m1'), segments(['Adaeze O.', 'Speaker 2', 'You', 'Adaeze O.']), invite, OWN);
-    const lines = inputs.map(input => [input.source, input.text, input.email ?? null, input.trusted ?? false]);
+    const lines = inputs.map(input => [input.source, input.text, input.email ?? null, input.workspaceId]);
     expect(lines).toEqual([
-      ['meet', 'Adaeze O.', null, false],
-      ['meet', 'dev.kunle', null, false],
-      // The invitee who is a roster name gives that name its address, on the word of both
-      ['calendar', 'Adaeze O.', 'ada@example.test', true],
-      ['calendar', 'Tolu Bello', 'tolu@example.test', false],
-      ['meet', 'Adaeze O.', null, false],
-      ['spoken', 'Ada', null, false],
+      ['meet', 'Adaeze O.', null, WS],
+      ['meet', 'dev.kunle', null, WS],
+      // The invitee who is a roster name joins that name's question with the address, for the owner to confirm
+      ['calendar', 'Adaeze O.', 'ada@example.test', WS],
+      ['calendar', 'Tolu Bello', 'tolu@example.test', null],
+      ['meet', 'Adaeze O.', null, WS],
+      ['task', 'Ada', null, WS],
     ]);
     expect(inputs.at(-1)).toMatchObject({ tasks: 2, context: 'was given 2 tasks on the call', workspaceId: WS });
   });
@@ -137,5 +138,44 @@ describe('learning from calls', () => {
     const event = { ...invite, id: 'again@1' };
     expect(await learnFromCalendar([event], { people, own: async () => OWN })).toBe(2);
     expect(await learnFromCalendar([event], { people, own: async () => OWN })).toBe(0);
+  });
+
+  it('a look-alike invite never gives a known person on the call an address', async () => {
+    const ada = await people.create({ name: 'Ada Obi', workspaceId: WS });
+    const record = meeting('m9', { roster: ['Ada Obi', 'Ada Obi'], note: undefined });
+    const evil = { ...invite, attendees: [{ name: 'Ada Obi', email: 'mallory@evil.test' }] };
+    await learnFromMeeting('m9', deps(record, ['Ada Obi'], [evil]));
+    expect((await people.get(ada.id))?.emails).toEqual([]);
+    const later = await people.observe({
+      text: 'Payroll',
+      source: 'gmail',
+      workspaceId: null,
+      email: 'mallory@evil.test',
+    });
+    expect(later.kind).toBe('candidate');
+    // It is asked about, showing the address and offering Ada Obi for the owner to confirm or not
+    const [question] = await people.store.unsettled();
+    expect(question).toMatchObject({ emails: ['mallory@evil.test'], suggestedPersonId: ada.id });
+  });
+
+  it("an action item's task goes with its owner's name, so a known owner's task is linked at once", async () => {
+    const ada = await people.create({ name: 'Ada Obi', workspaceId: WS });
+    const record = meeting('m3', {
+      roster: [],
+      note: {
+        ...meeting('m3').note!,
+        actionItems: [
+          { owner: 'Ada', task: 'Write the release note', due: null, taskId: 'tsk_1' },
+          { owner: 'Ada', task: 'Book the demo', due: null, taskId: 'tsk_2' },
+        ],
+      },
+    });
+    const inputs = meetingInputs(record, [], null, OWN);
+    expect(inputs.map(input => [input.source, input.text, input.taskId])).toEqual([
+      ['task', 'Ada', 'tsk_1'],
+      ['task', 'Ada', 'tsk_2'],
+    ]);
+    const results = await people.observeAll(inputs);
+    expect(results.every(result => result.kind === 'person' && result.personId === ada.id)).toBe(true);
   });
 });
