@@ -8,7 +8,7 @@ when a tool has no row, or when a tool has no group in `TOOL_GROUPS`. Which chan
 and are offered the growth team's tools only when the chat's workspace has a product (the channels below show the
 case with a product).
 
-120 tools. Per channel: panel 93, voice 67, whatsapp 89, agent 89, routine 89.
+121 tools. Per channel: panel 94, voice 67, whatsapp 90, agent 90, routine 90.
 
 "In" says where the tool is defined (chat action, voice tool, or both under one name). "Chars" is the size of its
 definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an agent or a routine.
@@ -48,6 +48,7 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `go_back` (go back) | chat | Screen and tabs | panel, whatsapp, agent, routine | 105 / - | Go back to the previous page |
 | `go_to_url` (go to url) | chat | Screen and tabs | panel, whatsapp, agent, routine | 161 / - | Navigate to URL in the current tab |
 | `hand_to_agent` (hand to agent) | both | Tasks | panel, voice, whatsapp, agent, routine | 564 / 609 | Hand a task to the user's agent that owns its area of work (email, social posts, research, meeting follow-ups, calendar…) or to an agent by name. |
+| `hover_element` (hover element) | chat | Screen and tabs | panel, whatsapp, agent, routine | 268 / - | Move the pointer onto an element by index, so controls that only appear on hover show up (listed under [Hidden until hover]) |
 | `input_text` (input text) | chat | Screen and tabs | panel, whatsapp, agent, routine | 299 / - | Input text into an interactive input element |
 | `install_skill` (install skill) | both | Tasks | panel, voice, whatsapp, agent, routine | 492 / 373 | Fetch a skill (a Markdown playbook) from a link the user typed in this chat — a raw .md file, a GitHub file, folder or repo with SKILL.md, or a gist — and save… |
 | `join_next_meeting` (join next meeting) | voice | Meetings and calendar | voice | - / 184 | Opens the next meeting on the calendar that has a link and, on Google Meet, presses Join now. |

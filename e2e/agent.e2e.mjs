@@ -18,6 +18,11 @@ const scenarios = {
     page => [{ click_element: { intent: 'Open the menu', index: page.find('button', 'Open menu') } }],
     done,
   ],
+  'hover-save': [
+    page => [{ hover_element: { intent: 'Show the pin controls', index: page.find('a', 'Sunset') } }],
+    page => [{ click_element: { intent: 'Save the pin', index: page.find('button', 'Save') } }],
+    done,
+  ],
   'just-finish': [done],
 };
 
@@ -73,6 +78,20 @@ test('an element under a dialog is not offered until the dialog is dealt with', 
   assert.match(mock.run.navigatorCalls[0], />Dismiss/);
   assert.match(mock.run.navigatorCalls[1], />Open menu/);
   assert.deepEqual(await session.events(), [{ type: 'dismiss' }, { type: 'menu' }]);
+  await finish(session);
+});
+
+test('a control that only shows on hover is named, revealed by hover_element, then clicked', async () => {
+  const session = await run('hover-save', '?hover=1');
+  await session.waitForEnd();
+
+  // Before the hover the Save button is invisible: it is not offered, but the state says where it hides
+  assert.doesNotMatch(mock.run.navigatorCalls[0], />Save/);
+  assert.match(mock.run.navigatorCalls[0], /Hidden until hover/);
+  assert.match(mock.run.navigatorCalls[0], /reveals: Save/);
+  // After it, Save has an index and the click lands
+  assert.match(mock.run.navigatorCalls[1], />Save/);
+  assert.deepEqual(await session.events(), [{ type: 'saved' }]);
   await finish(session);
 });
 
