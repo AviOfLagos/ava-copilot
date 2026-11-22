@@ -1,7 +1,9 @@
-import type { ThreadRecord } from '@extension/storage';
+import { toAppError } from '@extension/shared';
+import type { ConfirmRequest, ThreadRecord } from '@extension/storage';
 import { meetCodeOf } from '@src/shared/lib/protocol/companion';
 import type { MeetStatus } from '@src/shared/lib/protocol/companion';
 import { isAttendedThread } from '../agents/handoff';
+import { didNotHappen } from '../once/guard';
 import { contentWords, supportedByUser } from '../identity/facts';
 
 /**
@@ -40,10 +42,32 @@ export interface SayDeps {
   markIntroduced: (session: string) => Promise<void>;
   assistantName: () => Promise<string>;
   userName: () => Promise<string>;
-  confirm: (request: { spoken: string; meeting: UserMeeting }) => Promise<'approved' | 'declined' | 'cancelled'>;
+  confirm: (request: {
+    spoken: string;
+    meeting: UserMeeting;
+    // Set when the same words were already said (or cut off) in this task: only the user's click says them again
+    repeat?: NonNullable<ConfirmRequest['repeat']>;
+  }) => Promise<'approved' | 'declined' | 'cancelled'>;
+  // Do once (issue #84): the same words are not said twice in a task without the user's click. Optional so the
+  // rules above can be tested alone; the real action always passes it.
+  once?: (words: string) => Promise<SayOnce>;
   render: (spoken: string) => Promise<{ audio: string }>;
   send: (request: { meetingCode: string; audio: string }) => Promise<{ durationMs: number }>;
 }
+
+/** What the do-once key says about words about to be spoken. */
+export type SayOnce =
+  // Said already, or cut off: not said again; this is what the model is told
+  | { told: string }
+  | {
+      repeat?: NonNullable<ConfirmRequest['repeat']>;
+      // Writes "started" right before the words go out; a reason when another writer got there first
+      begin: () => Promise<string | null>;
+      // The words were played into the call
+      done: () => Promise<void>;
+      // They certainly were not
+      failed: (reason: string) => Promise<void>;
+    };
 
 export type SayOutcome =
   | { ok: true; spoken: string; durationMs: number }
@@ -120,8 +144,12 @@ export async function sayInMeeting(deps: SayDeps, rawWords: string): Promise<Say
   const first = !(await deps.introduced()).includes(session);
   const spoken = first ? `${introduction(await deps.assistantName(), await deps.userName())} ${words}` : words;
 
+  // Do once: the same words are not said twice in a task, and not after a try that was cut off, without a click
+  const once = deps.once ? await deps.once(words) : null;
+  if (once && 'told' in once) return { ok: false, reason: once.told };
+
   // Every time, whatever the confirm settings say: speaking into a call is a side effect others hear
-  const answer = await deps.confirm({ spoken, meeting });
+  const answer = await deps.confirm({ spoken, meeting, repeat: once?.repeat });
   if (answer === 'cancelled') return { ok: false, reason: REFUSALS.cancelled, stop: true };
   if (answer !== 'approved') return { ok: false, reason: REFUSALS.declined, stop: true };
 
@@ -129,8 +157,27 @@ export async function sayInMeeting(deps: SayDeps, rawWords: string): Promise<Say
   const after = await deps.status();
   if (after.state !== 'in_call' || introKey(after) !== session) return { ok: false, reason: REFUSALS.left };
 
-  const { audio } = await deps.render(spoken);
-  const { durationMs } = await deps.send({ meetingCode: code, audio });
+  const refused = once ? await once.begin() : null;
+  if (refused) return { ok: false, reason: refused };
+
+  let audio: string;
+  try {
+    ({ audio } = await deps.render(spoken));
+  } catch (error) {
+    // Nothing was played: a try again is not a repeat
+    await once?.failed(toAppError(error).kind);
+    throw error;
+  }
+  let durationMs: number;
+  try {
+    ({ durationMs } = await deps.send({ meetingCode: code, audio }));
+  } catch (error) {
+    // Refused outright: nothing was said. Cut off or timed out: it may have been heard, so it stays "started"
+    const problem = toAppError(error);
+    if (didNotHappen(problem.kind)) await once?.failed(problem.kind);
+    throw error;
+  }
+  await once?.done();
   if (first) await deps.markIntroduced(session);
   return { ok: true, spoken, durationMs };
 }

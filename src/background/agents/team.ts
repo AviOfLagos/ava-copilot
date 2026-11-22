@@ -8,10 +8,12 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { callerOf } from '../integrations/caller';
+import { didNotHappen, guardOnce } from '../once/guard';
+import type { OnceStart } from '../once/guard';
 import { registerAgentAction, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
 import type { HandoffService } from './handoff';
-import { isAttendedThread } from './handoff';
+import { isAttendedThread, resolveHandoff, trustedTask } from './handoff';
 import { teamLines, teamOf } from './team-section';
 
 /**
@@ -75,9 +77,35 @@ export function registerHandoff(handoffs: HandoffService): void {
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Handing it to an agent');
         const { attended } = await callerOf(context);
         if (!attended) return fail(context, 'Only a chat with the user can hand work to an agent.');
+        let guard: OnceStart | null = null;
         try {
           const messages = await threadStore.messages(context.taskId);
           const userWords = messages.filter(message => message.actor === 'user').at(-1)?.content ?? '';
+          // Do once: a task that was retried does not hand the same work over again without the user's click.
+          // A handover that cannot be resolved is left to handOff, which says why in plain words.
+          const target = resolveHandoff(await handoffs.teamFor(context.taskId), {
+            area: input.area,
+            agent: input.agent,
+          });
+          if (!('error' in target)) {
+            const claim = await guardOnce(
+              context,
+              {
+                what: 'agent.handoff',
+                scope: `agent:${target.agent.id}`,
+                label: `hand a task to the agent "${target.agent.name}"`,
+                parts: [target.agent.id, trustedTask(input.task, userWords).task || input.task],
+              },
+              {
+                kind: 'submit',
+                intent: `Hand the task to "${target.agent.name}" again`,
+                target: target.agent.name,
+                fields: [{ label: 'Task', value: input.task.trim().slice(0, 300) }],
+              },
+            );
+            if ('result' in claim) return claim.result;
+            guard = claim.start;
+          }
           const { agent, area } = await handoffs.handOff({
             threadId: context.taskId,
             from: 'chat',
@@ -86,11 +114,15 @@ export function registerHandoff(handoffs: HandoffService): void {
             task: input.task,
             userWords,
           });
+          await guard?.done('handed over');
           const text = `Handed to "${agent.name}"${area ? ` (it owns ${area})` : ''}. It works in its own window; a card in this chat shows where it is, and its answer is posted here when it ends. Tell the user that in one short line and finish now; do not do the task yourself.`;
           void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, `Handed to ${agent.name}`);
           return new ActionResult({ extractedContent: text, includeInMemory: true });
         } catch (error) {
-          return fail(context, toAppError(error).message);
+          const problem = toAppError(error);
+          // Refused before it began: nothing started, so it may be tried again
+          if (didNotHappen(problem.kind)) await guard?.failed(problem.kind);
+          return fail(context, problem.message);
         }
       }, handToAgentSchema),
   });
@@ -122,14 +154,51 @@ export function registerHandoff(handoffs: HandoffService): void {
         const threadId = voice.currentThreadId;
         const thread = threadId ? await threadStore.get(threadId) : undefined;
         if (!thread || !isAttendedThread(thread)) return 'There is no conversation to hand it over from.';
-        const { agent, area } = await handoffs.handOff({
-          threadId: thread.id,
-          from: 'voice',
+        const userWords = voice.userWords(heard);
+        // Do once, as in a chat. A spoken conversation has no card to ask on, so a repeat is refused: the user
+        // can say it again in the chat, where the card is
+        const target = resolveHandoff(await handoffs.teamFor(thread.id), {
           area: String(args.area ?? ''),
           agent: String(args.agent ?? ''),
-          task: String(args.task ?? ''),
-          userWords: voice.userWords(heard),
         });
+        let guard: OnceStart | null = null;
+        if (!('error' in target)) {
+          const claim = await guardOnce(
+            {
+              taskId: thread.id,
+              emitEvent: async () => {},
+              confirmGate: { ask: async () => 'declined' } as unknown as AgentContext['confirmGate'],
+              controller: new AbortController(),
+              stop: async () => {},
+            },
+            {
+              what: 'agent.handoff',
+              scope: `agent:${target.agent.id}`,
+              label: `hand a task to the agent "${target.agent.name}"`,
+              parts: [target.agent.id, trustedTask(String(args.task ?? ''), userWords).task || String(args.task ?? '')],
+            },
+            { kind: 'submit', intent: '', target: target.agent.name, fields: [] },
+          );
+          if ('result' in claim) return claim.result.error ?? 'It was already handed over.';
+          guard = claim.start;
+        }
+        let handed;
+        try {
+          handed = await handoffs.handOff({
+            threadId: thread.id,
+            from: 'voice',
+            area: String(args.area ?? ''),
+            agent: String(args.agent ?? ''),
+            task: String(args.task ?? ''),
+            userWords,
+          });
+        } catch (error) {
+          const problem = toAppError(error);
+          if (didNotHappen(problem.kind)) await guard?.failed(problem.kind);
+          throw error;
+        }
+        await guard?.done('handed over');
+        const { agent, area } = handed;
         return `Handed to "${agent.name}"${area ? `, which owns ${area}` : ''}. It works in its own window; the user will hear when it is done or needs their click. Say so in a few words.`;
       } catch (error) {
         return toAppError(error).message;
