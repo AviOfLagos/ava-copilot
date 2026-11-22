@@ -27,7 +27,7 @@ function sampleFacts(count: number): UserFact[] {
       text,
       category: 'other',
       workspaceId: null,
-      source: 'user',
+      source: 'said',
       status: 'active',
       via: 'chat',
       createdAt: index,
