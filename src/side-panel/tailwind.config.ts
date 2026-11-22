@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import type { Config } from 'tailwindcss/types/config';
 import animate from 'tailwindcss-animate';
+import { densitySpacing } from '../ui/lib/density';
 
 // Colours read the theme variables in index.css; the ones with an alpha channel take opacity modifiers
 const withAlpha = (name: string) => `rgb(var(--${name}-rgb) / <alpha-value>)`;
@@ -10,6 +11,8 @@ export default {
   content: [resolve(__dirname, '**/*.{js,ts,jsx,tsx}'), `!${resolve(__dirname, 'tailwind.config.ts')}`],
   theme: {
     extend: {
+      // The spacing scale follows the person's density setting (--density, set by layout/theme.ts)
+      spacing: densitySpacing,
       fontFamily: {
         sans: ['"Geist Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"Geist Mono Variable"', 'ui-monospace', 'monospace'],

@@ -1,4 +1,5 @@
 import { Disc, Menu, Mic, SquarePen } from 'lucide-react';
+import { TEXT_SCALES, appearanceSettingsStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import { LiveOrb } from '../components/ui/live-orb';
@@ -6,6 +7,7 @@ import { ThinkingOrb } from '../components/ui/thinking-orb';
 import Breadcrumbs from './Breadcrumbs';
 import type { Crumb } from './Breadcrumbs';
 import { useAssistantName } from '../hooks/useAssistant';
+import { useStoreSettings } from '../settings/sections/ui';
 import PersonalityPicker from '../personalities/PersonalityPicker';
 import SetupIndicator from '../setup/SetupIndicator';
 import AmbientIndicator from '../ambient/AmbientIndicator';
@@ -41,6 +43,34 @@ interface HeaderProps {
 const iconButton =
   'flex size-8 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground aria-pressed:bg-accent aria-pressed:text-foreground';
 
+/** A− and A+: the text one step smaller or larger, for every page, at once. */
+function TextSizeButtons() {
+  const settings = useStoreSettings(appearanceSettingsStore);
+  const scale = settings?.textScale ?? 100;
+  return (
+    <div className="flex items-center" role="group" aria-label={t('settings_look_textSize')}>
+      <button
+        type="button"
+        className={cn(iconButton, 'w-6 text-[11px] font-semibold disabled:opacity-40')}
+        disabled={scale <= TEXT_SCALES[0]}
+        onClick={() => void appearanceSettingsStore.stepText(-1)}
+        aria-label={t('settings_look_textSmaller')}
+        title={`${t('settings_look_textSmaller')} (${scale}%)`}>
+        A−
+      </button>
+      <button
+        type="button"
+        className={cn(iconButton, 'w-6 text-[13px] font-semibold disabled:opacity-40')}
+        disabled={scale >= TEXT_SCALES[TEXT_SCALES.length - 1]}
+        onClick={() => void appearanceSettingsStore.stepText(1)}
+        aria-label={t('settings_look_textLarger')}
+        title={`${t('settings_look_textLarger')} (${scale}%)`}>
+        A+
+      </button>
+    </div>
+  );
+}
+
 /**
  * The panel's header: the copilot's presence, what is open, and the few things you reach for most.
  */
@@ -74,6 +104,7 @@ export default function Header(props: HeaderProps) {
       )}
 
       <nav aria-label={t('nav_panel')} className="flex items-center gap-0.5">
+        <TextSizeButtons />
         <SetupIndicator />
         <AmbientIndicator />
         {props.recordingLabel ? (
