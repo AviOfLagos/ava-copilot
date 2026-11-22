@@ -20,6 +20,7 @@ import type {
   TeamItem,
 } from '../growth-team/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
+import type { TaskListRecord } from '../tasks/lists';
 import type { Task } from '../tasks/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
@@ -413,6 +414,8 @@ export class AviCopilotDb extends Dexie {
   teamSuppressed!: Table<SuppressedAddress, string>;
   teamChannels!: Table<TeamChannel, string>;
   tasks!: Table<Task, string>;
+  // The task lists Ava sent on WhatsApp, by message id: which tasks each carried (ids only)
+  taskLists!: Table<TaskListRecord, string>;
   // People (../people, docs/pm-desk.md Part 5): who is who, and the names not settled yet
   people!: Table<Person, string>;
   peopleNames!: Table<NameCandidate, string>;
@@ -502,6 +505,11 @@ export class AviCopilotDb extends Dexie {
     this.version(14).stores({
       people: 'id, nameKey, *aliasKeys, *emails, *phones, *handleKeys, *workspaceIds, updatedAt',
       peopleNames: 'id, &key, status, askedOn, *emails, *phones, *handleKeys, *meetingIds, lastAt',
+    });
+    // v15: the task lists Ava sent on WhatsApp (docs/pm-desk.md, Part 8). Additive. Parts 3 and 7 add tables too:
+    // whoever merges second takes the next free number
+    this.version(15).stores({
+      taskLists: 'messageId, sentAt',
     });
   }
 }

@@ -2,6 +2,7 @@ import { createStorage } from '@extension/storage/lib/base/base';
 import { StorageEnum } from '@extension/storage/lib/base/enums';
 import type { WhatsAppStatus } from '@src/shared/lib/protocol/companion';
 import type { NoticeKind } from '../notices';
+import type { PendingTaskMessage } from './task-desk';
 
 /**
  * Ava on WhatsApp, in the extension: what the user chose (which moments Ava messages him about, quiet hours) and
@@ -21,7 +22,7 @@ export interface WhatsAppRemoteSettings {
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_SETTINGS: WhatsAppRemoteSettings = {
-  notify: { approval: true, meeting: true, brief: true, routine: true },
+  notify: { approval: true, meeting: true, brief: true, routine: true, tasks: true },
   quietStart: '22:00',
   quietEnd: '07:00',
   voiceReplies: true,
@@ -58,6 +59,8 @@ export interface WhatsAppRemoteState {
   // The message that got her 👍 when the work took a while: it gets ✅ when the answer goes
   acknowledged: string | null;
   inFlight: InFlightAnswer | null;
+  // Task lists that waited for quiet hours to end: ids and titles only (./task-desk.ts)
+  taskOutbox: PendingTaskMessage[];
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
@@ -73,6 +76,7 @@ export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
   quoteReply: false,
   acknowledged: null,
   inFlight: null,
+  taskOutbox: [],
 };
 
 const settingsStorage = createStorage<WhatsAppRemoteSettings>(
