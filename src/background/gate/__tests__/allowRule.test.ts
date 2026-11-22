@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.hoisted(() => {
@@ -14,7 +15,7 @@ vi.hoisted(() => {
   });
 });
 
-const { permissionRulesStore } = await import('@extension/storage');
+const { permissionRulesStore, threadStore } = await import('@extension/storage');
 const { askOrAllowed } = await import('../allowRule');
 const { ConfirmGate } = await import('../confirmGate');
 const { ExecutionState } = await import('../../agent/event/types');
@@ -41,11 +42,11 @@ function request(): ConfirmRequest {
 }
 
 /** A task whose user answers every card: Allow once, or Allow every time. */
-function user(answer: 'approve' | 'decline', always: boolean) {
+function user(answer: 'approve' | 'decline', always: boolean, taskId = 't1') {
   const confirmGate = new ConfirmGate();
   const cards: ConfirmRequest[] = [];
   const context = {
-    taskId: 't1',
+    taskId,
     confirmGate,
     controller: new AbortController(),
     emitEvent: async (_actor: unknown, state: string, details: string) => {
@@ -59,6 +60,9 @@ function user(answer: 'approve' | 'decline', always: boolean) {
 }
 
 beforeEach(async () => {
+  // The user's own chat at the computer: the one a saved rule may answer for
+  await threadStore.remove('t1').catch(() => undefined);
+  await threadStore.create({ id: 't1', origin: 'user' });
   for (const rule of await permissionRulesStore.list()) await permissionRulesStore.remove(rule.id);
 });
 
@@ -73,6 +77,32 @@ describe('askOrAllowed', () => {
     expect(await askOrAllowed(later.context, request(), speak)).toBe('approved');
     expect(later.cards).toHaveLength(0);
     expect((await permissionRulesStore.list())[0]!.uses).toBe(1);
+  });
+
+  it('never answers for, or offers a rule to, a run that read outside content', async () => {
+    await permissionRulesStore.allow(speak);
+    for (const fields of [
+      { origin: 'agent' as const, tainted: true },
+      { origin: 'agent' as const },
+      { tainted: true },
+    ]) {
+      const thread = await threadStore.create(fields);
+      const asked = user('approve', true, thread.id);
+      expect(await askOrAllowed(asked.context, request(), speak)).toBe('approved');
+      expect(asked.cards).toHaveLength(1);
+      expect(asked.cards[0]!.always).toBeUndefined();
+    }
+    // The saved rule was not used, and nothing new was saved
+    expect(await permissionRulesStore.list()).toHaveLength(1);
+    expect((await permissionRulesStore.list())[0]!.uses).toBe(0);
+  });
+
+  it('still answers from a rule for a clean agent run', async () => {
+    await permissionRulesStore.allow(speak);
+    const thread = await threadStore.create({ origin: 'agent', tainted: false });
+    const later = user('decline', false, thread.id);
+    expect(await askOrAllowed(later.context, request(), speak)).toBe('approved');
+    expect(later.cards).toHaveLength(0);
   });
 
   it('Allow once and a refusal save nothing', async () => {

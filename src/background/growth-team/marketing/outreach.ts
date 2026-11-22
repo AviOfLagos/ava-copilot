@@ -84,7 +84,7 @@ export function outreachFooter(profile: ProductProfile, why: string): { text: st
 /** Drafts the first email to a person, for the user's approval. */
 export async function draftOutreach(
   profile: ProductProfile,
-  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   input: OutreachInput,
   deps: OutreachDeps = {},
 ): Promise<OutreachResult> {
@@ -152,7 +152,7 @@ export async function draftOutreach(
 /** Drafts the one follow-up a person may get, after 3 working days. */
 export async function draftFollowUp(
   profile: ProductProfile,
-  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   input: Pick<OutreachInput, 'email' | 'subject' | 'body'>,
   deps: OutreachDeps = {},
 ): Promise<OutreachResult> {

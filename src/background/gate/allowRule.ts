@@ -5,6 +5,7 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentContext } from '../agent/types';
 import { createLogger } from '../log';
 import type { GateAnswer } from './confirmGate';
+import { ruleMayAnswer } from './taint';
 
 const logger = createLogger('AllowRule');
 
@@ -16,6 +17,7 @@ const logger = createLogger('AllowRule');
  * - Otherwise the card offers "Allow every time" (only for a kind that may get a rule); an approval that came
  *   with it saves the rule.
  * - A kind that is always asked (money, deleting, access) never gets a rule, whatever a caller sends.
+ * - A run that read content from outside (see ./taint) gets no rule either: no answer from one, no offer of one.
  */
 export async function askOrAllowed(
   context: AgentContext,
@@ -23,7 +25,8 @@ export async function askOrAllowed(
   candidate: RuleCandidate,
 ): Promise<GateAnswer> {
   // A repeat of a step (do once) is the user's call every time, so no rule answers it and none is offered
-  const mayKeep = !request.repeat && canAllowAlways(candidate.kind, candidate.scope);
+  // A run that read content from outside gets no rule, answering or offered: the card still shows
+  const mayKeep = !request.repeat && canAllowAlways(candidate.kind, candidate.scope) && (await ruleMayAnswer(context));
   const rule = mayKeep ? await permissionRulesStore.find(candidate.kind, candidate.scope).catch(() => null) : null;
   if (rule) {
     await permissionRulesStore.used(rule.id).catch(() => undefined);

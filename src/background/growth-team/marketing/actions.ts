@@ -114,7 +114,8 @@ function ok(context: AgentContext, label: string, text: string): ActionResult {
 async function productOf(
   context: AgentContext,
 ): Promise<
-  { who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>; profile: ProductProfile } | { error: string }
+  | { who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>; profile: ProductProfile }
+  | { error: string }
 > {
   const who = await whoAsks(context);
   if ('error' in who) return who;
@@ -161,7 +162,7 @@ export async function rankChannelsAction(
 /** Asks for a channel's test week, only for a channel the ranking marked "test next". */
 export async function proposeChannelTest(
   profile: ProductProfile,
-  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   input: { channel: string; plan: string },
   deps: MarketingDeps = {},
 ): Promise<ProposeResult> {

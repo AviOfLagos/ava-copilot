@@ -5,6 +5,7 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentContext } from '../agent/types';
 import { classifyLabel } from '../gate/classify';
 import type { GateAnswer } from '../gate/confirmGate';
+import { ruleMayAnswer } from '../gate/taint';
 
 /**
  * The confirm gate for a connector's tool. A page action is reviewed from the page (gate/review.ts); a tool
@@ -58,12 +59,16 @@ export function argumentFields(args: Record<string, unknown>): ConfirmField[] {
 }
 
 /** The request the confirm card shows for a tool call. */
-export function toolCallRequest(context: Pick<AgentContext, 'taskId'>, review: ToolCallReview): ConfirmRequest {
+export function toolCallRequest(
+  context: Pick<AgentContext, 'taskId'>,
+  review: ToolCallReview,
+  mayKeep = false,
+): ConfirmRequest {
   const kind = confirmKindFor(review.tool);
   const target = `${review.connector.name} › ${review.tool.title || review.tool.tool}`;
   const scope = ruleScope(review);
   // A tool that deletes, pays or grants access is asked about every time, and so is a repeat
-  const always = !!scope && !review.repeat && canAllowAlways(kind);
+  const always = mayKeep && !!scope && !review.repeat && canAllowAlways(kind);
   return {
     id: crypto.randomUUID(),
     taskId: context.taskId,
@@ -97,7 +102,9 @@ function ruleScope(review: ToolCallReview): string {
 export async function reviewToolCall(context: AgentContext, review: ToolCallReview): Promise<GateAnswer> {
   const scope = ruleScope(review);
   const kind = confirmKindFor(review.tool);
-  if (scope && !review.repeat && canAllowAlways(kind)) {
+  // A run that read content from outside gets no rule, answering or offered: the card still shows
+  const mayKeep = await ruleMayAnswer(context);
+  if (mayKeep && scope && !review.repeat && canAllowAlways(kind)) {
     const rule = await permissionRulesStore.find('tool', scope).catch(() => null);
     if (rule) {
       await permissionRulesStore.used(rule.id).catch(() => undefined);
@@ -105,7 +112,7 @@ export async function reviewToolCall(context: AgentContext, review: ToolCallRevi
       return 'approved';
     }
   }
-  const request = toolCallRequest(context, review);
+  const request = toolCallRequest(context, review, mayKeep);
   const answer = await context.confirmGate.ask(
     request,
     shown => context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(shown)),

@@ -10671,7 +10671,7 @@
     "message": "Remove"
   },
   "settings_permissions_hint": {
-    "message": "These steps run without a card, from any chat, agent or routine. Paying, deleting and giving access always ask."
+    "message": "These steps run without a card, in a chat, agent or routine, unless that run has read content from outside (a web page, an email, someone else’s message): then they ask again. Paying, deleting and giving access always ask."
   },
   "product_title": {
     "message": "Product"

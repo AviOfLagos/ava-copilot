@@ -107,6 +107,10 @@ export interface ThreadRecord {
   // Who started it: the user typing or talking, an agent, a routine, the morning brief, or the user on WhatsApp
   // (his own words, but he is not at the computer: every commit waits for the panel click)
   origin?: 'user' | 'voice' | 'agent' | 'workflow' | 'brief' | 'whatsapp';
+  // Whether this run read content from outside (a page, an email, someone else's message). True or absent on a chat
+  // that was not started by the user at the computer means a saved "Allow every time" rule never answers for it.
+  // `false` is only ever written by code that knows the run is clean. See gate/origins.ts `rulesMayAnswer`.
+  tainted?: boolean;
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
   // How this chat hears and speaks, over Settings

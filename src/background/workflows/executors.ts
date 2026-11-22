@@ -316,6 +316,8 @@ async function startBrowse(context: StepContext): Promise<BrowseState> {
   const tab = await backgroundTab(startUrl);
   const thread = await threadStore.create({
     origin: 'workflow',
+    // A browser step reads pages, and the run's own taint is not known here: no saved rule answers for it
+    tainted: true,
     agentId: workflow.agentId,
     workspaceId: workflow.workspaceId,
     title: `${workflow.name}: ${node.label}`.slice(0, 80),

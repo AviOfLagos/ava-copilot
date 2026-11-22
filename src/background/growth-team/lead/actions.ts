@@ -132,7 +132,7 @@ export async function sortFeedbackAction(
 /** Proposes a beta place for one access request, on the product's own rule; code keeps the limits. */
 export async function requestBetaGrant(
   profile: ProductProfile,
-  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   input: { requestId: string; why: string },
   deps: LeadDeps = {},
 ): Promise<ProposeResult> {
@@ -142,6 +142,7 @@ export async function requestBetaGrant(
       workspaceId: who.workspaceId,
       agentId: who.agentId,
       agentName: who.agentName,
+      ...(who.tainted ? { tainted: true } : {}),
       action: 'beta_grant',
       title: `Beta access for request ${input.requestId}`,
       body: `${input.why}\n\nAccess request ${input.requestId}${rule ? `: the ${rule.plan} plan for ${rule.days} days` : ''}.`,

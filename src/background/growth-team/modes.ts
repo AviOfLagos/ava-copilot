@@ -39,7 +39,10 @@ export function modeFor(action: TeamAction, facts: ModeFacts): TeamMode {
   return facts.hasRule && TEAM_RULE_ACTIONS.includes(action) ? 'auto' : 'always_ask';
 }
 
-/** Whether the request for an item may offer "Allow every time". Never for one that names a customer. */
-export function offersAlways(action: TeamAction, namesCustomer: boolean): boolean {
-  return !namesCustomer && TEAM_RULE_ACTIONS.includes(action);
+/**
+ * Whether the request for an item may offer "Allow every time". Never for one that names a customer, nor for one
+ * proposed by a chat that read content from outside.
+ */
+export function offersAlways(action: TeamAction, namesCustomer: boolean, tainted = false): boolean {
+  return !namesCustomer && !tainted && TEAM_RULE_ACTIONS.includes(action);
 }

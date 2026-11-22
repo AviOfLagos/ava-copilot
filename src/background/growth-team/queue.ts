@@ -55,6 +55,8 @@ export interface Proposal {
   customerNames?: string[];
   // The agent said it names a customer: a hint, never the only check
   declaredNamesCustomer?: boolean;
+  // The chat that proposed it read content from outside: a saved rule never lets it through, and none is offered
+  tainted?: boolean;
   // Links that may carry an id (the admin console's page for a feedback item)
   allowedLinks?: string[];
   amountUsd?: number;
@@ -203,7 +205,7 @@ async function askForItem(item: TeamItem): Promise<void> {
     approval: {
       requestId: itemRequestId(item),
       action: 'team_item',
-      ...(offersAlways(item.action, item.namesCustomer) ? { always: true } : {}),
+      ...(offersAlways(item.action, item.namesCustomer, item.tainted) ? { always: true } : {}),
     },
   });
 }
@@ -435,7 +437,8 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
   }
 
   const scope = teamScope(proposal.workspaceId, proposal.agentId, proposal.action);
-  const rule = namesCustomer ? null : await permissionRulesStore.find('team', scope).catch(() => null);
+  const rule =
+    namesCustomer || proposal.tainted ? null : await permissionRulesStore.find('team', scope).catch(() => null);
   const mode = modeFor(proposal.action, { namesCustomer, hasRule: rule !== null });
   const draft: TeamItem = {
     id,
@@ -448,6 +451,7 @@ export async function propose(proposal: Proposal, deps: QueueDeps = {}): Promise
     target: EMAIL_ACTIONS.has(proposal.action) ? canonicalEmail(proposal.target) : oneLine(proposal.target, 200),
     why: oneLine(proposal.why, 400),
     namesCustomer,
+    ...(proposal.tainted ? { tainted: true } : {}),
     mode,
     status: 'queued',
     note: namesCustomer && findings.length ? `Found in the text: ${findingsText(findings)}.` : '',
@@ -496,7 +500,7 @@ export async function answerItem(
   if (claimed.batchId) await refreshBatch(claimed.batchId, claimed);
   if (!approved) return claimed;
 
-  if (options.always && offersAlways(claimed.action, claimed.namesCustomer)) {
+  if (options.always && offersAlways(claimed.action, claimed.namesCustomer, claimed.tainted)) {
     await permissionRulesStore
       .allow({
         kind: 'team',

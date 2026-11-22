@@ -10671,7 +10671,7 @@
     "message": "Remover"
   },
   "settings_permissions_hint": {
-    "message": "Estes passos rodam sem cartão, em qualquer chat, agente ou rotina. Pagar, excluir e dar acesso sempre perguntam."
+    "message": "Estes passos rodam sem cartão, em um chat, agente ou rotina, a menos que essa execução tenha lido conteúdo de fora (uma página, um e-mail, a mensagem de outra pessoa): aí elas perguntam de novo. Pagar, excluir e dar acesso sempre perguntam."
   },
   "product_title": {
     "message": "Produto"

@@ -25,6 +25,21 @@ export function alwaysAsks(chat: Chat): boolean {
   return !chat || has(ALWAYS_ASK_ORIGINS, chat);
 }
 
+// Chats that are not the user typing at the computer. Whether they read outside content is only known when the code that
+// started them said so (`tainted`); when it did not, they count as having read some.
+const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
+
+/**
+ * Whether a saved "Allow every time" rule may answer for a chat. Never for a run that read content from outside:
+ * a stranger's message or a page must not be able to unlock an approval. Fails closed: a chat that cannot be read, or
+ * an agent's, routine's, brief's or WhatsApp chat whose starter did not say it is clean, gets no rule.
+ */
+export function rulesMayAnswer(chat: Pick<ThreadRecord, 'origin' | 'tainted'> | undefined): boolean {
+  if (!chat || chat.tainted === true) return false;
+  if (chat.origin && MAY_READ_OUTSIDE.has(chat.origin)) return chat.tainted === false;
+  return true;
+}
+
 /** The user started it from somewhere away from the computer (WhatsApp). */
 export function isRemoteChat(chat: Chat): boolean {
   return has(REMOTE, chat);
