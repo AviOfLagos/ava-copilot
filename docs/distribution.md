@@ -11,15 +11,15 @@ through an enterprise policy nobody here has. So there is no literal one-command
 is: **one command does everything a command can do, then one click finishes it.**
 
 ```bash
-curl -fsSL https://avi-copilot.vercel.app/install.sh | bash
+curl -fsSL https://ava.nexprove.com/install.sh | bash
 ```
 
 What that command does (`site/public/install.sh`, built by `scripts/release.mjs`):
 
-1. Reads `download/latest.json` from the site, downloads `download/avi-copilot-<version>.zip`, verifies its
+1. Reads `download/latest.json` from the site, downloads `download/ava-copilot-<version>.zip`, verifies its
    SHA-256.
-2. Unpacks it to a stable, versionless folder — `~/Library/Application Support/Nex Copilot/extension` on macOS,
-   `${XDG_DATA_HOME:-~/.local/share}/avi-copilot/extension` on Linux — so re-running the same command later is an
+2. Unpacks it to a stable, versionless folder — `~/Library/Application Support/Ava Copilot/extension` on macOS,
+   `${XDG_DATA_HOME:-~/.local/share}/ava-copilot/extension` on Linux — so re-running the same command later is an
    **update**, not a reinstall: the browser's "Load unpacked" always points at the same path.
 3. Finds installed Brave/Chrome/Edge/Chromium, copies the folder path to the clipboard if it can, and opens the
    browser's extensions page if the browser accepts a URL on its command line (confirmed on this machine: `open -a
@@ -211,7 +211,7 @@ of that review even starts.
 ## Installer safety (lead review, 2026-10-12)
 
 The installer replaces the install folder on every update and removes it on `--uninstall`, so it only ever touches a
-folder it made: it writes `avi-copilot-install.txt` into every install, and refuses any target that exists, is not
+folder it made: it writes `ava-copilot-install.txt` into every install, and refuses any target that exists, is not
 empty and has no such file (a user's own folder given by mistake with `--dir`), as well as `/`, the home folder and
 any folder that contains it. `install.ps1` has the same rule. `--no-open` skips the clipboard and the browser (for
 scripted installs and tests).

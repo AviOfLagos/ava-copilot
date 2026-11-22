@@ -1,6 +1,17 @@
 # The growth team: three agents that sell a product, and the base they need
 
-Logged 2026-11-20 from Avi's brief. This is a spec; nothing here is built yet.
+Logged 2026-11-20 from Avi's brief. It began as a spec and is now mostly built. **Status on 2026-11-22**
+(what a reader of the site sees is in [CHANGELOG.md](../CHANGELOG.md)):
+
+- **Built:** do-once keys (#83), a closed tab reopened (#85), failed tasks retried then reported (#86), a morning
+  brief that says "not connected" instead of 0 (#87), every open tab known and reused (#94), a product profile per
+  workspace (#95), growth numbers (#96), rounds and check-ins (#97), approval modes and the budget ledger (#98), three
+  personalities (#99), the Growth Lead (#100), the Product Marketing Manager (#101), the Product Social Manager
+  (#102), the weekly plan and daily standup (#114) and the brief's Team section (#115).
+- **Not built:** anything that sends or posts what you approve (issues #43, #79). Approved drafts are held until it exists;
+  the agents only draft.
+
+The text below is the original spec; where the code differs, the pull request says so.
 It was reviewed once against the brief and the code, and the findings are
 folded in. Each numbered part maps to one GitHub issue (see "Build order").
 

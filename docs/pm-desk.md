@@ -1,6 +1,21 @@
 # The PM desk: tasks, people and follow-ups that Ava keeps for you
 
-Logged 2026-11-21 from Avi's brief. This is a spec; nothing here is built yet.
+Logged 2026-11-21 from Avi's brief. It began as a spec and is now mostly built. **Status on 2026-11-22**
+(what a reader of the site sees is in [CHANGELOG.md](../CHANGELOG.md)):
+
+| Part | State | Pull requests or issue |
+|---|---|---|
+| 1 Typing box | Built | #116 |
+| 2 Task board | Built | #121, #122, #123 |
+| 3 Workspaces in one click, by voice, sorted | Built | #126 |
+| 4 Vocabulary | Built | #117 |
+| 5 People | Built | #118, #119, #120 |
+| 6 "Ava, note a task for…" on a call | In progress; not available | issue #108 |
+| 7 Screen recording for a task | Built (Drive tested only against a fake endpoint) | #127 |
+| 8 Tasks on WhatsApp | Built | #124, #125 |
+| 9 Follow-ups, who to chase | In progress; not available | issue #111 |
+
+The text below is the original spec; where the code differs, the pull request says so.
 It was reviewed once against the brief and the code, and the findings are
 folded in. Each numbered part maps to one GitHub issue (see "Build order"). Every part
 names the model level that should build it: the spec was drafted on the

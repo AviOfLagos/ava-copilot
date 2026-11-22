@@ -1,0 +1,91 @@
+---
+// What changed, week by week, built from the repository's CHANGELOG.md (src/lib/changelog.ts reads it).
+import { ArrowRight } from 'lucide-react';
+import { changelogPage, projectLinks } from '../content/project';
+import { PRODUCT, VERSION, links } from '../content/site';
+import Base from '../layouts/Base.astro';
+import { changelog } from '../lib/changelog';
+import { pageGraph } from '../lib/seo';
+import '../styles/pages.css';
+
+const path = projectLinks.changelog;
+---
+
+<Base
+  title={changelogPage.title}
+  description={changelogPage.description}
+  path={path}
+  og="changelog"
+  ogAlt={changelogPage.ogAlt}
+  graph={pageGraph(path, changelogPage.title, changelogPage.description, changelogPage.breadcrumb)}>
+  <div class="wrap">
+    <header class="page-head">
+      <nav class="crumbs label" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">{PRODUCT}</a></li>
+          <li><span aria-current="page">{changelogPage.breadcrumb}</span></li>
+        </ol>
+      </nav>
+      <h1 class="display">{changelogPage.heading}</h1>
+      <p class="lede">{changelogPage.lede(VERSION, changelog.some(entry => entry.next))}</p>
+      <p class="clog-jump">
+        {
+          changelog.map(entry => (
+            <a href={`#${entry.id}`}>{entry.dates}</a>
+          ))
+        }
+      </p>
+    </header>
+
+    {
+      changelog.map(entry => (
+        <section class="block clog" id={entry.id} aria-labelledby={`${entry.id}-title`}>
+          <div class="block-head">
+            <h2 class="h2" id={`${entry.id}-title`}>
+              {entry.dates}
+            </h2>
+            {entry.label && (
+              <p class={`status ${entry.next ? 'status--preview' : 'status--live'}`}>{entry.label}</p>
+            )}
+          </div>
+          {entry.intro && <p class="clog__intro">{entry.intro}</p>}
+          {entry.groups.map(group => (
+            <div class="clog__group">
+              {group.title && <h3 class="h3">{group.title}</h3>}
+              <ul class="clog__list">
+                {group.items.map(item => (
+                  <li>
+                    <span set:html={item.html} />
+                    {item.prs.length > 0 && (
+                      <span class="clog__prs">
+                        {item.prs.map(pr => (
+                          <a href={pr.url} rel="noopener">
+                            #{pr.n}
+                          </a>
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ))
+    }
+
+    <p class="page-actions">
+      <a class="btn btn--cta" href={links.install}>
+        <span class="btn__label">Install {PRODUCT}</span>
+        <span class="btn__chip" aria-hidden="true"><ArrowRight strokeWidth={2.2} /></span>
+      </a>
+      <a class="arrow-link" href={projectLinks.releasesFeed}>
+        Release feed (RSS) <ArrowRight aria-hidden="true" />
+      </a>
+      <a class="arrow-link" href={projectLinks.roadmap}>
+        What comes next <ArrowRight aria-hidden="true" />
+      </a>
+    </p>
+  </div>
+  <div style="height: var(--section)"></div>
+</Base>
