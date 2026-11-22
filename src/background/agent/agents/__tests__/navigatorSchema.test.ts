@@ -87,6 +87,43 @@ describe('describeActionsForText', () => {
     for (const key of Object.keys(clickObject.properties as Schema)) expect(click).toContain(key);
   });
 
+  it('shows allowed values and the fields of list items', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              fill_form: {
+                description: 'Fill a form, e.g. a sign-up form. More text.',
+                anyOf: [
+                  {
+                    type: 'object',
+                    required: ['fields'],
+                    properties: {
+                      fields: {
+                        type: 'array',
+                        items: { type: 'object', required: ['index'], properties: { index: {}, value: {} } },
+                      },
+                      mode: { enum: ['fast', 'careful'] },
+                    },
+                  },
+                  { type: 'null' },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const line = describeActionsForText(schema as never)!.split('\n')[1];
+    expect(line).toBe(
+      '- fill_form: {fields: [{index, value?}], mode?: fast|careful} Fill a form, e.g. a sign-up form.',
+    );
+  });
+
   it('returns undefined for a schema without actions', () => {
     expect(describeActionsForText({ type: 'object', properties: {} })).toBeUndefined();
   });

@@ -96,6 +96,24 @@ function objectBranch(node: Node): Node | undefined {
   return undefined;
 }
 
+/** A parameter's shape where its name alone isn't enough: allowed values (`: a|b`) or list items (`: [{x, y}]`) */
+function shapeOf(node: Node | undefined, depth = 0): string {
+  if (!node || depth > 1) return '';
+  const branches = Array.isArray(node.anyOf) ? (node.anyOf as unknown[]).map(asNode) : [];
+  const values = Array.isArray(node.enum) ? node.enum : branches.flatMap(b => (Array.isArray(b?.enum) ? b.enum : []));
+  if (values.length) return `: ${values.map(String).join('|')}`;
+  const items = asNode(node.items) ?? asNode(branches.find(b => b?.items)?.items);
+  const inner = items ? objectBranch(items) : undefined;
+  if (inner?.properties) {
+    const req = new Set(Array.isArray(inner.required) ? (inner.required as string[]) : []);
+    const fields = Object.entries(asNode(inner.properties) ?? {}).map(
+      ([k, v]) => `${req.has(k) ? k : `${k}?`}${shapeOf(asNode(v), depth + 1)}`,
+    );
+    return `: [{${fields.join(', ')}}]`;
+  }
+  return '';
+}
+
 /**
  * A compact list of the navigator's actions for a model in text mode: one line per action with its parameters
  * (`?` marks optional ones) and the first sentence of its description. Undefined when the schema has no actions.
@@ -111,10 +129,12 @@ export function describeActionsForText(schema: JSONSchema7): string | undefined 
     if (!node) continue;
     const params = objectBranch(node);
     const required = new Set(Array.isArray(params?.required) ? (params.required as string[]) : []);
-    const keys = Object.keys(asNode(params?.properties) ?? {}).map(k => (required.has(k) ? k : `${k}?`));
+    const keys = Object.entries(asNode(params?.properties) ?? {}).map(
+      ([k, v]) => `${required.has(k) ? k : `${k}?`}${shapeOf(asNode(v))}`,
+    );
     const description = String(node.description ?? params?.description ?? '')
-      .split(/(?<=\.)\s/)[0]
-      .slice(0, 140);
+      .split(/(?<!\b(?:e\.g|i\.e|etc)\.)(?<=\.)\s/)[0]
+      .slice(0, 160);
     lines.push(`- ${name}: {${keys.join(', ')}}${description ? ` ${description}` : ''}`);
   }
   if (!lines.length) return undefined;
