@@ -101,6 +101,9 @@ describe('suggestions', () => {
     };
     expect((await suggestFor(things, [ORCHID], broken)).name).toBe('Crane');
     expect((await suggestFor(things, [ORCHID], null)).name).toBe('Crane');
+    // A model that does not answer in time is not waited for
+    const slow = { suggest: () => new Promise<never>(() => undefined), guess: async () => [] };
+    expect((await suggestFor(things, [ORCHID], slow, 20)).name).toBe('Crane');
   });
 
   it('checks a model’s answer: a short plain name that is new', () => {

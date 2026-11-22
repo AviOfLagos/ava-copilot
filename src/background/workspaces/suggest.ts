@@ -80,12 +80,29 @@ export function checkSuggestion(answer: Suggestion | null, taken: string[]): Sug
   return { name, keywords: clean(answer.keywords) };
 }
 
-/** What the sheet starts with: the model's suggestion when it gave a good one, else the words the things share. */
-export async function suggestFor(items: PlaceItem[], existing: Workspace[], model: SuggestModel | null) {
+// The sheet is usable while the model thinks; past this the words the things share stand in
+export const SUGGEST_WITHIN_MS = 8000;
+
+const within = <T>(work: Promise<T>, ms: number): Promise<T | null> =>
+  Promise.race([work, new Promise<null>(resolve => setTimeout(() => resolve(null), ms))]);
+
+/** What the sheet starts with: the model's suggestion when it gave a good one in time, else the words the things share. */
+export async function suggestFor(
+  items: PlaceItem[],
+  existing: Workspace[],
+  model: SuggestModel | null,
+  timeoutMs = SUGGEST_WITHIN_MS,
+) {
   const titles = items.map(item => item.title).filter(Boolean);
   const taken = existing.map(workspace => workspace.name);
   const asked = model
-    ? checkSuggestion(await model.suggest(titles.slice(0, 40), taken).catch(() => null), taken)
+    ? checkSuggestion(
+        await within(
+          model.suggest(titles.slice(0, 40), taken).catch(() => null),
+          timeoutMs,
+        ),
+        taken,
+      )
     : null;
   return asked ?? fallbackSuggestion(titles);
 }
