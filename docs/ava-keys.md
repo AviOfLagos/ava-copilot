@@ -70,11 +70,11 @@ All tools take a `purpose` (one short sentence, shown to Avi) and return JSON te
 |---|---|---|---|
 | `run_with_secrets` | v0 | Run one command (argv, no shell) with the secrets of `project`/`env` in its environment, optionally `only` some names. Touch ID per call. | `{approved, exitCode, stdout, stderr, masked: {NAME: count}, unmasked: [names too short to mask], truncated, timedOut}` |
 | `ask_human` | v0 | Show Avi numbered steps (dialog + notification now; Ava panel with on-screen pointers later) and wait for his answer. | `{answer: "done" \| "cant" \| "timeout", seconds}` |
-| `list_secrets` | v1 | Projects, envs and secret names. No prompt (names only). | `{projects: {p: {env: [names]}}}` |
+| `list_secrets` | shipped (#54) | Projects, envs and secret names. No prompt (names only). | `{projects: {p: {env: [names]}}}` |
 | `sign_in` | v1 | Make sure a site is signed in as an account in Ava's browser profile. Uses the vault for the password, the site adapter for the clicks, `ask_human` for 2FA or a CAPTCHA. | `{signedIn, account, steps}` |
 | `switch_account` | v1 (gh, vercel shipped) | For a CLI (`gh`, `vercel`, `gcloud`) or a site: read the current account, switch to the named one, verify. Reuses `gh-switch`, `vercel-switch`, and the account check of issue #43. | `{from, to, verified}` |
 | `do_action` | v2 | A named, deterministic action on a known site or app ("add env var on Vercel project X", "invite @y to the GitHub org") or, for an unknown screen, a goal handed to the local model. Each action declares the secrets it may use. | `{done, evidence, steps}` |
-| `get_status` | v1 | Is Ava Brain up, is the vault installed, which agents are registered. | names and booleans |
+| `get_status` | shipped (#54) | Is Ava Brain up (its port answers), is the vault installed root-owned, is the masker on disk the current one, which agents have Ava Keys registered (Claude Code). | `{brainUp, vaultInstalled, maskerCurrent, agents: [{name, registered}]}` |
 
 Arguments are validated before any prompt: project/env must exist, `only` names must exist, the command must
 resolve to an absolute path, everything must fit the prompt (offboard refuses a reason over 200 characters or a

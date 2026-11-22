@@ -1,16 +1,19 @@
 /**
- * Ava Keys MCP server (stdio): `ava-brain keys-mcp`. Tools: run_with_secrets, ask_human, switch_account.
+ * Ava Keys MCP server (stdio): `ava-brain keys-mcp`. Tools: run_with_secrets, ask_human, switch_account, list_secrets,
+ * get_status.
  * Results are JSON text with names, counts and masked output; never a secret value. stdout is the MCP channel,
  * so nothing else here writes to it.
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { COMPANION_DEFAULT_PORT } from '@protocol';
 import type { ProcessRunner } from '../sandbox/process';
 import { switchAccount } from './accounts';
 import { askHuman, notifyAvi } from './ask';
 import { ensureMasker } from './install';
 import { runWithSecrets } from './run';
+import { getStatus, listSecrets } from './status';
 
 export interface KeysServerDeps {
   runner: ProcessRunner;
@@ -18,11 +21,22 @@ export interface KeysServerDeps {
   nodePath: string;
   home: string;
   version: string;
+  // Where Ava Brain listens, for get_status
+  brain?: { host: string; port: number };
+  // Overridable in tests
+  statusProbe?: (host: string, port: number) => Promise<boolean>;
+  vaultBin?: string;
+  claudePath?: string | null;
 }
 
 /** The MCP client's own name (e.g. "claude-code"), cleaned for the approval prompt. */
 export function agentName(raw: string | undefined): string {
-  const name = (raw ?? '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 24);
+  const name = (raw ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 24);
   return name || 'an-agent';
 }
 
@@ -48,12 +62,28 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
       inputSchema: {
         project: z.string().min(1).max(40).describe('Vault project, e.g. go-solar-me'),
         env: z.string().min(1).max(30).describe('Vault env label, e.g. local'),
-        only: z.array(z.string().min(1)).max(20).optional().describe('Only these secret names (default: all of project/env)'),
+        only: z
+          .array(z.string().min(1))
+          .max(20)
+          .optional()
+          .describe('Only these secret names (default: all of project/env)'),
         command: z.string().min(1).describe('Program name on PATH or absolute path, e.g. pnpm or /usr/bin/printenv'),
         args: z.array(z.string()).max(20).optional().describe('Arguments, one per item'),
         cwd: z.string().optional().describe('Absolute folder to run in (default: home)'),
-        purpose: z.string().min(3).max(48).describe('Why, in a few words, plain characters (no quotes or backslashes). Shown to Avi in the Touch ID prompt.'),
-        timeout_seconds: z.number().int().min(10).max(1800).optional().describe('Includes the time Avi takes to approve (default 600)'),
+        purpose: z
+          .string()
+          .min(3)
+          .max(48)
+          .describe(
+            'Why, in a few words, plain characters (no quotes or backslashes). Shown to Avi in the Touch ID prompt.',
+          ),
+        timeout_seconds: z
+          .number()
+          .int()
+          .min(10)
+          .max(1800)
+          .optional()
+          .describe('Includes the time Avi takes to approve (default 600)'),
       },
     },
     async input => {
@@ -94,7 +124,11 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
           .array(
             z.object({
               text: z.string().min(1).max(140).describe('One action, e.g. "Click the green Continue button"'),
-              target: z.string().max(200).optional().describe('What a pointer should point at (later versions); optional'),
+              target: z
+                .string()
+                .max(200)
+                .optional()
+                .describe('What a pointer should point at (later versions); optional'),
             }),
           )
           .min(1)
@@ -104,7 +138,10 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
     },
     async input => {
       try {
-        const result = await askHuman({ purpose: input.purpose, steps: input.steps, agent: agent(), timeoutSeconds: input.timeout_seconds }, deps.runner);
+        const result = await askHuman(
+          { purpose: input.purpose, steps: input.steps, agent: agent(), timeoutSeconds: input.timeout_seconds },
+          deps.runner,
+        );
         return text(result);
       } catch (error) {
         return text({ answer: 'error', message: (error as Error).message }, true);
@@ -124,7 +161,12 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
         'then use ask_human to have Avi sign in.',
       inputSchema: {
         tool: z.enum(['gh', 'vercel']),
-        account: z.string().min(1).max(39).optional().describe('Exact account name (gh login, or saved Vercel login name)'),
+        account: z
+          .string()
+          .min(1)
+          .max(39)
+          .optional()
+          .describe('Exact account name (gh login, or saved Vercel login name)'),
         repo: z.string().optional().describe('Absolute repo folder: switch to the account that repo needs'),
         purpose: z.string().min(3).max(120).describe('Why, in a few words (shown in the notification)'),
       },
@@ -138,6 +180,54 @@ export function createKeysServer(deps: KeysServerDeps): McpServer {
         return text(result, !result.verified);
       } catch (error) {
         return text({ verified: false, message: (error as Error).message }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    'list_secrets',
+    {
+      title: 'List the secret names in Avi’s vault',
+      description:
+        'Lists the vault’s projects, envs and secret NAMES (never values), e.g. { "go-solar-me": { "local": ["DATABASE_URL"] } }. ' +
+        'No prompt for Avi. Use it to find the project, env and names to give run_with_secrets.',
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const result = await listSecrets({ runner: deps.runner, home: deps.home, vaultBin: deps.vaultBin });
+        return text(result, Boolean(result.message));
+      } catch (error) {
+        return text({ projects: {}, message: (error as Error).message }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_status',
+    {
+      title: 'Is Ava Keys ready?',
+      description:
+        'Says whether Ava Brain is running, the vault is installed (root-owned), the masker on disk is the current one, and which ' +
+        'coding agents have Ava Keys registered. Booleans and names only.',
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        return text(
+          await getStatus({
+            runner: deps.runner,
+            packageDir: deps.packageDir,
+            nodePath: deps.nodePath,
+            home: deps.home,
+            brain: deps.brain ?? { host: '127.0.0.1', port: COMPANION_DEFAULT_PORT },
+            probe: deps.statusProbe,
+            vaultBin: deps.vaultBin,
+            claudePath: deps.claudePath,
+          }),
+        );
+      } catch (error) {
+        return text({ message: (error as Error).message }, true);
       }
     },
   );

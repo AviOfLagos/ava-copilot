@@ -88,7 +88,14 @@ async function main(): Promise<void> {
     }
     case 'keys-mcp': {
       // stdout is the MCP channel: nothing else may write to it
-      await serveKeys({ runner: runProcess, packageDir: config.packageDir, nodePath: stableNode(), home: homedir(), version: config.version });
+      await serveKeys({
+        runner: runProcess,
+        packageDir: config.packageDir,
+        nodePath: stableNode(),
+        home: homedir(),
+        version: config.version,
+        brain: { host: config.host, port: config.port },
+      });
       return;
     }
     case 'keys': {
@@ -100,18 +107,26 @@ async function main(): Promise<void> {
       const masker = ensureMasker({ packageDir: config.packageDir, nodePath: stableNode(), home: homedir() });
       process.stdout.write(`Masker: ${masker.path} (${masker.wrote ? 'written' : 'up to date'})\n`);
       if (!vaultInstalled()) {
-        process.stdout.write('Vault: offboard-vault is not installed. In the offboard repo run: node offboard.mjs vault init\n');
+        process.stdout.write(
+          'Vault: offboard-vault is not installed. In the offboard repo run: node offboard.mjs vault init\n',
+        );
       } else process.stdout.write('Vault: offboard-vault is installed (root-owned)\n');
       const claude = findClaude();
       if (!claude) process.stdout.write('Claude Code: not found, skipped\n');
       else {
-        const said = await registerClaude(runProcess, { claude, command: serverCommand(stableNode(), config.packageDir), home: homedir() });
+        const said = await registerClaude(runProcess, {
+          claude,
+          command: serverCommand(stableNode(), config.packageDir),
+          home: homedir(),
+        });
         process.stdout.write(`${said}\nRemove it with: claude mcp remove --scope user ava-keys\n`);
       }
       return;
     }
     default:
-      process.stderr.write(`Unknown command "${command}". Use start, pair, unpair, status, sandbox-build, keys install or keys-mcp.\n`);
+      process.stderr.write(
+        `Unknown command "${command}". Use start, pair, unpair, status, sandbox-build, keys install or keys-mcp.\n`,
+      );
       process.exitCode = 2;
   }
 }
