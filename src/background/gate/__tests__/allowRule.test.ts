@@ -81,6 +81,15 @@ describe('askOrAllowed', () => {
     expect(await permissionRulesStore.list()).toHaveLength(0);
   });
 
+  it('still asks for a repeat, rule or not, and offers no rule on it', async () => {
+    await permissionRulesStore.allow(speak);
+    const asked = user('approve', true);
+    const repeat = { status: 'started' as const, at: 1, label: 'say words' };
+    expect(await askOrAllowed(asked.context, { ...request(), repeat }, speak)).toBe('approved');
+    expect(asked.cards).toHaveLength(1);
+    expect(asked.cards[0]!.always).toBeUndefined();
+  });
+
   it('never offers a rule for money, deleting or access', async () => {
     for (const kind of ['purchase', 'delete', 'permission'] as const) {
       const asked = user('approve', true);

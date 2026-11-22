@@ -22,7 +22,8 @@ export async function askOrAllowed(
   request: ConfirmRequest,
   candidate: RuleCandidate,
 ): Promise<GateAnswer> {
-  const mayKeep = canAllowAlways(candidate.kind, candidate.scope);
+  // A repeat of a step (do once) is the user's call every time, so no rule answers it and none is offered
+  const mayKeep = !request.repeat && canAllowAlways(candidate.kind, candidate.scope);
   const rule = mayKeep ? await permissionRulesStore.find(candidate.kind, candidate.scope).catch(() => null) : null;
   if (rule) {
     await permissionRulesStore.used(rule.id).catch(() => undefined);
