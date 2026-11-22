@@ -8,15 +8,19 @@
     <h1>Weekly sync</h1>
     <script>
       // With ?captions, the page shows live captions the way Zoom web does
-      if (new URLSearchParams(location.search).has('captions')) {
+      const query = new URLSearchParams(location.search);
+      if (query.has('captions')) {
+        // ?speakers=Ada%20Obi,Ben%20Cole takes turns between those names, one caption line each
+        const speakers = (query.get('speakers') || 'Ada').split(',');
         const line = document.createElement('div');
         line.className = 'live-transcription-subtitle__item';
-        line.dataset.speaker = 'Ada';
+        line.dataset.speaker = speakers[0];
         document.body.append(line);
         let n = 0;
         // A new caption line every two seconds, the way a speaker's words come in
         setInterval(() => {
           n += 1;
+          line.dataset.speaker = speakers[(n - 1) % speakers.length];
           line.textContent = `Captions line ${n}`;
         }, 2000);
       }
