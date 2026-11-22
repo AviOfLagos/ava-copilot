@@ -9,6 +9,7 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
 } from 'ai';
+import type { RetryReporter } from '../retry/status';
 
 /** Provider-specific options keyed by provider name, as accepted by `generateText` */
 export type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]['providerOptions']>;
@@ -24,8 +25,6 @@ export type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]['pr
 export type StructuredMode = 'native' | 'tool' | 'text';
 
 /** Call settings. Temperature and top P are never sent, so sampling is left to each model's defaults */
-import type { RetryReporter } from '../retry/status';
-
 export interface ChatModelSettings {
   maxOutputTokens?: number;
   /** The AI SDK's provider-independent reasoning effort; unset leaves the model's default reasoning */

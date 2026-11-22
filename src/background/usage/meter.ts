@@ -257,5 +257,5 @@ export function meterModel(chatModel: ChatModel, scope: UsageScope): ChatModel {
     },
   });
 
-  return { ...chatModel, model, status: scope.status };
+  return { ...chatModel, model, status: status => scope.status?.(status) };
 }

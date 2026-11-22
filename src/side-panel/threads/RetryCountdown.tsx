@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import type { RetryStatus } from '@src/background/retry/status';
-import { needsTicking, retryLine } from './countdown';
+import { retryLine } from './countdown';
 
 /** The current time, updated every second while `active`. */
 export function useNow(active: boolean): number {
@@ -28,5 +28,3 @@ export function RetryCountdown({ status }: { status: RetryStatus | null | undefi
     </div>
   );
 }
-
-export { needsTicking };
