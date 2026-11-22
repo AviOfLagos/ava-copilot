@@ -91,22 +91,32 @@ const storage = createStorage<AppearanceSettingsConfig>('appearance-settings', D
   liveUpdate: true,
 });
 
+// Writes run one after another, so two quick clicks (or two pages) never read the same old record
+let writes: Promise<unknown> = Promise.resolve();
+const serialized = <T>(task: () => Promise<T>): Promise<T> => {
+  const next = writes.then(task, task);
+  writes = next.catch(() => undefined);
+  return next;
+};
+
 export const appearanceSettingsStore: AppearanceSettingsStorage = {
   ...storage,
-  async updateSettings(settings) {
-    const current = normalizeAppearance(await storage.get());
-    await storage.set(normalizeAppearance({ ...current, ...settings }));
-  },
+  updateSettings: settings =>
+    serialized(async () => {
+      const current = normalizeAppearance(await storage.get());
+      await storage.set(normalizeAppearance({ ...current, ...settings }));
+    }),
   async getSettings() {
     return normalizeAppearance(await storage.get());
   },
-  async stepText(direction) {
-    const current = normalizeAppearance(await storage.get());
-    const textScale = stepTextScale(current.textScale, direction);
-    if (textScale !== current.textScale) await storage.set({ ...current, textScale });
-    return textScale;
-  },
+  stepText: direction =>
+    serialized(async () => {
+      const current = normalizeAppearance(await storage.get());
+      const textScale = stepTextScale(current.textScale, direction);
+      if (textScale !== current.textScale) await storage.set({ ...current, textScale });
+      return textScale;
+    }),
   async resetToDefaults() {
-    await storage.set(DEFAULT_APPEARANCE_SETTINGS);
+    await serialized(() => storage.set(DEFAULT_APPEARANCE_SETTINGS));
   },
 };

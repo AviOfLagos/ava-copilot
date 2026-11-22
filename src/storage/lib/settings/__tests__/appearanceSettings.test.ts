@@ -98,6 +98,20 @@ describe('appearanceSettingsStore', () => {
     expect(await appearanceSettingsStore.stepText(1)).toBe(130);
   });
 
+  it('does not lose steps or other fields when writes overlap', async () => {
+    await appearanceSettingsStore.resetToDefaults();
+    await Promise.all([
+      appearanceSettingsStore.stepText(1),
+      appearanceSettingsStore.stepText(1),
+      appearanceSettingsStore.updateSettings({ theme: 'light' }),
+    ]);
+    expect(await appearanceSettingsStore.getSettings()).toEqual({
+      theme: 'light',
+      textScale: 120,
+      density: 'comfortable',
+    });
+  });
+
   it('repairs a bad stored record on read', async () => {
     store['appearance-settings'] = { theme: 'blue', textScale: 9999 };
     expect(await appearanceSettingsStore.getSettings()).toEqual({ ...DEFAULT_APPEARANCE_SETTINGS, textScale: 130 });

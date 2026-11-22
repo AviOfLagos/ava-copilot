@@ -60,6 +60,22 @@ export function useAppearance(): { settings: AppearanceSettingsConfig; dark: boo
 
   useEffect(() => {
     let alive = true;
+    // What an older panel stored (the theme alone) moves into the shared record once
+    let old: string | null = null;
+    try {
+      old = localStorage.getItem(OLD_THEME_KEY);
+    } catch {
+      // nothing to move
+    }
+    if (old) {
+      void appearanceSettingsStore.updateSettings({ theme: normalizeAppearance({ theme: old }).theme }).then(() => {
+        try {
+          localStorage.removeItem(OLD_THEME_KEY);
+        } catch {
+          // it is moved either way
+        }
+      });
+    }
     const load = () =>
       void appearanceSettingsStore.getSettings().then(next => {
         if (!alive) return;
