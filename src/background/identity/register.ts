@@ -32,7 +32,7 @@ import { resolveModels } from '../threads/factory';
 import { isOverDailyBudget } from '../usage/budget';
 import { categoryOf, UNATTENDED_ORIGINS, ownWords } from './facts';
 import { REFLECT_DAILY_CRON, REFLECT_DAILY_KEY, REFLECT_JOB, REFLECT_SOON_KEY } from './jobs';
-import { describeMemory, rememberFact, updateMemory } from './memory';
+import { describeMemory, recallFacts, rememberFact, updateMemory } from './memory';
 import { reflectionSchema } from './reflection';
 import type { ReflectionOutput } from './reflection';
 import { defaultWorkspaces, gatherMaterial, REFLECTION_SESSION, runReflection, saveAboutYou } from './reflector';
@@ -319,6 +319,16 @@ const updateMemorySchema = {
   }),
 } satisfies ActionSchema;
 
+const recallSchema = {
+  name: 'recall',
+  description:
+    'Search everything stored about the user (their facts) for what a question asks, e.g. "where does my daughter go to school?". The notes in your prompt are only the newest ones: use this for anything about the user that is not there',
+  schema: z.object({
+    intent: z.string().default('').describe('purpose of this action'),
+    question: z.string().describe("what to find, in the user's words or yours"),
+  }),
+} satisfies ActionSchema;
+
 /** The chat's workspace and the user's own words in it, or a refusal for runs nobody is watching. */
 async function userSide(context: AgentContext): Promise<{ workspaceId: string | null; words: string } | string> {
   const thread = await threadStore.get(context.taskId).catch(() => undefined);
@@ -359,6 +369,19 @@ registerAgentAction({
       });
       return memoryResult(context, said);
     }, rememberSchema),
+});
+
+registerAgentAction({
+  prompt:
+    '- recall: the notes about the user in this prompt are only some of what is stored. For anything about them that is not there ("where does my daughter go to school?"), call recall before saying you do not know. Read-only.',
+  create: context =>
+    new Action(async (input: z.infer<typeof recallSchema.schema>) => {
+      context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || 'Recalling');
+      // Reading needs no user words: only the chat's workspace, so another workspace's facts stay out
+      const thread = await threadStore.get(context.taskId).catch(() => undefined);
+      const said = wrapUntrustedContent(await recallFacts(thread?.workspaceId ?? null, input.question));
+      return memoryResult(context, said);
+    }, recallSchema),
 });
 
 registerAgentAction({

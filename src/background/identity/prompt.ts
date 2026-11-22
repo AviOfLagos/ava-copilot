@@ -58,18 +58,28 @@ function capped(lines: string[], max: number): string[] {
   return kept;
 }
 
-/** The "about the user" lines: the workspace's own first, then the general ones, newest first within each. */
-export function aboutYouLines(ctx: IdentityContext, max = ABOUT_YOU_CHARS): string[] {
-  const facts = visibleTo(
+/** The facts the prompt may use, in the order it shows them: the workspace's own first, then the general ones, newest first. */
+function orderedFacts(ctx: IdentityContext): UserFact[] {
+  return visibleTo(
     ctx.facts.filter(fact => fact.status === 'active'),
     ctx.workspaceId,
   ).sort((a, b) => Number(!!b.workspaceId) - Number(!!a.workspaceId) || b.updatedAt - a.updatedAt);
+}
+
+const factLine = (ctx: IdentityContext, fact: UserFact) =>
+  `- [${fact.category}] ${fenced(fact.text)}${label(ctx, fact.workspaceId)} (since ${day(fact.updatedAt)})`;
+
+/** The "about the user" lines: the workspace's own first, then the general ones, newest first within each. */
+export function aboutYouLines(ctx: IdentityContext, max = ABOUT_YOU_CHARS): string[] {
   return capped(
-    facts.map(
-      fact => `- [${fact.category}] ${fenced(fact.text)}${label(ctx, fact.workspaceId)} (since ${day(fact.updatedAt)})`,
-    ),
+    orderedFacts(ctx).map(fact => factLine(ctx, fact)),
     max,
   );
+}
+
+/** The active facts this chat may see that `aboutYouLines` does not show: kept, but only `recall` finds them. */
+export function factsLeftOut(ctx: IdentityContext, max = ABOUT_YOU_CHARS): UserFact[] {
+  return orderedFacts(ctx).slice(aboutYouLines(ctx, max).length);
 }
 
 export function goalLines(ctx: IdentityContext, max = GOALS_CHARS): string[] {

@@ -8,7 +8,7 @@ when a tool has no row, or when a tool has no group in `TOOL_GROUPS`. Which chan
 and are offered the growth team's tools only when the chat's workspace has a product (the channels below show the
 case with a product).
 
-119 tools. Per channel: panel 92, voice 67, whatsapp 88, agent 88, routine 88.
+120 tools. Per channel: panel 93, voice 67, whatsapp 89, agent 89, routine 89.
 
 "In" says where the tool is defined (chat action, voice tool, or both under one name). "Chars" is the size of its
 definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an agent or a routine.
@@ -82,6 +82,7 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `read_page_text` (read page text) | chat | Screen and tabs | panel, whatsapp, agent, routine | 348 / - | Read the text the current page shows, to read an article, email, table or document without scrolling. |
 | `read_screen` (read screen) | voice | Screen and tabs | voice | - / 274 | Looks at the user's screen: the page in front's title, address and text, plus a picture of it sent to you. |
 | `read_skill_section` (read skill section) | chat | Memory and knowledge | panel, whatsapp, agent, routine | 358 / - | Read one of the extra files of a skill loaded for this page, by the skill name and the file name it lists |
+| `recall` (recall) | chat | Memory and knowledge | panel, whatsapp, agent, routine | 392 / - | Search everything stored about the user (their facts) for what a question asks, e.g. "where does my daughter go to school?". The notes in your prompt are only… |
 | `remember` (remember) | both | Memory and knowledge | panel, voice, whatsapp, agent, routine | 402 / 575 | Save a lasting fact about the user that they told you in their own message (name, role, company, people, preferences, goals), as one short third-person sentence |
 | `remember_this` (remember this) | voice | Memory and knowledge | voice | - / 344 | Saves to the user's knowledge base: the page in front, or a note in the user's words. |
 | `remove_ava_from_call` (remove ava from call) | voice | Meetings and calendar | voice | - / 125 | Have Ava's own participant leave the Google Meet call (the user stays in it). |
