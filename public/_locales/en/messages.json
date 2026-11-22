@@ -12692,5 +12692,327 @@
   },
   "settings_autoDefault_hint": {
     "message": "New tasks you type start with Auto mode on. Payments, deleting, access changes and passwords still ask."
+  },
+  "voice_preset_title": {
+    "message": "Voice presets"
+  },
+  "voice_preset_hint": {
+    "message": "One choice sets who listens and who speaks. Pick the one that fits this computer."
+  },
+  "voice_preset_instant_name": {
+    "message": "Instant"
+  },
+  "voice_preset_instant_desc": {
+    "message": "Listens on this computer and speaks with its own voice. Starts at once and never pauses between sentences. Works on any computer."
+  },
+  "voice_preset_light_name": {
+    "message": "Light"
+  },
+  "voice_preset_light_desc": {
+    "message": "Listens on this computer and speaks with KittenTTS, a small natural voice. Needs a computer that makes speech faster than it plays."
+  },
+  "voice_preset_natural_name": {
+    "message": "Natural"
+  },
+  "voice_preset_natural_desc": {
+    "message": "Listens with Moonshine base and speaks with Kokoro, the best voice that stays on this computer. Needs a fast computer."
+  },
+  "voice_preset_cloud_name": {
+    "message": "Cloud"
+  },
+  "voice_preset_cloud_desc": {
+    "message": "Gemini listens and speaks: quick on any computer and good with accents. Your voice is sent to Google."
+  },
+  "voice_preset_recommended": {
+    "message": "Recommended for this computer"
+  },
+  "voice_preset_unchecked": {
+    "message": "A safe start. Check this computer to see whether a nicer voice keeps up."
+  },
+  "voice_preset_inUse": {
+    "message": "In use"
+  },
+  "voice_preset_use": {
+    "message": "Use this"
+  },
+  "voice_preset_download": {
+    "message": "Download ($MB$ MB)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "97"
+      }
+    }
+  },
+  "voice_preset_needs": {
+    "message": "Download first: $FILES$ (about $MB$ MB)",
+    "placeholders": {
+      "files": {
+        "content": "$1",
+        "example": "KittenTTS nano"
+      },
+      "mb": {
+        "content": "$2",
+        "example": "60"
+      }
+    }
+  },
+  "voice_preset_needsKey": {
+    "message": "Needs a Gemini key: add one in Settings › Models."
+  },
+  "voice_preset_tooSlow": {
+    "message": "Too slow here: this voice makes speech at $SPEED$× real time, so longer answers use the computer's voice.",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_preset_keepsUp": {
+    "message": "Keeps up here: $SPEED$× real time.",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "2.4"
+      }
+    }
+  },
+  "voice_preset_applied": {
+    "message": "Using the $NAME$ preset.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Instant"
+      }
+    }
+  },
+  "voice_check_title": {
+    "message": "This computer"
+  },
+  "voice_check_button": {
+    "message": "Check this computer"
+  },
+  "voice_check_running": {
+    "message": "Checking: each downloaded voice makes a short line, timed. This takes under a minute."
+  },
+  "voice_check_never": {
+    "message": "Not checked yet. The check times each downloaded voice on this computer."
+  },
+  "voice_check_none": {
+    "message": "No voice is downloaded yet. Download one below, then check."
+  },
+  "voice_check_machine": {
+    "message": "$CORES$ processor cores, $MEMORY$, WebGPU: $GPU$.",
+    "placeholders": {
+      "cores": {
+        "content": "$1",
+        "example": "8"
+      },
+      "memory": {
+        "content": "$2",
+        "example": "8 GB of memory"
+      },
+      "gpu": {
+        "content": "$3",
+        "example": "yes"
+      }
+    }
+  },
+  "voice_check_memory": {
+    "message": "$GB$ GB of memory",
+    "placeholders": {
+      "gb": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "voice_check_memoryUnknown": {
+    "message": "memory not reported"
+  },
+  "voice_check_yes": {
+    "message": "yes"
+  },
+  "voice_check_no": {
+    "message": "no"
+  },
+  "voice_check_speed": {
+    "message": "$ENGINE$ speaks at $SPEED$× real time. $VERDICT$",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      },
+      "verdict": {
+        "content": "$3",
+        "example": "Too slow here."
+      }
+    }
+  },
+  "voice_check_hearing": {
+    "message": "$ENGINE$ listens at $SPEED$× real time.",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "5.1"
+      }
+    }
+  },
+  "voice_check_heard": {
+    "message": "wrote down $PERCENT$% of the test line",
+    "placeholders": {
+      "percent": {
+        "content": "$1",
+        "example": "100"
+      }
+    }
+  },
+  "voice_verdict_fast": {
+    "message": "Plenty fast."
+  },
+  "voice_verdict_steady": {
+    "message": "Keeps up."
+  },
+  "voice_verdict_borderline": {
+    "message": "Only just keeps up."
+  },
+  "voice_verdict_tooSlow": {
+    "message": "Too slow here."
+  },
+  "voice_health_title": {
+    "message": "What I noticed"
+  },
+  "voice_health_empty": {
+    "message": "No spoken answers have been recorded yet."
+  },
+  "voice_health_ok": {
+    "message": "Nothing wrong in the last answers."
+  },
+  "voice_health_useInstant": {
+    "message": "Use the computer's own voice"
+  },
+  "voice_health_fixed": {
+    "message": "Now using the Instant preset."
+  },
+  "voice_health_checking": {
+    "message": "Checking this computer…"
+  },
+  "voice_health_copy": {
+    "message": "Copy report"
+  },
+  "voice_health_copied": {
+    "message": "Copied."
+  },
+  "voice_health_issue": {
+    "message": "Open an issue"
+  },
+  "voice_health_clear": {
+    "message": "Clear"
+  },
+  "voice_health_privacy": {
+    "message": "The report holds sizes and times only: never a word that was said or heard. Nothing is sent unless you open the issue and send it yourself."
+  },
+  "voice_health_check_failed": {
+    "message": "The check could not run. Try again in a moment."
+  },
+  "voice_health_fallback_title": {
+    "message": "Ava used this computer's voice"
+  },
+  "voice_health_fallback_body": {
+    "message": "$ENGINE$ makes speech at $SPEED$× real time here, slower than it plays, which leaves a pause after each sentence. Settings › Voice › Voice presets has faster choices.",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_finding_slower_title": {
+    "message": "$ENGINE$ makes speech slower than it plays ($SPEED$×).",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_finding_slower_detail": {
+    "message": "That leaves a pause after sentences. Longer answers use the computer's own voice until it is faster."
+  },
+  "voice_finding_pauses_title": {
+    "message": "Speech stopped between sentences in $COUNT$ of the last answers, up to $SECONDS$ s.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "2.4"
+      }
+    }
+  },
+  "voice_finding_pauses_detail": {
+    "message": "The voice could not make the next sentence before the last one ended."
+  },
+  "voice_finding_slowStart_title": {
+    "message": "The first sound takes about $SECONDS$ s to start.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "6.3"
+      }
+    }
+  },
+  "voice_finding_failing_title": {
+    "message": "The voice failed in $COUNT$ of the last answers.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "voice_finding_sttSlow_title": {
+    "message": "$ENGINE$ listens slower than people speak ($SPEED$×).",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.8"
+      }
+    }
+  },
+  "voice_finding_fallback_title": {
+    "message": "The computer's voice replaced a slow voice $COUNT$ times lately.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "voice_finding_unchecked_title": {
+    "message": "This computer has not been checked yet."
   }
 }

@@ -98,7 +98,17 @@ test('every page opens from the nav and draws its sections; one control per page
     assert.doesNotMatch(await text(page), /could not be shown/, `every section on ${id} draws`);
     await shot(page, `${id}-1280`);
   }
-  assert.deepEqual(seen.voice, ['voice-identity', 'tts', 'voice-engines', 'audio-devices', 'wake', 'voice-ambient']);
+  assert.deepEqual(seen.voice, [
+    'voice-identity',
+    'voice-vocabulary',
+    'tts',
+    'voice-presets',
+    'voice-engines',
+    'voice-health',
+    'audio-devices',
+    'wake',
+    'voice-ambient',
+  ]);
   assert.deepEqual(seen.general, ['setup', 'names', 'theme', 'writing', 'confirm', 'cap', 'highlights', 'agent']);
   assert.deepEqual(seen.memory, [
     'about-you',

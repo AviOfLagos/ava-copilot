@@ -1,5 +1,7 @@
 import { PcmPlayer } from './player';
 import type { FromTtsWorker, LocalVoiceEngine, ToTtsWorker } from './protocol';
+import type { SpokenReport } from '../../background/voice/engines/wire';
+import { splitSentences } from './text';
 
 /**
  * The local voices in the offscreen document: starts the worker on first use, keeps the model loaded while it is
@@ -21,6 +23,39 @@ export interface LocalTtsStats {
   speedFactor: number | null;
   peakRms: number;
   playedSeconds: number;
+  // What the listener heard of the last request: pauses where the voice had run dry waiting for the next sentence
+  gaps: { count: number; totalMs: number; longestMs: number };
+  // Per sentence of the last request: where the time went
+  chunks: ChunkTiming[];
+}
+
+export interface ChunkTiming {
+  chars: number;
+  tokens: number;
+  // Turning the text into phonemes (eSpeak) and the model making speech from them, in milliseconds
+  phonemeMs: number;
+  modelMs: number;
+  // The whole sentence (both, and trimming), and the seconds of speech it made
+  workMs: number;
+  audioSeconds: number;
+  // When it reached the player, counted from the request
+  arrivedMs: number;
+}
+
+// The longest head start held back before speaking, in seconds of speech: past it waiting is worse than a pause
+export const MAX_HEAD_START_SECONDS = 6;
+// Counted on a voice a tenth slower than it measured, so a busy moment does not bring the pauses back
+const HEAD_START_MARGIN = 0.9;
+
+/**
+ * How many seconds of speech must be ready before it starts playing so the rest, made at `speed` seconds of speech per
+ * second of work, never runs dry: the voice falls behind by (1 - speed) for every second it plays, so the head start
+ * covers that over what is still to be made. A voice at least as fast as it plays needs none.
+ */
+export function headStartSeconds(speed: number, remainingSeconds: number): number {
+  const effective = speed * HEAD_START_MARGIN;
+  if (!(effective > 0) || effective >= 1 || remainingSeconds <= 0) return 0;
+  return Math.min(MAX_HEAD_START_SECONDS, (remainingSeconds * (1 - effective)) / effective);
 }
 
 export interface SpeakRequest {
@@ -33,6 +68,15 @@ export interface SpeakRequest {
 
 interface Pending {
   id: number;
+  engine: LocalVoiceEngine;
+  // Characters in the sentences to say, and how many are made so far: the rest of the speech is estimated from them
+  charsTotal: number;
+  charsDone: number;
+  // Speech made but kept back until there is enough ahead to play without a pause
+  held: Float32Array[];
+  heldSeconds: number;
+  released: boolean;
+  loadWaitMs: number | null;
   resolve: () => void;
   reject: (error: Error) => void;
   started: number;
@@ -60,6 +104,8 @@ export class LocalTts {
   // Bumped by every stop and every new request: a request still loading knows it was overtaken
   private generation = 0;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  // Told what each answer came to, once it has been heard (or cut off after some was)
+  onSpoken: ((report: SpokenReport) => void) | null = null;
   readonly stats: LocalTtsStats = {
     engine: null,
     requests: 0,
@@ -68,6 +114,8 @@ export class LocalTts {
     speedFactor: null,
     peakRms: 0,
     playedSeconds: 0,
+    gaps: { count: 0, totalMs: 0, longestMs: 0 },
+    chunks: [],
   };
 
   constructor(
@@ -116,7 +164,9 @@ export class LocalTts {
   async speak(request: SpeakRequest): Promise<void> {
     this.stop();
     const generation = this.generation;
+    const loadStarted = performance.now();
     await this.warm(request.engine);
+    const loadWaitMs = performance.now() - loadStarted;
     // Stopped, or another request came, while the model loaded
     if (generation !== this.generation) return;
     const id = this.nextId++;
@@ -124,9 +174,18 @@ export class LocalTts {
     this.stats.requests++;
     this.stats.peakRms = 0;
     this.stats.playedSeconds = 0;
+    this.stats.gaps = { count: 0, totalMs: 0, longestMs: 0 };
+    this.stats.chunks = [];
     const finished = new Promise<void>((resolve, reject) => {
       this.pending = {
         id,
+        engine: request.engine,
+        charsTotal: splitSentences(request.text).reduce((sum, sentence) => sum + sentence.length, 0),
+        charsDone: 0,
+        held: [],
+        heldSeconds: 0,
+        released: false,
+        loadWaitMs: loadWaitMs > 300 ? Math.round(loadWaitMs) : null,
         resolve,
         reject,
         started: performance.now(),
@@ -161,6 +220,13 @@ export class LocalTts {
     const finished = new Promise<void>((resolve, reject) => {
       this.pending = {
         id,
+        engine: request.engine,
+        charsTotal: 0,
+        charsDone: 0,
+        held: [],
+        heldSeconds: 0,
+        released: true,
+        loadWaitMs: null,
         resolve,
         reject,
         started: performance.now(),
@@ -216,7 +282,10 @@ export class LocalTts {
     if (current && !current.done) this.worker?.postMessage({ type: 'cancel', id: current.id } satisfies ToTtsWorker);
     if (current?.collect) current.collect.cancelled = true;
     // What was heard before it was cut off still counts
-    else if (current) this.recordPlayback();
+    else if (current) {
+      this.recordPlayback();
+      this.report(current, true, 'cut-off');
+    }
     this.player.stop();
     current?.resolve();
   }
@@ -224,6 +293,11 @@ export class LocalTts {
   private recordPlayback(): void {
     this.stats.peakRms = this.player.peakRms;
     this.stats.playedSeconds = +this.player.playedSeconds.toFixed(2);
+    this.stats.gaps = {
+      count: this.player.gapCount,
+      totalMs: Math.round(this.player.gapMs),
+      longestMs: Math.round(this.player.longestGapMs),
+    };
   }
 
   private post(message: ToTtsWorker): void {
@@ -247,11 +321,23 @@ export class LocalTts {
         pending.firstAudio ??= performance.now();
         pending.workMs += message.ms;
         pending.audioSeconds += message.samples.length / message.sampleRate;
+        if (!pending.collect) {
+          this.stats.chunks.push({
+            chars: message.chars ?? 0,
+            tokens: message.tokens ?? 0,
+            phonemeMs: Math.round(message.phonemeMs ?? 0),
+            modelMs: Math.round(message.modelMs ?? 0),
+            workMs: Math.round(message.ms),
+            audioSeconds: +(message.samples.length / message.sampleRate).toFixed(2),
+            arrivedMs: Math.round(performance.now() - pending.started),
+          });
+        }
         if (pending.collect) {
           pending.collect.chunks.push(message.samples);
           pending.collect.sampleRate = message.sampleRate;
         } else {
-          this.player.enqueue(message.samples);
+          pending.charsDone += message.chars ?? 0;
+          this.hold(pending, message.samples);
         }
         return;
       }
@@ -268,9 +354,12 @@ export class LocalTts {
           this.touch();
           return;
         }
+        // Whatever was held back plays now: nothing more is coming
+        this.release(pending);
         void this.player.whenDrained().then(() => {
           if (this.pending !== pending) return;
           this.recordPlayback();
+          this.report(pending, true);
           this.pending = null;
           pending.resolve();
           this.touch();
@@ -281,6 +370,48 @@ export class LocalTts {
         this.fail(message.message, message.id);
         return;
     }
+  }
+
+  /**
+   * Speech arrives sentence by sentence. A voice that keeps up plays each at once; one slower than it plays keeps the
+   * first sentences back until the head start covers the rest, so it speaks through instead of stopping after each
+   * full stop.
+   */
+  private hold(pending: Pending, samples: Float32Array): void {
+    if (pending.released) {
+      this.player.enqueue(samples);
+      return;
+    }
+    pending.held.push(samples);
+    pending.heldSeconds += samples.length / 24_000;
+    const speed = pending.workMs > 0 ? pending.audioSeconds / (pending.workMs / 1000) : Number.POSITIVE_INFINITY;
+    const secondsPerChar = pending.charsDone > 0 ? pending.audioSeconds / pending.charsDone : 0;
+    const remaining = Math.max(0, pending.charsTotal - pending.charsDone) * secondsPerChar;
+    if (pending.heldSeconds >= headStartSeconds(speed, remaining)) this.release(pending);
+  }
+
+  private release(pending: Pending): void {
+    pending.released = true;
+    for (const samples of pending.held.splice(0)) this.player.enqueue(samples);
+  }
+
+  private report(pending: Pending, ok: boolean, note?: string): void {
+    if (!this.onSpoken || pending.collect) return;
+    // Nothing was made before it was cut off: nothing to say about it
+    if (pending.audioSeconds === 0 && ok) return;
+    const heard = this.player.playedSeconds;
+    this.onSpoken({
+      engine: pending.engine,
+      ok,
+      chars: pending.charsTotal,
+      audioSeconds: +Math.max(heard, pending.audioSeconds).toFixed(2),
+      workMs: Math.round(pending.workMs),
+      speed: pending.workMs > 0 ? +(pending.audioSeconds / (pending.workMs / 1000)).toFixed(2) : null,
+      firstAudioMs: pending.firstAudio === null ? null : Math.round(pending.firstAudio - pending.started),
+      loadMs: pending.loadWaitMs,
+      gaps: this.stats.gaps,
+      note,
+    });
   }
 
   private fail(reason: string, id?: number): void {
@@ -295,6 +426,7 @@ export class LocalTts {
     if (pending && (id === undefined || pending.id === id)) {
       this.pending = null;
       this.player.stop();
+      this.report(pending, false, 'failed');
       pending.reject(error);
     }
   }

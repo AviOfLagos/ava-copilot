@@ -163,6 +163,10 @@ function command(page, message, timeout = 120_000) {
   );
 }
 
+// What was measured of the voices: cleared before a conversation, because a loaded machine can show KittenTTS slower
+// than speech in an earlier test, and the computer's own voice would then speak (e2e/voice-health.e2e.mjs tests that)
+const FRESH_HEALTH = { 'voice-health': { tts: {}, stt: {}, machine: null, checkedAt: null, lastFallback: null } };
+
 const waitFor = async (check, label, timeout = 60_000) => {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -309,7 +313,7 @@ test(
     assert.match(note, /English/);
     // The answer is spoken by KittenTTS (chosen in the first test; set here too so this test stands alone)
     const tts = await extension.getStorage('tts-settings');
-    await extension.setStorage({ 'tts-settings': { ...tts, engine: 'kitten' } });
+    await extension.setStorage({ ...FRESH_HEALTH, 'tts-settings': { ...tts, engine: 'kitten' } });
     const spokenBefore = (await command(panel, { type: 'voice_engine_status' })).runtime?.tts.requests ?? 0;
 
     // The same Talk button as a Live conversation
@@ -378,6 +382,7 @@ test(
     // An install from before "auto": every save wrote the old default Live and Gemini hearing, never picked;
     // the read-aloud voice left at the system default. There is no Gemini key in this profile.
     await extension.setStorage({
+      ...FRESH_HEALTH,
       'voice-engine-settings': { mode: 'live', stt: 'gemini', moonshineSize: 'tiny', economyModel: 'fast' },
       'tts-settings': { readAloud: 'voice', engine: 'system', voice: '', rate: 1, lastSpokenMessageId: null },
     });
