@@ -187,6 +187,10 @@ describe('the daily caps', () => {
     expect(await ensureBudget(free.value as never)).toBe(false);
     expect(free.asked[0]).toMatchObject({ kind: 'cap', target: expect.stringContaining('models_tokenCap_reached') });
     expect(free.stopped()).toBe(true);
+    // Money stays asked every time: the card never offers "Allow every time", and a cap is no kind a rule can name
+    expect(free.asked[0]).not.toHaveProperty('always');
+    const { canAllowAlways } = await import('@extension/storage');
+    expect(canAllowAlways('cap', 'usage:cap')).toBe(false);
 
     // 0 means no cap
     await modelSettingsStore.updateSettings({ unpricedDailyTokenCap: 0 });

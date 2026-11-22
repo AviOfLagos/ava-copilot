@@ -1,5 +1,6 @@
 import { t } from '@extension/i18n';
 import {
+  ALWAYS_ASK_KINDS,
   canAllowAlways,
   gateSettingsStore,
   onceStore,
@@ -7,7 +8,7 @@ import {
   permissionRulesStore,
   threadStore,
 } from '@extension/storage';
-import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
+import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind, RuleCandidate } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { Actors, ExecutionState } from '../agent/event/types';
@@ -36,7 +37,12 @@ const SNIPPET_LENGTH = 80;
 export type GatedAction = (
   | { action: 'click_element' | 'input_text'; args: Record<string, unknown>; node: DOMElementNode }
   | { action: 'send_keys'; args: Record<string, unknown> }
-) & { once?: OnceInput | false };
+) & {
+  once?: OnceInput | false;
+  // The rule "Allow every time" would save, when the caller knows the place better than the page's address (a
+  // Drive folder). Ignored for money, deleting and access: those are asked every time whatever a caller sends.
+  rule?: RuleCandidate;
+};
 
 // A commit that may run, with what is needed to check its effect afterwards
 export interface ApprovedCommit {
@@ -330,8 +336,14 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   // card would show. A repeat of a step (do once) is still asked, money, deleting and access never get a rule,
   // and neither does a kind that is only a guess (focus that could not be read, or the model's word).
   const needsCard = settings.confirm[kind] || unattended || !!repeat;
-  const scope = guessed ? '' : pageScope(page.url());
-  const rule = needsCard && !repeat && scope ? await permissionRulesStore.find(kind, scope).catch(() => null) : null;
+  const named =
+    gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
+      ? gated.rule
+      : null;
+  const scope = named ? named.scope : guessed ? '' : pageScope(page.url());
+  const ruleKind = named ? named.kind : kind;
+  const rule =
+    needsCard && !repeat && scope ? await permissionRulesStore.find(ruleKind, scope).catch(() => null) : null;
   if (rule) {
     await permissionRulesStore.used(rule.id).catch(() => undefined);
     await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
@@ -341,6 +353,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   if (!rule && needsCard) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     if (repeat) request.repeat = repeat;
+    else if (named) request.always = named;
     else if (scope && canAllowAlways(kind)) {
       request.always = { kind, scope, label: t('gate_rule_label', [t(KIND_TEXT[kind]), scope]) };
     }
