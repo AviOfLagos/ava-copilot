@@ -57,6 +57,9 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   is never moved except by his own click. Moves and offers are kept in `storage.local` (`workspacePlacement`), not Dexie.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
+- Appearance (theme, text size, density): one record in `src/storage/lib/settings/appearanceSettings.ts`, applied to a page by
+  `useAppearance` (`src/side-panel/layout/theme.ts`) as root `zoom` plus `--density`/`--ui-zoom`. New pages call `useTheme()`; add
+  fields to the record, not panel-only CSS. It is meant to carry over to the desktop app (`docs/appearance.md`).
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in
   through `src/background/registry` and `src/side-panel/registry.ts` from their own `register.ts`, imported in
   `src/background/registers.ts` and `src/side-panel/registers.ts`. Long work is a job (`src/background/jobs/runner.ts`).

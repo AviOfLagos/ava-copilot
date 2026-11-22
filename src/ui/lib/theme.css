@@ -105,3 +105,17 @@
     radial-gradient(420px 300px at 15% -5%, var(--aura-1), transparent 70%),
     radial-gradient(380px 320px at 110% 40%, var(--aura-2), transparent 70%), var(--color-background);
 }
+
+/*
+ * Text size is `zoom` on the root (src/side-panel/layout/theme.ts, which also sets --ui-zoom to the same number).
+ * Viewport units are not zoomed, so a full-height page would grow past the window at 130%: divide them by the zoom.
+ */
+html .h-screen {
+  height: calc(100vh / var(--ui-zoom, 1));
+}
+html .min-h-screen {
+  min-height: calc(100vh / var(--ui-zoom, 1));
+}
+html .max-h-screen {
+  max-height: calc(100vh / var(--ui-zoom, 1));
+}

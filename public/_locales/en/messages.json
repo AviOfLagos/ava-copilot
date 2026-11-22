@@ -2159,6 +2159,27 @@
   "settings_look_system": {
     "message": "System"
   },
+  "settings_look_textSize": {
+    "message": "Text size"
+  },
+  "settings_look_textSmaller": {
+    "message": "Smaller text"
+  },
+  "settings_look_textLarger": {
+    "message": "Larger text"
+  },
+  "settings_look_density": {
+    "message": "Spacing"
+  },
+  "settings_look_density_compact": {
+    "message": "Compact"
+  },
+  "settings_look_density_comfortable": {
+    "message": "Comfortable"
+  },
+  "settings_look_density_roomy": {
+    "message": "Roomy"
+  },
   "settings_full": {
     "message": "Full settings: models, blocked sites, skills"
   },
