@@ -7,7 +7,7 @@ import { setWakeWord } from '../../onboarding/wake';
 import type { PanelApi } from '../../registry';
 import { voiceFeatureRequirement } from '../../requirements/catalog';
 import { RequirementCard, useRequirementFlow } from '../../requirements/RequirementCard';
-import { Row, useStoreSettings } from './ui';
+import { Row, SELECT, useStoreSettings } from './ui';
 
 /**
  * The wake word: always listening on this computer for "Hey Ava". Its recogniser is downloaded the first time;
@@ -46,5 +46,37 @@ export function WakeWordSection({ api }: { api: PanelApi }) {
       </Row>
       <RequirementCard flow={flow} state={state} />
     </>
+  );
+}
+
+const PATIENCE_CHOICES = [
+  ['quick', 'settings_patience_quick'],
+  ['normal', 'settings_patience_normal'],
+  ['patient', 'settings_patience_patient'],
+] as const;
+
+/**
+ * How long a pause may be before Ava takes the user to be finished and answers. Applies to a live (Gemini) voice
+ * conversation; the on-device voice already waits for the end of a sentence.
+ */
+export function TurnPatienceSection() {
+  const meeting = useStoreSettings(meetingSettingsStore);
+  if (!meeting) return null;
+  return (
+    <Row title={t('settings_patience')} hint={t('settings_patience_hint')} htmlFor="settings-patience">
+      <select
+        id="settings-patience"
+        className={SELECT}
+        value={meeting.turnPatience}
+        onChange={event =>
+          void meetingSettingsStore.updateSettings({ turnPatience: event.target.value as typeof meeting.turnPatience })
+        }>
+        {PATIENCE_CHOICES.map(([value, label]) => (
+          <option key={value} value={value}>
+            {t(label)}
+          </option>
+        ))}
+      </select>
+    </Row>
   );
 }

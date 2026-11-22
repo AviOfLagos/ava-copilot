@@ -2352,6 +2352,24 @@
       }
     }
   },
+  "settings_section_patience": {
+    "message": "耐心"
+  },
+  "settings_patience": {
+    "message": "Ava 等你說完的時間"
+  },
+  "settings_patience_hint": {
+    "message": "停頓多久之後 Ava 才會回答。「讓我想想」適合說話較慢、愛思考的人。適用於 Gemini 即時對話；裝置上的語音本來就會等句子說完。"
+  },
+  "settings_patience_quick": {
+    "message": "快"
+  },
+  "settings_patience_normal": {
+    "message": "一般"
+  },
+  "settings_patience_patient": {
+    "message": "讓我想想"
+  },
   "settings_wake_hint": {
     "message": "即使關閉面板也持續開啟。僅在本機聆聽；在您說「$PHRASE$」之前不會傳送任何內容。",
     "placeholders": {

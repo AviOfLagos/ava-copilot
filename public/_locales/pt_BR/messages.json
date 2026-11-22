@@ -2352,6 +2352,24 @@
       }
     }
   },
+  "settings_section_patience": {
+    "message": "Paciência"
+  },
+  "settings_patience": {
+    "message": "Quanto tempo a Ava espera você terminar"
+  },
+  "settings_patience_hint": {
+    "message": "Quanto tempo uma pausa pode durar antes de a Ava responder. “Deixe-me pensar” serve para uma fala lenta e pensada. Vale para uma conversa ao vivo com o Gemini; a voz no dispositivo já espera o fim da frase."
+  },
+  "settings_patience_quick": {
+    "message": "Rápido"
+  },
+  "settings_patience_normal": {
+    "message": "Normal"
+  },
+  "settings_patience_patient": {
+    "message": "Deixe-me pensar"
+  },
   "settings_wake_hint": {
     "message": "Sempre ativo, mesmo com o painel fechado. Ouve só neste computador; nada é enviado até você dizer “$PHRASE$”.",
     "placeholders": {

@@ -25,19 +25,37 @@ const ECHO_TAIL_MS = 200;
 const SETTLE_MS = 200;
 
 /**
- * Gemini's own voice activity detection, tuned for a conversation: slow to decide the user started (so a cough,
- * a click or a trace of the copilot's echo does not count), quick to decide they finished (a short pause ends
- * the turn, so the answer comes sooner), and the user starting to speak cuts the copilot off.
+ * How long a pause may be before Gemini decides the user finished (Settings › Voice › Patience). People pause
+ * 0.5-1.5 s mid-sentence to think, so a short pause cannot be what ends a turn: "quick" answers fastest and cuts in
+ * on slow speakers (the old setting), "normal" waits for a pause that is the end of a thought, "patient" is for
+ * people who think out loud. The economy recogniser waits the same way (stt/economy.ts, 1.2 s).
  */
-export const REALTIME_INPUT_CONFIG = {
-  automaticActivityDetection: {
-    startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
-    endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
-    prefixPaddingMs: 200,
-    silenceDurationMs: 600,
-  },
-  activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
-} as const;
+export type TurnPatience = 'quick' | 'normal' | 'patient';
+export const DEFAULT_PATIENCE: TurnPatience = 'normal';
+
+const PATIENCE: Record<TurnPatience, { endOfSpeechSensitivity: string; silenceDurationMs: number }> = {
+  quick: { endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH', silenceDurationMs: 600 },
+  normal: { endOfSpeechSensitivity: 'END_SENSITIVITY_LOW', silenceDurationMs: 1200 },
+  patient: { endOfSpeechSensitivity: 'END_SENSITIVITY_LOW', silenceDurationMs: 2000 },
+};
+
+/**
+ * Gemini's own voice activity detection, tuned for a conversation: slow to decide the user started (so a cough,
+ * a click or a trace of the copilot's echo does not count), slow to decide they finished (see TurnPatience), and
+ * the user starting to speak cuts the copilot off.
+ */
+export function realtimeInputConfig(patience: TurnPatience = DEFAULT_PATIENCE) {
+  return {
+    automaticActivityDetection: {
+      startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+      ...(PATIENCE[patience] ?? PATIENCE[DEFAULT_PATIENCE]),
+      prefixPaddingMs: 200,
+    },
+    activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+  } as const;
+}
+
+export const REALTIME_INPUT_CONFIG = realtimeInputConfig();
 
 export interface VoiceTool {
   name: string;
@@ -60,6 +78,8 @@ export interface VoiceOptions extends LiveOptions {
   speakerDeviceId?: string | null;
   // The fixed voice (and, for models that take it, language) of the conversation, built by the background
   speechConfig?: { voiceConfig: { prebuiltVoiceConfig: { voiceName: string } }; languageCode?: string };
+  // How long a pause may be before the user counts as finished (Settings › Voice › Patience)
+  patience?: TurnPatience;
 }
 
 export interface VoiceEvents {
@@ -83,7 +103,7 @@ export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
         ...(options.speechConfig ? { speechConfig: options.speechConfig } : {}),
       },
       systemInstruction: { parts: [{ text: options.instructions }] },
-      realtimeInputConfig: REALTIME_INPUT_CONFIG,
+      realtimeInputConfig: realtimeInputConfig(options.patience),
       inputAudioTranscription: {},
       outputAudioTranscription: {},
       tools: [{ functionDeclarations: options.tools }],
