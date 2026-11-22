@@ -16,13 +16,15 @@ const data = vi.hoisted(() => {
   return store;
 });
 
-const sent = vi.hoisted(() => ({ init: vi.fn(), span: vi.fn(), flush: vi.fn() }));
+const sent = vi.hoisted(() => ({ init: vi.fn(), span: vi.fn(), flush: vi.fn(), reset: vi.fn() }));
 vi.mock('suture-trace', () => ({
   initSuture: sent.init,
   flushSuture: sent.flush,
-  suture: async (feature: string, fn: () => unknown) => {
-    sent.span(feature);
-    return fn();
+  _resetSuture: sent.reset,
+  suture: async (feature: string, fn: () => unknown, opts?: unknown) => {
+    const recorded = await fn();
+    sent.span(feature, opts, recorded);
+    return recorded;
   },
 }));
 
@@ -40,6 +42,7 @@ describe('hosted Suture tracing', () => {
     sent.init.mockClear();
     sent.span.mockClear();
     sent.flush.mockClear();
+    sent.reset.mockClear();
   });
 
   it('is off by default, content included', () => {
@@ -72,7 +75,7 @@ describe('hosted Suture tracing', () => {
     await tracingSettingsStore.updateSettings({ hostedEnabled: true });
     const { tracedCall } = await load();
     await tracedCall('ava-planner', async () => 1, []);
-    expect(sent.span).toHaveBeenCalledWith('ava-planner');
+    expect(sent.span).toHaveBeenCalledWith('ava-planner', {}, undefined);
     expect(sent.init).toHaveBeenCalledWith(expect.objectContaining({ captureContent: false }));
   });
 
@@ -84,5 +87,42 @@ describe('hosted Suture tracing', () => {
     await tracingSettingsStore.updateSettings({ hostedEnabled: false });
     await tracedCall('ava-planner', async () => 1, []);
     expect(sent.span).toHaveBeenCalledTimes(1);
+  });
+
+  it('withholds prompt and reply text itself when content is off, but the caller still gets them', async () => {
+    vi.stubEnv('VITE_SUTURE_API_KEY', 'sut_ing_test');
+    await tracingSettingsStore.updateSettings({ hostedEnabled: true });
+    const { tracedCall } = await load();
+    const result = { text: 'secret reply', rawText: 'raw', output: { x: 1 }, model: 'm', usage: { inputTokens: 3 } };
+    expect(await tracedCall('ava-planner', async () => result, [{ role: 'user', content: 'secret prompt' }])).toBe(
+      result,
+    );
+    expect(sent.span).toHaveBeenCalledWith('ava-planner', {}, { model: 'm', usage: { inputTokens: 3 } });
+  });
+
+  it('sends content only once captureContent is on, and restarts the library when it changes', async () => {
+    vi.stubEnv('VITE_SUTURE_API_KEY', 'sut_ing_test');
+    await tracingSettingsStore.updateSettings({ hostedEnabled: true });
+    const { tracedCall } = await load();
+    await tracedCall('ava-planner', async () => ({ text: 'a' }), ['p']);
+    await tracingSettingsStore.updateSettings({ captureContent: true });
+    await tracedCall('ava-planner', async () => ({ text: 'b' }), ['p']);
+    expect(sent.reset).toHaveBeenCalledTimes(1);
+    expect(sent.init).toHaveBeenLastCalledWith(expect.objectContaining({ captureContent: true }));
+    expect(sent.span).toHaveBeenLastCalledWith('ava-planner', { input: ['p'] }, { text: 'b' });
+    await tracingSettingsStore.updateSettings({ captureContent: false });
+    await tracedCall('ava-planner', async () => ({ text: 'c' }), ['p']);
+    expect(sent.span).toHaveBeenLastCalledWith('ava-planner', {}, {});
+  });
+
+  it('drops buffered spans and does not flush once tracing is switched off', async () => {
+    vi.stubEnv('VITE_SUTURE_API_KEY', 'sut_ing_test');
+    await tracingSettingsStore.updateSettings({ hostedEnabled: true });
+    const { tracedCall, flushHostedTracing } = await load();
+    await tracedCall('ava-planner', async () => 1, []);
+    await tracingSettingsStore.updateSettings({ hostedEnabled: false });
+    await flushHostedTracing();
+    expect(sent.reset).toHaveBeenCalledTimes(1);
+    expect(sent.flush).not.toHaveBeenCalled();
   });
 });

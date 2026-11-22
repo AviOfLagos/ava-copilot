@@ -118,6 +118,9 @@ async function main() {
     // environment too, in case it is ever set as a real shell variable rather than in that file.
     const env = { ...process.env };
     delete env.VITE_SEED_PROFILE;
+    // Never ship the hosted-tracing ingest key: it is for the owner's own builds only.
+    delete env.VITE_SUTURE_API_KEY;
+    delete env.VITE_SUTURE_CAPTURE_CONTENT;
 
     console.log('Installing dependencies (frozen lockfile)…');
     execFileSync('pnpm', ['install', '--frozen-lockfile'], { cwd: worktree, stdio: 'inherit', env });
