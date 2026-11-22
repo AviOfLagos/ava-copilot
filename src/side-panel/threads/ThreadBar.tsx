@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { t } from '@extension/i18n';
 import { llmProviderStore, threadStore } from '@extension/storage';
 import type { ThreadRecord } from '@extension/storage';
-import { Cpu, ExternalLink, Globe, RotateCcw } from 'lucide-react';
+import { Cpu, ExternalLink, Globe, RotateCcw, Zap } from 'lucide-react';
+import { Switch } from '../components/ui/switch';
 import UsageBadge from '../components/UsageBadge';
 import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
 import type { PanelApi } from '../registry';
+import { alwaysAsks } from '@src/background/gate/origins';
 import { MAX_AUTO_TRIES } from '@src/background/retry/classify';
 import { formatWait } from './countdown';
 import { RetryCountdown, useNow } from './RetryCountdown';
@@ -33,6 +35,8 @@ interface ThreadBarProps {
   // Opens the notes of the meeting this thread was made for
   onOpenMeeting?: () => void;
   onWorkspace: (workspaceId: string | null) => void;
+  // The user's click on the Auto mode switch: the only way it is turned on
+  onAutoMode?: (on: boolean) => void;
   isDarkMode?: boolean;
   api?: PanelApi;
 }
@@ -49,6 +53,7 @@ export default function ThreadBar({
   onOpenMeeting,
   onPopOut,
   onWorkspace,
+  onAutoMode,
   isDarkMode = false,
   api,
 }: ThreadBarProps) {
@@ -92,6 +97,8 @@ export default function ThreadBar({
     void threadStore.setModel(thread.id, value ? { provider, modelName } : null);
   };
 
+  // An agent's or a routine's chat always asks: it has no Auto mode
+  const canAuto = !alwaysAsks(thread);
   const chip = 'flex h-6 min-w-0 items-center gap-1.5 rounded-full border bg-card px-2 text-[11px]';
 
   return (
@@ -123,6 +130,12 @@ export default function ThreadBar({
             ))}
           </select>
         </label>
+        {thread.autoMode === true && canAuto && (
+          <span className={`${chip} text-primary border-primary/40 shrink-0`} role="status">
+            <Zap className="size-3 shrink-0" />
+            {t('auto_chip_on')}
+          </span>
+        )}
         <UsageBadge sessionId={thread.id} isDarkMode={isDarkMode} />
         {onPopOut && (
           <Button
@@ -159,6 +172,21 @@ export default function ThreadBar({
         )}
       </div>
       {thread.status === 'running' && <RetryCountdown status={thread.retrying} />}
+      {canAuto && onAutoMode && (
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-2 text-[11px]">
+            <span>{t('auto_toggle_label')}</span>
+            <Switch
+              label={t('auto_toggle_label')}
+              checked={thread.autoMode === true}
+              onChange={value => onAutoMode(value)}
+            />
+          </div>
+          <p className="text-muted-foreground text-[10.5px]">
+            {t('auto_asks_title')} {t('auto_asks_list')}
+          </p>
+        </div>
+      )}
       {thread.status === 'error' && thread.error && (
         <div
           role="status"

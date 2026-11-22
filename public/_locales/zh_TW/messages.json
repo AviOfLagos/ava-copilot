@@ -12628,5 +12628,26 @@
   },
   "settings_tracing_content_hint": {
     "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
+  },
+  "gate_autoApproved": {
+    "message": "已自動核准：$2 上的「$1」"
+  },
+  "auto_chip_on": {
+    "message": "自動模式已開啟"
+  },
+  "auto_toggle_label": {
+    "message": "自動：此任務不要詢問我"
+  },
+  "auto_asks_title": {
+    "message": "即使在自動模式下仍會詢問："
+  },
+  "auto_asks_list": {
+    "message": "付款與購買、刪除、變更存取權限，以及密碼或驗證碼"
+  },
+  "settings_autoDefault_label": {
+    "message": "新任務預設使用自動模式"
+  },
+  "settings_autoDefault_hint": {
+    "message": "你輸入的新任務會以自動模式開始。付款、刪除、存取權變更與密碼仍會詢問。"
   }
 }

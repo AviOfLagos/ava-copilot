@@ -118,6 +118,9 @@ export interface ThreadRecord {
   // that was not started by the user at the computer means a saved "Allow every time" rule never answers for it.
   // `false` is only ever written by code that knows the run is clean. See gate/origins.ts `rulesMayAnswer`.
   tainted?: boolean;
+  // "Auto mode" for this task: submits, saves, posts and sends go ahead without a card (money, deleting, access and
+  // sign-ins still ask). Written only by the user's own click in the panel (`thread_auto_mode`), never by the model.
+  autoMode?: boolean;
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
   // How this chat hears and speaks, over Settings

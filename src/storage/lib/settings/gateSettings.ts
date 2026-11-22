@@ -50,15 +50,19 @@ export interface ConfirmRequest {
 export interface GateSettingsConfig {
   // Ask before an action of this kind runs. All on by default.
   confirm: Record<CommitKind, boolean>;
+  // Start every new chat of the user's in Auto mode (see gate/autoMode.ts). Off by default.
+  autoModeDefault: boolean;
 }
 
 export type GateSettingsStorage = BaseStorage<GateSettingsConfig> & {
   getSettings: () => Promise<GateSettingsConfig>;
   setConfirm: (kind: CommitKind, enabled: boolean) => Promise<void>;
+  setAutoModeDefault: (enabled: boolean) => Promise<void>;
 };
 
 export const DEFAULT_GATE_SETTINGS: GateSettingsConfig = {
   confirm: { send: true, publish: true, submit: true, delete: true, purchase: true, permission: true },
+  autoModeDefault: false,
 };
 
 const storage = createStorage<GateSettingsConfig>('gate-settings', DEFAULT_GATE_SETTINGS, {
@@ -71,10 +75,17 @@ export const gateSettingsStore: GateSettingsStorage = {
   async getSettings() {
     const settings = await storage.get();
     // A kind missing from stored settings is confirmed, so a new kind is never silently off
-    return { confirm: { ...DEFAULT_GATE_SETTINGS.confirm, ...settings?.confirm } };
+    return {
+      confirm: { ...DEFAULT_GATE_SETTINGS.confirm, ...settings?.confirm },
+      autoModeDefault: settings?.autoModeDefault === true,
+    };
   },
   async setConfirm(kind: CommitKind, enabled: boolean) {
     const current = await gateSettingsStore.getSettings();
-    await storage.set({ confirm: { ...current.confirm, [kind]: enabled } });
+    await storage.set({ ...current, confirm: { ...current.confirm, [kind]: enabled } });
+  },
+  async setAutoModeDefault(enabled: boolean) {
+    const current = await gateSettingsStore.getSettings();
+    await storage.set({ ...current, autoModeDefault: enabled });
   },
 };
