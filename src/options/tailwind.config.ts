@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 // Tailwind's config loader ignores WXT aliases, so import withUI from source.
 import { withUI } from '../ui/lib/withUI';
 // Settings sections are the panel's components: its colours, animations and files come along
+import { densitySpacing } from '../ui/lib/density';
 import panel from '../side-panel/tailwind.config';
 
 /*
@@ -28,6 +29,7 @@ export default withUI({
   ],
   theme: {
     extend: {
+      spacing: densitySpacing,
       fontFamily: {
         sans: ['"Geist Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"Geist Mono Variable"', 'ui-monospace', 'monospace'],

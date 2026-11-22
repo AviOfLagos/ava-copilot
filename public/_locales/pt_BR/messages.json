@@ -12620,5 +12620,77 @@
         "example": "Save"
       }
     }
+  },
+  "settings_look_textSize": {
+    "message": "Tamanho do texto"
+  },
+  "settings_look_textSmaller": {
+    "message": "Texto menor"
+  },
+  "settings_look_textLarger": {
+    "message": "Texto maior"
+  },
+  "settings_look_density": {
+    "message": "Espaçamento"
+  },
+  "settings_look_density_compact": {
+    "message": "Compacto"
+  },
+  "settings_look_density_comfortable": {
+    "message": "Confortável"
+  },
+  "settings_look_density_roomy": {
+    "message": "Espaçoso"
+  },
+  "retry_wait_step": {
+    "message": "O passo falhou — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_wait_planning": {
+    "message": "O planejamento falhou — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_wait_model": {
+    "message": "O modelo está ocupado — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_now": {
+    "message": "Tentando de novo agora…"
+  },
+  "retry_repair": {
+    "message": "A resposta do modelo veio quebrada — perguntando de novo"
+  },
+  "retry_fallback": {
+    "message": "O modelo não responde — passando para o local"
+  },
+  "retry_bannerIn": {
+    "message": "Tentando de novo às $1, em $2 (tentativa $3 de $4)"
+  },
+  "retry_dur_s": {
+    "message": "$1s"
+  },
+  "retry_dur_ms": {
+    "message": "$1 min $2s"
+  },
+  "retry_dur_hm": {
+    "message": "$1 h $2 min"
+  },
+  "gate_autoApproved": {
+    "message": "Aprovado automaticamente: $1 em $2"
+  },
+  "auto_chip_on": {
+    "message": "Modo automático ligado"
+  },
+  "auto_toggle_label": {
+    "message": "Automático: não me pergunte nesta tarefa"
+  },
+  "auto_asks_title": {
+    "message": "Ainda pergunta, mesmo no modo automático:"
+  },
+  "auto_asks_list": {
+    "message": "pagamentos e compras, apagar, mudar quem tem acesso, e senhas ou códigos"
+  },
+  "settings_autoDefault_label": {
+    "message": "Iniciar novas tarefas no modo automático"
+  },
+  "settings_autoDefault_hint": {
+    "message": "As novas tarefas que você digitar começam no modo automático. Pagamentos, exclusões, mudanças de acesso e senhas ainda perguntam."
   }
 }

@@ -22,6 +22,7 @@ import {
 } from '@src/background/agent/messages/utils';
 import { fallbackReason } from './errors';
 import { userMessage } from './messages';
+import { whileRetrying } from '../retry/status';
 import type { ChatModel } from './types';
 
 export { jsonSchema, zodSchema } from 'ai';
@@ -193,7 +194,7 @@ export async function callWithFallback<R>(
     logger.warning(`[${label}] failed (${reason}), trying ${local.provider}/${local.modelName}`);
     let result: R;
     try {
-      result = await run(local);
+      result = await whileRetrying(chatModel.status, { kind: 'fallback' }, () => run(local));
     } catch (localError) {
       logger.warning(`[${label}] the local model failed too`, describeError(localError));
       throw error;
@@ -263,7 +264,9 @@ async function generateStructuredWithRepair<T>(
     const label = `${args.chatModel.provider}/${args.chatModel.modelName}`;
     logger.warning(`[${label}] unusable reply, asking once more`, error.message);
     try {
-      return await generateStructuredOn({ ...args, messages: [...args.messages, userMessage(repairNote(error))] });
+      return await whileRetrying(args.chatModel.status, { kind: 'repair' }, () =>
+        generateStructuredOn({ ...args, messages: [...args.messages, userMessage(repairNote(error))] }),
+      );
     } catch (repairError) {
       // The first failure says what went wrong; the repair's own error is logged only
       if (repairError instanceof ResponseParseError) {

@@ -50,7 +50,7 @@ export default function PersonalityPicker({ workspaceId, onManage }: Personality
         )}>
         <span aria-hidden="true">{current.icon}</span>
       </RowMenuTrigger>
-      <RowMenuContent align="start" className="w-[260px] max-w-[calc(100vw-24px)]">
+      <RowMenuContent align="start" className="w-[260px] max-w-[calc((100vw-24px)/var(--ui-zoom,1))]">
         <RowMenuLabel className="label-mono px-2.5 pb-1 pt-1.5">
           {workspaceName ? t('persona_picker_title_workspace', [workspaceName]) : t('persona_picker_title')}
         </RowMenuLabel>

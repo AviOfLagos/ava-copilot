@@ -19,7 +19,7 @@ html body #app-container {
   text-align: left;
   width: auto;
   height: auto;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--ui-zoom, 1));
 }
 
 /* Upstream's cards (Firewall, Skills) are the panel's glass */

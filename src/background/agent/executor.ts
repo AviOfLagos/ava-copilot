@@ -31,6 +31,8 @@ import type { AgentStepHistory } from './history';
 import type { GeneralSettingsConfig, Personality } from '@extension/storage';
 
 import { ensureBudget } from '../usage/budget';
+import { encodeRetryStatus, whileRetrying } from '../retry/status';
+import type { RetryStatus } from '../retry/status';
 import { compactIfNeeded } from '../threads/compaction';
 import { finishTurn, startTurn } from '../telemetry/traces';
 
@@ -221,6 +223,14 @@ export class Executor {
    */
   notify(message: string): void {
     void this.context.emitEvent(Actors.SYSTEM, ExecutionState.ACT_NOTICE, message);
+  }
+
+  /**
+   * Shows (or, with null, clears) the countdown for a wait before an automatic retry. It is a state of the thread,
+   * not a chat message, so nothing stays behind once the wait is over.
+   */
+  reportRetry(status: RetryStatus | null): void {
+    void this.context.emitEvent(Actors.SYSTEM, ExecutionState.ACT_RETRY, encodeRetryStatus(status));
   }
 
   addFollowUpTask(task: string, media?: TaskImages | null): void {
@@ -470,7 +480,12 @@ export class Executor {
       `${FAILURE_NOTE_PREFIX} the ${kind} failed (failure ${context.consecutiveFailures} of ${context.options.maxFailures} allowed in a row): ${detail}. ` +
         'Before acting, work out why from the page state and your last actions, then take a different, simpler next step.',
     );
-    await waitUnlessStopped(failureBackoffMs(context.consecutiveFailures), context.controller.signal);
+    const delay = failureBackoffMs(context.consecutiveFailures);
+    await whileRetrying(
+      status => this.reportRetry(status),
+      { kind, until: Date.now() + delay, attempt: context.consecutiveFailures, max: context.options.maxFailures },
+      () => waitUnlessStopped(delay, context.controller.signal),
+    );
   }
 
   private async shouldStop(): Promise<boolean> {

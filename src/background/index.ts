@@ -369,6 +369,11 @@ chrome.runtime.onConnect.addListener(port => {
           if (threadId) await threads.cancel(threadId);
           return;
 
+        case 'thread_auto_mode':
+          // The user's click in the panel, and only an explicit true turns it on
+          if (threadId) await threads.setAutoMode(threadId, message.on === true);
+          return;
+
         case 'thread_cancel_all':
           return threads.cancelAll();
 

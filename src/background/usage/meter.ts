@@ -9,6 +9,8 @@ import {
 } from '@extension/storage';
 import type { AviCopilotDb, ModelCatalogEntry, ModelRole, UsageEvent } from '@extension/storage';
 import type { ChatModel } from '../llm/types';
+import { whileRetrying } from '../retry/status';
+import type { RetryReporter } from '../retry/status';
 import { createLogger } from '../log';
 import { priceCall } from './pricing';
 
@@ -40,6 +42,8 @@ export interface UsageScope extends UsageAttribution {
   sessionId: string;
   // Shows a short status line to the user, e.g. while waiting to retry
   notify: (message: string) => void;
+  // Shows a countdown while a call waits to retry; absent where nothing shows it (then `notify` is used)
+  status?: RetryReporter;
 }
 
 /** A recorded call's details: the provider (for its price) and who it was for. */
@@ -237,13 +241,21 @@ export function meterModel(chatModel: ChatModel, scope: UsageScope): ChatModel {
               }
               throw error;
             }
-            scope.notify(t('usage_rateLimited', [String(Math.ceil(delay / 1000))]));
-            await sleep(delay, params.abortSignal);
+            if (scope.status) {
+              await whileRetrying(
+                scope.status,
+                { kind: 'model', until: Date.now() + delay, attempt: attempt + 1, max: MAX_RATE_LIMIT_RETRIES },
+                () => sleep(delay, params.abortSignal),
+              );
+            } else {
+              scope.notify(t('usage_rateLimited', [String(Math.ceil(delay / 1000))]));
+              await sleep(delay, params.abortSignal);
+            }
           }
         }
       },
     },
   });
 
-  return { ...chatModel, model };
+  return { ...chatModel, model, status: status => scope.status?.(status) };
 }

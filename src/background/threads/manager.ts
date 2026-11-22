@@ -3,6 +3,7 @@ import {
   agentModelStore,
   AgentNameEnum,
   db,
+  gateSettingsStore,
   generalSettingsStore,
   routeWorkspace,
   threadStore,
@@ -17,6 +18,7 @@ import type { AgentEvent } from '../agent/event/types';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
+import { alwaysAsks } from '../gate/origins';
 import { createLogger } from '../log';
 import { onceNote } from '../once';
 import type { FailureCode } from '../retry/classify';
@@ -212,6 +214,10 @@ export class ThreadManager {
         origin: request.origin ?? 'user',
         agentId: request.agentId ?? null,
         ...request.fields,
+        // The user's own setting makes his new typed chats start in Auto mode; nothing else sets it
+        ...((request.origin ?? 'user') === 'user' && (await gateSettingsStore.getSettings()).autoModeDefault
+          ? { autoMode: true }
+          : {}),
       }));
     await this.windDown(thread.id);
     if (this.running.has(thread.id)) {
@@ -412,7 +418,7 @@ export class ThreadManager {
       ) {
         await this.store.update(
           threadId,
-          { status: 'idle', activity: '', pendingRequest: null, runStartedAt: null, activeTask: null },
+          { status: 'idle', activity: '', retrying: null, pendingRequest: null, runStartedAt: null, activeTask: null },
           true,
         );
       }
@@ -496,6 +502,16 @@ export class ThreadManager {
     }
     this.parked.delete(threadId);
     await this.store.remove(threadId);
+  }
+
+  /**
+   * Turns Auto mode on or off for a task. Called only for the side panel's `thread_auto_mode` command, i.e. the
+   * user's own click (see gate/autoMode.ts). A chat nobody watches never gets it.
+   */
+  async setAutoMode(threadId: string, on: boolean): Promise<boolean> {
+    const thread = await this.store.get(threadId);
+    if (!thread || alwaysAsks(thread)) return false;
+    return this.store.update(threadId, { autoMode: on });
   }
 
   /**
@@ -754,6 +770,7 @@ export class ThreadManager {
         failure: ending?.failure ?? null,
         ...(ending ? { autoTries: ending.autoTries } : {}),
         activity: '',
+        retrying: null,
         pendingRequest: null,
       });
     }
@@ -880,6 +897,7 @@ export class ThreadManager {
       browserContext = await createBrowserContext(binding, { onlyDomains: agent?.domains });
       executor = await createExecutor({ threadId, task, browserContext, models, messageContext, media });
       scope.notify = message => executor.notify(message);
+      scope.status = status => executor.reportRetry(status);
     }
 
     const groupId = await groupTabs(binding, thread.title || task);
@@ -890,6 +908,7 @@ export class ThreadManager {
         status: 'running',
         error: null,
         activity: '',
+        retrying: null,
         activeTask: task,
         failure: null,
         runStartedAt: Date.now(),
@@ -984,6 +1003,7 @@ export class ThreadManager {
             failure: ending?.failure ?? null,
             ...(ending ? { autoTries: ending.autoTries } : {}),
             activity: '',
+            retrying: null,
             activeTask: error ? runner.executor.currentTask : null,
             runStartedAt: null,
             pendingRequest: null,
@@ -1040,7 +1060,7 @@ export class ThreadManager {
       }
       // After the run ended, or once it is told to stop, nothing may make the thread look busy again
       if (runner.ended || this.running.get(runner.threadId) !== runner) return;
-      if (runner.cancelled && (effect.request || effect.activity)) return;
+      if (runner.cancelled && (effect.request || effect.activity || effect.retrying)) return;
       if (effect.request) {
         await this.store.addMessage(
           runner.threadId,
@@ -1054,6 +1074,9 @@ export class ThreadManager {
       }
       if (effect.activity !== undefined) {
         await this.store.update(runner.threadId, { activity: effect.activity });
+      }
+      if (effect.retrying !== undefined) {
+        await this.store.update(runner.threadId, { retrying: effect.retrying });
       }
     } catch (error) {
       // A lost record must not stop the run

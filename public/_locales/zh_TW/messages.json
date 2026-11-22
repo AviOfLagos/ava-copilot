@@ -12620,5 +12620,77 @@
         "example": "Save"
       }
     }
+  },
+  "settings_look_textSize": {
+    "message": "文字大小"
+  },
+  "settings_look_textSmaller": {
+    "message": "縮小文字"
+  },
+  "settings_look_textLarger": {
+    "message": "放大文字"
+  },
+  "settings_look_density": {
+    "message": "間距"
+  },
+  "settings_look_density_compact": {
+    "message": "緊湊"
+  },
+  "settings_look_density_comfortable": {
+    "message": "標準"
+  },
+  "settings_look_density_roomy": {
+    "message": "寬鬆"
+  },
+  "retry_wait_step": {
+    "message": "步驟失敗 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_wait_planning": {
+    "message": "規劃失敗 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_wait_model": {
+    "message": "模型忙碌中 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_now": {
+    "message": "正在重試…"
+  },
+  "retry_repair": {
+    "message": "模型的回覆有誤 — 正在重新詢問"
+  },
+  "retry_fallback": {
+    "message": "模型沒有回應 — 改用本機模型"
+  },
+  "retry_bannerIn": {
+    "message": "將於 $1 再試，$2 後（第 $3 次，共 $4 次）"
+  },
+  "retry_dur_s": {
+    "message": "$1 秒"
+  },
+  "retry_dur_ms": {
+    "message": "$1 分 $2 秒"
+  },
+  "retry_dur_hm": {
+    "message": "$1 小時 $2 分"
+  },
+  "gate_autoApproved": {
+    "message": "已自動核准：$2 上的「$1」"
+  },
+  "auto_chip_on": {
+    "message": "自動模式已開啟"
+  },
+  "auto_toggle_label": {
+    "message": "自動：此任務不要詢問我"
+  },
+  "auto_asks_title": {
+    "message": "即使在自動模式下仍會詢問："
+  },
+  "auto_asks_list": {
+    "message": "付款與購買、刪除、變更存取權限，以及密碼或驗證碼"
+  },
+  "settings_autoDefault_label": {
+    "message": "新任務預設使用自動模式"
+  },
+  "settings_autoDefault_hint": {
+    "message": "你輸入的新任務會以自動模式開始。付款、刪除、存取權變更與密碼仍會詢問。"
   }
 }

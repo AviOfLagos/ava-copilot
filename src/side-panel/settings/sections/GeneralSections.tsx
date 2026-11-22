@@ -3,7 +3,10 @@ import { t } from '@extension/i18n';
 import { cn } from '@extension/ui';
 import {
   COMMIT_KINDS,
+  DENSITIES,
+  TEXT_SCALES,
   accountProfileStore,
+  appearanceSettingsStore,
   checkAssistantName,
   gateSettingsStore,
   generalSettingsStore,
@@ -11,7 +14,7 @@ import {
   permissionRulesStore,
   usageStore,
 } from '@extension/storage';
-import type { CommitKind, GeneralSettingsConfig, PermissionRule } from '@extension/storage';
+import type { CommitKind, Density, GeneralSettingsConfig, PermissionRule } from '@extension/storage';
 import { Switch } from '../../components/ui/switch';
 import { useAssistantName } from '../../hooks/useAssistant';
 import { saveTheme, useTheme } from '../../layout/theme';
@@ -113,8 +116,67 @@ export function ThemePicker({ className }: { className?: string }) {
   );
 }
 
+/** Small / normal / large text, and how tight the spacing is. */
+export function TextSizeControl() {
+  const appearance = useStoreSettings(appearanceSettingsStore);
+  const scale = appearance?.textScale ?? 100;
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="range"
+        min={0}
+        max={TEXT_SCALES.length - 1}
+        step={1}
+        value={Math.max(0, TEXT_SCALES.indexOf(scale))}
+        aria-label={t('settings_look_textSize')}
+        aria-valuetext={`${scale}%`}
+        onChange={event =>
+          void appearanceSettingsStore.updateSettings({ textScale: TEXT_SCALES[Number(event.target.value)] })
+        }
+        className="accent-primary min-w-0 flex-1"
+      />
+      <span className="w-10 shrink-0 text-right font-mono text-[11.5px]">{scale}%</span>
+    </div>
+  );
+}
+
+export function DensityPicker() {
+  const appearance = useStoreSettings(appearanceSettingsStore);
+  const density = appearance?.density ?? 'comfortable';
+  return (
+    <div role="radiogroup" aria-label={t('settings_look_density')} className="grid grid-cols-3 gap-1">
+      {DENSITIES.map((option: Density) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={density === option}
+          onClick={() => void appearanceSettingsStore.updateSettings({ density: option })}
+          className={cn(
+            'h-8 rounded-xl text-[12.5px] transition-colors',
+            density === option ? 'border bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}>
+          {t(`settings_look_density_${option}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ThemeSection() {
-  return <ThemePicker />;
+  return (
+    <>
+      <ThemePicker />
+      <div className="flex flex-col gap-1.5 px-3 pb-2.5 pt-1">
+        <div className="text-[13px]">{t('settings_look_textSize')}</div>
+        <TextSizeControl />
+      </div>
+      <div className="flex flex-col gap-1.5 px-3 pb-3 pt-1">
+        <div className="text-[13px]">{t('settings_look_density')}</div>
+        <DensityPicker />
+      </div>
+    </>
+  );
 }
 
 /** How it writes: a style the agent follows in everything it drafts. */
@@ -183,6 +245,13 @@ export function ConfirmSection() {
         ))}
       </div>
       <p className="text-muted-foreground px-3 pb-3 text-[11.5px]">{t('settings_gate_hint')}</p>
+      <Row title={t('settings_autoDefault_label')} hint={t('settings_autoDefault_hint')}>
+        <Switch
+          label={t('settings_autoDefault_label')}
+          checked={settings.autoModeDefault}
+          onChange={value => void gateSettingsStore.setAutoModeDefault(value)}
+        />
+      </Row>
     </>
   );
 }

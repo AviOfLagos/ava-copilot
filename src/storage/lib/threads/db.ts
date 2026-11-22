@@ -79,6 +79,13 @@ export interface ThreadRecord {
   retryRound?: number;
   // What the agent is doing right now, e.g. "Planning", while it runs
   activity: string;
+  // While Ava waits to try a step or a model call again: what and until when (RetryStatus in background/retry)
+  retrying?: {
+    kind: 'step' | 'planning' | 'model' | 'repair' | 'fallback';
+    until?: number;
+    attempt?: number;
+    max?: number;
+  } | null;
   // The task of the current or interrupted run, kept so it can be resumed
   activeTask: string | null;
   // The id of that task: the same when it is resumed or retried, new for every new request. Do-once keys start
@@ -111,6 +118,9 @@ export interface ThreadRecord {
   // that was not started by the user at the computer means a saved "Allow every time" rule never answers for it.
   // `false` is only ever written by code that knows the run is clean. See gate/origins.ts `rulesMayAnswer`.
   tainted?: boolean;
+  // "Auto mode" for this task: submits, saves, posts and sends go ahead without a card (money, deleting, access and
+  // sign-ins still ask). Written only by the user's own click in the panel (`thread_auto_mode`), never by the model.
+  autoMode?: boolean;
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
   // How this chat hears and speaks, over Settings
