@@ -17,6 +17,7 @@ import { BriefSection, MeetingsSection } from './sections/MeetingSections';
 import { AgentMemorySection, MemoryDataSection, MemoryIndexSection } from './sections/MemorySections';
 import {
   FirewallSection,
+  TracingSection,
   HelpTasksSection,
   InstallOverviewSection,
   ModelsSection,
@@ -199,6 +200,14 @@ registerSettingsSection({
   bare: true,
   keywords: ['skills', 'playbook', 'markdown'],
   Component: SkillsSection,
+});
+registerSettingsSection({
+  id: 'tracing',
+  label: 'settings_tracing_title',
+  page: 'privacy',
+  order: 20,
+  keywords: ['tracing', 'suture', 'telemetry', 'hosted', 'diagnostics'],
+  Component: TracingSection,
 });
 
 // Help

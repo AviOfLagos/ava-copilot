@@ -12547,5 +12547,20 @@
   },
   "calltasks_looksRight_hint": {
     "message": "Nothing is sent and no recording is shared until you press this."
+  },
+  "settings_tracing_title": {
+    "message": "Hosted tracing"
+  },
+  "settings_tracing_on": {
+    "message": "Send agent traces to Suture"
+  },
+  "settings_tracing_on_hint": {
+    "message": "Off by default. When on, and only in a build that carries a Suture key, each planner and navigator call sends its timing, model name and token counts to the hosted Suture project (suture.nexprove.com) so its quality can be checked. Nothing is sent while this is off."
+  },
+  "settings_tracing_content": {
+    "message": "Include the text of prompts and replies"
+  },
+  "settings_tracing_content_hint": {
+    "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
   }
 }

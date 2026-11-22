@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { t } from '@extension/i18n';
+import { tracingSettingsStore } from '@extension/storage';
 import { FirewallSettings } from '../../../options/components/FirewallSettings';
 import { SkillsSettings } from '../../../options/components/SkillsSettings';
 import { Badge } from '../../components/ui/badge';
@@ -17,7 +18,8 @@ import {
 } from '../../requirements/catalog';
 import type { Requirement } from '../../requirements/flow';
 import { RequirementCard, sizeText, useRequirementFlow } from '../../requirements/RequirementCard';
-import { HINT } from './ui';
+import { Switch } from '../../components/ui/switch';
+import { HINT, Row, useStoreSettings } from './ui';
 
 /** Models: the same Models page as the panel's (providers, roles, local models, the cloud fallback, usage). */
 export function ModelsSection({ api, anchor }: { api: PanelApi; anchor?: string }) {
@@ -148,5 +150,30 @@ export function InstallOverviewSection({ api }: { api: PanelApi }) {
         <InstallRow key={item.key} item={item} api={api} />
       ))}
     </ul>
+  );
+}
+
+/** Privacy: hosted tracing to Suture. Off unless switched on here; the text of chats is a second switch. */
+export function TracingSection() {
+  const settings = useStoreSettings(tracingSettingsStore);
+  if (!settings) return null;
+  return (
+    <>
+      <Row title={t('settings_tracing_on')} hint={t('settings_tracing_on_hint')}>
+        <Switch
+          label={t('settings_tracing_on')}
+          checked={settings.hostedEnabled}
+          onChange={hostedEnabled => void tracingSettingsStore.updateSettings({ hostedEnabled })}
+        />
+      </Row>
+      <Row title={t('settings_tracing_content')} hint={t('settings_tracing_content_hint')}>
+        <Switch
+          label={t('settings_tracing_content')}
+          checked={settings.captureContent}
+          disabled={!settings.hostedEnabled}
+          onChange={captureContent => void tracingSettingsStore.updateSettings({ captureContent })}
+        />
+      </Row>
+    </>
   );
 }
