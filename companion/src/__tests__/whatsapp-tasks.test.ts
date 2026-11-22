@@ -108,6 +108,20 @@ describe('a send says which message went out', () => {
     });
   });
 
+  it('stamps a message that waited with the time he wrote it, so "done 2" is read against the lists he had seen', async () => {
+    const { driver, service, settle, advance } = await linked();
+    // He writes at 1 060 000 ms (WhatsApp counts seconds); the Mac only gets it ten minutes later
+    advance(600_000);
+    driver.deliver({ id: 'late', body: 'done 2', at: 1_060 });
+    // One that comes at once keeps the Mac's own moment, so its clock and WhatsApp's never disagree
+    driver.deliver({ id: 'now', body: 'done 1', at: 1_600 });
+    await settle();
+    expect(service.pull().map(({ id, at }) => ({ id, at }))).toEqual([
+      { id: 'late', at: 1_060_000 },
+      { id: 'now', at: 1_600_000 },
+    ]);
+  });
+
   it('the route answers with the message id and the inbox carries reactions apart from messages', async () => {
     const driver = new FakeDriver();
     const brain = await startTestBrain({ whatsappDriver: () => driver });

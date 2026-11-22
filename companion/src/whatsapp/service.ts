@@ -225,6 +225,18 @@ export function inQuietHours(at: Date, start: string, end: string): boolean {
 
 // Seconds or milliseconds since the epoch, as milliseconds
 const millisOf = (at: number) => (at > 0 && at < 1e12 ? at * 1000 : at);
+
+// A message that came more than this after WhatsApp says he sent it waited somewhere (the Mac was asleep or offline)
+const LATE_MS = 60_000;
+
+/**
+ * When he wrote a message, by this Mac's clock: the moment it came, unless it plainly waited, then WhatsApp's own time.
+ * A "done 2" typed before a list went out is then never read against that list (the extension compares the two).
+ */
+const writtenAt = (messageAt: number, now: number) => {
+  const sent = millisOf(messageAt);
+  return sent > 0 && now - sent > LATE_MS ? sent : now;
+};
 const cUs = (number: string) => `${number}@c.us`;
 
 export class WhatsAppService {
@@ -766,7 +778,7 @@ export class WhatsAppService {
    */
   private async itemOf(message: WaIncoming, chatId: string): Promise<Queued | null> {
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
-    const base = { id: message.id, text, at: this.now(), chatId, media: null, link: null };
+    const base = { id: message.id, text, at: writtenAt(message.at, this.now()), chatId, media: null, link: null };
     const quotedId = message.quotedId ?? null;
     if (message.type === 'chat') {
       if (!text) return null;
