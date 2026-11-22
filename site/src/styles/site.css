@@ -1539,6 +1539,31 @@ pre {
   opacity: 0.7;
 }
 
+/* Numbered steps: the same list, with a number where the dot is */
+.list--steps {
+  counter-reset: step;
+}
+
+.list--steps li {
+  counter-increment: step;
+  padding-left: 30px;
+}
+
+.list--steps li::before {
+  content: counter(step);
+  top: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fill-hover);
+  color: var(--ink);
+  opacity: 1;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 20px;
+  text-align: center;
+}
+
 .callout {
   padding: var(--s4) var(--s5);
   border-radius: var(--radius);

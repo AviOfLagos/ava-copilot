@@ -37,7 +37,7 @@ export const links = {
 export const product = {
   name: PRODUCT,
   tagline: 'The AI browser copilot that waits for your click',
-  description: `${PRODUCT} is an AI copilot in your browser’s side panel. It works on real pages, takes meeting notes, talks, remembers what you saw and runs routines, with the model you choose. Nothing is sent, posted, bought or deleted without your click.`,
+  description: `${PRODUCT} is an AI copilot in your browser’s side panel. It works on real pages, takes meeting notes, keeps your tasks and the people in them, talks, answers on WhatsApp, remembers what you saw and runs routines, with the model you choose. Nothing is sent, posted, bought or deleted without your click.`,
   browsers: ['Brave', 'Chrome', 'Edge'],
   systems: ['macOS', 'Linux', 'Windows'],
   license: 'PolyForm-Noncommercial-1.0.0',
@@ -57,6 +57,7 @@ export const nav = {
   // The phone menu adds these to the four above
   more: [
     { href: '/#gate', label: 'How it works' },
+    { href: '/changelog', label: 'Changelog' },
     { href: links.privacy, label: 'Privacy' },
   ],
   menu: 'Menu',
@@ -100,7 +101,9 @@ export const footer = {
       links: [
         { href: '/features', label: 'All features' },
         { href: '/features/gate', label: 'The gate' },
-        { href: '/features/ambient', label: 'Ambient listening' },
+        { href: '/features/tasks', label: 'Tasks and people' },
+        { href: '/features/whatsapp', label: 'WhatsApp' },
+        { href: '/features/team', label: 'Your team of agents' },
         { href: '/#integrations', label: 'Integrations' },
         { href: '/#faq', label: 'Questions' },
       ],
@@ -111,7 +114,9 @@ export const footer = {
         { href: links.install, label: 'Install' },
         { href: `${links.install}#notify`, label: 'Updates and notices' },
         { href: `${links.install}#update`, label: 'Update or remove' },
+        { href: `${links.install}#connect`, label: 'Connect WhatsApp and Drive' },
         { href: `${links.install}#brain`, label: COMPANION },
+        { href: '/changelog', label: 'Changelog' },
         { href: '/releases.xml', label: 'Release feed (RSS)' },
       ],
     },
@@ -210,7 +215,7 @@ const GATE_KINDS = [
 
 export const home = {
   title: `${PRODUCT} — the AI browser copilot that waits for your click`,
-  description: `${PRODUCT} works in the side panel of Brave, Chrome and Edge: it does tasks on real pages, takes meeting notes and remembers what you saw, with your own model. Nothing is sent, posted, bought or deleted without your click.`,
+  description: `${PRODUCT} works in the side panel of Brave, Chrome and Edge: it does tasks on real pages, keeps your tasks and people, takes meeting notes, answers on WhatsApp and remembers what you saw, with your own model. Nothing is sent, posted, bought or deleted without your click.`,
   ogAlt: `${PRODUCT}: a dotted globe beside the words “The AI copilot that waits for your click.”`,
   hero: {
     eyebrow: 'For Brave, Chrome and Edge · Free · No account',
@@ -534,6 +539,20 @@ export const home = {
         held: null,
       },
       {
+        task: 'Mark the login task done',
+        kind: 'Tasks',
+        href: '/features/tasks',
+        steps: ['Found 2 tasks that fit', 'Asked you which one', 'Ticked it in the brief and on the Tasks page'],
+        held: null,
+      },
+      {
+        task: 'done 2 (sent on WhatsApp)',
+        kind: 'WhatsApp',
+        href: '/features/whatsapp',
+        steps: ['Read your numbered task list', 'Closed the second task', 'Sent it back, struck through'],
+        held: null,
+      },
+      {
         task: 'What did we decide about pricing?',
         kind: 'Memory',
         href: '#memory',
@@ -562,7 +581,7 @@ export const home = {
       },
       {
         q: 'Can it send, post or buy something without me?',
-        a: 'Not as it ships. Every send, post, form submission, deletion, purchase and permission change stops at a card until you hold the button or click twice. Each kind can be switched off in Settings, and helper agents refuse to run unless all of them are on. Routines and agents put those steps in your Inbox instead.',
+        a: 'Not as it ships. Every send, post, form submission, deletion, purchase and permission change stops at a card until you hold the button or click twice. You can answer “Allow every time” to one kind of step on one site, and that rule is yours to see and remove in Settings; paying, deleting and giving access never get a rule. Routines and agents put those steps in your Inbox instead, and the growth team’s agents only draft: nothing they write is posted or sent.',
       },
       {
         q: 'What does it send, and to whom?',
@@ -577,8 +596,20 @@ export const home = {
         a: 'GitHub, Linear, Notion, Slack, Gmail, Google Calendar and Google Drive are built in, and any other MCP server can be added by its address. A connector tool that would change something asks first, and a new or changed tool stays off until you turn it on.',
       },
       {
+        q: 'Can I talk to Ava on WhatsApp?',
+        a: `Yes, as a preview. ${COMPANION} on your Mac holds the link to WhatsApp, and you message Ava in your own “Message yourself” chat. She reads voice notes, photos and documents and answers like a person; in the next download she can also list your tasks (send “tasks”, then “done 2”), and Ava Brain needs updating for that. It uses an unofficial WhatsApp Web client, which WhatsApp can restrict, so choose a number you can afford to lose. Setup is on the install page.`,
+      },
+      {
+        q: 'Where are my tasks and the people in them kept?',
+        a: 'In your browser, one workspace at a time. A name or a task never carries over to another workspace. Task and meeting text reaches your model provider as part of a chat or note, like any other text, and nothing goes to us. Screen recordings go to Google Drive only if you connect Drive, and stay private until you press Share.',
+      },
+      {
+        q: 'Is everything on the features page in the download?',
+        a: 'Not always. A feature marked live works in the code today, and some arrive with the next download. The changelog lists each change and says which ones are still waiting for the next version.',
+      },
+      {
         q: `What is ${COMPANION}?`,
-        a: `An optional companion for macOS. It runs code for your routines in a Docker sandbox on your Mac and shows what it builds in Avi Studio. ${PRODUCT} works fully without it.`,
+        a: `An optional companion for macOS. It runs code for your routines in a Docker sandbox on your Mac, holds your WhatsApp link, lets coding agents ask for a command to be run with your secrets (Ava Keys), and shows what it builds in Avi Studio. ${PRODUCT} works fully without it. Its installer is not one command yet: the install page has the steps.`,
       },
       {
         q: 'How is it related to Nanobrowser?',
@@ -685,7 +716,7 @@ export const demo = {
 
 export const install = {
   title: `Install ${PRODUCT} — one command for Brave, Chrome and Edge`,
-  description: `Install ${PRODUCT} on macOS or Linux with one command, or by hand on Windows, then turn it on in Brave, Chrome or Edge. How to update, remove it, add local voices and the optional Mac companion.`,
+  description: `Install ${PRODUCT} on macOS or Linux with one command, or by hand on Windows, then turn it on in Brave, Chrome or Edge. How to update, remove it, add local voices, and how to connect Ava Brain, WhatsApp and Google Drive.`,
   ogAlt: `Install ${PRODUCT}: one command in the terminal, then Load unpacked in your browser.`,
   breadcrumb: 'Install',
   heading: `Install ${PRODUCT}`,
@@ -696,7 +727,7 @@ export const install = {
       id: 'download',
       title: 'No terminal',
       body: 'Download a zip, unzip it, and turn it on in your browser. The easiest way for anyone.',
-      href: '/download/nex-copilot-latest.zip',
+      href: links.releases,
       action: 'Download the latest build',
       then: 'Then follow step 2 below.',
     },
@@ -836,17 +867,55 @@ export const install = {
   brain: {
     id: 'brain',
     title: COMPANION,
-    badge: 'Optional · macOS · coming soon',
+    badge: 'Optional · macOS · installed from the repository',
     body: `A small companion that runs on your Mac and does what a browser extension can’t. ${PRODUCT} works fully without it.`,
     addsLabel: 'What it adds',
     adds: [
+      'Holds your WhatsApp link, so you can message Ava from your phone.',
       'Runs code for your routines in a Docker sandbox: no network unless you allow it, limits on CPU, memory and time, and only its own folder.',
       'Builds small pages and tools, and shows them in Avi Studio.',
       'Listens only on this Mac, at 127.0.0.1, and pairs with your browser through a one-time code.',
     ],
     needsLabel: 'What it needs',
-    needs: ['macOS', 'Docker Desktop, OrbStack or Colima', 'Node 24 or newer'],
-    setup: `Its installer is not public yet; it will be one command, like this page’s. Then you open Settings › ${COMPANION} in the panel, enter the port and the code, and pair.`,
+    needs: [
+      'macOS',
+      'Node 24 or newer, and Xcode Command Line Tools',
+      'Docker Desktop, OrbStack or Colima, only for the sandbox',
+    ],
+    setup: `It is not a one-command install yet. Download the source, then build it and start it at login with the lines below. It prints a pairing code; open Settings › ${COMPANION} in the panel, enter the port (47615) and the code, and press Pair. Settings › ${COMPANION} then says it is connected.`,
+    command:
+      'git clone https://github.com/AviOfLagos/ava-copilot.git && cd ava-copilot/companion && corepack enable && pnpm install && sh scripts/install-launchagent.sh',
+  },
+  connect: {
+    id: 'connect',
+    title: 'Connect WhatsApp and Google Drive',
+    body: 'Both are optional and both are switched on from the panel, one at a time. Nothing here is posted or sent without your click.',
+    cards: [
+      {
+        id: 'whatsapp',
+        title: 'WhatsApp',
+        badge: `Preview · needs ${COMPANION}`,
+        steps: [
+          `Pair ${COMPANION} first (above).`,
+          'In the panel, open Settings › WhatsApp and press Link WhatsApp.',
+          'On your phone open WhatsApp › Settings › Linked devices › Link a device, and scan the code.',
+          'Write to Ava in your own “Message yourself” chat. If she has a number of her own, press Get a code to text Ava and send that code from your phone.',
+          'Press Send a test message. You should see it in WhatsApp.',
+        ],
+        note: 'This uses an unofficial WhatsApp Web client on your Mac. WhatsApp can restrict a number that uses one, and Ava sends at most a fixed number of messages an hour. The Mac has to be on and your browser open for her to answer.',
+      },
+      {
+        id: 'drive',
+        title: 'Google Drive',
+        badge: 'Preview',
+        steps: [
+          'In the panel, open Connectors and choose Google Drive.',
+          'Sign in with the Google account you want to use.',
+          'Press Record screen on a task. When you stop, the file goes to Drive under “Ava recordings”, private until you press Share.',
+        ],
+        note: `Without Drive, recordings go to a folder on your Mac when ${COMPANION} is paired, or to Downloads. Share gives anyone with the link permission to comment; Stop sharing removes it.`,
+      },
+    ],
   },
 };
 
@@ -858,7 +927,7 @@ export const privacy = {
   ogAlt: `${PRODUCT} privacy: what stays on your machine and what leaves it.`,
   breadcrumb: 'Privacy',
   heading: 'What stays on your machine',
-  updated: '12 October 2026',
+  updated: '22 November 2026',
   updatedLabel: 'Last updated',
   lede: `${PRODUCT} has no server, no account and no analytics. It keeps your data in your browser, and sends only what a task needs to the services you chose.`,
   label: {
@@ -869,7 +938,7 @@ export const privacy = {
         tone: 'stays',
         heading: 'Stays in your browser',
         rows: [
-          { what: 'Chats, meeting notes, memory, routines and settings', where: 'Browser storage' },
+          { what: 'Chats, meeting notes, tasks, people, memory, routines and settings', where: 'Browser storage' },
           { what: 'API keys and connector sign-ins', where: 'Encrypted vault' },
         ],
       },
@@ -879,6 +948,11 @@ export const privacy = {
         rows: [
           { what: 'Your task and the page it works on', where: 'Your model provider' },
           { what: 'Meeting audio and dictation', where: 'Your speech-to-text model' },
+          { what: 'Screen recordings, if you connect Drive', where: 'Your Google Drive, private until you share' },
+          {
+            what: 'WhatsApp messages to and from Ava, if you link it',
+            where: 'WhatsApp, through Ava Brain on your Mac',
+          },
         ],
       },
       {
@@ -900,7 +974,7 @@ export const privacy = {
       items: [
         {
           title: 'Your work',
-          body: 'Chats, meeting notes and transcripts, memory, routines, agents and the Inbox are kept in your browser profile (IndexedDB). Settings are kept in the extension’s own storage.',
+          body: 'Chats, meeting notes and transcripts, tasks, the people Ava has learned and their names, the words you taught her to spell, memory, routines, agents and the Inbox are kept in your browser profile (IndexedDB). Tasks, people and names belong to one workspace and are not shared with another. Settings are kept in the extension’s own storage. Screen recordings are kept in a database of their own, are never part of a backup, and are saved where you chose when you stop.',
         },
         {
           title: 'Your keys',
@@ -927,6 +1001,22 @@ export const privacy = {
         {
           title: 'For search by meaning',
           body: 'Passages added to memory are turned into vectors by Gemini if you use it, by Ollama on your computer, or not at all: keyword search works without either.',
+        },
+        {
+          title: 'To Google Drive, if you connect it',
+          body: 'A screen recording is uploaded to a folder called “Ava recordings”, private to your account. Pressing Share lets anyone with the link comment, and Stop sharing removes that. Ava can only reach files she saved herself.',
+        },
+        {
+          title: 'To WhatsApp, if you link it',
+          body: `Messages between you and Ava travel through WhatsApp, and ${COMPANION} on your Mac passes them to the browser on the same computer. It listens only at 127.0.0.1 and answers only you. Voice notes are written down on your computer, or by Gemini if you have a Gemini key and have not chosen economy or a local recogniser for that chat.`,
+        },
+        {
+          title: 'Names and tasks',
+          body: 'Names Ava has learned reach your model provider only inside a chat or a meeting note, such as the speaker names in a note. If you back up to Ava Brain on your Mac, the backup includes your tasks and people.',
+        },
+        {
+          title: 'To a product’s own API, if you set one up',
+          body: 'Ava calls the address you gave, with the token you pasted (kept in the vault), to read that product’s numbers.',
         },
         {
           title: 'To the tools you connect',
@@ -968,7 +1058,10 @@ export const privacy = {
         why: 'To read and act on the pages you give it a task on. A blocked-sites list keeps it off sites you name.',
       },
       { name: 'Side panel', why: 'To sit next to the page you are working on.' },
-      { name: 'Tabs and tab groups', why: 'To see and group the tabs a chat works in, and keep each chat to its own.' },
+      {
+        name: 'Tabs and tab groups',
+        why: 'To see and group the tabs a chat works in, keep each chat to its own, and know which sites you already have open so it can reuse the right tab. Private windows are never listed.',
+      },
       { name: 'Scripting and active tab', why: 'To read pages and press buttons in them.' },
       {
         name: 'Debugger',
@@ -1028,11 +1121,14 @@ export const llms = {
     'Meeting notes from browser calls (Meet, Zoom, Teams): live transcript, rolling summary, decisions and action items.',
     'Memory across chats, meetings and saved pages, with cited answers and a knowledge graph.',
     'Voice: an on-device “Hey Ava” wake word, Gemini Live or local speech engines (KittenTTS, Kokoro, Moonshine, Whisper), dictation.',
-    'Routines drawn as diagrams, helper agents with budgets, an Inbox for approvals.',
+    'Tasks: one board for action items from calls and chats, boxes that tick the same task everywhere, a Tasks page, and “mark the login task done” by voice or chat. People are learned per workspace from Meet, calendar, Gmail, Slack, WhatsApp and GitHub, with Who’s who cards when unsure.',
+    'WhatsApp (preview, through the Mac companion Ava Brain): message Ava from a phone; she reads voice notes, photos and documents, lists tasks (“done 2”) and messages first about approvals and the morning brief. It uses an unofficial client that WhatsApp can restrict.',
+    'Routines drawn as diagrams, helper agents with budgets, an Inbox for approvals, a morning brief, and three growth agents (Growth Lead, Product Marketing Manager, Product Social Manager) that only draft: nothing is posted or sent.',
+    'Allow once or Allow every time on the confirm card (never for paying, deleting or giving access), do-once keys so a retry does not repeat a send on its own, and a closed tab that is reopened.',
     'Connectors (MCP): GitHub, Linear, Notion, Slack, Gmail, Google Calendar and Google Drive built in; any other MCP server by its address. Tools that write ask first.',
     'Models: Ollama, LM Studio, OpenRouter, NVIDIA NIM, OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, Azure OpenAI, or any OpenAI-compatible endpoint.',
     'Ambient listening: an optional Listen mode that writes down what is said near the computer, on the computer only, with “off the record” and “forget the last ten minutes”.',
-    'Pages: /features lists every feature as live, preview or planned; /roadmap is what comes next; /contribute is how to help; /donate (not open yet); /releases.xml is the release feed.',
+    'Pages: /features lists every feature as live, preview or planned; /roadmap is what comes next; /changelog is what changed, week by week; /contribute is how to help; /donate (not open yet); /releases.xml is the release feed.',
     'A fork of Nanobrowser (Apache-2.0).',
   ],
 };

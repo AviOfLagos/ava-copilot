@@ -600,3 +600,59 @@
     transition: none;
   }
 }
+
+/* A feature row's "what you do" and "what you will see" lines */
+.frow__how {
+  font-size: 15px;
+  line-height: 24px;
+}
+
+.frow__how b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The hub's way in by what a person wants to do */
+.fpaths {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fpaths__item {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: var(--s5);
+  border-radius: 20px;
+  border: 1px solid var(--line);
+}
+
+.fpaths__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+
+.fpaths__body {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 24px;
+}
+
+.fpaths__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--s3);
+  margin: var(--s2) 0 0;
+}
+
+.fpaths__links a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
