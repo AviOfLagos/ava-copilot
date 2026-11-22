@@ -1326,8 +1326,8 @@ export const widgetCopy = {
   },
   update: {
     title: 'Update available',
-    version: 'Version 0.2.3',
-    notes: ['Ambient listening: Listen mode and off the record', 'Update notices for every new version'],
+    version: 'Version 0.2.4',
+    notes: ['Tasks, people and follow-ups', 'Ava knows every tool she has'],
     commandLabel: 'Run this, then reload:',
     reload: 'Reload',
     later: 'Later',
