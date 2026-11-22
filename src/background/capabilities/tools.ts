@@ -117,10 +117,13 @@ export async function manageInbox(args: Record<string, unknown>): Promise<string
 
 // ── Connectors, workspaces, personalities ─────────────────────────────────────────────────────────
 
-export async function listConnectors(): Promise<string> {
+/** `inChat`: the answer to a chat, which cannot open the panel, so it leaves out the hints that do. */
+export async function listConnectors(inChat = false): Promise<string> {
   const connectors = await connectorStore.list();
   if (connectors.length === 0) {
-    return 'No connectors are set up. Connectors (open_place "connectors") adds one; signing in needs the user.';
+    return inChat
+      ? 'No connectors are set up. Connectors in the side panel adds one; signing in needs the user.'
+      : 'No connectors are set up. Connectors (open_place "connectors") adds one; signing in needs the user.';
   }
   const workspaces = new Map((await workspaceStore.list()).map(item => [item.id, item.name]));
   const lines = connectors.map(connector => {
@@ -130,18 +133,30 @@ export async function listConnectors(): Promise<string> {
     const status = connector.status === 'needs_auth' ? 'needs the user to sign in' : connector.status.replace('_', ' ');
     return `- ${connector.name}: ${status}${where}`;
   });
+  if (inChat) {
+    return `${wrapUntrustedContent(lines.join('\n'))}\nAdding, signing in, turning on and removing happen in Connectors in the side panel, with the user's click.`;
+  }
   return `${wrapUntrustedContent(lines.join('\n'))}
 Adding, signing in, turning on and removing happen in Connectors with the user's click; open_place "connectors" opens it. Their tools are used through do_task.`;
 }
 
-export async function listWorkspaces(): Promise<string> {
+/** `current`: the workspace of the conversation asking (a chat passes its own; voice's is the default). */
+export async function listWorkspaces(
+  current: string | null = services().voice.workspaceId,
+  inChat = false,
+): Promise<string> {
   const [workspaces, defaultId] = await Promise.all([workspaceStore.list(), workspaceStore.getDefaultWorkspaceId()]);
-  if (workspaces.length === 0) return 'There are no workspaces yet. Workspaces (open_place "workspaces") makes one.';
-  const current = services().voice.workspaceId;
+  if (workspaces.length === 0) {
+    return inChat
+      ? 'There are no workspaces yet. Workspaces in the side panel makes one.'
+      : 'There are no workspaces yet. Workspaces (open_place "workspaces") makes one.';
+  }
   const lines = workspaces.map(
     item =>
       `- ${item.name}${item.id === defaultId ? ' (the default)' : ''}${item.id === current ? ' (this conversation)' : ''}`,
   );
+  if (inChat)
+    return `${wrapUntrustedContent(lines.join('\n'))}\nMaking or editing one happens in Workspaces in the side panel.`;
   return `${wrapUntrustedContent(lines.join('\n'))}
 where_are_we says where one is at. Making or editing one happens in Workspaces (open_place "workspaces").`;
 }

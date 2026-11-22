@@ -8,7 +8,7 @@ when a tool has no row, or when a tool has no group in `TOOL_GROUPS`. Which chan
 and are offered the growth team's tools only when the chat's workspace has a product (the channels below show the
 case with a product).
 
-119 tools. Per channel: panel 87, voice 67, whatsapp 83, agent 83, routine 83.
+119 tools. Per channel: panel 92, voice 67, whatsapp 88, agent 88, routine 88.
 
 "In" says where the tool is defined (chat action, voice tool, or both under one name). "Chars" is the size of its
 definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an agent or a routine.
@@ -41,9 +41,9 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `end_conversation` (end conversation) | voice | Conversation | voice | - / 195 | Ends this voice conversation. |
 | `fill_form` (fill form) | chat | Screen and tabs | panel, whatsapp, agent, routine | 753 / - | Fill a whole form in one action: every field you have a value for, from the task, the conversation or the knowledge base. |
 | `find_tab` (find tab) | chat | Screen and tabs | panel, whatsapp, agent, routine | 427 / - | Find a tab the user already has open, in any of their windows, by site or by words from its title. |
-| `get_brief` (get brief) | voice | Meetings and calendar | voice | - / 190 | Gets today's morning brief: the day's calendar, what waits on the user, open actions by workspace, and the top priorities. |
+| `get_brief` (get brief) | both | Meetings and calendar | panel, voice, whatsapp, agent, routine | 230 / 190 | Get today's morning brief: the day's calendar, what waits on the user, open actions by workspace, and the top priorities. |
 | `get_dropdown_options` (get dropdown options) | chat | Screen and tabs | panel, whatsapp, agent, routine | 198 / - | Get all options from a native dropdown |
-| `get_schedule` (get schedule) | voice | Meetings and calendar | voice | - / 261 | Lists the user's calendar events for the coming hours, from the calendar connected in settings. |
+| `get_schedule` (get schedule) | both | Meetings and calendar | panel, voice, whatsapp, agent, routine | 301 / 261 | List the user's calendar events for the coming hours, from the calendar connected in settings. |
 | `get_status` (get status) | voice | Tasks | voice | - / 133 | Says which tasks are running, which wait for the user, and whether a meeting is being recorded. |
 | `go_back` (go back) | chat | Screen and tabs | panel, whatsapp, agent, routine | 105 / - | Go back to the previous page |
 | `go_to_url` (go to url) | chat | Screen and tabs | panel, whatsapp, agent, routine | 161 / - | Navigate to URL in the current tab |
@@ -53,12 +53,12 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `join_next_meeting` (join next meeting) | voice | Meetings and calendar | voice | - / 184 | Opens the next meeting on the calendar that has a link and, on Google Meet, presses Join now. |
 | `leave_call` (leave call) | voice | Meetings and calendar | voice | - / 166 | Leaves the Google Meet call quietly; the call goes on for the others. |
 | `list_agents` (list agents) | both | Tasks | panel, voice, whatsapp, agent, routine | 154 / 188 | List the user's agents with their ids, status, triggers and today's spend |
-| `list_connectors` (list connectors) | voice | Settings and checks | voice | - / 138 | Lists the connectors (Slack, GitHub, Notion…) and whether each is connected or needs a sign-in. |
+| `list_connectors` (list connectors) | both | Settings and checks | panel, voice, whatsapp, agent, routine | 178 / 138 | List the connectors (Slack, GitHub, Notion…) and whether each is connected or needs a sign-in |
 | `list_frequent_sites` (list frequent sites) | voice | Screen and tabs | voice | - / 185 | Lists the sites the user visits most, which are the ones they are signed in to: use it to find 'my email', 'my social media' and the like. |
 | `list_personalities` (list personalities) | voice | Settings and checks | voice | - / 134 | Lists the personalities you can switch to with set_personality, and which one is in use. |
 | `list_tabs` (list tabs) | voice | Screen and tabs | voice | - / 117 | Lists the open tabs of the window, with their ids; the one in front comes first. |
 | `list_workflows` (list workflows) | both | Routines | panel, voice, whatsapp, agent, routine | 165 / 134 | List the user's workflows with their ids, when they run and how the last run went |
-| `list_workspaces` (list workspaces) | voice | Settings and checks | voice | - / 100 | Lists the user's workspaces and which one is the default. |
+| `list_workspaces` (list workspaces) | both | Settings and checks | panel, voice, whatsapp, agent, routine | 170 / 100 | List the user's workspaces and which one is the default and which one this chat is in |
 | `look_up_graph` (look up graph) | chat | Memory and knowledge | panel, whatsapp, agent, routine | 387 / - | Look up a person, project, organization, decision or action in the user's knowledge graph: what it is linked to, e.g. a project's decisions and open actions, w… |
 | `make_link` (make link) | chat | Tasks | panel, whatsapp, agent, routine | 705 / - | Make a link to this workspace's product for a post, a reply or an email. |
 | `manage_inbox` (manage inbox) | voice | Inbox | voice | - / 465 | Marks an Inbox item done or read, or snoozes it, found by words of its title. |
@@ -77,7 +77,7 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `read_chat` (read chat) | both | Memory and knowledge | panel, voice, whatsapp, agent, routine | 324 / 406 | Reads the last messages of one chat by its id from search_chats; long chats are partly summarised. |
 | `read_confirm_cards` (read confirm cards) | voice | Inbox | voice | - / 217 | Reads out what waits for the user’s click: confirm cards in chats (what would be sent or submitted, and where) and approvals in the Inbox. |
 | `read_feedback` (read feedback) | chat | Tasks | panel, whatsapp, agent, routine | 232 / - | Read the product's customer feedback from today and yesterday that has not been sorted yet. |
-| `read_inbox` (read inbox) | voice | Inbox | voice | - / 202 | Reads the user's Inbox out loud: how many items are waiting, including any approvals, and the most important ones by title. |
+| `read_inbox` (read inbox) | both | Inbox | panel, voice, whatsapp, agent, routine | 211 / 202 | Read the user's Inbox: how many items are waiting, including approvals, and the most important by title. |
 | `read_page` (read page) | voice | Screen and tabs | voice | - / 317 | Reads the text of the page in front, or of the tab with the given id. |
 | `read_page_text` (read page text) | chat | Screen and tabs | panel, whatsapp, agent, routine | 348 / - | Read the text the current page shows, to read an article, email, table or document without scrolling. |
 | `read_screen` (read screen) | voice | Screen and tabs | voice | - / 274 | Looks at the user's screen: the page in front's title, address and text, plus a picture of it sent to you. |
