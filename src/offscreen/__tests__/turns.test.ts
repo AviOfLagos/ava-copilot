@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { REPLY_WAIT_MS, TurnTaking } from '../turns';
-import { REALTIME_INPUT_CONFIG, voiceSetup } from '../voice';
+import { REALTIME_INPUT_CONFIG, realtimeInputConfig, voiceSetup } from '../voice';
 
 describe('TurnTaking: when a notice may be said', () => {
   it('is free at the start', () => {
@@ -59,17 +59,42 @@ describe('TurnTaking: when a notice may be said', () => {
 });
 
 describe('the Live session setup', () => {
-  it('tunes the server turn detection for a conversation', () => {
+  const detection = (patience?: 'quick' | 'normal' | 'patient') =>
+    realtimeInputConfig(patience).automaticActivityDetection;
+
+  it('waits for a pause that is the end of a thought, by default', () => {
     const { setup } = voiceSetup({ model: 'gemini-live', instructions: 'Be brief.', tools: [] } as never, null);
     expect(setup.realtimeInputConfig).toEqual(REALTIME_INPUT_CONFIG);
     expect(REALTIME_INPUT_CONFIG).toEqual({
       automaticActivityDetection: {
         startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
-        endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+        endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
         prefixPaddingMs: 200,
-        silenceDurationMs: 600,
+        silenceDurationMs: 1200,
       },
       activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
     });
+  });
+
+  it('follows the Patience setting: quick is the old fast setting, patient waits longest', () => {
+    expect(detection('quick')).toMatchObject({
+      endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+      silenceDurationMs: 600,
+    });
+    expect(detection('normal').silenceDurationMs).toBe(1200);
+    expect(detection('patient')).toMatchObject({
+      endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+      silenceDurationMs: 2000,
+    });
+    const { setup } = voiceSetup(
+      { model: 'gemini-live', instructions: '', tools: [], patience: 'patient' } as never,
+      null,
+    );
+    expect(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs).toBe(2000);
+  });
+
+  it('never leaves the user interrupting by speaking, and falls back to normal for an unknown value', () => {
+    expect(realtimeInputConfig('patient').activityHandling).toBe('START_OF_ACTIVITY_INTERRUPTS');
+    expect(detection('nonsense' as never).silenceDurationMs).toBe(1200);
   });
 });

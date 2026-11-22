@@ -288,6 +288,7 @@ export class VoiceManager {
                 : { apiKey: gemini?.[1].apiKey ?? '' }),
               model: settings.liveModel,
               speechConfig,
+              patience: settings.turnPatience,
             }),
         instructions: voiceSessionInstructions(
           this.assistantName,

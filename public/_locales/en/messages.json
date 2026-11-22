@@ -2352,6 +2352,24 @@
       }
     }
   },
+  "settings_section_patience": {
+    "message": "Patience"
+  },
+  "settings_patience": {
+    "message": "How long Ava waits for you to finish"
+  },
+  "settings_patience_hint": {
+    "message": "How long a pause may be before Ava answers. “Let me think” suits slow, thoughtful speech. Applies to a live Gemini conversation; the on-device voice already waits for the end of a sentence."
+  },
+  "settings_patience_quick": {
+    "message": "Quick"
+  },
+  "settings_patience_normal": {
+    "message": "Normal"
+  },
+  "settings_patience_patient": {
+    "message": "Let me think"
+  },
   "settings_wake_hint": {
     "message": "Always on, even with this panel closed. It listens on this computer only; nothing is sent until you say “$PHRASE$”.",
     "placeholders": {
