@@ -961,7 +961,7 @@ export const privacy = {
         rows: [
           { what: 'Cookies and saved passwords', where: 'Never read' },
           { what: 'Analytics or usage tracking', where: 'None' },
-          { what: 'Anything to us', where: 'No server' },
+          { what: 'Anything to us', where: 'No server, unless you switch on hosted tracing' },
         ],
       },
     ],
@@ -1023,6 +1023,10 @@ export const privacy = {
           body: 'Connectors (MCP servers) receive only the tool calls you allow. A tool that writes asks first.',
         },
         {
+          title: 'To Suture, only if you switch on hosted tracing',
+          body: 'Off by default. If you turn on Settings › Privacy › Hosted tracing, and your build carries a Suture key, each planner and navigator call sends a trace to the hosted Suture project (suture.nexprove.com): the step name, timing, model name and token counts. The text of prompts and replies is a second switch, also off by default, because chats can contain what other people send you on WhatsApp.',
+        },
+        {
           title: 'Checking a key',
           body: 'Saving a Gemini key sends it to Google once, to check that it works.',
         },
@@ -1042,7 +1046,7 @@ export const privacy = {
         },
         {
           title: 'Us',
-          body: `There is no ${PRODUCT} server. Nothing is sent to the people who make it.`,
+          body: `There is no ${PRODUCT} server. Nothing is sent to the people who make it, unless you switch on hosted tracing (off by default, see above).`,
         },
       ],
     },

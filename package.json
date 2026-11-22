@@ -59,6 +59,7 @@
     "react-force-graph-2d": "^1.29.2",
     "react-icons": "^5.7.0",
     "streamdown": "^2.7.0",
+    "suture-trace": "file:vendor/suture-trace-0.1.0.tgz",
     "tailwind-merge": "^2.4.0",
     "use-stick-to-bottom": "^1.1.6",
     "webextension-polyfill": "^0.12.0",

@@ -14,5 +14,10 @@ no analytics. The full, current page is the site's `/privacy` (source: `site/src
   Drive only if you connect Drive, private until you press Share. WhatsApp messages travel through WhatsApp if you
   link it. Names Ava has learned reach your model only inside a chat or meeting note, and a backup to Ava Brain on your Mac
   includes your tasks and people. Tool calls go to the MCP connectors you added. With a local model (Ollama, LM Studio), page text stays on your computer.
+  **Hosted tracing is off by default.** Only if you switch on Settings › Privacy › Hosted tracing, and only in a build
+  that carries a Suture ingest key, each planner and navigator call sends a trace to the hosted Suture project
+  (suture.nexprove.com, run by the makers of Ava Copilot): the step's name, timing, model name and token counts. The
+  text of prompts and replies is a second switch, also off by default, because chats can contain what other people send
+  you on WhatsApp. With the switch off, or with no key, nothing is sent.
 - **Never leaves.** Cookies and saved passwords are never read. The "Hey Ava" wake word runs on your computer. Nothing
-  is sent to us: there is no server of ours.
+  is sent to us unless you switch on hosted tracing (above): there is no other server of ours.

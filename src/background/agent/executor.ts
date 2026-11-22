@@ -1,3 +1,4 @@
+import { flushHostedTracing } from '@src/background/telemetry/suture';
 import type { ChatModel } from '@src/background/llm/types';
 import { type ActionResult, AgentContext, type AgentOptions, type AgentOutput } from './types';
 import { t } from '@extension/i18n';
@@ -315,6 +316,7 @@ export class Executor {
       }
     } finally {
       finishTurn(this.context.taskId, outcome);
+      void flushHostedTracing(); // the service worker may stop soon after a turn
       if (import.meta.env.DEV) {
         logger.debug('Executor history', JSON.stringify(this.context.history, null, 2));
       }

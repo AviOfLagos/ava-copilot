@@ -42,3 +42,4 @@ import './followups/register';
 import './workspaces/register';
 import './recordings/register';
 import './call-tasks/register';
+import './telemetry/suture';
