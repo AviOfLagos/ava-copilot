@@ -184,6 +184,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   stop_contact: 'tasks',
   update_product_profile: 'tasks',
   // Drive, knowledge and WhatsApp Web, read or written from a chat
+  recall: 'memory',
   drive_create_doc: 'memory',
   drive_list: 'memory',
   drive_share: 'memory',

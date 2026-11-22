@@ -1,6 +1,7 @@
 import { aboutYouStore, addFact, findFact, removeFact, updateFact, visibleFactsFor } from '@extension/storage';
 import type { FactCategory, FactChange } from '@extension/storage';
 import { askedToForget, factStatusFor, savedNote } from './facts';
+import { searchFacts } from './recall';
 
 /**
  * Remembering and correcting facts about the user, shared by the voice tools and the chat agent's actions. The
@@ -74,5 +75,16 @@ export async function describeMemory(workspaceId: string | null): Promise<string
   if (!facts.length) return 'You know nothing about the user yet.';
   return facts
     .map(fact => `- ${fact.text}${fact.status === 'proposed' ? ' (a suggestion, not confirmed)' : ''} [id ${fact.id}]`)
+    .join('\n');
+}
+
+/** What the user's stored facts say about a question: the best matches, newest first among equals. */
+export async function recallFacts(workspaceId: string | null, question: string): Promise<string> {
+  const state = await aboutYouStore.getState();
+  const found = searchFacts(state.facts, question, workspaceId);
+  if (!found.length)
+    return 'Nothing stored about the user matches that. Ask them, and remember the answer if it is lasting.';
+  return found
+    .map(({ fact }) => `- ${fact.text} (since ${new Date(fact.updatedAt).toISOString().slice(0, 10)})`)
     .join('\n');
 }
