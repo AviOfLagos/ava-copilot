@@ -79,6 +79,71 @@ export function buildNavigatorJsonSchema(schema: z.ZodType): JSONSchema7 {
   return addTitlesToProperties(zodSchema(schema).jsonSchema as Record<string, unknown>) as JSONSchema7;
 }
 
+type Node = Record<string, unknown>;
+const asNode = (v: unknown): Node | undefined =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Node) : undefined;
+
+/** The object branch of a nullable action (`anyOf: [{type: object…}, {type: null}]`), or the node itself */
+function objectBranch(node: Node): Node | undefined {
+  if (node.type === 'object' || node.properties) return node;
+  for (const key of ['anyOf', 'oneOf']) {
+    const list = node[key];
+    if (Array.isArray(list)) {
+      const found = list.map(asNode).find(n => n && (n.type === 'object' || n.properties));
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/** A parameter's shape where its name alone isn't enough: allowed values (`: a|b`) or list items (`: [{x, y}]`) */
+function shapeOf(node: Node | undefined, depth = 0): string {
+  if (!node || depth > 1) return '';
+  const branches = Array.isArray(node.anyOf) ? (node.anyOf as unknown[]).map(asNode) : [];
+  const values = Array.isArray(node.enum) ? node.enum : branches.flatMap(b => (Array.isArray(b?.enum) ? b.enum : []));
+  if (values.length) return `: ${values.map(String).join('|')}`;
+  const items = asNode(node.items) ?? asNode(branches.find(b => b?.items)?.items);
+  const inner = items ? objectBranch(items) : undefined;
+  if (inner?.properties) {
+    const req = new Set(Array.isArray(inner.required) ? (inner.required as string[]) : []);
+    const fields = Object.entries(asNode(inner.properties) ?? {}).map(
+      ([k, v]) => `${req.has(k) ? k : `${k}?`}${shapeOf(asNode(v), depth + 1)}`,
+    );
+    return `: [{${fields.join(', ')}}]`;
+  }
+  return '';
+}
+
+/**
+ * A compact list of the navigator's actions for a model in text mode: one line per action with its parameters
+ * (`?` marks optional ones) and the first sentence of its description. Undefined when the schema has no actions.
+ */
+export function describeActionsForText(schema: JSONSchema7): string | undefined {
+  const actionProp = asNode(asNode(asNode(schema)?.properties)?.action);
+  const items = asNode(actionProp?.items);
+  const actions = asNode(items?.properties);
+  if (!actions) return undefined;
+  const lines: string[] = [];
+  for (const [name, raw] of Object.entries(actions)) {
+    const node = asNode(raw);
+    if (!node) continue;
+    const params = objectBranch(node);
+    const required = new Set(Array.isArray(params?.required) ? (params.required as string[]) : []);
+    const keys = Object.entries(asNode(params?.properties) ?? {}).map(
+      ([k, v]) => `${required.has(k) ? k : `${k}?`}${shapeOf(asNode(v))}`,
+    );
+    const description = String(node.description ?? params?.description ?? '')
+      .split(/(?<!\b(?:e\.g|i\.e|etc)\.)(?<=\.)\s/)[0]
+      .slice(0, 160);
+    lines.push(`- ${name}: {${keys.join(', ')}}${description ? ` ${description}` : ''}`);
+  }
+  if (!lines.length) return undefined;
+  return [
+    'Available actions. Each item of "action" is an object with exactly one of these keys, whose value is an object with the listed parameters (? = optional). Use no other action names.',
+    ...lines,
+  ].join('\n');
+}
+
 export interface NavigatorResult {
   done: boolean;
 }
@@ -108,6 +173,11 @@ export class NavigatorAgent extends BaseAgent<z.ZodType<NavigatorOutput>, Naviga
    */
   protected getOutputSchema(): FlexibleSchema<this['ModelOutput']> {
     return jsonSchema<this['ModelOutput']>(this.jsonSchema, { validate: validateNavigatorOutput });
+  }
+
+  /** In text mode the schema isn't sent, so list every action with its parameters in the instructions */
+  protected textModeHint(): string | undefined {
+    return describeActionsForText(this.jsonSchema);
   }
 
   async execute(): Promise<AgentOutput<NavigatorResult>> {

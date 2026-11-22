@@ -8,6 +8,7 @@ import {
   generatePlainText,
   generateStructured,
   isStructuredOutputUnavailableError,
+  isSchemaTooComplexError,
   splitInstructions,
 } from '../generate';
 import {
@@ -226,6 +227,50 @@ describe('generateStructured', () => {
       for (const call of model.doGenerateCalls.slice(1)) {
         expect(call.responseFormat?.type).not.toBe('json');
         expect(call.toolChoice).toEqual({ type: 'tool', toolName: 'x' });
+      }
+    });
+
+    it('switches to text mode when the provider says the schema is too complex', async () => {
+      const tooComplex = () =>
+        new APICallError({
+          message:
+            'The specified schema produces a constraint that has too many states for serving. Typical causes of this error are schemas with lots of text',
+          url: 'https://generativelanguage.googleapis.com/v1beta/models/x:generateContent',
+          requestBodyValues: {},
+          statusCode: 400,
+          isRetryable: false,
+        });
+      expect(isSchemaTooComplexError(tooComplex())).toBe(true);
+      expect(
+        isSchemaTooComplexError(
+          new APICallError({ message: 'model not found', url: 'u', requestBodyValues: {}, statusCode: 404 }),
+        ),
+      ).toBe(false);
+      for (const mode of ['native', 'tool'] as const) {
+        let calls = 0;
+        const model = new MockLanguageModelV4({
+          doGenerate: async () => {
+            calls++;
+            if (calls === 1) throw tooComplex();
+            return textResult('{"answer":"from text"}');
+          },
+        });
+        const chatModel: ChatModel = { provider: 'gemini', modelName: 'g', model, settings: {}, structuredMode: mode };
+        const first = await generateStructured({ chatModel, messages: history, schema, name: 'x' });
+        expect(first.output).toEqual({ answer: 'from text' });
+        expect(chatModel.structuredMode).toBe('text');
+        expect(model.doGenerateCalls).toHaveLength(2);
+        expect(model.doGenerateCalls[1].responseFormat?.type).not.toBe('json');
+        expect(model.doGenerateCalls[1].tools ?? []).toHaveLength(0);
+      }
+    });
+
+    it('adds the text-mode hint to the instructions only in text mode', async () => {
+      for (const mode of ['text', 'native'] as const) {
+        const { chatModel, model } = mockChatModel(textResult('{"answer":"ok"}'), mode);
+        await generateStructured({ chatModel, messages: history, schema, name: 'x', textModeHint: 'ACTIONS-HINT' });
+        const sent = JSON.stringify(model.doGenerateCalls[0].prompt);
+        expect(sent.includes('ACTIONS-HINT')).toBe(mode === 'text');
       }
     });
 

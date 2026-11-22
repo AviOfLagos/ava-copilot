@@ -147,6 +147,20 @@ export function isStructuredOutputUnavailableError(error: unknown): boolean {
   return APICallError.isInstance(cause) && /structured output is unavailable/i.test(cause.message);
 }
 
+/**
+ * Whether the provider refused the schema itself as too large or complex to enforce, e.g. Gemini's "The specified
+ * schema produces a constraint that has too many states for serving". Constrained decoding can't run, but the same
+ * schema still works when the model answers in text and the reply is parsed and validated here.
+ */
+export function isSchemaTooComplexError(error: unknown): boolean {
+  const cause = RetryError.isInstance(error) ? error.lastError : error;
+  if (!APICallError.isInstance(cause)) return false;
+  const text = `${cause.message} ${cause.responseBody ?? ''}`;
+  return /too many states|schema (?:is )?too (?:complex|large|big)|schema[^.]{0,200}exceed|total number of (?:enum values|object properties)|too many (?:enum values|properties|union)/i.test(
+    text,
+  );
+}
+
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -203,6 +217,11 @@ export interface GenerateStructuredArgs<T> {
   abortSignal?: AbortSignal;
   /** The turn's trace recorder (telemetry/traces.ts#telemetryFor) */
   telemetry?: TelemetryOptions;
+  /**
+   * Text sent with the instructions in text mode only, where no schema reaches the model: e.g. the navigator's list
+   * of actions and their parameters, which native and tool mode carry in the schema itself.
+   */
+  textModeHint?: string;
 }
 
 /**
@@ -238,6 +257,12 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
           throw new ResponseParseError(`Could not parse response from ${label}: no output generated`, error);
         }
       } catch (error) {
+        if (isSchemaTooComplexError(error)) {
+          // Tool mode would send the same schema as tool input, so go straight to text; it lasts for this chat model
+          logger.warning(`[${label}] the schema is too complex for constrained output, falling back to text mode`);
+          chatModel.structuredMode = 'text';
+          return generateStructuredOn(args);
+        }
         if (isStructuredOutputUnavailableError(error)) {
           // The chat model lives for the whole task, so later calls go straight to tool mode
           logger.warning(`[${label}] structured output is unavailable, falling back to tool mode`);
@@ -271,6 +296,11 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
           toolChoice: chatModel.autoToolChoice ? 'auto' : { type: 'tool', toolName },
         });
       } catch (error) {
+        if (isSchemaTooComplexError(error)) {
+          logger.warning(`[${label}] the tool schema is too complex, falling back to text mode`);
+          chatModel.structuredMode = 'text';
+          return generateStructuredOn(args);
+        }
         // The SDK rejects replies without the forced tool call; some models answer in text instead.
         // The error has no raw reason, so only a normal stop counts as finished
         if (!ToolChoiceViolationError.isInstance(error)) throw error;
@@ -312,7 +342,11 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
     }
 
     case 'text': {
-      const callArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
+      const baseArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
+      const hint = args.textModeHint?.trim();
+      const callArgs = hint
+        ? { ...baseArgs, instructions: baseArgs.instructions ? `${baseArgs.instructions}\n\n${hint}` : hint }
+        : baseArgs;
       let text: string;
       let finishReason: FinishReason | undefined;
       let rawFinishReason: string | undefined;

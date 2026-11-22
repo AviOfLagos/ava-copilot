@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ActionResult } from '../../types';
 import { Action } from '../../actions/builder';
 import { clickElementActionSchema, doneActionSchema, goBackActionSchema } from '../../actions/schemas';
-import { buildNavigatorJsonSchema, NavigatorActionRegistry } from '../navigator';
+import { buildNavigatorJsonSchema, describeActionsForText, NavigatorActionRegistry } from '../navigator';
 import { validateNavigatorOutput } from '../navigatorOutput';
 import { generateStructured, jsonSchema } from '@src/background/llm/generate';
 import { userMessage } from '@src/background/llm/messages';
@@ -68,5 +68,63 @@ describe('buildNavigatorJsonSchema', () => {
       name: 'navigator_output',
     });
     expect(output).toEqual(reply);
+  });
+});
+
+describe('describeActionsForText', () => {
+  it('lists every action with its parameters for a model in text mode', () => {
+    const schema = buildNavigatorJsonSchema(buildRegistry().setupModelOutputSchema());
+    const text = describeActionsForText(schema)!;
+    const lines = text.split('\n');
+    expect(lines[0]).toMatch(/exactly one of these keys/);
+    const done = lines.find(l => l.startsWith('- done:'))!;
+    const click = lines.find(l => l.startsWith('- click_element:'))!;
+    expect(done).toBeDefined();
+    expect(click).toBeDefined();
+    const clickObject = (actionProperties(schema as Schema).click_element.anyOf as Schema[]).find(
+      b => b.type === 'object',
+    )!;
+    for (const key of Object.keys(clickObject.properties as Schema)) expect(click).toContain(key);
+  });
+
+  it('shows allowed values and the fields of list items', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              fill_form: {
+                description: 'Fill a form, e.g. a sign-up form. More text.',
+                anyOf: [
+                  {
+                    type: 'object',
+                    required: ['fields'],
+                    properties: {
+                      fields: {
+                        type: 'array',
+                        items: { type: 'object', required: ['index'], properties: { index: {}, value: {} } },
+                      },
+                      mode: { enum: ['fast', 'careful'] },
+                    },
+                  },
+                  { type: 'null' },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const line = describeActionsForText(schema as never)!.split('\n')[1];
+    expect(line).toBe(
+      '- fill_form: {fields: [{index, value?}], mode?: fast|careful} Fill a form, e.g. a sign-up form.',
+    );
+  });
+
+  it('returns undefined for a schema without actions', () => {
+    expect(describeActionsForText({ type: 'object', properties: {} })).toBeUndefined();
   });
 });
