@@ -30,6 +30,7 @@ function sampleFacts(count: number): UserFact[] {
       source: 'said',
       status: 'active',
       via: 'chat',
+      previous: [],
       createdAt: index,
       // Told over time: a higher number is newer, and the newest facts are shown first
       updatedAt: Date.UTC(2026, 0, 1) + index * 86_400_000,
