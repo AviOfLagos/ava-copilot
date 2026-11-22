@@ -174,6 +174,7 @@ export async function callToolAction(
     return new ActionResult({
       extractedContent: result.isError ? `${name} reported an error:\n${body}` : `${name} returned:\n${body}`,
       includeInMemory: true,
+      outside: true,
     });
   } catch (thrown) {
     const error = toAppError(thrown);

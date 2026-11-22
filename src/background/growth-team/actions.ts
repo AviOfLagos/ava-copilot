@@ -4,6 +4,8 @@ import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import type { ActionSchema } from '../agent/actions/schemas';
 import { Actors, ExecutionState } from '../agent/event/types';
+import { rulesMayAnswer } from '../gate/origins';
+import { withTaint } from '../gate/taint';
 import { propose, resultText } from './queue';
 import type { Proposal, QueueDeps } from './queue';
 import { TOOL_RUNGS, toolRequest } from './requests';
@@ -80,7 +82,7 @@ function fail(context: AgentContext, error: string): ActionResult {
 /** Who is asking: the chat's workspace and, when an agent runs it, that agent. */
 export async function whoAsks(
   context: Pick<AgentContext, 'taskId'>,
-): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'automated'> | { error: string }> {
+): Promise<Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'automated' | 'tainted'> | { error: string }> {
   const thread = await threadStore.get(context.taskId);
   const workspace = await workspaceStore.get(thread?.workspaceId);
   if (!workspace)
@@ -90,6 +92,8 @@ export async function whoAsks(
     workspaceId: workspace.id,
     agentId: agent?.id ?? null,
     agentName: agent?.name ?? 'Ava',
+    // What the chat read from outside decides whether a saved rule may answer for it
+    tainted: !(thread && rulesMayAnswer(withTaint(thread), 'team')),
     // Only the user's own words (typed, spoken, or sent from their phone) skip the draft checks
     automated:
       Boolean(agent) || (thread?.origin !== undefined && !['user', 'voice', 'whatsapp'].includes(thread.origin)),
@@ -100,7 +104,7 @@ async function run(
   context: AgentContext,
   label: string,
   build: (
-    who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+    who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   ) => Proposal | { text: string } | { error: string },
   deps: QueueDeps = {},
 ): Promise<ActionResult> {

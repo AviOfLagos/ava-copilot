@@ -68,9 +68,9 @@ function fail(context: AgentContext, error: string): ActionResult {
   return new ActionResult({ error, includeInMemory: true });
 }
 
-function ok(context: AgentContext, label: string, text: string): ActionResult {
+function ok(context: AgentContext, label: string, text: string, outside = false): ActionResult {
   void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, label);
-  return new ActionResult({ extractedContent: text, includeInMemory: true });
+  return new ActionResult({ extractedContent: text, includeInMemory: true, outside });
 }
 
 async function productOf(context: AgentContext) {
@@ -91,7 +91,7 @@ export async function readFeedbackAction(
   if ('error' in found) return fail(context, found.error);
   const read = await newFeedback(found.profile, deps);
   if (!read.ok) return fail(context, `Feedback: no reading. ${read.why}`);
-  return ok(context, `${read.items.length} new`, feedbackForModel(read.items, read.more));
+  return ok(context, `${read.items.length} new`, feedbackForModel(read.items, read.more), true);
 }
 
 export async function sortFeedbackAction(
@@ -132,7 +132,7 @@ export async function sortFeedbackAction(
 /** Proposes a beta place for one access request, on the product's own rule; code keeps the limits. */
 export async function requestBetaGrant(
   profile: ProductProfile,
-  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'workspaceId' | 'agentId' | 'agentName' | 'tainted'>,
   input: { requestId: string; why: string },
   deps: LeadDeps = {},
 ): Promise<ProposeResult> {
@@ -142,6 +142,8 @@ export async function requestBetaGrant(
       workspaceId: who.workspaceId,
       agentId: who.agentId,
       agentName: who.agentName,
+      // Built from a customer's request: no saved rule grants it by itself
+      tainted: true,
       action: 'beta_grant',
       title: `Beta access for request ${input.requestId}`,
       body: `${input.why}\n\nAccess request ${input.requestId}${rule ? `: the ${rule.plan} plan for ${rule.days} days` : ''}.`,

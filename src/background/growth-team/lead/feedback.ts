@@ -120,7 +120,7 @@ const adminLink = (profile: ProductProfile) => {
 /** Sorts one feedback item and does what its sort calls for. */
 export async function sortFeedback(
   profile: ProductProfile,
-  who: Pick<Proposal, 'agentId' | 'agentName'>,
+  who: Pick<Proposal, 'agentId' | 'agentName' | 'tainted'>,
   input: SortInput,
   deps: LeadDeps = {},
 ): Promise<SortResult> {
@@ -172,6 +172,8 @@ export async function sortFeedback(
           workspaceId: profile.workspaceId,
           agentId: who.agentId,
           agentName: who.agentName,
+          // Built from what a customer wrote: no saved rule files it by itself
+          tainted: true,
           action: 'customer_issue',
           target: profile.repo || 'not set',
           allowedLinks: admin ? [admin] : [],

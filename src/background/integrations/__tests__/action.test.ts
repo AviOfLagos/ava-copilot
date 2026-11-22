@@ -186,6 +186,9 @@ describe('call_tool', () => {
   it('after Allow every time, the same tool runs again without a card, until the rule is removed', async () => {
     const { permissionRulesStore } = await import('@extension/storage');
     for (const rule of await permissionRulesStore.list()) await permissionRulesStore.remove(rule.id);
+    // The user's own chat: a rule never answers for a chat that cannot be read
+    await threadStore.remove('task-1').catch(() => undefined);
+    await threadStore.create({ id: 'task-1', origin: 'user' });
     const first = fakeContext('none');
     (first.context as unknown as { emitEvent: unknown }).emitEvent = vi.fn(
       async (_actor: unknown, state: string, details: string) => {

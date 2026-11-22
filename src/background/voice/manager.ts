@@ -33,6 +33,7 @@ import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { registeredVoiceTool, registeredVoiceTools } from '../registry';
 import { usesLiveTokens } from '../models/liveToken';
 import { wrapUntrustedContent } from '../agent/messages/utils';
+import { markTainted, textCarriesOutsideContent } from '../gate/taint';
 import { noticeFor, voiceSessionInstructions, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, readScreen, switchTab } from './browser-tools';
 import { loadIdentityContext } from '../identity/context';
@@ -416,6 +417,13 @@ export class VoiceManager {
 
   /** Runs a tool the copilot called and returns what it should know. */
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
+    const answer = await this.runTool(name, args, heard);
+    // What a tool brought in from outside (a meeting's words, a page, a connector's answer) taints this conversation
+    if (this.threadId && textCarriesOutsideContent(answer)) await markTainted(this.threadId, 'voice tool');
+    return answer;
+  }
+
+  private async runTool(name: string, args: Record<string, unknown>, heard: string): Promise<string> {
     this.lastActivity = Date.now();
     const registered = registeredVoiceTool(name);
     const action = TOOL_ACTIONS[name] ?? registered?.guardLabel ?? 'act for you';

@@ -79,5 +79,9 @@ export async function lookUpGraphAction(
   }
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, `Found ${found.length} in the graph`);
   // Names and decisions come from chats, meetings and pages: data, never instructions
-  return new ActionResult({ extractedContent: wrapUntrustedContent(parts.join('\n\n')), includeInMemory: true });
+  return new ActionResult({
+    extractedContent: wrapUntrustedContent(parts.join('\n\n')),
+    includeInMemory: true,
+    outside: true,
+  });
 }

@@ -711,6 +711,8 @@ export class AgentService {
       workspaceId: agent.workspaceId,
       title: `${agent.name} · ${new Date(now).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`,
       boundTabIds: [tab.tabId],
+      // What the run read from outside: a saved rule never answers for a tainted chat
+      tainted: run.tainted,
       boundGroupId: tab.groupId,
       boundUrl: startUrl,
       // Kept out of the user's own chat list; the agent's page and run log open it

@@ -106,8 +106,8 @@ async function act(context: AgentContext, page: Page, state: PageState, gated: P
 }
 
 /** A chat with a task running in it; `restart` is the background coming back and resuming the same task. */
-async function runningThread() {
-  const thread = await threadStore.create({ origin: 'user' });
+async function runningThread(fields: Parameters<typeof threadStore.create>[0] = { origin: 'user' }) {
+  const thread = await threadStore.create(fields);
   await threadStore.update(thread.id, {
     taskRunId: `task-of-${thread.id}`,
     runStartedAt: Date.now() - 1,
@@ -391,6 +391,35 @@ describe('allow every time on a page', () => {
     expect((await act(later.context, page, state, pressEnter)).proceed).toBe(true);
     expect(later.requests).toHaveLength(0);
     expect((await permissionRulesStore.list())[0].uses).toBe(1);
+  });
+
+  it('never lets a saved rule answer a run that read outside content, and offers none on its card', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    await permissionRulesStore.allow({ kind: 'send', scope: 'mail.example/compose', label: 'x' });
+    // An agent run marked tainted, one whose starter said nothing (fails closed), and a user chat marked tainted
+    for (const fields of [
+      { origin: 'agent' as const, tainted: true },
+      { origin: 'agent' as const },
+      { origin: 'whatsapp' as const },
+      { origin: 'user' as const, tainted: true },
+    ]) {
+      const tainted = answering(await runningThread(fields), true);
+      expect((await act(tainted.context, page, state, pressEnter)).proceed).toBe(true);
+      expect(tainted.requests).toHaveLength(1);
+      expect(tainted.requests[0]!.always).toBeUndefined();
+    }
+    // The rule is untouched: not used, and the "Allow every time" click saved nothing new
+    expect(await permissionRulesStore.list()).toHaveLength(1);
+    expect((await permissionRulesStore.list())[0]!.uses).toBe(0);
+  });
+
+  it('still lets a saved rule answer an agent run that is known to be clean', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    await permissionRulesStore.allow({ kind: 'send', scope: 'mail.example/compose', label: 'x' });
+    // An agent's chat always asks (unattended), so the rule is what answers
+    const clean = answering(await runningThread({ origin: 'agent', tainted: false }), false);
+    expect((await act(clean.context, page, state, pressEnter)).proceed).toBe(true);
+    expect(clean.requests).toHaveLength(0);
   });
 
   it('Allow once saves nothing, and a rule for one site does not cover another', async () => {

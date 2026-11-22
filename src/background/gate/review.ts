@@ -22,6 +22,7 @@ import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TA
 import type { GateTarget } from './classify';
 import { readCommitContent, readCommitEffect, readFocus, readLiveLabel } from './probes';
 import type { CommitContent, FocusReading } from './probes';
+import { ruleMayAnswer } from './taint';
 import { describeTarget, targetFromRaw } from './target';
 
 const logger = createLogger('ConfirmGate');
@@ -334,16 +335,22 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
 
   // "Allow every time": the user already said yes to this kind of step in this place. Looked up only when a
   // card would show. A repeat of a step (do once) is still asked, money, deleting and access never get a rule,
-  // and neither does a kind that is only a guess (focus that could not be read, or the model's word).
+  // and neither does a kind that is only a guess (focus that could not be read, or the model's word). A run that
+  // read content from outside (a page, an email, someone else's message) gets no rule either, answering or offered:
+  // what it read must not be able to unlock an approval. The card shows as usual.
+  const mayKeep = await ruleMayAnswer(context, kind);
+  const mayKeepNamed = gated.rule ? await ruleMayAnswer(context, gated.rule.kind) : false;
   const needsCard = settings.confirm[kind] || unattended || !!repeat;
   const named =
-    gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
+    mayKeepNamed && gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
       ? gated.rule
       : null;
   const scope = named ? named.scope : guessed ? '' : pageScope(page.url());
   const ruleKind = named ? named.kind : kind;
   const rule =
-    needsCard && !repeat && scope ? await permissionRulesStore.find(ruleKind, scope).catch(() => null) : null;
+    (named ? mayKeepNamed : mayKeep) && needsCard && !repeat && scope
+      ? await permissionRulesStore.find(ruleKind, scope).catch(() => null)
+      : null;
   if (rule) {
     await permissionRulesStore.used(rule.id).catch(() => undefined);
     await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
@@ -354,7 +361,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     if (repeat) request.repeat = repeat;
     else if (named) request.always = named;
-    else if (scope && canAllowAlways(kind)) {
+    else if (mayKeep && scope && canAllowAlways(kind)) {
       request.always = { kind, scope, label: t('gate_rule_label', [t(KIND_TEXT[kind]), scope]) };
     }
     const answer = await ask(context, request);

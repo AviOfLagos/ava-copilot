@@ -417,6 +417,25 @@ describe('auto, inside a hard limit', () => {
     expect((await propose(issue('fb-3', { agentId: 'marketing', agentName: 'Marketing' }), deps)).state).toBe('queued');
   });
 
+  it('never lets a saved rule run, or offers one for, an item a tainted chat proposed', async () => {
+    const filed: string[] = [];
+    registerTeamExecutor('customer_issue', async item => {
+      filed.push(item.title);
+      return { ok: true, note: 'Filed' };
+    });
+    await permissionRulesStore.allow({
+      kind: 'team',
+      scope: teamScope('suture', 'lead', 'customer_issue'),
+      label: 'issues',
+    });
+    const item = queued(await propose(issue('fb-9', { tainted: true }), deps));
+    expect(item.mode).toBe('always_ask');
+    expect(filed).toEqual([]);
+    expect((await open())[0]!.approval).not.toHaveProperty('always');
+    // An untainted proposal with the same rule still runs by itself
+    expect(await propose(issue('fb-10'), deps)).toMatchObject({ state: 'ran' });
+  });
+
   it('stops filing issues at the daily limit, even on auto', async () => {
     registerTeamExecutor('customer_issue', async () => ({ ok: true, note: 'Filed' }));
     await permissionRulesStore.allow({

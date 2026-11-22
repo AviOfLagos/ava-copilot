@@ -47,7 +47,7 @@ describe('describeTarget', () => {
   });
 
   it('finds the form around a button, however deep', () => {
-    const button = el('button', {}, ['Request a quote']);
+    const button = el('button', {}, ['Get a quote']);
     el('form', { action: '/contact' }, [el('div', {}, [el('div', {}, [button])])]);
     const target = describeTarget(button);
     expect(target.inForm).toBe(true);

@@ -366,6 +366,15 @@ describe('hand-off', () => {
     expect((await createThreadStore(db).messages(chat.id)).at(-1)?.content).toMatch(/Research\*\* is done/);
   });
 
+  it("keeps a run tainted when the chat it comes from read outside content, even with the user's own words", async () => {
+    await addAgent({ name: 'Mail', owns: ['email'] });
+    const clean = await userChat('triage my email');
+    const dirty = await userChat('triage my email', { tainted: true });
+    const request = { from: 'chat' as const, area: 'email', task: 'triage my email', userWords: 'triage my email' };
+    expect((await handoffs.handOff({ ...request, threadId: clean.id })).run.tainted).toBe(false);
+    expect((await handoffs.handOff({ ...request, threadId: dirty.id })).run.tainted).toBe(true);
+  });
+
   it("passes Ava's own wording as data, tainted, when the user's words do not cover it", async () => {
     await addAgent({ name: 'Mail', owns: ['email'] });
     const chat = await userChat('triage my email');

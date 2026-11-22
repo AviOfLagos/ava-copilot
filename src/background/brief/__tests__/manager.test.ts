@@ -249,6 +249,8 @@ describe('the morning brief', () => {
     pending = false;
     await brief.check();
     const { lastThreadId } = await briefSettingsStore.getSettings();
+    // The brief's chat holds mail and invites written by others: no saved rule answers in it
+    expect((await threadStore.get(lastThreadId!))?.tainted).toBe(true);
     const said = (await threadStore.messages(lastThreadId!)).map(message => message.content).join('\n');
     expect(said).toContain('**Team · Suture**\nStandup did not run: it starts at 07:45.');
     registerBriefExtra({ id: 'test-team', pending: async () => false, sections: async () => [] });

@@ -25,6 +25,28 @@ export function alwaysAsks(chat: Chat): boolean {
   return !chat || has(ALWAYS_ASK_ORIGINS, chat);
 }
 
+// Chats that are not the user typing at the computer. Whether they read outside content is only known when the code
+// that started them said so (`tainted: false`); when it did not, they count as having read some.
+const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
+
+/**
+ * Whether a saved "Allow every time" rule of `kind` may answer for a chat, and whether its card may offer one. The one
+ * policy every gate uses. Fails closed, because classifying an action by its label always misses some (a "Reply",
+ * an RSVP, a contact form's Submit can all come out as another kind).
+ *
+ * - A chat that cannot be read: no.
+ * - An agent's, routine's, brief's or WhatsApp chat: only when its starter said it is clean (`tainted: false`).
+ * - The user's own chat (user, voice): only while it has not read outside content (a web page, an email, a message
+ *   from someone else); after that, no rule of any kind. `kind` is kept so a narrower policy (rules by recipient,
+ *   epic #169) can come back later.
+ */
+export function rulesMayAnswer(chat: Pick<ThreadRecord, 'origin' | 'tainted'> | undefined, kind?: string): boolean {
+  if (!chat) return false;
+  if (chat.origin && MAY_READ_OUTSIDE.has(chat.origin)) return chat.tainted === false;
+  void kind;
+  return chat.tainted !== true;
+}
+
 /** The user started it from somewhere away from the computer (WhatsApp). */
 export function isRemoteChat(chat: Chat): boolean {
   return has(REMOTE, chat);

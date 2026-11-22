@@ -62,13 +62,16 @@ const COMMIT_PATTERNS: [CommitKind, RegExp][] = [
     /\b(share|invite|grant|authorize|authorise|make (public|private|admin|owner|editor)|transfer ownership|add (member|members|people|collaborator|collaborators|user|users)|change (role|access|permission|permissions))\b/i,
   ],
   ['publish', /\b(publish|post|tweet|repost|go live|deploy|release|merge)\b/i],
-  ['send', /\b(send|comment)\b/i],
+  ['send', /\b(send|comment|reply|respond|message|answer|rsvp|accept|request)\b/i],
   ['submit', /\b(submit|confirm|sign up|register|apply now|enroll|enrol)\b/i],
 ];
 
 // Labels of submit-type buttons that only move around or look things up
 const SAFE_SUBMIT_PATTERN =
   /^\W*(search|find|filter|go|next|back|previous|prev|continue|cancel|close|add|new|edit|show|hide|view|more|open|clear|reset|sort|refresh|preview|upload|attach|browse|choose|select|copy|download|expand|collapse|sign in|log in|login)\b/i;
+
+// A single-line box that looks like a chat or message composer
+const CHAT_BOX_PATTERN = /\b(chat|messages?|reply|replies|comment|write|type a|say something|ask)\b/i;
 
 const OTP_PATTERN =
   /\b(otp|2fa|mfa|totp|one[- ]time|verification code|security code|auth(entication)? code|passcode|6[- ]digit code)\b/i;
@@ -196,7 +199,9 @@ export function classifyKeys(keys: string, focus: GateTarget | null): CommitKind
     return modifiers.includes('shift') && modifiers.length === 1 ? null : 'send';
   }
   if (isTextInput) {
-    return focus.searchLike ? null : (classifyLabel(focus.label) ?? 'submit');
+    if (focus.searchLike) return null;
+    // Enter in a single-line chat or message box sends it
+    return classifyLabel(focus.label) ?? (CHAT_BOX_PATTERN.test(focus.label) ? 'send' : 'submit');
   }
   if (isButton || focus.tagName === 'a') {
     // Enter on a focused control clicks it

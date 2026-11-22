@@ -67,6 +67,8 @@ export interface TeamItem {
   why: string;
   // Set by code when the text names a customer: such an item is always asked on its own
   namesCustomer: boolean;
+  // Proposed by a chat that read content from outside: no saved rule answered it and none is offered
+  tainted?: boolean;
   mode: TeamMode;
   status: TeamItemStatus;
   // What happened to it, in plain words

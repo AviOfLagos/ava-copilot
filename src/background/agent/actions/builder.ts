@@ -404,7 +404,7 @@ export class ActionBuilder {
       this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, rawMsg);
 
       const msg = wrapUntrustedContent(rawMsg);
-      return new ActionResult({ extractedContent: msg, includeInMemory: true });
+      return new ActionResult({ extractedContent: msg, includeInMemory: true, outside: true });
     }, cacheContentActionSchema);
     actions.push(cacheContent);
 
