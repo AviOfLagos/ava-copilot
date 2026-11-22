@@ -9001,6 +9001,236 @@
   "wava_settings_notify_routine": {
     "message": "Um lembrete ou rotina tem um resultado"
   },
+  "wava_settings_notify_tasks": {
+    "message": "Listas de tarefas (depois de uma chamada, tarefas abertas)"
+  },
+  "wava_tasks_listTitle": {
+    "message": "Tarefas abertas"
+  },
+  "wava_tasks_listTitleFor": {
+    "message": "Tarefas de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_listTitleIn": {
+    "message": "Tarefas abertas em $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_more": {
+    "message": "…e mais $COUNT$ na página Tarefas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "wava_tasks_hint": {
+    "message": "Responda \"done 2\" para concluir uma, \"undo 2\" para reabrir."
+  },
+  "wava_tasks_none": {
+    "message": "Nenhuma tarefa aberta."
+  },
+  "wava_tasks_noneFor": {
+    "message": "Nenhuma tarefa aberta para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_noneIn": {
+    "message": "Nenhuma tarefa aberta em $WORKSPACE$.",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_noList": {
+    "message": "Ainda não enviei uma lista numerada. Envie \"tasks\" e eu envio uma."
+  },
+  "wava_tasks_notAList": {
+    "message": "Essa mensagem não tem tarefas numeradas. Envie \"tasks\" para ver a lista."
+  },
+  "wava_tasks_outOfRange": {
+    "message": "Essa lista tem $COUNT$ tarefas. Qual delas?",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "wava_tasks_outOfRangeOne": {
+    "message": "Essa lista tem 1 tarefa. Qual você quis dizer?"
+  },
+  "wava_tasks_done": {
+    "message": "Concluída: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_reopened": {
+    "message": "Reaberta: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_dropped": {
+    "message": "Descartada: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_unchanged": {
+    "message": "Já estava assim: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_gone": {
+    "message": "Não está mais no quadro: $NUMBERS$",
+    "placeholders": {
+      "numbers": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_tasks_which": {
+    "message": "Você quer dizer $NAME$ ou o espaço de trabalho $WORKSPACE$? Envie \"tasks for $WORD$\" para a pessoa ou \"tasks in $WORD$\" para o espaço de trabalho.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "workspace": {
+        "content": "$2",
+        "example": "Ada Labs"
+      },
+      "word": {
+        "content": "$3",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_people": {
+    "message": "$COUNT$ pessoas se chamam \"$WORD$\": $NAMES$. Envie \"tasks for\" e o nome completo.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "word": {
+        "content": "$2",
+        "example": "ada"
+      },
+      "names": {
+        "content": "$3",
+        "example": "Ada Obi, Ada Lin"
+      }
+    }
+  },
+  "wava_tasks_workspaces": {
+    "message": "Mais de um espaço de trabalho corresponde a \"$WORD$\": $NAMES$. Envie \"tasks in\" e o nome completo.",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      },
+      "names": {
+        "content": "$2",
+        "example": "Tech Ember, Ember Labs"
+      }
+    }
+  },
+  "wava_tasks_noOne": {
+    "message": "Nenhuma pessoa ou espaço de trabalho se chama \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_nobody": {
+    "message": "Não conheço ninguém chamado \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_noWorkspace": {
+    "message": "Nenhum espaço de trabalho se chama \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      }
+    }
+  },
+  "wava_tasks_addEmpty": {
+    "message": "Qual é a tarefa? Envie assim: \"task for Ada: send the deck by Friday\"."
+  },
+  "wava_tasks_added": {
+    "message": "Adicionada: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_exists": {
+    "message": "Já está no quadro: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_followUpTitle": {
+    "message": "Acompanhar hoje"
+  },
+  "wava_tasks_followUpsNone": {
+    "message": "Nada para acompanhar ainda."
+  },
+  "wava_tasks_overdue": {
+    "message": "atrasada"
+  },
+  "wava_tasks_dueToday": {
+    "message": "hoje"
+  },
+  "wava_tasks_dueTomorrow": {
+    "message": "amanhã"
+  },
   "wava_settings_qr_label": {
     "message": "Código para escanear com o WhatsApp"
   },

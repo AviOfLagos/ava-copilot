@@ -844,7 +844,8 @@ export type WhatsAppState = (typeof WHATSAPP_STATES)[number];
 // Digits only, with the country code: 2348012345678
 export const WHATSAPP_NUMBER = /^[1-9][0-9]{7,14}$/;
 export const WHATSAPP_TEXT_MAX = 4000;
-export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine'] as const;
+// 'tasks': a task list Ava sends first (after a call, the morning's open tasks); held in quiet hours like the others
+export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine', 'tasks'] as const;
 export type WhatsAppNoticeKind = (typeof WHATSAPP_NOTICE_KINDS)[number];
 
 export const whatsappStatusSchema = z.object({
@@ -936,9 +937,21 @@ export const whatsappMessageSchema = z.object({
 });
 export type WhatsAppMessage = z.infer<typeof whatsappMessageSchema>;
 
+// A reaction the owner put on a message in his chat (✅ on a task list closes its task), or took back: `emoji` is
+// empty then. Only the message's id and the emoji cross; a reaction from anyone else never reaches the queue.
+export const whatsappReactionSchema = z.object({
+  id: z.string().min(1).max(200),
+  targetId: z.string().min(1).max(200),
+  emoji: z.string().max(32),
+  at: z.number(),
+});
+export type WhatsAppReaction = z.infer<typeof whatsappReactionSchema>;
+
 export const whatsappInboxReplySchema = z.object({
   ok: z.literal(true),
   messages: z.array(whatsappMessageSchema).max(50),
+  // Older Ava Brain: none. A separate list, so an older extension reading this reply ignores them
+  reactions: z.array(whatsappReactionSchema).max(50).default([]),
   status: whatsappStatusSchema,
 });
 
@@ -1008,7 +1021,13 @@ export const whatsappReviseRequestSchema = z
   .refine(request => request.action === 'delete' || Boolean(request.text?.trim()), 'An edit needs the new words.');
 export type WhatsAppReviseRequest = z.infer<typeof whatsappReviseRequestSchema>;
 
-export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
+export const whatsappSendReplySchema = z.object({
+  ok: z.literal(true),
+  status: whatsappStatusSchema,
+  // The id of the message that went out, when the client gave one (older Ava Brain: absent), so a task list's
+  // numbers and a reaction on it can be matched later
+  messageId: z.string().max(200).nullable().default(null),
+});
 
 // A queued message's media: a voice note or picture as base64 bytes, a document as its text. Only for a message
 // still in the queue (the owner's, not yet acked), and never larger than WHATSAPP_MEDIA_MAX_BYTES.

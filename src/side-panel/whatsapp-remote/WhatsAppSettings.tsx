@@ -34,6 +34,7 @@ const KINDS: { kind: NoticeKind; label: Parameters<typeof t>[0] }[] = [
   { kind: 'meeting', label: 'wava_settings_notify_meeting' },
   { kind: 'brief', label: 'wava_settings_notify_brief' },
   { kind: 'routine', label: 'wava_settings_notify_routine' },
+  { kind: 'tasks', label: 'wava_settings_notify_tasks' },
 ];
 
 function LinkCode({ code }: { code: string }) {

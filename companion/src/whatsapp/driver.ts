@@ -29,6 +29,8 @@ export interface WaIncoming {
   download?: (maxBytes: number) => Promise<Buffer>;
   // The message this one quotes (he swiped to reply to it), by id
   quotedId?: string | null;
+  // type 'reaction': the message reacted to, by id, and the emoji (empty when the reaction was taken back)
+  reaction?: { targetId: string; emoji: string };
 }
 
 /** A message in a chat, as WhatsApp addresses it for a reaction, an edit or a delete. */
