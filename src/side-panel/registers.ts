@@ -28,3 +28,4 @@ import './tasks/register';
 import './call-tasks/register';
 import './people/register';
 import './recordings/register';
+import './followups/register';

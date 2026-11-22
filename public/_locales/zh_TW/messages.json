@@ -9220,7 +9220,7 @@
     "message": "今天要追蹤"
   },
   "wava_tasks_followUpsNone": {
-    "message": "目前還沒有需要追蹤的事。"
+    "message": "今天沒有需要跟進的人。"
   },
   "wava_tasks_overdue": {
     "message": "已逾期"
@@ -12074,6 +12074,286 @@
   },
   "recording_settings_max_hint": {
     "message": "兩分鐘沒有聲音或通話結束時也會停止。"
+  },
+  "followups_wa_which": {
+    "message": "你是指哪一位 $NAME$：$LIST$？請寫出全名。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "list": {
+        "content": "$2",
+        "example": "Ada Obi, Ada Lee"
+      }
+    }
+  },
+  "followups_wa_notSaved": {
+    "message": "無法記下這則更新。請這樣說：Ada says 簡報在設計那邊，週四完成。"
+  },
+  "followups_wa_saved": {
+    "message": "已為 $NAME$ 記下。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_by": {
+    "message": "預計 $DAY$ 前完成。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 26 Nov"
+      }
+    }
+  },
+  "followups_wa_nextFollowUp": {
+    "message": "我會在 $DAY$ 提醒你跟進。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 27 Nov"
+      }
+    }
+  },
+  "followups_wa_didTitle": {
+    "message": "$NAME$ 完成這些了嗎？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_didHint": {
+    "message": "回覆 done 1 即可關閉一項。你不說，就不會關閉。"
+  },
+  "followups_error": {
+    "message": "發生問題，請再試一次。"
+  },
+  "followups_card_a11y": {
+    "message": "追蹤 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_gone": {
+    "message": "這項任務已不在看板上。"
+  },
+  "followups_card_closed": {
+    "message": "已完成"
+  },
+  "followups_card_why_overdue": {
+    "message": "到期日 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 20 Nov"
+      }
+    }
+  },
+  "followups_card_why_asked": {
+    "message": "$DAY$ 已詢問，尚無回覆",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_card_why_snoozed": {
+    "message": "已延後到今天"
+  },
+  "followups_card_why_update": {
+    "message": "對方說的日期到了"
+  },
+  "followups_card_why_quiet": {
+    "message": "已三個工作天沒有消息"
+  },
+  "followups_card_draft_a11y": {
+    "message": "給 $NAME$ 的訊息",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_drafting": {
+    "message": "正在撰寫訊息…"
+  },
+  "followups_card_copy": {
+    "message": "複製"
+  },
+  "followups_card_copied": {
+    "message": "已複製"
+  },
+  "followups_card_copy_fail": {
+    "message": "無法複製，請自行選取文字複製。"
+  },
+  "followups_card_whatsapp": {
+    "message": "在 WhatsApp 起草"
+  },
+  "followups_card_whatsapp_done": {
+    "message": "已輸入到與 $CHAT$ 的對話中，請檢查後自行按下傳送。",
+    "placeholders": {
+      "chat": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_asked": {
+    "message": "已詢問"
+  },
+  "followups_card_done": {
+    "message": "完成"
+  },
+  "followups_card_snooze_1": {
+    "message": "延後 1 天"
+  },
+  "followups_card_snooze_3": {
+    "message": "延後 3 天"
+  },
+  "followups_card_snooze_7": {
+    "message": "延後 7 天"
+  },
+  "followups_card_state_asked": {
+    "message": "已詢問 · 下次追蹤 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_card_state_snoozed": {
+    "message": "延後到 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_inbox_other": {
+    "message": "這份清單是 $DAY$ 的。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_ps_summary": {
+    "message": "進行中：$TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "finishing the login"
+      }
+    }
+  },
+  "followups_ps_latest": {
+    "message": "最新更新 $WHEN$ · $FROM$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Tue 17 Nov"
+      },
+      "from": {
+        "content": "$2",
+        "example": "a call"
+      }
+    }
+  },
+  "followups_ps_from_meeting": {
+    "message": "來自一場通話"
+  },
+  "followups_ps_from_whatsapp": {
+    "message": "來自 WhatsApp"
+  },
+  "followups_ps_from_manual": {
+    "message": "由你記下"
+  },
+  "followups_ps_did": {
+    "message": "已完成"
+  },
+  "followups_ps_doing": {
+    "message": "進行中"
+  },
+  "followups_ps_next": {
+    "message": "下一步"
+  },
+  "followups_ps_by": {
+    "message": "$DAY$ 前",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 27 Nov"
+      }
+    }
+  },
+  "followups_ps_blocked": {
+    "message": "受阻"
+  },
+  "followups_ps_open": {
+    "message": "未完成任務"
+  },
+  "followups_ps_none": {
+    "message": "還沒有更新。"
+  },
+  "followups_md_title": {
+    "message": "標記為完成？"
+  },
+  "followups_md_ask": {
+    "message": "$NAME$ 說：$SAID$。要將「$TASK$」標記為完成嗎？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "said": {
+        "content": "$2",
+        "example": "sent the login"
+      },
+      "task": {
+        "content": "$3",
+        "example": "Send the login"
+      }
+    }
+  },
+  "followups_md_yes": {
+    "message": "標記完成"
+  },
+  "followups_md_no": {
+    "message": "還沒"
+  },
+  "followups_md_answered_done": {
+    "message": "已標記完成"
+  },
+  "followups_md_answered_no": {
+    "message": "保持未完成"
+  },
+  "followups_report_label": {
+    "message": "$NAME$ 說了什麼？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_report_save": {
+    "message": "儲存"
+  },
+  "followups_report_saved": {
+    "message": "已記下。"
   },
   "calltasks_you": {
     "message": "你"

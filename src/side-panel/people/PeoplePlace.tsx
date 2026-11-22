@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import { useLive } from '../hooks/useLive';
 import { relativeTime } from '../inbox/meta';
 import type { PanelApi } from '../registry';
+import { PersonStatus, PersonStatusSummary } from '../followups/PersonStatus';
 import { WhosWhoList } from './WhosWho';
 
 /**
@@ -83,6 +84,7 @@ function PersonRow({
         <span className="min-w-0">
           <span className="block text-[13px] font-medium">{person.name}</span>
           {person.about && <span className="text-muted-foreground block text-[11.5px]">{person.about}</span>}
+          {!open && <PersonStatusSummary personId={person.id} />}
         </span>
         {lastSeen > 0 && (
           <span className="text-muted-foreground shrink-0 text-[11px]">
@@ -129,6 +131,7 @@ function PersonRow({
       )}
       {open && (
         <div className="mt-2 flex flex-col gap-2">
+          <PersonStatus personId={person.id} name={person.name} />
           <form
             className="flex flex-col gap-1.5"
             onSubmit={event => {

@@ -37,4 +37,5 @@ export * from './rounds';
 export * from './standup';
 export * from './tasks';
 export * from './people';
+export * from './followups';
 export * from './recordings';

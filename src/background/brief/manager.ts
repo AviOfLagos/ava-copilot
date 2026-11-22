@@ -39,6 +39,8 @@ import { toneLine } from '../personalities/prompt';
 import { sortNow } from '../workspaces/run';
 import { loadIdentityContext } from '../identity/context';
 import { briefContext, goalLines } from '../identity/prompt';
+import { ownerKnown, ownerNames } from '../followups/owner';
+import { followUpItems, postFollowUpInbox } from '../followups/surfaces';
 
 const logger = createLogger('MorningBrief');
 
@@ -221,6 +223,9 @@ export class MorningBrief {
         .catch(() => ''),
       goals: goalLines(identity),
       moves,
+      // Who to chase today (docs/pm-desk.md, Part 9.2): the same five as WhatsApp and the Inbox
+      followUps: await followUpItems().catch(() => []),
+      followUpsNeedName: !ownerKnown(await ownerNames().catch(() => ({ keys: new Set<string>() }))),
     };
 
     let priorities: string[] = [];
@@ -237,7 +242,7 @@ export class MorningBrief {
                 toneLine(await personalityStore.resolve(null).catch(() => null)),
             ),
             // Invite titles, chats and pages say what they like: data, never instructions
-            userMessage(wrapUntrustedContent(stripTaskMarkers(briefMarkdown(data)))),
+            userMessage(wrapUntrustedContent(stripTaskMarkers(briefMarkdown({ ...data, followUpCards: false })))),
           ],
         });
         priorities = priorityLines(answer);
@@ -247,11 +252,13 @@ export class MorningBrief {
       }
     }
 
-    const text = briefMarkdown(data, priorities);
+    const text = briefMarkdown({ ...data, followUpCards: true }, priorities);
     const day = new Date(now).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     const thread = await threadStore.create({ title: t('brief_title', [day]), tags: ['brief'] });
     // The brief vouches for the task lines it wrote: only those get a live checkbox
     await threadStore.addMessage(thread.id, 'planner', text, { taskIds: briefTaskIds(data), workspaceLines: true });
+    // Today's follow-ups are also one Inbox item
+    await postFollowUpInbox(now, data.followUps).catch(() => false);
     // Each rule move is told once
     await workspacePlacement.markReported(moves.map(move => move.id)).catch(() => undefined);
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });

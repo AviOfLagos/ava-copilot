@@ -435,9 +435,9 @@ describe('"task for ada: …"', () => {
 });
 
 describe('who is next', () => {
-  it('says nothing is due until the follow-ups part exists', async () => {
+  it('says when nobody is due for a follow-up', async () => {
     const s = setup();
-    expect((await s.say("who's next")).answer).toBe('Nothing is due for a follow-up yet.');
+    expect((await s.say("who's next")).answer).toBe('Nobody to follow up with today.');
   });
 
   it('lists what the follow-ups hook gives, numbered like any list', async () => {

@@ -3,6 +3,7 @@
  * Apache License 2.0. Changed: imports, the panel's tokens, Streamdown without its code, math,
  * mermaid and CJK plugins, which the panel does not need, and live task checkboxes.
  */
+import { FollowUpCard } from '../../followups/FollowUpCard';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { Streamdown } from 'streamdown';
@@ -158,6 +159,8 @@ export const MessageResponse = memo(
             run(piece.text, index)
           ) : piece.kind === 'make' ? (
             <MakeWorkspaceButton key={index} />
+          ) : piece.kind === 'followup' ? (
+            <FollowUpCard key={index} taskId={piece.taskId} />
           ) : (
             <UndoMoveButton key={index} moveId={piece.moveId} />
           ),

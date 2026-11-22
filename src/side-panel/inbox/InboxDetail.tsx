@@ -8,6 +8,7 @@ import type { PanelApi } from '../registry';
 import { HOUR_MS, tomorrowMorning } from './InboxRow';
 import { openThreadId, relativeTime, sourceLabel } from './meta';
 import { draftPrompt } from './whatsapp/WhatsAppView';
+import { FollowUpInboxCard } from '../followups/FollowUpInboxCard';
 import { WhosWhoCard } from '../people/WhosWho';
 import { WorkspaceInboxCard } from '../workspaces/InboxCard';
 
@@ -83,7 +84,7 @@ export default function InboxDetail({
       </header>
 
       {/* The body is from outside the extension: shown as plain text, never as markup */}
-      {item.source !== 'people' && (
+      {item.source !== 'people' && item.source !== 'followups' && (
         <p className="glass whitespace-pre-wrap rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed">{item.body}</p>
       )}
 
@@ -92,6 +93,9 @@ export default function InboxDetail({
 
       {/* A workspace Ava made, or things she offers to move: the answer is here (Part 3) */}
       {item.source === 'workspaces' && <WorkspaceInboxCard externalId={item.externalId} />}
+
+      {/* Today's follow-ups: a card each, with its buttons (Part 9) */}
+      {item.source === 'followups' && <FollowUpInboxCard externalId={item.externalId} />}
 
       {item.links.length > 0 && (
         <ul className="glass flex flex-col gap-1.5 rounded-xl px-3 py-2">

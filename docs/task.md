@@ -2966,6 +2966,41 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: replayed caption and mic fixtures (another speaker, a guest named "You", a guest named "Avi", a line
   rewritten three times, follow-ons, two commands); E2E `call-tasks.e2e.mjs` on a fake Meet page.
 
+### Follow-ups: who is doing what, and who to chase (2026-11-22, #111, docs/pm-desk.md Part 9)
+
+- Person updates (`background/followups/note.ts`, `updates.ts`): the meeting note gains `personUpdates` (did, doing,
+  next, by, blockers) and a "## Updates" section. Code keeps one per person in the Dexie table `personUpdates` (v16):
+  not Avi, not "the team", and, when captions name the speakers, only someone who spoke. Names go through
+  `people.resolve`, else `people.observe` (the call's Who's who card). The id is fixed per call and name, so a rerun
+  keeps one record and Avi's answers.
+- "Mark done?": a "did" that clearly matches one open task of that person (`match.ts`: three quarters of the title's
+  words, the opening verb left out, no line that says "not") is only offered, as a card
+  under the call's note in its chat (`side-panel/followups/MarkDoneOffers.tsx`, until #108's after-call list takes
+  it). Only the Yes click closes the task, as Avi's.
+- Status (`status.ts`): latest update plus open tasks, on the person's row and page, as `person_status` (voice and
+  agent), and Avi can type what someone said on their page.
+- Who to chase (`rules.ts`, `today.ts`, plain code): tasks someone other than Avi owns (`owner.ts`: "me", "Me.",
+  "(You)", his profile name, its first word and "Avi E.", a person record with his name or a workspace's Google
+  address). Nobody is chased until his profile has a name; the brief says to set it. Due when the due date has passed; with no due date,
+  after 3 working days with nothing heard (task made, mentioned on a call, or an update); or when `followUp.nextAt`
+  comes. Weekends are skipped, except the day after a weekend due date (that weekend only). Five a day at most, most overdue first; the
+  day's pick is kept (`followup-day` in `storage.local`) and never refilled.
+- Surfaces: "Follow up today" in the brief (`^fu_<taskId>` lines drawn as cards), WhatsApp `who's next`, and one
+  Inbox item a day (job `followups_daily`, 08:30).
+- The card (`FollowUpCard.tsx`): a draft from fixed facts (name, task, where it came from, due date) worded by the
+  light model (`draft`), checked (names the person, no links, short), else a template; cached per facts. Copy;
+  Draft in WhatsApp (only for a task linked to a person; opens their chat in Avi's WhatsApp Web tab, checks the
+  header, refuses if the box already has his text, types, never sends);
+  Asked (next follow-up two working days on); Done (closes it as Avi's); Snooze 1, 3 or 7 days.
+- Reporting back: "<name> says …" on WhatsApp (matched in `task-commands.ts`) or typed on the person's page is a
+  `PersonUpdate` (the agent and voice tools keep one only when the name and most of the words are the user's own);
+  the light model reads the words, a named day becomes `by`, and the person's named tasks move their
+  next follow-up to the first working day after it (or 3 working days on). A "did" is offered, never closed.
+- Tests: rules on a fake clock (weekend, month end, snooze, Asked, a Saturday due date, five of eight), today, buttons,
+  match, updates, report, owner, store, the `says` command; eval `note_updates` (two people, only talked about,
+  nobody); E2E `followups.e2e.mjs` runs a captions call with two speakers and moves the background clock to a
+  Tuesday for the brief card, Asked and Done.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

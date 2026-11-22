@@ -1,7 +1,8 @@
 /**
  * What Avi types on WhatsApp about his tasks (docs/pm-desk.md, Part 8), read here rather than by a model, like the
  * commands in ./commands.ts: "done 2", "2 done", "done 2 4 5", "undo 2", "reopen 2", "drop 2", "tasks",
- * "tasks ada", "tasks for ada", "tasks in ember", "task for ada: send the deck by friday", "who's next". Only a
+ * "tasks ada", "tasks for ada", "tasks in ember", "task for ada: send the deck by friday", "who's next", and what
+ * someone said about their work, "ada says the deck is with design, ready thursday" (docs/pm-desk.md, Part 9). Only a
  * message that is nothing but the command counts, so anything longer still goes to the chat.
  */
 
@@ -15,7 +16,9 @@ export type TaskCommand =
   // A new task for someone, the owner as he wrote it
   | { kind: 'add'; owner: string; words: string }
   // Today's follow-ups
-  | { kind: 'next' };
+  | { kind: 'next' }
+  // What a person said about their work, as he reports it (Part 9.3): the name as he wrote it, then their words
+  | { kind: 'says'; name: string; words: string };
 
 // The most numbers one message names, and the largest number a list can have
 const NUMBERS_MAX = 15;
@@ -73,7 +76,16 @@ const ADD = new RegExp(
   `^${POLITE}(?:new\\s+|add\\s+(?:a\\s+)?)?task\\s+for\\s+([^:,\\n]{1,60}?)(?:\\s*[:,]|\\s+[-–—])\\s*([\\s\\S]+)$`,
   'iu',
 );
+// "ada says …", "Ada said: …", "ada told me …": a name of one to three words, then what they said
+const SAYS = new RegExp(
+  `^${POLITE}(${NAME})\\s+(?:says|said|told me|reports|reported)\\b\\s*(?:that\\s+)?[:,-]?\\s*([\\s\\S]{2,})$`,
+  'iu',
+);
 const NEXT = new RegExp(`^${POLITE}(?:who[’']?s|who is)\\s+next\\s*[?.!]*$`, 'iu');
+
+// Words before "says" that are never someone's name
+const NOT_A_NAME =
+  /^(?:it|that|this|he|she|they|we|you|i|everyone|everybody|nobody|someone|the (?:doc|docs|page|site|app|email|message|news|report)|tasks?)$/iu;
 
 /** The numbers in "2, 4 and 5": each once, in the order said; null when one is out of bounds. */
 function numbersOf(text: string): number[] | null {
@@ -99,6 +111,13 @@ export function taskCommandOf(text: string): TaskCommand | null {
     return numbers ? { kind: 'set', status: VERBS[verb], numbers } : null;
   }
   if (NEXT.test(words)) return { kind: 'next' };
+  const says = SAYS.exec(words);
+  if (says) {
+    const name = bareName(says[1]);
+    const said = says[2].trim();
+    // "it said…", "the doc says…": not a person's name, so not this command
+    if (name && said.length >= 2 && !NOT_A_NAME.test(name)) return { kind: 'says', name, words: said };
+  }
   if (LIST.test(words)) return { kind: 'list', word: null, as: null };
   // Before the lists: "task for ada: …" is a new task, "tasks for ada" a list
   const add = ADD.exec(words);

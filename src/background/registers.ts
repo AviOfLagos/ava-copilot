@@ -38,6 +38,7 @@ import './growth-team/register';
 import './voice/vocabulary/register';
 import './tasks/register';
 import './people/register';
+import './followups/register';
 import './workspaces/register';
 import './recordings/register';
 import './call-tasks/register';
