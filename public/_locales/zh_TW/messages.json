@@ -9001,6 +9001,236 @@
   "wava_settings_notify_routine": {
     "message": "提醒或例行工作有結果"
   },
+  "wava_settings_notify_tasks": {
+    "message": "任務清單（通話後、未完成的任務）"
+  },
+  "wava_tasks_listTitle": {
+    "message": "未完成的任務"
+  },
+  "wava_tasks_listTitleFor": {
+    "message": "$NAME$ 的任務",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_listTitleIn": {
+    "message": "$WORKSPACE$ 中未完成的任務",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_more": {
+    "message": "…還有 $COUNT$ 項在任務頁面。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "wava_tasks_hint": {
+    "message": "回覆「done 2」完成一項，「undo 2」重新開啟。"
+  },
+  "wava_tasks_none": {
+    "message": "沒有未完成的任務。"
+  },
+  "wava_tasks_noneFor": {
+    "message": "$NAME$ 沒有未完成的任務。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_noneIn": {
+    "message": "$WORKSPACE$ 沒有未完成的任務。",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_noList": {
+    "message": "我還沒傳給你編號清單。傳「tasks」我就會傳一份。"
+  },
+  "wava_tasks_notAList": {
+    "message": "那則訊息沒有編號任務。傳「tasks」取得清單。"
+  },
+  "wava_tasks_outOfRange": {
+    "message": "那份清單有 $COUNT$ 項任務。是哪一項？",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "wava_tasks_outOfRangeOne": {
+    "message": "那份清單只有 1 項任務。你指的是哪一項？"
+  },
+  "wava_tasks_done": {
+    "message": "已完成：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_reopened": {
+    "message": "已重新開啟：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_dropped": {
+    "message": "已放棄：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_unchanged": {
+    "message": "原本就是這樣：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_gone": {
+    "message": "已不在任務板上：$NUMBERS$",
+    "placeholders": {
+      "numbers": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_tasks_which": {
+    "message": "你是指 $NAME$，還是 $WORKSPACE$ 工作區？傳「tasks for $WORD$」看此人，或「tasks in $WORD$」看工作區。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "workspace": {
+        "content": "$2",
+        "example": "Ada Labs"
+      },
+      "word": {
+        "content": "$3",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_people": {
+    "message": "有 $COUNT$ 人叫「$WORD$」：$NAMES$。傳「tasks for」加上全名。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "word": {
+        "content": "$2",
+        "example": "ada"
+      },
+      "names": {
+        "content": "$3",
+        "example": "Ada Obi, Ada Lin"
+      }
+    }
+  },
+  "wava_tasks_workspaces": {
+    "message": "不只一個工作區符合「$WORD$」：$NAMES$。傳「tasks in」加上完整名稱。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      },
+      "names": {
+        "content": "$2",
+        "example": "Tech Ember, Ember Labs"
+      }
+    }
+  },
+  "wava_tasks_noOne": {
+    "message": "沒有叫「$WORD$」的人或工作區。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_nobody": {
+    "message": "我不認識叫「$WORD$」的人。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_noWorkspace": {
+    "message": "沒有叫「$WORD$」的工作區。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      }
+    }
+  },
+  "wava_tasks_addEmpty": {
+    "message": "任務是什麼？請這樣傳：「task for Ada: send the deck by Friday」。"
+  },
+  "wava_tasks_added": {
+    "message": "已新增：$TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_exists": {
+    "message": "已在任務板上：$TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_followUpTitle": {
+    "message": "今天要追蹤"
+  },
+  "wava_tasks_followUpsNone": {
+    "message": "目前還沒有需要追蹤的事。"
+  },
+  "wava_tasks_overdue": {
+    "message": "已逾期"
+  },
+  "wava_tasks_dueToday": {
+    "message": "今天"
+  },
+  "wava_tasks_dueTomorrow": {
+    "message": "明天"
+  },
   "wava_settings_qr_label": {
     "message": "用 WhatsApp 掃描的條碼"
   },

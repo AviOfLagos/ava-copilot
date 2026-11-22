@@ -6,7 +6,8 @@ import { createLogger } from '../log';
  * sink decides whether and how to pass it on. Emitting never fails the caller and never waits for a sink.
  */
 
-export type NoticeKind = 'approval' | 'meeting' | 'brief' | 'routine';
+// 'tasks': a task list Ava sends first (docs/pm-desk.md, Part 8), sent by ../whatsapp-remote/task-desk.ts
+export type NoticeKind = 'approval' | 'meeting' | 'brief' | 'routine' | 'tasks';
 
 export interface Notice {
   kind: NoticeKind;

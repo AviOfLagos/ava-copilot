@@ -2,7 +2,8 @@
 // (see ../registry and ../jobs/runner). Plan A, Ava inside the user's WhatsApp Web tab, is ../whatsapp.
 import { z } from 'zod';
 import { t } from '@extension/i18n';
-import { db, threadStore } from '@extension/storage';
+import { db, onceKey, onceStore, taskListStore, taskStore, threadStore, workspaceStore } from '@extension/storage';
+import type { OnceStep } from '@extension/storage';
 import type { MeetingRecord, ThreadRecord } from '@extension/storage';
 import { toAppError } from '@extension/shared';
 import { WHATSAPP_NUMBER } from '@src/shared/lib/protocol/companion';
@@ -11,6 +12,8 @@ import { companionClient } from '../companion/client';
 import { brainSettingsStore } from '../companion/state';
 import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
+import { digest } from '../once';
+import { people } from '../people/people';
 import { transcribeSpeech } from '../voice/dictation';
 import { registerNoticeSink } from '../notices';
 import { registerCommand, registerRecovery } from '../registry';
@@ -18,6 +21,8 @@ import { services } from '../registry/services';
 import { WhatsAppBridge } from './bridge';
 import { photoAttachment } from './media';
 import { HHMM, whatsappRemoteSettingsStore, whatsappRemoteStateStore } from './state';
+import { TaskDesk } from './task-desk';
+import type { PendingTaskMessage } from './task-desk';
 import { voiceNoteOf } from './voice-note';
 
 const logger = createLogger('WhatsAppRemote');
@@ -51,6 +56,61 @@ async function ensureTab(thread: ThreadRecord): Promise<void> {
   await threadStore.update(thread.id, { boundTabIds: [tabId], boundGroupId: null, boundUrl: START_URL });
 }
 
+/** The do-once step of one WhatsApp task message: its own task and chat, so no other message waits on it. */
+async function onceStep(key: string): Promise<OnceStep> {
+  return {
+    taskId: key,
+    threadId: key,
+    what: 'whatsapp.send',
+    target: await digest([key]),
+    scope: 'whatsapp',
+    label: 'WhatsApp task message',
+  };
+}
+
+/** Tasks on WhatsApp (docs/pm-desk.md, Part 8): numbered lists, "done 2", reactions, the brief's open tasks. */
+export const taskDesk = new TaskDesk({
+  tasks: taskStore,
+  lists: taskListStore,
+  people,
+  workspaces: () => workspaceStore.list(),
+  send: async request => {
+    const { messageId } = await companionClient.whatsappSend(request);
+    return { messageId };
+  },
+  once: {
+    begin: async key => (await onceStore.begin(await onceStep(key))).fresh,
+    finish: async key => onceStore.finish(onceKey(await onceStep(key)), 'sent'),
+    fail: async key => onceStore.fail(onceKey(await onceStep(key)), 'not sent'),
+  },
+  requestIdOf: async key => `wa-tasks-${await digest([key])}`,
+  settings: () => whatsappRemoteSettingsStore.getSettings(),
+  outbox: {
+    get: async () => (await whatsappRemoteStateStore.getState()).taskOutbox ?? [],
+    set: async items => {
+      await whatsappRemoteStateStore.update({ taskOutbox: items });
+    },
+  },
+  // HOOK (#111): the follow-ups part fills this in; until then "who's next" says nothing is due
+  followUpsToday: async () => [],
+  now: Date.now,
+  warn: (message, error) => logger.warning(message, toAppError(error).kind),
+});
+
+/**
+ * HOOK (#108): one person's tasks after a call, as a numbered message he can forward. Waits out quiet hours and goes
+ * once per key; returns what happened (see TaskDesk.sendTaskList).
+ */
+export function sendPersonTaskList(input: { key: string; name: string; taskIds: string[]; note?: string }) {
+  return taskDesk.sendTaskList({
+    key: input.key,
+    title: t('wava_tasks_listTitleFor', [input.name]),
+    taskIds: input.taskIds,
+    ...(input.note ? { note: input.note } : {}),
+    hint: false,
+  } satisfies Omit<PendingTaskMessage, 'at'>);
+}
+
 export const whatsappBridge = new WhatsAppBridge({
   inbox: () => companionClient.whatsappInbox(),
   ack: async ids => {
@@ -59,6 +119,9 @@ export const whatsappBridge = new WhatsAppBridge({
   send: async request => {
     await companionClient.whatsappSend({ requestId: crypto.randomUUID(), ...request });
   },
+  taskCommand: (message, words) => taskDesk.handle(message, words),
+  taskReaction: reaction => taskDesk.reaction(reaction),
+  sendBrief: (text, key) => taskDesk.sendBrief(text, key),
   sendVoice: async request => {
     await companionClient.whatsappVoice({ requestId: crypto.randomUUID(), ...request });
   },
@@ -112,6 +175,10 @@ async function tick(fromJob: boolean): Promise<void> {
     // Ava Brain closed or not linked: the next tick tries again
     if (appError.kind !== 'network') logger.warning(`WhatsApp poll failed (${appError.kind})`);
   });
+  // Task lists held for quiet hours go once they are over
+  if ((await whatsappRemoteStateStore.getState()).status?.state === 'linked') {
+    await taskDesk.flush().catch(error => logger.warning(`WhatsApp task lists not sent (${toAppError(error).kind})`));
+  }
 }
 
 setInterval(() => void tick(false), POLL_MS);
@@ -122,6 +189,7 @@ registerJobHandler(POLL_JOB, async () => {
 
 registerRecovery('whatsapp-remote', async () => {
   await jobs.schedule({ kind: POLL_JOB, key: POLL_KEY, cron: POLL_CRON, catchUpMs: 60_000 });
+  void taskListStore.prune().catch(() => {});
   if ((await brainSettingsStore.getSettings()).paired) {
     void pushQuietHours().catch(() => {});
     void whatsappBridge.resume().catch(error => logger.warning('A WhatsApp answer could not be resumed', error));
@@ -202,7 +270,13 @@ command(
   'wava_settings',
   z.object({
     notify: z
-      .object({ approval: z.boolean(), meeting: z.boolean(), brief: z.boolean(), routine: z.boolean() })
+      .object({
+        approval: z.boolean(),
+        meeting: z.boolean(),
+        brief: z.boolean(),
+        routine: z.boolean(),
+        tasks: z.boolean(),
+      })
       .partial()
       .optional(),
     quietStart: z.string().regex(HHMM).optional(),
