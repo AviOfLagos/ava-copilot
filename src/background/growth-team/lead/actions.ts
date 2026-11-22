@@ -142,7 +142,8 @@ export async function requestBetaGrant(
       workspaceId: who.workspaceId,
       agentId: who.agentId,
       agentName: who.agentName,
-      ...(who.tainted ? { tainted: true } : {}),
+      // Built from a customer's request: no saved rule grants it by itself
+      tainted: true,
       action: 'beta_grant',
       title: `Beta access for request ${input.requestId}`,
       body: `${input.why}\n\nAccess request ${input.requestId}${rule ? `: the ${rule.plan} plan for ${rule.days} days` : ''}.`,

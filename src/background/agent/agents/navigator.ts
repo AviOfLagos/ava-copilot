@@ -30,6 +30,7 @@ import { type NavigatorOutput, validateNavigatorOutput } from './navigatorOutput
 import { HistoryTreeProcessor } from '@src/background/browser/dom/history/service';
 import { AgentStepRecord } from '../history';
 import { type DOMHistoryElement } from '@src/background/browser/dom/history/view';
+import { carriesOutsideContent, markTainted } from '@src/background/gate/taint';
 
 const logger = createLogger('NavigatorAgent');
 
@@ -158,6 +159,10 @@ export class NavigatorAgent extends BaseAgent<z.ZodType<NavigatorOutput>, Naviga
       // logger.info('Action results', JSON.stringify(actionResults, null, 2));
 
       this.context.actionResults = actionResults;
+      // A tool that brought in content from outside (an email, a message, a connector's answer) taints the chat
+      if (actionResults.some(result => carriesOutsideContent(result.extractedContent))) {
+        await markTainted(this.context.taskId, 'tool result');
+      }
 
       // check if the task is paused or stopped
       if (this.context.paused || this.context.stopped) {

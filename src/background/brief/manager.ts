@@ -254,7 +254,12 @@ export class MorningBrief {
 
     const text = briefMarkdown({ ...data, followUpCards: true }, priorities);
     const day = new Date(now).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-    const thread = await threadStore.create({ title: t('brief_title', [day]), tags: ['brief'] });
+    const thread = await threadStore.create({
+      title: t('brief_title', [day]),
+      tags: ['brief'],
+      // It summarises mail, messages and invites written by others: no saved rule answers for it
+      tainted: true,
+    });
     // The brief vouches for the task lines it wrote: only those get a live checkbox
     await threadStore.addMessage(thread.id, 'planner', text, { taskIds: briefTaskIds(data), workspaceLines: true });
     // Today's follow-ups are also one Inbox item

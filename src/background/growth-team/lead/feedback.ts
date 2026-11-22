@@ -172,7 +172,8 @@ export async function sortFeedback(
           workspaceId: profile.workspaceId,
           agentId: who.agentId,
           agentName: who.agentName,
-          ...(who.tainted ? { tainted: true } : {}),
+          // Built from what a customer wrote: no saved rule files it by itself
+          tainted: true,
           action: 'customer_issue',
           target: profile.repo || 'not set',
           allowedLinks: admin ? [admin] : [],
