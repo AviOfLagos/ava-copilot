@@ -14,14 +14,14 @@ Research, written 2026-11-22. No code was changed. Related: [code-mode.md](code-
 
 ## 1. How Ava learns what she can do today
 
-- **The catalogue.** `currentCapabilities()` (`src/background/capabilities/sources.ts:22-33`) gathers every voice tool (the 19 fixed ones and the registered ones), every chat action (built-in and registered), the side-panel places and the settings sections. `buildCapabilities` (`capabilities/catalog.ts`) puts the voice tools into groups using a hand-kept map, `TOOL_GROUPS` (`catalog.ts:73`, 73 entries); a tool with no entry goes under "More".
+- **The catalogue.** `currentCapabilities()` (`src/background/capabilities/sources.ts:22-33`) gathers every voice tool (the 19 fixed ones and the registered ones), every chat action (built-in and registered), the side-panel places and the settings sections. `buildCapabilities` (`capabilities/catalog.ts`) puts the voice tools into groups using a hand-kept map, `TOOL_GROUPS` (`catalog.ts:73-139`, 64 entries); a tool with no entry goes under "More".
 - **Who reads it.**
   - Voice: the start of each conversation (`voice/manager.ts:742-746`) and the tool `what_can_you_do` (`capabilities/register.ts:230-236`).
   - Planner: `buildAbilitiesSection` (`agent/prompts/channel.ts:44-66`), passed in at `threads/factory.ts:154`. It tells the planner to answer "can you…?" at once from this list and "never claim something that is in neither list".
   - Navigator: the same compact list, added to its rules by the `what_can_you_do` registration (`capabilities/register.ts:396-413`).
   - Chat: the action `what_can_you_do` returns the full list (`capabilities/register.ts:373, 412`).
-- **How tools get in.** Two registries in `src/background/registry/index.ts`: `registerAgentAction` (`:105`) and `registerVoiceTool` (`:80`). A feature registers each separately; 33 names are in both.
-- **Quiet-failure path.** The list of chat actions is built from a stand-in context, and an action that throws is "left out rather than failing the list" (`registry/index.ts:40-50`).
+- **How tools get in.** Two registries in `src/background/registry/index.ts`: `registerAgentAction` (`:106`) and `registerVoiceTool` (`:159`). A feature registers each separately; 33 names are in both.
+- **Quiet-failure path.** The list of chat actions is built from a stand-in context, and an action that throws is "left out rather than failing the list" (`registry/index.ts:114-129`).
 
 What the tools look like to each channel: see the per-channel table in code-mode.md §2.3. In short, **there is no per-channel tool filter**. Every chat origin (panel, WhatsApp, agent, routine, brief) gets all chat actions (`agent/actions/builder.ts:780`, `agent/executor.ts:128`); the origin only changes one paragraph of text (`threads/factory.ts:192-194`, `agent/prompts/channel.ts:19-27`).
 
@@ -70,7 +70,7 @@ It has its own sandbox for agents (Docker, no network by default, `companion/src
 
 ### 2.6 Across channels
 
-- **No single list.** Tools are defined in 28 feature folders and listed again by hand in `TOOL_GROUPS`, in the voice prose and in per-feature prompt strings (14 of them are added to the navigator's rules: `registry/index.ts:53`).
+- **No single list.** Tools are defined in about 28 files across 23 folders and listed again by hand in `TOOL_GROUPS`, in the voice prose and in per-feature prompt strings (about 26 of them are added to the navigator's rules: `registry/index.ts:131-135`).
 - **No rule per channel in code.** The WhatsApp paragraph says what the user cannot do; nothing removes the tools that depend on it.
 - **Nothing counts.** Nobody can see how many tools a channel sends, or when a new one raises the cost for every channel (see code-mode.md, issue 1).
 
@@ -107,8 +107,8 @@ From this one list, the code generates:
 
 | Channel | Rule | Examples removed |
 |---|---|---|
-| Panel chat | Everything except voice-call controls | `say_in_meeting`, `stop_speaking_in_call`, `remove_ava_from_call` |
-| WhatsApp | Everything that works with the user away from the computer. Tools that change something still ask first, the card waits in the panel and the user is told. Plus the read tools now missing (calendar, brief, inbox, workspaces). Nothing that only makes sense with the screen. | `open_place`, `check_audio`, `check_model`, `switch_model`, `set_personality` (open question), meeting-call controls |
+| Panel chat | Everything that makes sense in a chat | `say_in_meeting` (it speaks into a live call) |
+| WhatsApp | Everything that works with the user away from the computer. Tools that change something still ask first, the card waits in the panel and the user is told. Plus the read tools now missing (calendar, brief, inbox, workspaces). Nothing that only makes sense with the screen. | `open_place`, `check_audio`, `check_model`, `say_in_meeting`, `set_personality` (open question). Voice-only tools such as `switch_model` and the call controls are not in chats at all. |
 | Voice | Tools a spoken turn can use, plus `do_task` as hand-over for the rest | page-reading and growth-team tools stay hand-over |
 | Agents and routines | Everything that can finish unattended; gated ones go to the Inbox as today | `open_place`, `check_*`, `ask the user` style tools |
 

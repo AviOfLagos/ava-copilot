@@ -18,14 +18,14 @@ Sources and dates are in [code-mode.md §1.2](code-mode.md). Summary:
 
 | Feature | What it does | Reported result | Limits |
 |---|---|---|---|
-| **Memory tool** (docs, undated; announced 2025-09-29) | A folder `/memories`. The model makes ordinary tool calls (`view`, create, edit, delete); your code runs them against storage you choose. The model checks the folder before a task. | With context editing: 39% better than baseline on an internal agentic search test | Client-side only: you write the handler and must reject paths outside `/memories`. Claude "usually refuses" to store sensitive data; strip it yourself. Cap file sizes. Anthropic API only. |
+| **Memory tool** (docs, undated; announced 2025-09-29) | A folder `/memories`. The model makes ordinary tool calls (`view`, create, edit, delete); your code runs them against storage you choose. The model checks the folder before a task. | With context editing: 39% better than baseline on an internal agentic search test | Client-side only: you write the handler and must reject paths outside `/memories`. Claude "usually refuses" to store sensitive data; strip it yourself. Cap file sizes. Claude models only (Anthropic's API and partner clouds such as Bedrock and Vertex AI). |
 | **Context editing** (docs; announced 2025-09-29) | Removes old tool results (`clear_tool_uses`) and old thinking when the window fills. Settings: `trigger`, `keep`, `clear_at_least`, `exclude_tools`. | Alone: 29% better; 84% fewer tokens in a 100-turn web search test | Clearing breaks the cached start of the prompt, so clear enough to be worth it. The docs now call server-side compaction the main strategy for long conversations. |
-| **Compaction** (docs) | The server summarises older turns into one block. | Not quoted here (I did not read the numbers) | Anthropic API only. |
+| **Compaction** (docs) | The server summarises older turns into one block. | Not quoted here (I did not read the numbers) | Claude models only. |
 | **State and skills as files** (Anthropic, 2025-11-04) | In the code-execution post: write intermediate results to files, save reusable code as "skills". | none | Needs a code sandbox. |
 
 I found no independent evaluation. The 84% and the 39% are Anthropic's own, on tests it describes as internal.
 
-What matters for Ava: all three Anthropic features sit on Anthropic's API. Ava reaches many providers through the Vercel AI SDK (`package.json`: `ai` 7.0.126) and its browser agent uses one JSON reply per step, not native tool calls. So the *ideas* carry over (clear old results; keep memory outside the window; summarise), the *features* do not.
+What matters for Ava: all three Anthropic features work only with Claude models (the announcement names Anthropic's API, Amazon Bedrock and Google Cloud's Vertex AI). Ava reaches many providers through the Vercel AI SDK (`package.json`: `ai` 7.0.126) and its browser agent uses one JSON reply per step, not native tool calls. So the *ideas* carry over (clear old results; keep memory outside the window; summarise), the *features* do not.
 
 ## 2. What Ava has today
 
@@ -39,7 +39,7 @@ Caps and paths verified in the code at commit `4bdb8c1`.
 | **Workspace summaries** (`src/background/history/`) | A summary per workspace from up to 15 sources of 1,400 characters (`history/summary-prompt.ts:7-8`), stored through the KB store (`history/summaries.ts:26-31`) | `workspace_context`, `history_summarize` (`history/action.ts:46-60`) | `workspace_context` action; voice `where_are_we` | Only when asked | yes |
 | **Workspace record** (`storage/lib/workspaces/workspaces.ts:24, 153`) | `about` text up to 4,000 characters, accounts, product profile | the user | `workspaceSectionFor` (`workspaces/inject.ts`) | **Every navigator step** of a chat in that workspace: the whole `about` (up to 4,000 characters, about 1k tokens), accounts, product section | yes |
 | **People** (`src/background/people/`) | names, aliases, identifiers; caps 20/20/60/20 (`storage/lib/people/store.ts:44-47`) | `person_note` (`people/register.ts:169, 198`) | tools and the task board "by person" | I found no place that puts people into a prompt (not exhaustive) | via chat |
-| **Tasks** (`src/background/tasks/`) | tasks with workspace, owner, due; done ones age out after 14 days (`storage/lib/tasks/store.ts:11`) | task actions, meeting and graph sources (`tasks/sources.ts:30, 78`) | `task_list`, the board, WhatsApp commands | when asked | yes |
+| **Tasks** (`src/background/tasks/`) | tasks with workspace, owner, due; a "Close old" command closes open tasks older than 14 days (`storage/lib/tasks/store.ts:11, 325`) | task actions, meeting and graph sources (`tasks/sources.ts:30, 78`) | `task_list`, the board, WhatsApp commands | when asked | yes |
 | **A run's own history** (`src/background/agent/`) | messages of the running task; old page states are removed after each step (`agent/agents/navigator.ts:153-201`) | the run | the model, every step | all of it, until compaction | thread |
 | **Voice history** (`voice/prompt.ts:247-267`) | the tail of the previous voice chat | the chat | start of a voice session | at most 6,000 characters, 300 per line | thread |
 
@@ -52,7 +52,7 @@ Caps and paths verified in the code at commit `4bdb8c1`.
 3. **Chat text in three places.** Thread messages, KB chunks and graph nodes built from those chunks. Costs storage and indexing time, not prompt tokens.
 4. **Two writers to the task board** (task actions and meeting/graph sources). Deduplication is presumed to be in `storage/lib/tasks/match.ts`; I did not read it.
 5. **Summaries can lag.** Workspace summaries read a 600-character slice of the facts (`identity/prompt.ts:196-197`), so a fact told a minute ago may be missing from the next summary.
-6. **Per-workspace rule is only partly enforced by what is shown.** The workspace section says "never bring in another workspace's people, facts or accounts" (`workspaces/inject.ts`), and facts sort workspace-first, but facts of other workspaces still fill the same 1,500 characters when the workspace has few.
+6. **Workspaces are kept apart in the always-on block.** `visibleTo` drops other workspaces' facts when the chat has a workspace (`identity/prompt.ts:40-42`) and a test covers it (`identity/__tests__/prompt.test.ts:89`). A chat in no workspace sees every fact, labelled by workspace.
 7. **A large block on every step.** The workspace `about` (up to 4,000 characters) plus the identity section (up to about 6,000) together can reach 2.5k tokens on every call, before any tool.
 
 ## 4. Proposal
@@ -78,7 +78,7 @@ Not recommended: Anthropic's memory tool as a store. It is Anthropic-only, lets 
 ### 4.3 Remember the right things per workspace
 
 - Put one short **workspace card** (about 800 characters) at the top of every workspace chat: what it is, who matters, what is open. Source: the existing summary, refreshed when `workspace_context` runs, plus the workspace's own facts. It replaces the raw `about` text on every step when `about` is long.
-- Facts get a `workspaceId` already; add a check that a chat in workspace A never shows workspace B's facts, even when A has few. This is a test, not a feature.
+- Facts already carry a `workspaceId` and other workspaces' facts are already filtered out and tested (see §3, item 6), so nothing to build there.
 
 ### 4.4 First steps, measurement, who builds
 
@@ -88,14 +88,14 @@ Not recommended: Anthropic's memory tool as a store. It is Anthropic-only, lets 
 | Test that shows which facts the prompt drops, and a `recall` over facts only | yes | share of stored facts that can be found; a script that asks 20 questions about stored facts | sonnet |
 | `remember` front door with routing and aliases | after the above | share of facts that land in the right store on a labelled set of 30 sentences | opus (routing rules) |
 | `recall` across all stores | after `remember` | answers about older facts, people and notes in a fixed question set | opus |
-| Workspace card and the cross-workspace test | after the above | tokens per step in workspace chats; the test | sonnet |
+| Workspace card | after the above | tokens per step in workspace chats | sonnet |
 
 ## 5. What I could not confirm
 
 - Anthropic's compaction numbers, and any independent test of the memory tool.
 - Where workspace summaries are stored beyond "through the KB store" (`history/summaries.ts:26-31`).
 - Whether any prompt includes the people store; I found none, but did not read every prompt builder.
-- Real token counts of these blocks; sizes are characters from the caps, converted at 4 characters per token.
+- Real token counts of these blocks; sizes are characters from the caps, converted at 4 characters per token (the repo's own estimator uses 3, so up to a third higher).
 
 ## Sources
 

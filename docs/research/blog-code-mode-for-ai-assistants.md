@@ -23,8 +23,8 @@ Every time an AI assistant takes a step, it is shown the list of everything it c
 ## The short version
 
 - **Code mode** shows the model a short typed API and lets it write a small program, run in a sandbox, instead of calling tools one at a time. Cloudflare reports about 1,000 tokens in place of 1.17 million for its own very large API.
-- **Tool search** keeps a few tools loaded and lets the model look up the rest when it needs them. Anthropic reports an 85% cut in its five-server example.
-- **Trimming and caching** (shorter descriptions, a stable start of the prompt) is the cheapest first step and has no risk.
+- **Tool search** keeps a few tools loaded and lets the model look up the rest when it needs them. Anthropic reports cuts of over 85% in its examples.
+- **Trimming and caching** (shorter descriptions, a stable start of the prompt) is the cheapest first step and has very low risk.
 - For an assistant that mostly works on web pages, **start with trimming and tool search; try code mode on data jobs only**, and keep one click for every send, post or delete.
 
 ## What Cloudflare published
@@ -33,7 +33,7 @@ In September 2025 Cloudflare described [Code Mode](https://blog.cloudflare.com/c
 
 ## What Anthropic published
 
-In November 2025 Anthropic published [code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp) (150,000 tokens down to 2,000 in one worked example) and [advanced tool use](https://www.anthropic.com/engineering/advanced-tool-use): a tool search tool (their five-server example: about 77,000 tokens down to 8,700) and programmatic tool calling (37% fewer tokens on complex research tasks). Their [memory tool and context editing](https://www.anthropic.com/news/context-management) keep notes outside the model's window and clear old tool results; they report 84% fewer tokens in a 100-turn test. They say less: tool search helps less under ten tools, programmatic calling helps less for single calls, and running agent code needs sandboxing, limits and monitoring.
+In November 2025 Anthropic published [code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp) (150,000 tokens down to 2,000 in one worked example) and [advanced tool use](https://www.anthropic.com/engineering/advanced-tool-use): a tool search tool (a 50-tool scenario: about 77,000 tokens down to 8,700) and programmatic tool calling (37% fewer tokens on complex research tasks). In September 2025 its [memory tool and context editing](https://www.anthropic.com/news/context-management) came out: they keep notes outside the model's window and clear old tool results; they report 84% fewer tokens in a 100-turn test. They say less: tool search helps less under ten tools, programmatic calling helps less for single calls, and running agent code needs sandboxing, limits and monitoring.
 
 ## What it costs one real assistant
 
@@ -41,7 +41,7 @@ Ava Copilot is a browser extension. We counted from the source (characters divid
 
 | Where | Tools sent | Tokens before the task starts |
 |---|---|---|
-| Browser steps (panel, WhatsApp, agents, routines) | 85 | about 14,000 to 19,000 per step |
+| Browser steps (panel, WhatsApp, agents, routines) | 85 | about 15,000 to 20,000 per step |
 | Planner | none | about 2,500 per planning round |
 | Voice | 64 | about 8,000 at the start of a session |
 
@@ -52,12 +52,12 @@ The same 85 tools go to a WhatsApp message asking for the time. Nothing in the c
 1. **Measure.** A test that prints the size of each part of each prompt, so every later change shows a number.
 2. **Trim and cache.** Shorter descriptions, one shared field instead of 85 copies, a stable start of the prompt. Low risk.
 3. **One catalogue of tools.** Every tool described once, with a rule for each channel (for example: nothing that needs a person at the screen on WhatsApp). Each channel's list, and the answer to "what can you do?", is generated from it.
-4. **Load tools on demand.** Keep about 25 core tools and add a `find_tool` step. Our estimate: about half the tool tokens per step.
+4. **Load tools on demand.** Keep about 25 core tools and add a `find_action` step. Our estimate: about half the tool tokens per step.
 5. **Code mode, as a pilot.** Read-only tools first, in a JavaScript engine compiled to WebAssembly inside an extension page. Writes only after that, and each send, post, delete or spend still gets its own click.
 
 ## Try it in your own product
 
-These snippets are small and illustrative. We ran each once on sample data; they are not production code.
+These snippets are small and illustrative. Snippets 1 to 3 were run once on sample data; none is production code.
 
 **1. Turn tool definitions into a short typed API** (the code-mode idea, without the sandbox):
 
@@ -131,7 +131,7 @@ Keep these rules whatever you choose: a tool that sends, posts, deletes, spends 
 
 **Does code mode work with small local models?** Often badly: small models write code less reliably. We would allow it only for the stronger model and fall back to normal tool calls on failure.
 
-**Is it safe to run model-written code?** Only inside a sandbox that has no network, no secrets and no way to act except through functions you hand it. Cloudflare's own docs say hardening a sandbox is hard and needs extra layers. Every side effect should still need the user's click.
+**Is it safe to run model-written code?** Only inside a sandbox that has no network, no secrets and no way to act except through functions you hand it. Cloudflare's Dynamic Workers post calls hardening an isolate sandbox tricky and says it needs extra layers. Every side effect should still need the user's click.
 
 **Do I need Anthropic's memory tool?** Not if your product already stores memory in code with sources and caps. The useful ideas are to clear old tool results early and to keep memory outside the window.
 

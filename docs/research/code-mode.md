@@ -5,7 +5,7 @@ Research and measurement, written 2026-11-22. No code was changed. Related: [too
 ## Summary for the owner
 
 1. **What was published.** Cloudflare (Sept 2025) and Anthropic (Nov 2025) found that an AI spends far fewer tokens if it sees a short list of tools and writes a small program that uses them, instead of being shown every tool every time. Cloudflare reports about 1,000 tokens in place of 1.17 million for its own huge API. Anthropic reports 98.7% less in one example, and 37% less on harder real tasks.
-2. **What Ava spends today (estimate, not a meter reading).** Every browser step, in the panel, on WhatsApp, in agents and in routines, carries roughly 14,000 to 19,000 tokens of tool definitions and rules before the page is even read. A voice conversation starts with about 8,000. WhatsApp pays the same as the panel for a one-line question.
+2. **What Ava spends today (estimate, not a meter reading).** Every browser step, in the panel, on WhatsApp, in agents and in routines, carries roughly 15,000 to 20,000 tokens of tool definitions and rules before the page is even read. A voice conversation starts with about 8,000. WhatsApp pays the same as the panel for a one-line question.
 3. **Recommendation.** Do not start with a code sandbox. First trim, cache and load rarely used tool groups on demand: about half of the per-step tool cost, and it ships in small steps. Then pilot code mode, read-only tools first, using a tiny JavaScript engine compiled to WebAssembly, and only if measurements show enough multi-step data jobs to pay for it.
 4. **Safety stays.** Every send, post, delete, spend or share still needs its own click, one per side effect, even inside a program. A repeated program cannot repeat a side effect. Words from pages are data. Secrets never enter a program.
 5. **Not worth it when:** most runs are page-driven (each step needs a fresh look at the page), fewer than about one run in five chains three or more non-browser tools, or the models Avi uses write code badly. The first issue is to measure this properly.
@@ -42,7 +42,7 @@ All numbers below are the authors' own. I found no independent benchmark. Every 
 - The runtime, not the sandbox, holds state. A resumed run executes the code again in a new isolate ("replay"), so side effects must be recorded. Rollback "is compensation, not database transaction isolation".
 - Every connector call is intercepted by the runtime, which applies approval, logging, replay and rollback. Execution failures come back to the model as data. Stored values are capped at 1,000,000 characters.
 - Third post: hardening an isolate sandbox "is tricky"; V8 bugs are more common than hypervisor bugs, so extra layers are needed.
-- Second post compares alternatives. Tool search "requires a search function that must be maintained and evaluated, and each matched tool still uses tokens". Shell/CLI approaches need a shell and widen the attack surface.
+- Second post compares alternatives. Tool search, they say, "requires a search function that must be maintained and evaluated", and each matched tool still uses tokens. Shell/CLI approaches need a shell and widen the attack surface.
 
 ### 1.2 Anthropic
 
@@ -55,9 +55,9 @@ All numbers below are the authors' own. I found no independent benchmark. Every 
 
 **Code execution with MCP.** Tools become files (`servers/google-drive/getDocument.ts`). The agent lists the folder and reads only the files it needs, then writes code that calls them. Example: 150,000 tokens down to 2,000 ("98.7%"). That is one worked example, not a benchmark. They also describe a `search_tools` tool with a detail level, privacy by replacing personal data with tokens before the model sees it, and saving reusable code as "skills". They warn that running agent code needs "sandboxing, resource limits, and monitoring" and that this is overhead direct tool calls avoid.
 
-**Tool search tool.** You send all definitions but mark most `defer_loading: true`; the model gets a search tool (regex or BM25), and matching tools are expanded into full definitions (up to 5 per search by default; at least one tool must stay non-deferred). Their five-server example: 58 tools, about 55,000 tokens. With search: about 77K down to 8.7K, "85% reduction". Accuracy on their MCP evaluation: Opus 4 from 49% to 74%, Opus 4.5 from 79.5% to 88.1%. It does not break prompt caching because deferred tools are never in the cached prefix. They say it is less useful under 10 tools or when all tools are used every time.
+**Tool search tool.** You send all definitions but mark most `defer_loading: true`; the model gets a search tool (regex or BM25), and matching tools are expanded into full definitions (up to 5 per search by default; at least one tool must stay non-deferred). Their five-server setup (58 tools) costs about 55,000 tokens in definitions before any work; the docs say search "typically reduces this by over 85 percent". In a separate scenario (50+ tools, about 72K of definitions) the post goes from about 77K total to 8.7K, an "85% reduction". Accuracy on their MCP evaluation: Opus 4 from 49% to 74%, Opus 4.5 from 79.5% to 88.1%. It does not break prompt caching because deferred tools are never in the cached prefix. They say it is less useful under 10 tools or when all tools are used every time.
 
-**Programmatic tool calling.** Tools marked `allowed_callers` can be called from Python that Claude writes and runs in Anthropic's code-execution container. Each tool call pauses the code, your server answers, and the answer goes to the code, not the model. Only the final printed output reaches the model. Reported: average 43,588 to 27,297 tokens (37%) on complex research tasks; knowledge retrieval 25.6% to 28.5%; GIA benchmark 46.5% to 51.2%. Docs limits: `allowed_callers` is "not a hard API-level block", so do not use it as a security boundary; a pending tool call times out after about 4 minutes; containers expire after 30 days; and the docs' data-retention note says it is "built on code execution containers; data retained up to 30 days". It exists only on Anthropic's own API.
+**Programmatic tool calling.** Tools marked `allowed_callers` can be called from Python that Claude writes and runs in Anthropic's code-execution container. Each tool call pauses the code, your server answers, and the answer goes to the code, not the model. Only the final printed output reaches the model. Reported: average 43,588 to 27,297 tokens (37%) on complex research tasks; knowledge retrieval 25.6% to 28.5%; GIA benchmark 46.5% to 51.2%. Docs limits: `allowed_callers` is "not a hard API-level block", so do not use it as a security boundary; a pending tool call times out after about 4 minutes; containers expire after 30 days; and the docs' data-retention note says it is "built on code execution containers; data retained up to 30 days". It works only with Claude models, on Anthropic's platform and some partner clouds.
 
 **Memory tool and context editing.** The memory tool is a folder (`/memories`) the model reads and writes through ordinary tool calls that your own code executes (files, a database, anything). Your handler must reject paths outside `/memories`; the docs say Claude "usually refuses" to store sensitive data and you should strip it yourself. Context editing removes old tool results (`clear_tool_uses_20250919`, with `trigger`, `keep`, `clear_at_least`, `exclude_tools`) and old thinking. Reported on an internal agentic search test: memory plus editing 39% better than baseline, editing alone 29%; in a 100-turn web search test editing cut tokens 84%. The docs now call server-side compaction "the primary strategy" for long conversations, with editing for specific cases. Clearing results breaks the cached prefix, hence `clear_at_least`.
 
@@ -67,7 +67,7 @@ All numbers below are the authors' own. I found no independent benchmark. Every 
 - Any independent benchmark of either company's numbers.
 - Whether the Gemini Live setup (Ava's voice engine) can change its tool list mid-session. I did not read that page.
 - How long a WebAssembly JavaScript engine takes to start inside Ava's offscreen document. Not measured.
-- Anthropic's API features (tool search, programmatic calling, context editing) only work through Anthropic's API. Ava reaches models through the Vercel AI SDK (`package.json`: `ai` 7.0.126), and its browser agent asks for one JSON object back (structured output), not native tool calls (`src/background/agent/agents/navigator.ts:59-68`). So the pattern applies; the API features do not apply directly.
+- Anthropic's API features (tool search, programmatic calling, context editing) only work with Claude models (through Anthropic's API and some partner clouds). Ava reaches models through the Vercel AI SDK (`package.json`: `ai` 7.0.126), and its browser agent asks for one JSON object back (structured output), not native tool calls (`src/background/agent/agents/navigator.ts:59-68`). So the pattern applies; the API features do not apply directly.
 
 ---
 
@@ -77,7 +77,7 @@ All numbers below are the authors' own. I found no independent benchmark. Every 
 
 I tried to run a script that builds each channel's real tool list and counts it. The permission system refused that run, so I deleted the script. These numbers come from the **source text** instead:
 
-- Tokens are estimated as **characters divided by 4**. No tokenizer is installed in the repo (the dependency list has none). Real counts will differ by about ±25%.
+- Tokens are estimated as **characters divided by 4**. The repo's own estimator uses 3 characters per token (`src/background/agent/messages/service.ts:27`); at 3, every figure here is up to a third higher. No tokenizer is installed in the repo (the dependency list has none). Real counts will differ by about ±25%.
 - Declarations were found by a script that reads every `name: '…'` block under `src/background` (found 85 chat actions and 64 voice tools; the script is not committed). TypeScript source is shorter than the JSON Schema a model receives: each action repeats an `intent` field, the navigator adds a `title` to every property, and each action is wrapped as nullable and optional (`src/background/agent/actions/builder.ts:141-152`, `agents/navigator.ts:59-68`). I use source size as the floor and 1.5 times as the middle estimate.
 - Issue 1 asks for a real measurement (a test that prints the size of every prompt part), so these estimates can be replaced.
 
@@ -87,11 +87,11 @@ I tried to run a script that builds each channel's real tool list and counts it.
 |---|---|---|
 | Browser steps built in (click, scroll, tabs, done, …) | 20 in one file | `src/background/agent/actions/schemas.ts` |
 | Built-in, from other folders (graph, reader, form fill, knowledge) | 5 | wired in `src/background/agent/actions/builder.ts:163-780` |
-| Actions that features register | 60 | `registerAgentAction` in `src/background/registry/index.ts:105-110`, called from 28 files; added to the list at `builder.ts:780` |
-| Voice tools, fixed | 19 | `VOICE_TOOLS` in `src/background/voice/prompt.ts:61-219` |
-| Voice tools, registered | 45 | `registerVoiceTool` (`registry/index.ts:80`) |
+| Actions that features register | 60 | `registerAgentAction` in `src/background/registry/index.ts:106-110`, called from 22 files; added to the list at `builder.ts:780` |
+| Voice tools, fixed | 19 | `VOICE_TOOLS` in `src/background/voice/prompt.ts:61-213` |
+| Voice tools, registered | 45 | `registerVoiceTool` (`registry/index.ts:159`) |
 | Connector tools | per connector, one action `call_tool` plus a list in the step state | `src/background/integrations/action.ts`, `catalogue.ts` |
-| Workflow steps | about 20 step kinds | `src/background/workflows/spec.ts` |
+| Workflow node kinds | 20 (12 steps, 4 triggers, 4 outputs) | `src/background/workflows/spec.ts` |
 
 ### 2.3 Per channel
 
@@ -99,7 +99,7 @@ There is **no per-channel tool filter**. Every chat is run by the same planner a
 
 | Channel | Tools sent | Tool definitions per call | Instructions per call | Total fixed, per call |
 |---|---|---|---|---|
-| Panel chat, navigator (per step) | 85 actions | 9.3k floor, about 14k middle | about 5k (18k characters plus the capability list, about 2k characters estimated; see below) | **about 14k to 19k** |
+| Panel chat, navigator (per step) | 85 actions | 9.3k floor, about 14k middle | about 6k (about 24k characters including the capability list; see below) | **about 15k to 20k** |
 | Panel chat, planner (every 3rd step, `planningInterval` 3, `generalSettings.ts:39`) | none | 0 | about 2.5k | **about 2.5k** |
 | WhatsApp | same as panel (origin `whatsapp`) | same | same, plus 0.4k WhatsApp paragraph | **same as panel**; messages handled in code cost 0 (`whatsapp-remote/commands.ts`, `task-commands.ts`) |
 | Agents and routines (`step.agent`, background chats) | same 85 | same | same | **same as panel** |
@@ -107,7 +107,7 @@ There is **no per-channel tool filter**. Every chat is run by the same planner a
 | Voice (Gemini Live), at session start | 64 declarations | 5.6k (22.5k characters, plain JSON) | about 1.5k rules + about 0.5k "what you can do" | **about 8k**, carried for the whole session |
 | Connectors, added to every navigator step | `call_tool` plus a list | 0.2k + list | up to 6,000 characters of list (1.5k tokens) | **up to 1.7k extra** (`catalogue.ts:14-16`) |
 
-How the navigator's 18k characters add up: rules template 7,709, gate 1,030, page reader 590, knowledge 1,193, the 14 prompts that features add 6.3k, channel paragraph about 1.6k (`agent/prompts/templates/navigator.ts`, `gate/prompt.ts`, `reader/reader.ts`, `kb/action.ts`, `registry/index.ts:53`). The capability list ("what you can do") is also added to the navigator's rules (`capabilities/register.ts:396-413`); I estimate it at about 2k characters. Not counted: the "about you" identity section (up to about 6k characters, about 1.5k tokens, see memory.md), the user's style and personality, the page, the history, and the per-step lists (skills, workspace, team of up to 12 lines, connector list).
+How the navigator's 24k characters add up: rules template 7,709, gate 1,030, page reader 590, knowledge 1,193 (`agent/prompts/templates/navigator.ts`, `gate/prompt.ts`, `reader/reader.ts`, `kb/action.ts`); the prompts that about 26 features add, about 10k (an estimate: 18 named constants sum to about 7.8k and the rest are inline strings, `registry/index.ts:131-135`); the channel paragraph, about 1.6k; and the capability list ("what you can do"), which is also added to the navigator's rules (`capabilities/register.ts:396-413`), estimated at about 2k. Not counted: the "about you" identity section (up to about 6k characters, about 1.5k tokens, see memory.md), the user's style and personality, the page, the history, and the per-step lists (skills, workspace, team of up to 12 lines, connector list).
 
 The biggest single declarations are growth-team and product tools (`sort_feedback` 1,439 characters, `update_product_profile` 1,284, `metrics_query` 1,238, `request_tool` 1,107, `queue_for_approval` 1,101). The 15 growth and growth-team actions alone are about 10.3k characters, about 2.6k tokens to 3.9k tokens on every step of every chat, including a WhatsApp message asking for the time.
 
@@ -124,12 +124,12 @@ Usage is metered per model call with the role and input and output tokens (`src/
 | | (a) Load tools on demand | (b) Code mode | (c) Trim and cache |
 |---|---|---|---|
 | Idea | Keep about 25 core actions always. The rest are found with a `find_action` step that adds their definitions for the rest of the run. | The model writes one short program against a typed API and it runs in a sandbox. | Shorter descriptions, drop unused fields, one shared `intent`, cache markers, leave growth and meeting tools out of chats that cannot use them. |
-| Saving on the navigator | about half of the fixed cost: 6.7k to 10k tokens a step | adds nothing for page work; saves intermediate data in multi-call data jobs | 10% to 25% on its own; more with caching |
+| Saving on the navigator | about half of the fixed cost: 8k to 11k tokens a step | adds nothing for page work; saves intermediate data in multi-call data jobs | 10% to 25% on its own; more with caching |
 | Effort | small to medium | large | small |
 | Risk | the model forgets to search, or picks wrong; one more step for rare tools | new attack surface; hard to keep one click per effect; weak local models | very low |
 | Fits Ava's structure | yes, but the one-JSON-schema design means the schema grows during a run | partly: Ava's workflow engine already is a typed program (see 3.3) | yes |
 
-Estimate for (a) on the navigator: keep the 25 built-ins (2.4k to 3.6k tokens), add the search step (0.2k), keep the core rules without the 14 feature prompts (3.1k), plus about 1.5k for the groups a typical run loads. That is about 7k to 8.4k, against 14k to 19k now: **a saving of 6.7k to 10k tokens per step, about half**. The prompts for the feature actions move into the definitions that load on demand.
+Estimate for (a) on the navigator: keep the 25 built-ins (2.4k to 3.6k tokens), add the search step (0.2k), keep the core rules, channel paragraph and capability list without the feature prompts (3.5k), plus about 1.5k for the groups a typical run loads. That is about 7.6k to 8.8k, against 15k to 20k now: **a saving of about 8k to 11k tokens per step, about half**. The prompts for the feature actions move into the definitions that load on demand.
 
 ### 3.2 Recommendation for tool tokens
 
@@ -142,7 +142,7 @@ Estimate for (a) on the navigator: keep the 25 built-ins (2.4k to 3.6k tokens), 
 ### 3.3 Where code could run in Ava
 
 The rules that decide this:
-- The extension's pages may not build code from text. Their security rule is `script-src 'self' 'wasm-unsafe-eval'` (`wxt.config.ts:87`): WebAssembly is allowed, JavaScript `eval` and `new Function` are not. A comment in the integrations code says the same (`src/background/integrations/schema.ts:7`). Chrome's own page agrees: remote and generated code must live in an iframe declared as "sandbox" ([improve security](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security)).
+- The extension's pages may not build code from text. Their security rule is `script-src 'self' 'wasm-unsafe-eval'` (`wxt.config.ts:87`): WebAssembly is allowed, JavaScript `eval` and `new Function` are not. A comment in the integrations code says the same (`src/background/integrations/schema.ts:7`). Chrome's migration page says `eval` and `new Function` are still supported in sandboxed iframes ([improve security](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security)).
 - A page declared in the manifest as a sandbox page has no access to extension APIs and talks to other pages only by `postMessage`, and may run `eval` ([manifest: sandbox](https://developer.chrome.com/docs/extensions/reference/manifest/sandbox)). The default sandbox rule is permissive; Ava would write a stricter one (it must keep the `sandbox` directive and must not allow same-origin). Ava's manifest has no sandbox page today. It does have an offscreen document (`wxt.config.ts:72`, `src/offscreen/`).
 
 | Where | Isolation | Cost and limits | Verdict |
@@ -156,7 +156,7 @@ Rejected: running `eval` in the background or panel pages (blocked), Node's `vm`
 
 ### 3.4 What a pilot looks like, and how the rules are kept
 
-**Smallest first step that ships alone.** One new action, `run_program`, available only in chats whose model role is `smart`, with a typed API for **read-only** tools only: `task_list`, `person` lookups, `metrics_query`, `drive_search`/`drive_read`, `search_knowledge`, `search_chats`, and connector tools whose policy is "runs freely". The program runs in option B. It returns what it printed, up to 10,000 characters (the same cap connector answers already have, `integrations/action.ts`, `AGENT_RESULT_CHARS`). No writes in the pilot, so the confirm gate is never in play yet. If it saves tokens and works, step two adds writes.
+**Smallest first step that ships alone.** One new action, `run_program`, available only in chats whose model role is `smart`, with a typed API for **read-only** tools only: `task_list`, `metrics_query`, `drive_search`/`drive_read`, `search_knowledge`, `search_chats`, and connector tools whose policy is "runs freely". No chat action reads the people store today (only `person_note`, a write, exists), so people lookups would need a new read tool first. The program runs in option B. It returns what it printed, up to 10,000 characters (the same cap connector answers already have, `integrations/action.ts`, `AGENT_RESULT_CHARS`). No writes in the pilot, so the confirm gate is never in play yet. If it saves tokens and works, step two adds writes.
 
 **Steps with side effects (step two).** A program cannot act except through functions the host binds. Each bound function is the existing action's handler, so it goes through `reviewAction` (`gate/review.ts:266`) exactly as today.
 - *One decision per side effect.* A call that needs a click pauses that one call (its promise waits) and the panel shows that one effect. Approving it approves nothing else. A program that tries ten sends gets ten cards, one at a time. There is no "approve all".
@@ -171,7 +171,7 @@ Rejected: running `eval` in the background or panel pages (blocked), Node's `vm`
 
 | Channel | (c) trim and cache | (a) on demand | (b) code mode, extra | Note |
 |---|---|---|---|---|
-| Panel chat | 1.5k to 4k per step | 6.7k to 10k per step (includes the part (c) overlaps) | unknown; only on data jobs | Combined (a)+(c): about 7k to 10k of 14k to 19k |
+| Panel chat | 1.5k to 4k per step | 8k to 11k per step (includes the part (c) overlaps) | unknown; only on data jobs | Combined (a)+(c): about 8k to 11k of 15k to 20k |
 | WhatsApp | same | same, and highest value: short questions, many steps | none for page jobs | Plus leaving out tools that cannot work from a phone (tool-awareness.md) |
 | Agents and routines | same | same | best fit: routines are data jobs | Many routine steps do not need a chat at all |
 | Voice | 1k to 2k at session start (shorter descriptions) | not recommended: tools are fixed at session setup (not confirmed) and a search step adds delay | none | Voice already hands heavy work to `do_task` |
@@ -194,7 +194,7 @@ None of this is measured. Issue 1 gives the baseline; every later issue states t
 | Step | Ships alone | Measured by | Model |
 |---|---|---|---|
 | Print the size of every prompt part per channel (a test, no behaviour change) | yes | tokens by channel in CI, and a limit that fails when it grows by more than 10% | sonnet |
-| Shorter descriptions, one shared `intent`, drop the 14 feature prompts into the definitions | yes | fixed tokens per navigator step before and after on the same task set | sonnet |
+| Shorter descriptions, one shared `intent`, move the about 26 feature prompts into the definitions | yes | fixed tokens per navigator step before and after on the same task set | sonnet |
 | Cache markers and a stable prefix check | yes | cache-hit share in provider usage; cost per run | sonnet |
 | Per-channel tool lists (WhatsApp and routines get only what works for them) | yes | actions sent per channel | sonnet |
 | `find_action` and on-demand groups | after the above | tokens per step, and task success on a fixed set (must not drop) | opus (changes how the agent chooses) |
