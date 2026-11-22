@@ -666,7 +666,8 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       rate: 'read',
       async handler() {
         const messages = deps.whatsapp.pull();
-        return json({ ok: true, messages, status: deps.whatsapp.status() });
+        const reactions = deps.whatsapp.pullReactions();
+        return json({ ok: true, messages, reactions, status: deps.whatsapp.status() });
       },
     },
     {
@@ -702,7 +703,8 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       maxBodyBytes: 40_000,
       async handler({ body }) {
         const request = parse(whatsappSendRequestSchema, body);
-        return json({ ok: true, status: await deps.whatsapp.send(request) });
+        const { status, messageId } = await deps.whatsapp.send(request);
+        return json({ ok: true, status, messageId });
       },
     },
     {

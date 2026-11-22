@@ -84,8 +84,8 @@ const silent = {
   error: () => {},
 };
 
-// What a person sends that is not text; anything else (key shares, settings, receipts, reactions, poll votes) is
-// WhatsApp talking to itself, and is ignored without an answer
+// What a person sends that is not text; a reaction is read on its own (reactionOf). Anything else (key shares,
+// settings, receipts, poll votes) is WhatsApp talking to itself, and is ignored without an answer
 const MEDIA: Record<string, string> = {
   imageMessage: 'image',
   videoMessage: 'video',
@@ -149,6 +149,17 @@ function linkOf(extended: Record<string, unknown> | undefined): WaLink | undefin
   return { url, title: textOf(extended?.title, 300), description: textOf(extended?.description, 1000) };
 }
 
+/**
+ * A reaction: the id of the message it is on and its emoji, empty when it was taken back. Null when it names no
+ * message. Whose it is and where are the service's to decide, like any message.
+ */
+function reactionOf(content: Record<string, unknown>): { targetId: string; emoji: string } | null {
+  const reaction = content.reactionMessage as { key?: { id?: unknown } | null; text?: unknown } | undefined;
+  const targetId = textOf(reaction?.key?.id, 200);
+  if (!targetId) return null;
+  return { targetId, emoji: typeof reaction?.text === 'string' ? reaction.text.trim().slice(0, 32) : '' };
+}
+
 /** A Baileys message as the service reads it. `download` fetches its file, when it has one. */
 export function incomingOfBaileys(
   raw: BaileysMessage,
@@ -180,6 +191,7 @@ export function incomingOfBaileys(
     lib.isPnUser(jid ?? undefined),
   );
   const at = raw.messageTimestamp;
+  const reaction = kind === 'reactionMessage' ? reactionOf(content) : null;
   return {
     id: key.id ?? '',
     chatId,
@@ -187,7 +199,8 @@ export function incomingOfBaileys(
     forwarded:
       context?.isForwarded === true || (typeof context?.forwardingScore === 'number' && context.forwardingScore > 0),
     isGroup: chatId.endsWith('@g.us'),
-    type: kind === 'conversation' || kind === 'extendedTextMessage' ? 'chat' : (media ?? 'system'),
+    type:
+      kind === 'conversation' || kind === 'extendedTextMessage' ? 'chat' : reaction ? 'reaction' : (media ?? 'system'),
     body: text ?? '',
     at: typeof at === 'number' ? at : typeof at?.toNumber === 'function' ? at.toNumber() : Number(at ?? 0),
     senderNumber: phoneJid ? numberOfJid(lib.jidNormalizedUser(phoneJid)) : null,
@@ -195,6 +208,7 @@ export function incomingOfBaileys(
     ...(link ? { link } : {}),
     ...(file && download ? { download } : {}),
     ...(quotedId ? { quotedId } : {}),
+    ...(reaction ? { reaction } : {}),
   };
 }
 
