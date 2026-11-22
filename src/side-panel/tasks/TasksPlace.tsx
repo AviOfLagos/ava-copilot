@@ -8,6 +8,7 @@ import { RowMenu, RowMenuContent, RowMenuItem, RowMenuSeparator, RowMenuTrigger 
 import { useLive } from '../hooks/useLive';
 import type { PanelApi } from '../registry';
 import { useWorkspaces } from '../workspaces/WorkspacePicker';
+import { MakeWorkspaceButton } from '../workspaces/MakeWorkspaceButton';
 import { tasksRequest } from './client';
 import { TaskCheckbox } from './TaskCheckbox';
 import { groupTasks } from './group';
@@ -456,6 +457,8 @@ export default function TasksPlace({ api }: { api: PanelApi }) {
             <h3 className="label-mono">
               {group.name} <span className="text-muted-foreground">({group.tasks.length})</span>
             </h3>
+            {/* Things in no workspace can become one, in one click (docs/pm-desk.md, Part 3) */}
+            {grouping === 'workspace' && group.key === '' && <MakeWorkspaceButton />}
             <ul className="flex flex-col gap-1.5">
               {group.tasks.map(task => (
                 <TaskRow

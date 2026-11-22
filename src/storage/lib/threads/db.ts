@@ -10,6 +10,7 @@ import type { LogEntry } from '../observability/types';
 import type { OnceRecord } from '../once/types';
 import type { VocabEntry } from '../vocabulary/types';
 import type { NameCandidate, Person } from '../people/types';
+import type { WorkspaceSetBy } from '../tasks/types';
 import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
 import type {
   FeedbackRecord,
@@ -95,6 +96,9 @@ export interface ThreadRecord {
   meetingId: string | null;
   // The workspace it belongs to: its context and accounts guide the agent, and its knowledge stays there
   workspaceId?: string | null;
+  // Who set it: Avi's own pick always wins over a rule's or Ava's, and only things Avi did not place are ever moved
+  // for him (docs/pm-desk.md, Part 3). Absent: not known, which counts as not his
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent it runs as, when an agent or routine started it
   agentId?: string | null;
   // Who started it: the user typing or talking, an agent, a routine, the morning brief, or the user on WhatsApp
@@ -119,6 +123,9 @@ export interface ThreadMessage {
   // The tasks the code that built this message wrote into it (the brief, a meeting note). Only a task marker whose
   // id is here gets a live checkbox; a marker a model wrote is plain text (src/storage/lib/tasks/markers.ts)
   taskIds?: string[];
+  // The code that built this message wrote workspace lines into it (the brief's "Make a workspace" button and the
+  // Undo of a rule move); only then are they drawn as buttons (src/storage/lib/workspaces/markers.ts)
+  workspaceLines?: boolean;
 }
 
 /**
@@ -221,6 +228,8 @@ export interface MeetingRecord {
   auto?: boolean;
   // The workspace the call belongs to
   workspaceId?: string | null;
+  // Who set it (see ThreadRecord.workspaceSetBy)
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent that took the notes, when one did
   agentId?: string | null;
   // Whether the call shows its captions, as last read from the page (null: no captions button found)
@@ -302,6 +311,8 @@ export interface KnowledgeItem {
   unembedded: number;
   // The workspace of the chat or meeting it came from; a search in one workspace never sees another's
   workspaceId?: string | null;
+  // Who set it (see ThreadRecord.workspaceSetBy); a chat's or meeting's item follows its source and has none
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent whose work it came from, for knowledge filtered by agent
   agentId?: string | null;
   // Who may read it (src/background/kb/scope.ts): 'private' to its agent (and Ava and the user), or the whole

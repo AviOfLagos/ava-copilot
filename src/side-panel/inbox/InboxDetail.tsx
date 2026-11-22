@@ -9,6 +9,7 @@ import { HOUR_MS, tomorrowMorning } from './InboxRow';
 import { openThreadId, relativeTime, sourceLabel } from './meta';
 import { draftPrompt } from './whatsapp/WhatsAppView';
 import { WhosWhoCard } from '../people/WhosWho';
+import { WorkspaceInboxCard } from '../workspaces/InboxCard';
 
 export interface InboxDetailProps {
   item: InboxItem;
@@ -88,6 +89,9 @@ export default function InboxDetail({
 
       {/* A "Who's who" card: its questions, answered here (its body only lists them for the Inbox row) */}
       {item.source === 'people' && <WhosWhoCard cardId={item.externalId} api={api} />}
+
+      {/* A workspace Ava made, or things she offers to move: the answer is here (Part 3) */}
+      {item.source === 'workspaces' && <WorkspaceInboxCard externalId={item.externalId} />}
 
       {item.links.length > 0 && (
         <ul className="glass flex flex-col gap-1.5 rounded-xl px-3 py-2">

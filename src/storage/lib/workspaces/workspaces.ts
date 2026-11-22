@@ -196,17 +196,25 @@ function mentions(text: string, phrase: string): boolean {
 }
 
 /**
+ * Every workspace a text points at: its name, one of its keywords, or its Google account's domain, as whole words.
+ * `routeWorkspace` and the sorting rules (src/background/workspaces) both read it, so they agree.
+ */
+export function matchWorkspaces(text: string, workspaces: Workspace[]): Workspace[] {
+  const lower = text.toLowerCase();
+  return workspaces.filter(workspace =>
+    [workspace.name, ...workspace.keywords, domainOf(workspace.accounts.google) ?? '']
+      .filter(phrase => phrase.trim().length >= 3)
+      .some(phrase => mentions(lower, phrase)),
+  );
+}
+
+/**
  * Which workspace a request belongs to, from its words: the workspace's name, its keywords, or its
  * Google account's domain. None when nothing matches, or when more than one workspace does: then the
  * user decides, since mixing two is the mistake to avoid.
  */
 export function routeWorkspace(text: string, workspaces: Workspace[]): Workspace | null {
-  const lower = text.toLowerCase();
-  const matched = workspaces.filter(workspace =>
-    [workspace.name, ...workspace.keywords, domainOf(workspace.accounts.google) ?? '']
-      .filter(phrase => phrase.trim().length >= 3)
-      .some(phrase => mentions(lower, phrase)),
-  );
+  const matched = matchWorkspaces(text, workspaces);
   return matched.length === 1 ? matched[0] : null;
 }
 

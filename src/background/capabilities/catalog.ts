@@ -135,6 +135,8 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   task_list: 'tasks',
   task_assign: 'tasks',
   task_move: 'tasks',
+  // Workspaces in one click, by voice (docs/pm-desk.md, Part 3)
+  workspace_create: 'tasks',
 };
 
 const MAX_DESCRIPTION = 160;

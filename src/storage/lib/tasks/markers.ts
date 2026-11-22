@@ -1,3 +1,4 @@
+import { stripWorkspaceMarkers } from '../workspaces/markers';
 import type { Task } from './types';
 
 // The task marker (docs/pm-desk.md, Part 2.3): a task written into Markdown ends with "^tsk_…", which the panel's
@@ -9,9 +10,9 @@ const MARKER = /[ \t]*\^(tsk_[a-z2-7]{10})(?![a-z0-9_])/g;
 /** " ^tsk_…": what goes at the end of a task's line. */
 export const taskMarker = (id: string): string => ` ^${id}`;
 
-/** The text with every task marker taken out. */
+/** The text with every task marker taken out, and the brief's workspace lines (../workspaces/markers). */
 export function stripTaskMarkers(text: string): string {
-  return text.replace(MARKER, '');
+  return stripWorkspaceMarkers(text.replace(MARKER, ''));
 }
 
 /** A task's line as code writes it: its box, its title (already plain), its marker. */

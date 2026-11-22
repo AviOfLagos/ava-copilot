@@ -304,6 +304,32 @@ describe('ThreadManager', () => {
     await runEnded(lastExecutor());
   });
 
+  it('records who placed a chat: the default workspace and the words are a rule’s, a pick is the user’s', async () => {
+    browser.open('https://chat.example');
+    const byDefault = await manager.send({ text: 'Check the inbox', windowId: 1 });
+    expect((await store.get(byDefault))?.workspaceSetBy).toBe('rule');
+    await lastExecutor().complete('Done.');
+    await runEnded(lastExecutor());
+
+    browser.open('https://other.example');
+    const picked = await manager.send({ text: 'Check the other inbox', windowId: 1, workspaceId: 'tech-ember-fest' });
+    await settle();
+    expect(await store.get(picked)).toMatchObject({ workspaceId: 'tech-ember-fest', workspaceSetBy: 'avi' });
+    await lastExecutor().complete('Done.');
+    await runEnded(lastExecutor());
+  });
+
+  it('records a chat the user moves as theirs, and a meeting’s notes chat takes its meeting with it', async () => {
+    const thread = await store.create({ meetingId: 'm1', workspaceId: 'nexprove', workspaceSetBy: 'rule' });
+    await db.meetings.add({ id: 'm1', threadId: thread.id, workspaceId: 'nexprove', workspaceSetBy: 'rule' } as never);
+    await manager.setWorkspace(thread.id, 'tech-ember-fest');
+    expect(await store.get(thread.id)).toMatchObject({ workspaceId: 'tech-ember-fest', workspaceSetBy: 'avi' });
+    expect(await db.meetings.get('m1')).toMatchObject({ workspaceId: 'tech-ember-fest', workspaceSetBy: 'avi' });
+    // Out of any workspace is a choice too
+    await manager.setWorkspace(thread.id, null);
+    expect(await store.get(thread.id)).toMatchObject({ workspaceId: null, workspaceSetBy: 'avi' });
+  });
+
   it('runs threads at the same time, up to the limit', async () => {
     browser.open('https://a.example');
     await manager.send({ text: 'task a' });

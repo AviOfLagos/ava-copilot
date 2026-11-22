@@ -391,8 +391,10 @@ chrome.runtime.onConnect.addListener(port => {
         case 'thread_workspace':
           if (threadId) {
             await threads.setWorkspace(threadId, typeof message.workspaceId === 'string' ? message.workspaceId : null);
-            // Its knowledge moves with it
+            // Its knowledge moves with it (a meeting's notes chat takes the meeting's)
             await kb.indexThread(threadId);
+            const meetingId = (await threadStore.get(threadId))?.meetingId;
+            if (meetingId) await kb.indexMeeting(meetingId);
           }
           return;
 

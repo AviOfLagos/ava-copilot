@@ -267,20 +267,26 @@ export class ThreadManager {
     // The user's pick, else the one the words name, else the default workspace. A pick since deleted counts as none
     const pick = picked ? workspaces.find(item => item.id === picked) : undefined;
     let workspace = pick ?? routeWorkspace(text, workspaces);
+    // Who placed it: the user's own pick is theirs (an agent or routine that picked is not); the rest is a rule's
+    const setBy = pick ? (thread.origin === 'agent' || thread.origin === 'workflow' ? 'ava' : 'avi') : 'rule';
     if (!workspace) {
       const fallback = await workspaceStore.getDefaultWorkspaceId().catch(() => null);
       workspace = workspaces.find(item => item.id === fallback) ?? null;
     }
     if (!workspace) return;
-    await this.store.update(thread.id, { workspaceId: workspace.id });
+    await this.store.update(thread.id, { workspaceId: workspace.id, workspaceSetBy: setBy });
     await this.store.addMessage(thread.id, 'system', t('workspace_placed', [workspace.name]));
   }
 
-  /** Moves a chat to another workspace, or out of any. */
+  /** Moves a chat to another workspace, or out of any. The user's own choice (docs/pm-desk.md, Part 3, rule 8). */
   async setWorkspace(threadId: string, workspaceId: string | null): Promise<void> {
     const workspace = await workspaceStore.get(workspaceId);
     if (workspaceId && !workspace) return;
-    await this.store.update(threadId, { workspaceId: workspace?.id ?? null });
+    const placed = { workspaceId: workspace?.id ?? null, workspaceSetBy: 'avi' as const };
+    await this.store.update(threadId, placed);
+    // The notes chat of a meeting is the meeting's: the meeting follows the user's choice
+    const thread = await this.store.get(threadId);
+    if (thread?.meetingId) await this.store.db.meetings.update(thread.meetingId, placed).catch(() => undefined);
     await this.store.addMessage(
       threadId,
       'system',

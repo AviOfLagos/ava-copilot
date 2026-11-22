@@ -10,6 +10,7 @@ import {
   meetingStore,
   speechToTextModelStore,
   threadStore,
+  peopleStore,
   usageStore,
   routeWorkspace,
   workspaceForAccount,
@@ -24,6 +25,7 @@ import type {
   TranscriptSegment,
 } from '@extension/storage';
 import { generatePlainText, generateStructured } from '../llm/generate';
+import { workspaceByParticipants } from '../workspaces/rules';
 import { systemMessage, textPart, userMessage } from '../llm/messages';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
@@ -252,23 +254,30 @@ export class MeetingManager {
 
   /**
    * Puts a meeting, and its notes chat, in a workspace. What the user typed the call is about comes
-   * first and overrides any earlier choice, since one company's call link serves many workspaces. Else,
-   * once, the workspace of the Google account the user is in the call as. Never from an invite's or a
-   * page's title: anyone can write those.
+   * first and overrides any earlier choice a rule made, since one company's call link serves many workspaces. Then,
+   * once, the workspace most of the call's known participants belong to (docs/pm-desk.md, Part 3), then the workspace
+   * of the Google account the user is in the call as. Never from an invite's or a page's title: anyone can write those.
+   * A workspace the user chose himself is never changed here.
    */
   async placeInWorkspace(meetingId: string): Promise<void> {
     const meeting = await this.meetings.get(meetingId);
-    if (!meeting) return;
+    if (!meeting || meeting.workspaceSetBy === 'avi') return;
     const workspaces = await workspaceStore.list();
     let workspace = meeting.topicSource === 'user' && meeting.topic ? routeWorkspace(meeting.topic, workspaces) : null;
     if (!workspace) {
       if (meeting.workspaceId) return;
+      if (meeting.roster?.length) {
+        workspace = workspaceByParticipants(meeting.roster, await peopleStore.list(), workspaces);
+      }
+    }
+    if (!workspace) {
       const email = meeting.tabId !== null ? await this.meetAccount(meeting.tabId) : null;
       if (email) workspace = workspaceForAccount(email, workspaces);
     }
     if (!workspace || workspace.id === meeting.workspaceId) return;
-    await this.meetings.update(meetingId, { workspaceId: workspace.id });
-    if (meeting.threadId) await this.threads.update(meeting.threadId, { workspaceId: workspace.id });
+    const placed = { workspaceId: workspace.id, workspaceSetBy: 'rule' as const };
+    await this.meetings.update(meetingId, placed);
+    if (meeting.threadId) await this.threads.update(meeting.threadId, placed);
   }
 
   /** The Google account a Meet tab is signed in as, read only while the tab is on Google Meet. */
@@ -612,7 +621,13 @@ export class MeetingManager {
       .catch(() => []);
     const names = (found?.result as RosterReading | undefined)?.names ?? [];
     const roster = mergeRoster(meeting.roster ?? [], names);
-    if (roster.length !== (meeting.roster ?? []).length) await this.meetings.update(meetingId, { roster });
+    if (roster.length !== (meeting.roster ?? []).length) {
+      await this.meetings.update(meetingId, { roster });
+      // Who is on the call can place it, while it has no workspace yet
+      if (!meeting.workspaceId) {
+        await this.placeInWorkspace(meetingId).catch(error => logger.warning('Could not place the meeting', error));
+      }
+    }
   }
 
   // Caption marks are added one batch at a time, so two batches arriving together both land

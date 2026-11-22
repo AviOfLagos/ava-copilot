@@ -11,6 +11,7 @@ import type {
   KnowledgeSourceType,
   MeetingStore,
   ThreadStore,
+  WorkspaceSetBy,
 } from '@extension/storage';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
@@ -170,8 +171,18 @@ export class KnowledgeBase {
         : fields.agentId
           ? 'private'
           : undefined);
+    // A saved page or note placed again keeps the workspace Avi gave it (docs/pm-desk.md, Part 3); what follows a chat
+    // or meeting takes its source's
+    const follows = fields.sourceType === 'thread' || fields.sourceType === 'meeting';
+    const placed = !follows && previous?.workspaceSetBy ? previous : null;
     const item: KnowledgeItem = {
       ...fields,
+      ...(placed
+        ? {
+            workspaceSetBy: placed.workspaceSetBy,
+            ...(placed.workspaceSetBy === 'avi' ? { workspaceId: placed.workspaceId } : {}),
+          }
+        : {}),
       id,
       createdAt: previous?.createdAt ?? now,
       updatedAt: now,
@@ -420,15 +431,24 @@ export class KnowledgeBase {
     return saved;
   }
 
-  /** Moves items to another workspace (or none), e.g. when the user maps an imported project folder. */
-  setWorkspace(itemIds: string[], workspaceId: string | null): Promise<number> {
+  /**
+   * Moves items to another workspace (or none), e.g. when the user maps an imported project folder. `setBy` records who
+   * placed them (docs/pm-desk.md, Part 3): Avi's own click by default; `null` for an item that follows its chat or
+   * meeting and so has no placement of its own.
+   */
+  setWorkspace(itemIds: string[], workspaceId: string | null, setBy: WorkspaceSetBy | null = 'avi'): Promise<number> {
     return this.serial(async () => {
       const now = Date.now();
       let moved = 0;
       for (const id of itemIds) {
         const item = await this.deps.store.item(id);
-        if (!item || (item.workspaceId ?? null) === workspaceId) continue;
-        await this.deps.store.db.kbItems.update(id, { workspaceId, updatedAt: now });
+        if (!item) continue;
+        if ((item.workspaceId ?? null) === workspaceId && (item.workspaceSetBy ?? null) === setBy) continue;
+        await this.deps.store.db.kbItems.update(id, {
+          workspaceId,
+          workspaceSetBy: setBy ?? undefined,
+          updatedAt: now,
+        });
         this.changed({ type: 'put', itemId: id });
         moved++;
       }

@@ -59,6 +59,7 @@ import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
 import UpdateBanner from './update/UpdateBanner';
+import { PendingWorkspaceOffers } from './workspaces/MakeWorkspaceButton';
 import WhatsNewCard from './update/WhatsNewCard';
 
 // A thread tag: the user answered "Save as skill?" for this chat
@@ -926,6 +927,8 @@ const SidePanel = () => {
 
       {(view === 'home' || view === 'chat') && <WhatsNewCard api={panelApi} />}
       {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
+      {/* A workspace made by voice: its Undo, and the sheet for what looks like it (docs/pm-desk.md, Part 3) */}
+      <PendingWorkspaceOffers />
 
       {elsewhere?.pendingRequest && (
         <div className="px-2.5 pt-2">

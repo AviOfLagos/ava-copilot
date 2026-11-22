@@ -8,7 +8,9 @@ import { memo } from 'react';
 import { Streamdown } from 'streamdown';
 import { cn } from '@extension/ui';
 import { TaskCheckbox } from '../../tasks/TaskCheckbox';
+import { splitWorkspaceLines, stripWorkspaceMarkers } from '@extension/storage';
 import { hideTaskMarkers, splitTaskLines } from '../../tasks/markdown';
+import { MakeWorkspaceButton, UndoMoveButton } from '../../workspaces/MakeWorkspaceButton';
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: 'user' | 'assistant' | 'system';
@@ -58,6 +60,8 @@ export const MessageActions = ({ className, children, ...props }: MessageActions
 export type MessageResponseProps = ComponentProps<typeof Streamdown> & {
   // The tasks the code that wrote this message put in it (ThreadMessage.taskIds): only their markers get a live box
   taskIds?: readonly string[];
+  // The code that wrote this message put workspace lines in it (ThreadMessage.workspaceLines): only then are they buttons
+  workspaceLines?: boolean;
 };
 
 /*
@@ -84,7 +88,7 @@ const MARKDOWN_CLASS = [
  * hidden and its line stays plain Markdown.
  */
 export const MessageResponse = memo(
-  ({ className, taskIds, children, ...props }: MessageResponseProps) => {
+  ({ className, taskIds, workspaceLines, children, ...props }: MessageResponseProps) => {
     const markdown = (text: string, key?: number) => (
       <Streamdown
         key={key}
@@ -96,7 +100,28 @@ export const MessageResponse = memo(
         {text}
       </Streamdown>
     );
-    if (typeof children !== 'string' || !taskIds?.length) {
+    // A run of text: its task lines as live boxes when the message vouches for them, else plain Markdown
+    const run = (text: string, key?: number) => {
+      if (!taskIds?.length) return markdown(hideTaskMarkers(text), key);
+      return (
+        <div key={key} className="flex flex-col gap-2">
+          {splitTaskLines(text, taskIds).map((segment, index) =>
+            segment.kind === 'markdown' ? (
+              markdown(segment.text, index)
+            ) : (
+              <ul key={index} className="flex flex-col gap-1 text-[14px] leading-relaxed">
+                {segment.items.map(item => (
+                  <li key={item.id}>
+                    <TaskCheckbox taskId={item.id} fallback={item.text} />
+                  </li>
+                ))}
+              </ul>
+            ),
+          )}
+        </div>
+      );
+    };
+    if (typeof children !== 'string') {
       return (
         <Streamdown
           className={cn(...MARKDOWN_CLASS, className)}
@@ -104,29 +129,45 @@ export const MessageResponse = memo(
           disallowedElements={BLOCKED_ELEMENTS}
           skipHtml
           urlTransform={safeUrl}>
-          {typeof children === 'string' ? hideTaskMarkers(children) : children}
+          {children}
         </Streamdown>
       );
     }
-    const segments = splitTaskLines(children, taskIds);
+    // Workspace lines are buttons only in a message the code vouches for; anywhere else they are taken out
+    const text = workspaceLines ? children : stripWorkspaceMarkers(children);
+    const pieces = splitWorkspaceLines(text);
+    if (pieces.every(piece => piece.kind === 'markdown')) {
+      if (!taskIds?.length) {
+        return (
+          <Streamdown
+            className={cn(...MARKDOWN_CLASS, className)}
+            {...props}
+            disallowedElements={BLOCKED_ELEMENTS}
+            skipHtml
+            urlTransform={safeUrl}>
+            {hideTaskMarkers(text)}
+          </Streamdown>
+        );
+      }
+      return <div className={cn('flex flex-col gap-2', className)}>{run(text)}</div>;
+    }
     return (
       <div className={cn('flex flex-col gap-2', className)}>
-        {segments.map((segment, index) =>
-          segment.kind === 'markdown' ? (
-            markdown(segment.text, index)
+        {pieces.map((piece, index) =>
+          piece.kind === 'markdown' ? (
+            run(piece.text, index)
+          ) : piece.kind === 'make' ? (
+            <MakeWorkspaceButton key={index} />
           ) : (
-            <ul key={index} className="flex flex-col gap-1 text-[14px] leading-relaxed">
-              {segment.items.map(item => (
-                <li key={item.id}>
-                  <TaskCheckbox taskId={item.id} fallback={item.text} />
-                </li>
-              ))}
-            </ul>
+            <UndoMoveButton key={index} moveId={piece.moveId} />
           ),
         )}
       </div>
     );
   },
-  (prev, next) => prev.children === next.children && (prev.taskIds ?? []).join() === (next.taskIds ?? []).join(),
+  (prev, next) =>
+    prev.children === next.children &&
+    prev.workspaceLines === next.workspaceLines &&
+    (prev.taskIds ?? []).join() === (next.taskIds ?? []).join(),
 );
 MessageResponse.displayName = 'MessageResponse';
