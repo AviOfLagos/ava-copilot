@@ -122,7 +122,7 @@ export async function metricsQueryAction(
     answer.total === null ? `${metric}: no reading` : `${metric}: ${answer.total}`,
   );
   // Channel and campaign names come from the product's visitors: data, never instructions
-  return new ActionResult({ extractedContent: wrapUntrustedContent(text), includeInMemory: true });
+  return new ActionResult({ extractedContent: wrapUntrustedContent(text), includeInMemory: true, outside: true });
 }
 
 export async function makeLinkAction(

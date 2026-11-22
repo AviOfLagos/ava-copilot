@@ -33,7 +33,7 @@ import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
 import { registeredVoiceTool, registeredVoiceTools } from '../registry';
 import { usesLiveTokens } from '../models/liveToken';
 import { wrapUntrustedContent } from '../agent/messages/utils';
-import { carriesOutsideContent, markTainted } from '../gate/taint';
+import { markTainted, textCarriesOutsideContent } from '../gate/taint';
 import { noticeFor, voiceSessionInstructions, VOICE_TOOLS, voiceHistory } from './prompt';
 import { listFrequentSites, listTabs, openTab, readPage, readScreen, switchTab } from './browser-tools';
 import { loadIdentityContext } from '../identity/context';
@@ -419,7 +419,7 @@ export class VoiceManager {
   async onTool(name: string, args: Record<string, unknown>, heard = ''): Promise<string> {
     const answer = await this.runTool(name, args, heard);
     // What a tool brought in from outside (a meeting's words, a page, a connector's answer) taints this conversation
-    if (this.threadId && carriesOutsideContent(answer)) await markTainted(this.threadId, 'voice tool');
+    if (this.threadId && textCarriesOutsideContent(answer)) await markTainted(this.threadId, 'voice tool');
     return answer;
   }
 

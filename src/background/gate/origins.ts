@@ -25,19 +25,32 @@ export function alwaysAsks(chat: Chat): boolean {
   return !chat || has(ALWAYS_ASK_ORIGINS, chat);
 }
 
-// Chats that are not the user typing at the computer. Whether they read outside content is only known when the code that
-// started them said so (`tainted`); when it did not, they count as having read some.
+// Chats that are not the user typing at the computer. Whether they read outside content is only known when the code
+// that started them said so (`tainted: false`); when it did not, they count as having read some.
 const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
 
 /**
- * Whether a saved "Allow every time" rule may answer for a chat. Never for a run that read content from outside:
- * a stranger's message or a page must not be able to unlock an approval. Fails closed: a chat that cannot be read, or
- * an agent's, routine's, brief's or WhatsApp chat whose starter did not say it is clean, gets no rule.
+ * The rule kinds that may still answer in the user's own chat (typed or spoken, at the computer) after it read outside
+ * content. Everything that reaches other people (send, publish: posts, replies, shares, invites, speaking in a call;
+ * a connector's tool; a growth item; a routine step) never does. A form submit is the user's own page work, so it may.
+ * A kind not listed here is treated as reaching people.
  */
-export function rulesMayAnswer(chat: Pick<ThreadRecord, 'origin' | 'tainted'> | undefined): boolean {
-  if (!chat || chat.tainted === true) return false;
+export const KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT: ReadonlySet<string> = new Set(['submit']);
+
+/**
+ * Whether a saved "Allow every time" rule of `kind` may answer for a chat, and whether its card may offer one. The one
+ * policy every gate uses. Fails closed.
+ *
+ * - A chat that cannot be read: no.
+ * - An agent's, routine's, brief's or WhatsApp chat: only when its starter said it is clean (`tainted: false`).
+ * - The user's own chat (user, voice): yes while clean; once it read outside content only for a kind in
+ *   KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT (and never when the kind is not given).
+ */
+export function rulesMayAnswer(chat: Pick<ThreadRecord, 'origin' | 'tainted'> | undefined, kind?: string): boolean {
+  if (!chat) return false;
   if (chat.origin && MAY_READ_OUTSIDE.has(chat.origin)) return chat.tainted === false;
-  return true;
+  if (chat.tainted !== true) return true;
+  return kind !== undefined && KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT.has(kind);
 }
 
 /** The user started it from somewhere away from the computer (WhatsApp). */

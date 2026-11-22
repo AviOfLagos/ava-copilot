@@ -5,6 +5,7 @@ import type { AgentContext } from '../agent/types';
 import type { ActionSchema } from '../agent/actions/schemas';
 import { Actors, ExecutionState } from '../agent/event/types';
 import { rulesMayAnswer } from '../gate/origins';
+import { withTaint } from '../gate/taint';
 import { propose, resultText } from './queue';
 import type { Proposal, QueueDeps } from './queue';
 import { TOOL_RUNGS, toolRequest } from './requests';
@@ -92,7 +93,7 @@ export async function whoAsks(
     agentId: agent?.id ?? null,
     agentName: agent?.name ?? 'Ava',
     // What the chat read from outside decides whether a saved rule may answer for it
-    tainted: !rulesMayAnswer(thread),
+    tainted: !(thread && rulesMayAnswer(withTaint(thread), 'team')),
     // Only the user's own words (typed, spoken, or sent from their phone) skip the draft checks
     automated:
       Boolean(agent) || (thread?.origin !== undefined && !['user', 'voice', 'whatsapp'].includes(thread.origin)),

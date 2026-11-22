@@ -46,7 +46,7 @@ abstract class BasePrompt {
       const scrollInfo = `[Scroll info of current page] window.scrollY: ${browserState.scrollY}, document.body.scrollHeight: ${browserState.scrollHeight}, window.visualViewport.height: ${browserState.visualViewportHeight}, visual viewport height as percentage of scrollable distance: ${Math.round((browserState.visualViewportHeight / (browserState.scrollHeight - browserState.visualViewportHeight)) * 100)}%\n`;
       logger.info(scrollInfo);
       await reportPageInstructions(context, browserState.url, rawElementsText);
-      await markPageRead(context.taskId);
+      await markPageRead(context.taskId, context);
       const elementsText = wrapUntrustedContent(rawElementsText);
       formattedElementsText = `${scrollInfo}[Start of page]\n${elementsText}\n[End of page]\n`;
     } else {

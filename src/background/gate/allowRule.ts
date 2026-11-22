@@ -26,7 +26,10 @@ export async function askOrAllowed(
 ): Promise<GateAnswer> {
   // A repeat of a step (do once) is the user's call every time, so no rule answers it and none is offered
   // A run that read content from outside gets no rule, answering or offered: the card still shows
-  const mayKeep = !request.repeat && canAllowAlways(candidate.kind, candidate.scope) && (await ruleMayAnswer(context));
+  const mayKeep =
+    !request.repeat &&
+    canAllowAlways(candidate.kind, candidate.scope) &&
+    (await ruleMayAnswer(context, candidate.kind));
   const rule = mayKeep ? await permissionRulesStore.find(candidate.kind, candidate.scope).catch(() => null) : null;
   if (rule) {
     await permissionRulesStore.used(rule.id).catch(() => undefined);

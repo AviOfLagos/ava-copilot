@@ -56,6 +56,7 @@ export async function readPageTextAction(
   return new ActionResult({
     extractedContent: slice.text ? `${header}\n${wrapUntrustedContent(slice.text)}` : header,
     includeInMemory: false,
+    outside: true,
   });
 }
 

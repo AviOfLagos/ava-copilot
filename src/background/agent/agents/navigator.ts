@@ -160,8 +160,8 @@ export class NavigatorAgent extends BaseAgent<z.ZodType<NavigatorOutput>, Naviga
 
       this.context.actionResults = actionResults;
       // A tool that brought in content from outside (an email, a message, a connector's answer) taints the chat
-      if (actionResults.some(result => carriesOutsideContent(result.extractedContent))) {
-        await markTainted(this.context.taskId, 'tool result');
+      if (actionResults.some(carriesOutsideContent)) {
+        await markTainted(this.context.taskId, 'tool result', this.context);
       }
 
       // check if the task is paused or stopped

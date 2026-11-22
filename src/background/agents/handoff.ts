@@ -1,5 +1,6 @@
 import { AppError } from '@extension/shared';
 import { rulesMayAnswer, userAtComputer } from '../gate/origins';
+import { withTaint } from '../gate/taint';
 import { createThreadStore } from '@extension/storage';
 import type {
   AgentHandoff,
@@ -194,7 +195,7 @@ export class HandoffService {
       // The user asked for it and sees its card
       attended: true,
       // Ava's own wording, when the user's words do not cover it, may carry page content: data, and the run tainted
-      tainted: trusted.note !== null || !rulesMayAnswer(thread),
+      tainted: trusted.note !== null || !rulesMayAnswer(withTaint(thread)),
       task: trusted.task,
       data: trusted.note
         ? `How the assistant put the task (its words may carry what a page said):\n${trusted.note}`

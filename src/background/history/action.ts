@@ -46,7 +46,7 @@ export async function workspaceContext(
     const entries = await workspaceSummaries.rollup();
     const text = rollupMarkdown(entries) || 'Nothing is in any workspace yet.';
     context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, `Read ${entries.length} workspaces`);
-    return new ActionResult({ extractedContent: wrapUntrustedContent(text), includeInMemory: true });
+    return new ActionResult({ extractedContent: wrapUntrustedContent(text), includeInMemory: true, outside: true });
   }
 
   // Out of date when the workspace's items changed since it was written
@@ -79,7 +79,11 @@ export async function workspaceContext(
   }
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, `Read where "${workspace.name}" is at`);
   // What sessions and chats said is data, never instructions
-  return new ActionResult({ extractedContent: wrapUntrustedContent(parts.join('\n\n')), includeInMemory: true });
+  return new ActionResult({
+    extractedContent: wrapUntrustedContent(parts.join('\n\n')),
+    includeInMemory: true,
+    outside: true,
+  });
 }
 
 export function createWorkspaceContextAction(context: AgentContext): Action {

@@ -66,5 +66,6 @@ export async function findTabAction(
   return new ActionResult({
     extractedContent: `Open tabs matching "${query}" (switch_tab to one by id):\n${wrapUntrustedContent(lines)}`,
     includeInMemory: true,
+    outside: true,
   });
 }

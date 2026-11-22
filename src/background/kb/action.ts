@@ -43,6 +43,7 @@ export async function searchKnowledgeAction(
   return new ActionResult({
     extractedContent: wrapUntrustedContent(hitsForAgent(input.query, hits)),
     includeInMemory: true,
+    outside: true,
   });
 }
 

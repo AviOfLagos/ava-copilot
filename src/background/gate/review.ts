@@ -338,16 +338,17 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   // and neither does a kind that is only a guess (focus that could not be read, or the model's word). A run that
   // read content from outside (a page, an email, someone else's message) gets no rule either, answering or offered:
   // what it read must not be able to unlock an approval. The card shows as usual.
-  const mayKeep = await ruleMayAnswer(context);
+  const mayKeep = await ruleMayAnswer(context, kind);
+  const mayKeepNamed = gated.rule ? await ruleMayAnswer(context, gated.rule.kind) : false;
   const needsCard = settings.confirm[kind] || unattended || !!repeat;
   const named =
-    mayKeep && gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
+    mayKeepNamed && gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
       ? gated.rule
       : null;
   const scope = named ? named.scope : guessed ? '' : pageScope(page.url());
   const ruleKind = named ? named.kind : kind;
   const rule =
-    mayKeep && needsCard && !repeat && scope
+    (named ? mayKeepNamed : mayKeep) && needsCard && !repeat && scope
       ? await permissionRulesStore.find(ruleKind, scope).catch(() => null)
       : null;
   if (rule) {

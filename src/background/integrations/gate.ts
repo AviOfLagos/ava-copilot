@@ -103,7 +103,7 @@ export async function reviewToolCall(context: AgentContext, review: ToolCallRevi
   const scope = ruleScope(review);
   const kind = confirmKindFor(review.tool);
   // A run that read content from outside gets no rule, answering or offered: the card still shows
-  const mayKeep = await ruleMayAnswer(context);
+  const mayKeep = await ruleMayAnswer(context, 'tool');
   if (mayKeep && scope && !review.repeat && canAllowAlways(kind)) {
     const rule = await permissionRulesStore.find('tool', scope).catch(() => null);
     if (rule) {

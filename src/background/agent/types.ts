@@ -43,6 +43,8 @@ export class AgentContext {
   stopped: boolean;
   consecutiveFailures: number;
   nSteps: number;
+  // This run read content from outside (kept here too, so the gates see it even if the store write failed)
+  tainted = false;
   stepInfo: AgentStepInfo | null;
   actionResults: ActionResult[];
   stateMessageAdded: boolean;
@@ -164,6 +166,9 @@ export class ActionResult {
   error: string | null;
   includeInMemory: boolean;
   interactedElement: DOMHistoryElement | null;
+  // The result carries text written by someone else (a page, a message, an email, a customer): the chat has read
+  // outside content, and no saved rule that reaches other people answers for it from now on
+  outside: boolean;
 
   constructor(params: Partial<ActionResult> = {}) {
     this.isDone = params.isDone ?? false;
@@ -172,6 +177,7 @@ export class ActionResult {
     this.extractedContent = params.extractedContent ?? null;
     this.error = params.error ?? null;
     this.includeInMemory = params.includeInMemory ?? false;
+    this.outside = params.outside ?? false;
   }
 }
 
