@@ -35,7 +35,8 @@ import {
   userTimezone,
   validateProfile,
 } from './profile';
-import { agentTemplate, SOCIAL_TEMPLATE_IDS } from './templates';
+import { checkGrowthWorkspace, setGrowthModels } from '../growth-team/setup';
+import { agentTemplate, isGrowthTemplate, SOCIAL_TEMPLATE_IDS } from './templates';
 import type { AgentTemplateId } from './templates';
 import {
   agentsForInboxItem,
@@ -132,7 +133,7 @@ export interface ThreadsPort {
     agentId: string;
     workspaceId: string | null;
   }): Promise<string>;
-  cancel(threadId: string, reason?: { kind: ThreadErrorKind; message: string } | null): Promise<void>;
+  cancel(threadId: string, reason?: { kind: ThreadErrorKind; message: string; quiet?: boolean } | null): Promise<void>;
   isRunning(threadId: string): boolean;
   holderOf(tabId: number): string | null;
   readonly runningCount: number;
@@ -245,6 +246,29 @@ function firstLine(text: string, max = 120): string {
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
+/** What an agent's run waits for, for its Inbox item: the user's click, or a step only they can do. */
+export function waitsFor(request: ThreadRecord['pendingRequest']): string {
+  if (request?.mode !== 'needs_user') return 'waits for your click';
+  const host = (() => {
+    try {
+      return new URL(request.pageUrl).host;
+    } catch {
+      return '';
+    }
+  })();
+  const where = host ? ` on ${host}` : '';
+  switch (request.kind) {
+    case 'login':
+      return `needs you to sign in${where}`;
+    case 'captcha':
+      return `needs you to solve a CAPTCHA${where}`;
+    case 'code':
+      return `needs a code from you${where}`;
+    default:
+      return 'needs you for a step';
+  }
+}
+
 export class AgentService {
   readonly bus: AgentBus;
   private readonly db: AviCopilotDb;
@@ -314,18 +338,24 @@ export class AgentService {
   }
 
   async fromTemplate(template: AgentTemplateId, workspaceId: string | null = null): Promise<AgentProfile> {
+    // A growth agent works for one product: its workspace's
+    if (isGrowthTemplate(template)) await checkGrowthWorkspace(workspaceId);
     const profile = { ...agentTemplate(template, userTimezone()), workspaceId };
     // A social agent gets the user's SI-SDK connectors, so it can read and act on their accounts
     if (SOCIAL_TEMPLATE_IDS.includes(template)) {
       const social = await this.db.connectors.filter(connector => connector.catalogId === 'si_sdk').toArray();
       profile.connectors = social.map(connector => connector.id).slice(0, 20);
     }
-    return this.saveDraft({ profile, request: profile.instructions, template });
+    const agent = await this.saveDraft({ profile, request: profile.instructions, template });
+    if (isGrowthTemplate(template)) await setGrowthModels(agent.id).catch(() => 'fallback');
+    return agent;
   }
 
   /** "Set up my team": a draft for each template the user ticked. Nothing runs until each is created. */
   async setUpTeam(templates: readonly AgentTemplateId[], workspaceId: string | null = null): Promise<AgentProfile[]> {
     const made: AgentProfile[] = [];
+    // A growth agent needs a product: checked first, so a refusal leaves no half-made team
+    if (templates.some(isGrowthTemplate)) await checkGrowthWorkspace(workspaceId);
     for (const template of [...new Set(templates)]) made.push(await this.fromTemplate(template, workspaceId));
     return made;
   }
@@ -745,7 +775,8 @@ export class AgentService {
     let waited = 0;
     let polls = 0;
     const stop = async (kind: string, message: string, status: RunStatus = 'failed') => {
-      await threads.cancel(state.threadId, { kind: 'failed', message }).catch(() => {});
+      // The run reports its own limits below: the chat neither tries again nor reports for itself
+      await threads.cancel(state.threadId, { kind: 'failed', message, quiet: true }).catch(() => {});
       await this.finish(run, status, { kind, message }, null, state);
     };
 
@@ -789,7 +820,8 @@ export class AgentService {
                   source: agentSource(agent.id),
                   externalId: `${run.id}:click`,
                   kind: 'approval',
-                  title: `"${agent.name}" waits for your click`,
+                  // A step only the user can do says which: a sign-in is not "a click"
+                  title: `"${agent.name}" ${waitsFor(thread.pendingRequest)}`,
                   body: `${run.tainted ? 'This run read content from outside; check what it is about to do. ' : ''}Open its chat to answer.`,
                   priority: 'high',
                   workspaceId: agent.workspaceId,
@@ -835,6 +867,12 @@ export class AgentService {
           return void (await this.finish(run, 'succeeded', null, await this.answerOf(state.threadId), state));
         }
         case 'error': {
+          // Its chat is queued to try again (a closed tab, a dropped network): the same run goes on with it. The
+          // wait does not count against the run's time, like a wait for the user's click.
+          if (thread.failure?.retryAt) {
+            waitingSince ??= now;
+            break;
+          }
           const kind = thread.error?.kind ?? 'failed';
           return void (await this.finish(
             run,
@@ -846,7 +884,10 @@ export class AgentService {
         }
       }
       polls += 1;
-      await this.sleep(thread.status === 'waiting_confirm' ? WAIT_POLL_MS : POLL_MS, signal);
+      await this.sleep(
+        thread.status === 'waiting_confirm' || thread.status === 'error' ? WAIT_POLL_MS : POLL_MS,
+        signal,
+      );
     }
   }
 
@@ -919,6 +960,14 @@ export class AgentService {
       }
     }
 
+    // The run no longer follows its chat: a try queued for the chat must not start with nobody watching its
+    // steps, its time, its sites or its money (src/background/retry)
+    if (threadId && (await this.db.threads.get(threadId))?.failure?.retryAt) {
+      await this.deps
+        .threads()
+        .cancel(threadId)
+        .catch(() => {});
+    }
     const usage = threadId && run.agentId ? await runUsage(this.db, run.agentId, threadId, run.startedAt) : null;
     // The run's end and the agent's counts change together: whoever sees the run ended (a run starting right after,
     // the agent page) also sees its failure count, so "paused after 3 failures in a row" never counts from stale data
@@ -971,7 +1020,12 @@ export class AgentService {
           priority: 'high',
         })
         .catch(() => {});
-    } else if (!run.attended && (failed || status === 'interrupted')) {
+    } else if (
+      !run.attended &&
+      (failed || status === 'interrupted') &&
+      // The chat already told the user it is stuck (src/background/retry): never a second item for one task
+      !(threadId && (await this.db.threads.get(threadId))?.failure?.reported)
+    ) {
       await this.deps
         .inbox({
           ...base,

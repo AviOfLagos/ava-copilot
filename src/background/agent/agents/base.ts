@@ -5,7 +5,7 @@ import type { Action } from '../actions/builder';
 import type { ChatModel, FlexibleSchema, ModelMessage } from '@src/background/llm/types';
 import { generateStructured } from '@src/background/llm/generate';
 import { telemetryFor } from '@src/background/telemetry/traces';
-import { suture } from 'suture-trace';
+import { tracedCall } from '@src/background/telemetry/suture';
 
 export interface BaseAgentOptions {
   chatLLM: ChatModel;
@@ -57,7 +57,7 @@ export abstract class BaseAgent<T extends z.ZodType, M = unknown> {
 
   async invoke(inputMessages: ModelMessage[]): Promise<this['ModelOutput']> {
     // Suture: one span per agent call, named for the feature (ava-planner, ava-navigator)
-    const { output } = await suture(
+    const { output } = await tracedCall(
       `ava-${this.id}`,
       async () => {
         const r = await generateStructured({
@@ -71,7 +71,7 @@ export abstract class BaseAgent<T extends z.ZodType, M = unknown> {
         });
         return { ...r, text: r.rawText || JSON.stringify(r.output), model: this.chatLLM.modelName };
       },
-      { input: inputMessages },
+      inputMessages,
     );
     return output;
   }

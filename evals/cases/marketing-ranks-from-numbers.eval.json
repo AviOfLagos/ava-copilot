@@ -1,0 +1,36 @@
+{
+  "kind": "marketing",
+  "name": "Channels are ranked from the sign-ups they brought, and the three cheapest untested come next",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#75",
+    "spec": "docs/growth-team.md, Parts 8 and 12"
+  },
+  "signups_per_day": { "x": 2, "reddit": 1 },
+  "replay": [
+    { "tool": "add_channel", "channel": "hn", "reach": "developers who read Show HN", "cost_usd": 0 },
+    { "tool": "add_channel", "channel": "Reddit", "reach": "r/LocalLLaMA", "cost_usd": 0 },
+    { "tool": "add_channel", "channel": "ads", "reach": "a paid newsletter slot", "cost_usd": 300 },
+    { "tool": "add_channel", "channel": "producthunt", "reach": "launch day", "cost_usd": 0 },
+    { "tool": "rank_channels" }
+  ],
+  "expect": {
+    "steps": [
+      { "state": "ok" },
+      { "state": "ok", "matches": ["reddit added"] },
+      { "state": "ok" },
+      { "state": "ok" },
+      {
+        "state": "ok",
+        "matches": [
+          "1\\. x \\(kept\\): 14 sign-ups a week",
+          "2\\. reddit \\(idea\\): 7 sign-ups a week.*test next",
+          "3\\. hn \\(idea\\): no sign-ups read from it; free to test.*test next",
+          "4\\. producthunt.*test next",
+          "5\\. ads \\(idea\\): no sign-ups read from it; \\$300\\.00 to test; a paid newsletter slot$"
+        ]
+      }
+    ],
+    "queued": []
+  }
+}

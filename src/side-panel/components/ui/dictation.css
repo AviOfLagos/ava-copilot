@@ -133,3 +133,25 @@
     transition: none;
   }
 }
+
+/* Words the vocabulary corrected in dictated text, faintly underlined for a few seconds (composerVocabulary.tsx) */
+.vocab-mirror {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  scrollbar-width: none;
+}
+
+.vocab-mark {
+  background: none;
+  color: transparent;
+  text-decoration: underline dotted;
+  text-decoration-color: rgb(var(--primary-rgb) / 0.7);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}

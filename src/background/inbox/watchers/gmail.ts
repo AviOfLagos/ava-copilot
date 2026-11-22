@@ -15,7 +15,7 @@ export function matchesGmailUrl(url: string): boolean {
  * sender and subject together stand in for one.
  */
 export const probeGmail = (): WatcherConversation[] => {
-  const out: { externalId: string; sender: string; snippet: string }[] = [];
+  const out: { externalId: string; sender: string; snippet: string; senderEmail?: string }[] = [];
   try {
     const rows = document.querySelectorAll('tr.zA, [role="row"][data-legacy-thread-id]');
     rows.forEach((row, index) => {
@@ -30,7 +30,9 @@ export const probeGmail = (): WatcherConversation[] => {
       const preview = (snippetEl?.textContent || '').trim();
       const snippet = [subject, preview].filter(Boolean).join(' - ');
       const stableId = row.getAttribute('data-legacy-thread-id') || row.id || `${index}:${sender}:${subject}`;
-      out.push({ externalId: stableId, sender, snippet });
+      // The address sits on the span[email] inside the sender's cell, not on the cell itself
+      const senderEmail = (row.querySelector('span[email]')?.getAttribute('email') || '').trim();
+      out.push({ externalId: stableId, sender, snippet, ...(senderEmail ? { senderEmail } : {}) });
     });
   } catch {
     // Unrecognised page structure: nothing read, nothing broken

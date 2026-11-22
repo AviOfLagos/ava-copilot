@@ -7,6 +7,7 @@ import {
   AgentLimitsSection,
   ConfirmSection,
   DailyCapSection,
+  PermissionsSection,
   HighlightsSection,
   NamesSection,
   ThemeSection,
@@ -16,6 +17,7 @@ import { BriefSection, MeetingsSection } from './sections/MeetingSections';
 import { AgentMemorySection, MemoryDataSection, MemoryIndexSection } from './sections/MemorySections';
 import {
   FirewallSection,
+  TracingSection,
   HelpTasksSection,
   InstallOverviewSection,
   ModelsSection,
@@ -55,6 +57,14 @@ registerSettingsSection({
   order: 30,
   keywords: ['confirm', 'ask', 'send', 'delete', 'gate', 'approve'],
   Component: ConfirmSection,
+});
+registerSettingsSection({
+  id: 'permissions',
+  label: 'settings_permissions',
+  page: 'general',
+  order: 31,
+  keywords: ['permission', 'allow', 'always', 'every time', 'confirm', 'rule'],
+  Component: PermissionsSection,
 });
 registerSettingsSection({
   id: 'cap',
@@ -190,6 +200,14 @@ registerSettingsSection({
   bare: true,
   keywords: ['skills', 'playbook', 'markdown'],
   Component: SkillsSection,
+});
+registerSettingsSection({
+  id: 'tracing',
+  label: 'settings_tracing_title',
+  page: 'privacy',
+  order: 20,
+  keywords: ['tracing', 'suture', 'telemetry', 'hosted', 'diagnostics'],
+  Component: TracingSection,
 });
 
 // Help

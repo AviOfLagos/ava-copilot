@@ -18,6 +18,7 @@ import {
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import Composer from './components/Composer';
+import type { DictationVocabulary, VocabularyApi } from './components/Composer';
 import ConfirmCard from './components/ConfirmCard';
 import BookmarkList from './components/BookmarkList';
 import { Button } from './components/ui/button';
@@ -58,6 +59,9 @@ import { useLive } from './hooks/useLive';
 import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
 import UpdateBanner from './update/UpdateBanner';
+import { PendingWorkspaceOffers } from './workspaces/MakeWorkspaceButton';
+import { CallTaskCards } from './call-tasks/CallTaskCards';
+import RecordingBar from './recordings/RecordingBar';
 import WhatsNewCard from './update/WhatsNewCard';
 
 // A thread tag: the user answered "Save as skill?" for this chat
@@ -86,7 +90,12 @@ type PanelMessage =
   | { type: 'voice_state'; status: 'off' | 'connecting' | 'listening' | 'speaking'; threadId: string | null }
   | { type: 'voice_text_sent'; clientId: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
-  | { type: 'speech_to_text_result'; text: string }
+  | {
+      type: 'speech_to_text_result';
+      text: string;
+      changes?: DictationVocabulary['changes'];
+      unsure?: DictationVocabulary['unsure'];
+    }
   | { type: 'speech_to_text_error'; error: string; retryable?: boolean }
   | { type: 'heartbeat_ack' };
 
@@ -141,7 +150,7 @@ const SidePanel = () => {
   // composer has mounted, by the effect below — the composer is not mounted while on another place.
   const pendingPromptRef = useRef<string | null>(null);
   // Where a dictation's words go: the composer adds them after what is typed, or sends them
-  const transcriptSinkRef = useRef<((words: string) => void) | null>(null);
+  const transcriptSinkRef = useRef<((words: string, vocabulary?: DictationVocabulary) => void) | null>(null);
   // Sends waiting to learn the id of the thread they created
   const pendingSendsRef = useRef(new Set<string>());
   // The words of every send the background has not taken yet: they go back in the composer if it refuses
@@ -228,12 +237,19 @@ const SidePanel = () => {
       .catch(error => console.error('Failed to load favorite prompts:', error));
   }, []);
 
+  // The workspace the chat box writes in, for the vocabulary that applies there before a chat exists
+  const composerWorkspaceRef = useRef<string | null>(null);
   const threadIdRef = useRef(threadId);
   threadIdRef.current = threadId;
   const speech = useSpeechInput(
     useCallback(audio => {
       setSttError(null);
-      postRef.current({ type: 'speech_to_text', audio, threadId: threadIdRef.current });
+      postRef.current({
+        type: 'speech_to_text',
+        audio,
+        threadId: threadIdRef.current,
+        workspaceId: composerWorkspaceRef.current,
+      });
     }, []),
     useCallback((message: string, retryable?: boolean) => (retryable ? setSttError(message) : setBanner(message)), []),
     // While dictating, a voice conversation and "Hey Ava" do not hear the microphone, so the words are answered once
@@ -252,7 +268,7 @@ const SidePanel = () => {
     setInputTextRef.current?.(text);
     setBanner([why, t('chat_send_kept')].filter(Boolean).join(' '));
   }, []);
-  const setTranscriptSink = useCallback((sink: (words: string) => void) => {
+  const setTranscriptSink = useCallback((sink: (words: string, vocabulary?: DictationVocabulary) => void) => {
     transcriptSinkRef.current = sink;
   }, []);
 
@@ -347,7 +363,10 @@ const SidePanel = () => {
           break;
         case 'speech_to_text_result':
           setSttError(null);
-          transcriptSinkRef.current?.(message.text ?? '');
+          transcriptSinkRef.current?.(message.text ?? '', {
+            changes: message.changes ?? [],
+            unsure: message.unsure ?? [],
+          });
           speechDone(true);
           break;
         case 'speech_to_text_error':
@@ -514,10 +533,10 @@ const SidePanel = () => {
 
   const handleStop = () => threadId && post({ type: 'thread_cancel', threadId });
 
-  const handleConfirmAnswer = (approved: boolean, replies?: string[]) => {
+  const handleConfirmAnswer = (approved: boolean, replies?: string[], always?: boolean) => {
     const request = thread?.pendingRequest;
     if (request && threadId) {
-      post({ type: 'confirm_action', threadId, requestId: request.id, approved, replies });
+      post({ type: 'confirm_action', threadId, requestId: request.id, approved, replies, always: always === true });
     }
   };
 
@@ -814,6 +833,25 @@ const SidePanel = () => {
     </>
   );
 
+  // What the composer asks of the vocabulary: learn a correction, and never change a word again
+  const composerWorkspace = view === 'chat' && threadId ? (thread?.workspaceId ?? null) : nextWorkspace;
+  composerWorkspaceRef.current = composerWorkspace;
+  const composerVocabulary: VocabularyApi = {
+    learn: async (from, to, confirmed) => {
+      const reply = await panelApi.request<{ saved?: boolean; automatic?: boolean }>({
+        type: 'vocab_learn',
+        from,
+        to,
+        confirmed,
+        workspaceId: composerWorkspace,
+      });
+      return { saved: reply.saved === true, automatic: reply.automatic === true };
+    },
+    never: async word => {
+      await panelApi.request({ type: 'vocab_never', word });
+    },
+  };
+
   const composer = (
     <div className="shrink-0 px-2.5 pb-2.5 pt-1">
       {thread?.pendingRequest && view === 'chat' && (
@@ -826,6 +864,7 @@ const SidePanel = () => {
         onStopTask={handleStop}
         speech={gatedSpeech}
         setTranscriptSink={setTranscriptSink}
+        vocabulary={composerVocabulary}
         disabled={isBusy || sending}
         showStopButton={isBusy}
         setContent={setter => {
@@ -888,8 +927,14 @@ const SidePanel = () => {
         onPersonalities={() => void openSettingsPage('#personalities')}
       />
 
+      {/* A screen recording's red mark, timer and Stop, on every page of the panel */}
+      <RecordingBar />
       {(view === 'home' || view === 'chat') && <WhatsNewCard api={panelApi} />}
       {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
+      {/* A workspace made by voice: its Undo, and the sheet for what looks like it (docs/pm-desk.md, Part 3) */}
+      <PendingWorkspaceOffers />
+      {/* On a call: whether a spoken task is heard, and a card per task just said (docs/pm-desk.md Part 6) */}
+      <CallTaskCards />
 
       {elsewhere?.pendingRequest && (
         <div className="px-2.5 pt-2">
@@ -898,13 +943,14 @@ const SidePanel = () => {
           </p>
           <ConfirmCard
             request={elsewhere.pendingRequest}
-            onAnswer={(approved, replies) =>
+            onAnswer={(approved, replies, always) =>
               post({
                 type: 'confirm_action',
                 threadId: elsewhere.id,
                 requestId: elsewhere.pendingRequest!.id,
                 approved,
                 replies,
+                always: always === true,
               })
             }
             isDarkMode={isDarkMode}
@@ -1041,6 +1087,7 @@ const SidePanel = () => {
             onOpenMeeting={thread.meetingId ? () => openMeeting(thread.meetingId!) : undefined}
             onWorkspace={workspaceId => post({ type: 'thread_workspace', threadId: thread.id, workspaceId })}
             onRetry={async () => post({ type: 'thread_retry', threadId: thread.id, windowId: await currentWindowId() })}
+            onStopRetry={() => post({ type: 'thread_cancel', threadId: thread.id })}
             isDarkMode={isDarkMode}
             api={panelApi}
           />

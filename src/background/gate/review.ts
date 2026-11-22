@@ -1,5 +1,12 @@
 import { t } from '@extension/i18n';
-import { gateSettingsStore, threadStore } from '@extension/storage';
+import {
+  canAllowAlways,
+  gateSettingsStore,
+  onceStore,
+  pageScope,
+  permissionRulesStore,
+  threadStore,
+} from '@extension/storage';
 import type { CommitKind, ConfirmField, ConfirmRequest, NeedsUserKind } from '@extension/storage';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -7,6 +14,8 @@ import { Actors, ExecutionState } from '../agent/event/types';
 import type Page from '../browser/page';
 import type { DOMElementNode } from '../browser/dom/views';
 import { createLogger } from '../log';
+import { beginOnce, checkOnce, stepFor } from '../once';
+import type { OnceInput } from '../once';
 import { alwaysAsks } from './origins';
 import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TARGET } from './classify';
 import type { GateTarget } from './classify';
@@ -21,10 +30,13 @@ const VERIFY_DELAY_MS = 1500;
 const MAX_SNIPPETS = 5;
 const SNIPPET_LENGTH = 80;
 
-// An action the gate reviews before it runs
-export type GatedAction =
+// An action the gate reviews before it runs. `once` names the step for its do-once key when the caller knows
+// better than the page what it acts on (a chat's name, a file and who it is shared with); `false` for an action
+// that only fills a field, which commits nothing yet.
+export type GatedAction = (
   | { action: 'click_element' | 'input_text'; args: Record<string, unknown>; node: DOMElementNode }
-  | { action: 'send_keys'; args: Record<string, unknown> };
+  | { action: 'send_keys'; args: Record<string, unknown> }
+) & { once?: OnceInput | false };
 
 // A commit that may run, with what is needed to check its effect afterwards
 export interface ApprovedCommit {
@@ -33,6 +45,8 @@ export interface ApprovedCommit {
   // Pieces of the committed text, and how often each showed on the page before the action
   snippets: string[];
   visibleBefore: number[];
+  // The do-once record written before the action ran ("started"): `verifyCommit` or `settleCommit` closes it
+  onceKey: string | null;
 }
 
 export type ReviewOutcome =
@@ -110,6 +124,41 @@ function snippetsOf(fields: ConfirmField[]): string[] {
     .map(value => value.slice(0, SNIPPET_LENGTH))
     .slice(0, MAX_SNIPPETS);
 }
+
+/**
+ * The do-once step of a commit on a page: the site and what is committed. Where the commit is reached from (a
+ * button or Enter, this path or that) is left out on purpose, so a retry that gets there another way still finds
+ * it. A control with nothing filled in around it (Publish, Merge, Grant) is told apart by its page and label.
+ */
+function commitStep(page: Page, kind: CommitKind, control: string, content: CommitContent): OnceInput {
+  let host = '';
+  let path = '';
+  try {
+    ({ host, pathname: path } = new URL(page.url()));
+  } catch {
+    // A page with no proper address still gets a key, from what is committed
+  }
+  const values = content.fields
+    .map(field => normalize(field.value))
+    .filter(value => value && !/^•+$/.test(value))
+    .sort();
+  return {
+    what: 'commit',
+    scope: host,
+    label: host ? `${kind} on ${host}` : kind,
+    parts: values.length > 0 ? values : [path, control.toLowerCase(), normalize(content.context)],
+  };
+}
+
+// How a rule names the kind it covers, in the words the confirm card uses
+const KIND_TEXT = {
+  send: 'gate_kind_send',
+  publish: 'gate_kind_publish',
+  submit: 'gate_kind_submit',
+  delete: 'gate_kind_delete',
+  purchase: 'gate_kind_purchase',
+  permission: 'gate_kind_permission',
+} as const;
 
 function blocked(message: string): ReviewOutcome {
   return { proceed: false, result: new ActionResult({ error: message, includeInMemory: true }) };
@@ -221,6 +270,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   let target = EMPTY_TARGET;
   let focus: FocusReading | null = null;
   let kind: CommitKind | null = null;
+  // The kind is a worst-case guess, not what the page shows: no "Allow every time" rule may cover it
+  let guessed = false;
   let needsUser: NeedsUserKind | null = null;
   let control: string;
 
@@ -229,7 +280,9 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     focus = await readFocusSafely(page);
     target = targetFromRaw(focus?.element);
     // Focus that cannot be read (an iframe, or a failed read) is treated as the worst case
-    kind = classifyKeys(keys, focus === null || focus.where === 'frame' ? null : target);
+    const unreadable = focus === null || focus.where === 'frame';
+    kind = classifyKeys(keys, unreadable ? null : target);
+    guessed = unreadable;
     if (kind !== null && target.formHasPassword) {
       needsUser = 'login';
     }
@@ -249,23 +302,56 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   }
   if (kind === null && declared) {
     kind = classifyLabel(`${intent} ${target.label}`) ?? 'submit';
+    guessed = true;
   }
   if (kind === null) {
+    // Typing into a field: the task is now in the middle of a form
+    if (gated.action === 'input_text') context.markForm?.();
     return { proceed: true, commit: null };
   }
 
   const content = await readContent(page, gated);
+
+  // Do once: a step this task already did, or one that was cut off, is not run again by itself
+  const step =
+    gated.once === false ? null : await stepFor(context, gated.once ?? commitStep(page, kind, control, content));
+  const once = step ? await checkOnce(context, step) : { state: 'clear' as const };
+  if (once.state === 'told') {
+    return { proceed: false, result: once.result };
+  }
+  const asked = once.state === 'ask' ? once : null;
+  const repeat = asked?.repeat;
+
   const settings = await gateSettingsStore.getSettings();
   // An agent or a routine works alone: whatever the chat settings say, every commit waits for the click
   const unattended = await isUnattended(context);
 
-  if (settings.confirm[kind] || unattended) {
+  // "Allow every time": the user already said yes to this kind of step in this place. Looked up only when a
+  // card would show. A repeat of a step (do once) is still asked, money, deleting and access never get a rule,
+  // and neither does a kind that is only a guess (focus that could not be read, or the model's word).
+  const needsCard = settings.confirm[kind] || unattended || !!repeat;
+  const scope = guessed ? '' : pageScope(page.url());
+  const rule = needsCard && !repeat && scope ? await permissionRulesStore.find(kind, scope).catch(() => null) : null;
+  if (rule) {
+    await permissionRulesStore.used(rule.id).catch(() => undefined);
+    await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
+  }
+
+  // Running a step again is the user's call, whatever the settings say
+  if (!rule && needsCard) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
+    if (repeat) request.repeat = repeat;
+    else if (scope && canAllowAlways(kind)) {
+      request.always = { kind, scope, label: t('gate_rule_label', [t(KIND_TEXT[kind]), scope]) };
+    }
     const answer = await ask(context, request);
     if (answer !== 'approved') {
       // A refusal ends the task, so the agent cannot look for another way to do the same thing
       await context.stop();
       return blocked(t('gate_declined'));
+    }
+    if (request.always && context.confirmGate.takeAlways(request.id)) {
+      await permissionRulesStore.allow(request.always).catch(error => logger.warning('Could not save the rule', error));
     }
 
     // The answer can take a while. Run the action only if it is still the one that was approved.
@@ -283,7 +369,26 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   } catch (error) {
     logger.warning('Could not read the page before the commit', error);
   }
-  return { proceed: true, commit: { kind, urlBefore: page.url(), snippets, visibleBefore } };
+  // "Started" is written last, right before the caller acts: nothing between here and the act can fail quietly
+  const claim = step ? await beginOnce(context, step, asked) : null;
+  if (claim && 'result' in claim) {
+    return { proceed: false, result: claim.result };
+  }
+  // A submit or a send is about to run: a page lost right after it is not reopened blindly
+  context.markForm?.();
+  return {
+    proceed: true,
+    commit: { kind, urlBefore: page.url(), snippets, visibleBefore, onceKey: claim?.record.key ?? null },
+  };
+}
+
+/**
+ * Closes the do-once record of a commit whose caller checks the result itself: it went through.
+ * A commit that is never settled stays at "started", which is right when the caller cannot tell.
+ */
+export async function settleCommit(commit: ApprovedCommit | null, result: string): Promise<void> {
+  if (!commit?.onceKey) return;
+  await onceStore.finish(commit.onceKey, result).catch(error => logger.warning('Could not record a result', error));
 }
 
 /**
@@ -298,19 +403,33 @@ export async function verifyCommit(context: AgentContext, page: Page, commit: Ap
   await new Promise(resolve => setTimeout(resolve, VERIFY_DELAY_MS));
 
   let message = t('gate_verify_unknown');
+  // What the page showed, in words that keep nothing of it: no address, no text
+  let outcome: string | null = null;
   try {
     const effect = await page.evaluateInPage(readCommitEffect, commit.snippets);
     if (effect.visible.some((count, i) => count > commit.visibleBefore[i])) {
       message = t('gate_verify_shown');
+      outcome = 'the page showed it';
     } else if (effect.url !== commit.urlBefore) {
       message = t('gate_verify_moved', [effect.url]);
+      outcome = 'the page moved on';
     } else if (commit.snippets.length > 0 && !effect.pending.some(Boolean)) {
       message = t('gate_verify_cleared');
+      outcome = 'the text left the box';
     }
   } catch (error) {
     logger.warning('Could not read the page after the commit', error);
   }
 
+  // The page shows it went through: the step is done. When the page shows nothing new (a short message, a form
+  // that keeps its values, a validation error), the step is neither called done, which could drop a send for
+  // good, nor left as cut off, which would hold up the next, different send: it holds back only itself.
+  if (outcome) await settleCommit(commit, outcome);
+  else if (commit.onceKey) {
+    await onceStore
+      .unsure(commit.onceKey, 'the page showed no sign either way')
+      .catch(error => logger.warning('Could not record a result', error));
+  }
   await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_VERIFY, message);
   return message;
 }

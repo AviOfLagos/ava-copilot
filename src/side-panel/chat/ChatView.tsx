@@ -22,7 +22,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { ttsSpeakingStore } from '@extension/storage';
+import { stripTaskMarkers, ttsSpeakingStore } from '@extension/storage';
 import type { ConfirmRequest, ThreadMessage, ThreadRecord } from '@extension/storage';
 import { Conversation, ConversationContent, ConversationScrollButton } from '../components/ai/conversation';
 import AttachmentStrip from '../attachments/AttachmentStrip';
@@ -148,7 +148,12 @@ function RunTrail({
                     {step.text}
                   </Shimmer>
                 ) : step.kind === 'plan' ? (
-                  <MessageResponse className="text-muted-foreground text-[13px]">{step.text}</MessageResponse>
+                  <MessageResponse
+                    className="text-muted-foreground text-[13px]"
+                    taskIds={step.taskIds}
+                    workspaceLines={step.workspaceLines}>
+                    {step.text}
+                  </MessageResponse>
                 ) : (
                   step.text
                 )
@@ -260,10 +265,12 @@ export default function ChatView({
               {turn.answer && (
                 <Message from="assistant">
                   <MessageContent>
-                    <MessageResponse>{turn.answer.content}</MessageResponse>
+                    <MessageResponse taskIds={turn.answer.taskIds} workspaceLines={turn.answer.workspaceLines}>
+                      {turn.answer.content}
+                    </MessageResponse>
                   </MessageContent>
                   <MessageActions className={speakingThis ? 'h-7 opacity-100' : undefined}>
-                    <CopyButton text={turn.answer.content} />
+                    <CopyButton text={stripTaskMarkers(turn.answer.content)} />
                     {onSpeak &&
                       (speakingThis ? (
                         <Button

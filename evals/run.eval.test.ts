@@ -11,6 +11,10 @@ import { join } from 'node:path';
 import { beforeAll, describe, it, vi } from 'vitest';
 import { enT } from '@src/background/skills/__tests__/en';
 import { loadCases } from './runner/cases';
+import { runDraftCase } from './runner/draft';
+import { runTeamCase } from './runner/team';
+import { runStandupCase } from './runner/standup';
+import { runNoteUpdatesCase } from './runner/notes';
 import { LIVE_MODEL, runPlannerCase } from './runner/planner';
 import { runSkillsCase } from './runner/skills';
 import { runVoiceCase } from './runner/voice';
@@ -40,11 +44,17 @@ describe(LIVE_MODEL ? `evals (live: ${LIVE_MODEL})` : 'evals', () => {
 
   for (const { evalCase } of cases) {
     const timeout =
-      evalCase.kind === 'planner' && LIVE_MODEL ? Number(process.env.AVA_EVAL_TIMEOUT_MS) || 300_000 : 20_000;
+      (evalCase.kind === 'planner' || evalCase.kind === 'note_updates') && LIVE_MODEL
+        ? Number(process.env.AVA_EVAL_TIMEOUT_MS) || 300_000
+        : 20_000;
     it(evalCase.name, { timeout }, async () => {
       if (evalCase.kind === 'planner') await runPlannerCase(evalCase);
       else if (evalCase.kind === 'skills') await runSkillsCase(evalCase);
-      else await runVoiceCase(evalCase);
+      else if (evalCase.kind === 'draft') runDraftCase(evalCase);
+      else if (evalCase.kind === 'voice') await runVoiceCase(evalCase);
+      else if (evalCase.kind === 'standup') await runStandupCase(evalCase);
+      else if (evalCase.kind === 'note_updates') await runNoteUpdatesCase(evalCase);
+      else await runTeamCase(evalCase);
     });
   }
 });

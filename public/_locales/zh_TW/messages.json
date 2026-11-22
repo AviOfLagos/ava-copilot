@@ -1035,6 +1035,24 @@
   "gate_stale": {
     "message": "The page changed while waiting for confirmation, so nothing was done."
   },
+  "gate_once_done": {
+    "message": "這項工作中已經做過，所以沒有重複：$1"
+  },
+  "gate_once_cutOff": {
+    "message": "先前的嘗試可能已經成功，所以沒有重複：$1"
+  },
+  "gate_card_repeat_done": {
+    "message": "這項工作已在 $1 做過這件事（$2）。只有在你想再做一次時才核准。"
+  },
+  "gate_card_repeat_started": {
+    "message": "先前在 $1 的嘗試（$2）被中斷，可能已經成功。核准前請先確認。"
+  },
+  "gate_card_repeat_earlier": {
+    "message": "這項工作先前的執行已在 $1 做過類似的步驟（$2）。核准前請確認這不是同一件事。"
+  },
+  "gate_repeat_short": {
+    "message": "可能是重複"
+  },
   "gate_userContinued": {
     "message": "The user finished this step on the page themselves. Read the page again before the next action."
   },
@@ -1091,6 +1109,9 @@
   },
   "threads_tabInUse": {
     "message": "Tab is in use by thread \"$1\"."
+  },
+  "threads_reusedTab": {
+    "message": "使用你已開啟的 $1 分頁。"
   },
   "threads_tabClosed": {
     "message": "The tab this thread was working in was closed."
@@ -1796,6 +1817,12 @@
   },
   "chat_input_attach": {
     "message": "Attach a text file"
+  },
+  "chat_input_expand": {
+    "message": "Expand the text box"
+  },
+  "chat_input_collapse": {
+    "message": "Shrink the text box"
   },
   "chat_input_attachments": {
     "message": "Attached files"
@@ -2794,19 +2821,6 @@
   "brief_ready": {
     "message": "你的晨間簡報已準備好"
   },
-  "brief_counts": {
-    "message": "今天行事曆上有 $MEETINGS$ 項，$WAITING$ 項等你處理。",
-    "placeholders": {
-      "meetings": {
-        "content": "$1",
-        "example": "3"
-      },
-      "waiting": {
-        "content": "$2",
-        "example": "1"
-      }
-    }
-  },
   "brief_open": {
     "message": "今日簡報"
   },
@@ -3238,6 +3252,69 @@
   },
   "retry_action": {
     "message": "重試"
+  },
+  "retry_queued": {
+    "message": "還沒完成就停了。$1 分鐘後再試（第 $2 次，共 $3 次）。"
+  },
+  "retry_stopped": {
+    "message": "已停止，不會自動再試。"
+  },
+  "retry_banner": {
+    "message": "將於 $1 再試（第 $2 次，共 $3 次）"
+  },
+  "retry_stopTrying": {
+    "message": "不要再試"
+  },
+  "retry_untitled": {
+    "message": "一項工作"
+  },
+  "retry_stuck_title": {
+    "message": "卡在：$1"
+  },
+  "retry_stuck_line": {
+    "message": "卡在 $1：$2 $3"
+  },
+  "retry_need_temporary": {
+    "message": "我又試了 $1 次。想再試時，請開啟對話並按「重試」。"
+  },
+  "retry_need_cannot": {
+    "message": "這件事我做不到。請開啟對話查看停在哪裡。"
+  },
+  "retry_need_key": {
+    "message": "請到設定檢查模型金鑰，然後在對話中按「重試」。"
+  },
+  "retry_need_model": {
+    "message": "找不到設定中的模型。請改選另一個，然後在對話中按「重試」。"
+  },
+  "retry_need_billing": {
+    "message": "模型帳戶餘額不足或超過用量上限。請先處理，再在對話中按「重試」。"
+  },
+  "retry_need_debugger": {
+    "message": "我工作時偵錯列必須保持開啟。請在對話中按「重試」。"
+  },
+  "retry_need_extension": {
+    "message": "另一個擴充功能正在使用這個分頁。請先關閉它，再在對話中按「重試」。"
+  },
+  "retry_need_user": {
+    "message": "需要你處理。請開啟對話查看步驟，然後按「繼續」。"
+  },
+  "retry_needs_login": {
+    "message": "需要登入：$1"
+  },
+  "retry_needs_captcha": {
+    "message": "需要你完成 CAPTCHA：$1"
+  },
+  "retry_needs_code": {
+    "message": "需要驗證碼：$1"
+  },
+  "retry_needs_cap": {
+    "message": "花費上限需要你處理：$1"
+  },
+  "retry_needs_body": {
+    "message": "請開啟對話，自己在 $1 完成這個步驟，然後按「繼續」。"
+  },
+  "retry_needs_bodyNoHost": {
+    "message": "請開啟對話，自己完成這個步驟，然後按「繼續」。"
   },
   "retry_fromHere": {
     "message": "從這裡重試"
@@ -8924,6 +9001,236 @@
   "wava_settings_notify_routine": {
     "message": "提醒或例行工作有結果"
   },
+  "wava_settings_notify_tasks": {
+    "message": "任務清單（通話後、未完成的任務）"
+  },
+  "wava_tasks_listTitle": {
+    "message": "未完成的任務"
+  },
+  "wava_tasks_listTitleFor": {
+    "message": "$NAME$ 的任務",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_listTitleIn": {
+    "message": "$WORKSPACE$ 中未完成的任務",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_more": {
+    "message": "…還有 $COUNT$ 項在任務頁面。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "wava_tasks_hint": {
+    "message": "回覆「done 2」完成一項，「undo 2」重新開啟。"
+  },
+  "wava_tasks_none": {
+    "message": "沒有未完成的任務。"
+  },
+  "wava_tasks_noneFor": {
+    "message": "$NAME$ 沒有未完成的任務。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_noneIn": {
+    "message": "$WORKSPACE$ 沒有未完成的任務。",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_noList": {
+    "message": "我還沒傳給你編號清單。傳「tasks」我就會傳一份。"
+  },
+  "wava_tasks_notAList": {
+    "message": "那則訊息沒有編號任務。傳「tasks」取得清單。"
+  },
+  "wava_tasks_outOfRange": {
+    "message": "那份清單有 $COUNT$ 項任務。是哪一項？",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "wava_tasks_outOfRangeOne": {
+    "message": "那份清單只有 1 項任務。你指的是哪一項？"
+  },
+  "wava_tasks_done": {
+    "message": "已完成：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_reopened": {
+    "message": "已重新開啟：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_dropped": {
+    "message": "已放棄：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_unchanged": {
+    "message": "原本就是這樣：$TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_gone": {
+    "message": "已不在任務板上：$NUMBERS$",
+    "placeholders": {
+      "numbers": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_tasks_which": {
+    "message": "你是指 $NAME$，還是 $WORKSPACE$ 工作區？傳「tasks for $WORD$」看此人，或「tasks in $WORD$」看工作區。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "workspace": {
+        "content": "$2",
+        "example": "Ada Labs"
+      },
+      "word": {
+        "content": "$3",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_people": {
+    "message": "有 $COUNT$ 人叫「$WORD$」：$NAMES$。傳「tasks for」加上全名。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "word": {
+        "content": "$2",
+        "example": "ada"
+      },
+      "names": {
+        "content": "$3",
+        "example": "Ada Obi, Ada Lin"
+      }
+    }
+  },
+  "wava_tasks_workspaces": {
+    "message": "不只一個工作區符合「$WORD$」：$NAMES$。傳「tasks in」加上完整名稱。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      },
+      "names": {
+        "content": "$2",
+        "example": "Tech Ember, Ember Labs"
+      }
+    }
+  },
+  "wava_tasks_noOne": {
+    "message": "沒有叫「$WORD$」的人或工作區。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_nobody": {
+    "message": "我不認識叫「$WORD$」的人。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_noWorkspace": {
+    "message": "沒有叫「$WORD$」的工作區。",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      }
+    }
+  },
+  "wava_tasks_addEmpty": {
+    "message": "任務是什麼？請這樣傳：「task for Ada: send the deck by Friday」。"
+  },
+  "wava_tasks_added": {
+    "message": "已新增：$TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_exists": {
+    "message": "已在任務板上：$TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_followUpTitle": {
+    "message": "今天要追蹤"
+  },
+  "wava_tasks_followUpsNone": {
+    "message": "今天沒有需要跟進的人。"
+  },
+  "wava_tasks_overdue": {
+    "message": "已逾期"
+  },
+  "wava_tasks_dueToday": {
+    "message": "今天"
+  },
+  "wava_tasks_dueTomorrow": {
+    "message": "明天"
+  },
   "wava_settings_qr_label": {
     "message": "用 WhatsApp 掃描的條碼"
   },
@@ -10085,13 +10392,13 @@
     "message": "你的手機"
   },
   "wava_settings_phone_hint": {
-    "message": "連接你要傳訊息給 Ava 的手機，讓她能在那裡回覆你。"
+    "message": "用你要使用的手機傳一個短代碼給 Ava，讓她知道要在哪裡回覆你。不需要掃描。"
   },
   "wava_settings_phone_connect": {
-    "message": "連接我的手機"
+    "message": "取得要傳給 Ava 的代碼"
   },
   "wava_settings_phone_send": {
-    "message": "用你的手機，把這個代碼傳到 Ava 的號碼："
+    "message": "在手機的 WhatsApp 裡，把這個代碼當作訊息傳到 Ava 的號碼："
   },
   "wava_settings_phone_waiting": {
     "message": "正在等待你的訊息……代碼 15 分鐘內有效。"
@@ -10224,5 +10531,2036 @@
   },
   "voice_engine_name_gemini": {
     "message": "Gemini"
+  },
+  "threads_tabReopened": {
+    "message": "分頁已關閉，所以已在 $1 重新開啟，工作繼續進行。按「停止」可結束。"
+  },
+  "brief_source_calendar": {
+    "message": "行事曆"
+  },
+  "brief_source_chats": {
+    "message": "對話"
+  },
+  "brief_source_inbox": {
+    "message": "收件匣"
+  },
+  "brief_source_agents": {
+    "message": "代理"
+  },
+  "brief_source_knowledge": {
+    "message": "筆記與會議"
+  },
+  "brief_source_notConnected": {
+    "message": "$1：尚未連接。"
+  },
+  "brief_source_failed": {
+    "message": "$1：無法讀取。"
+  },
+  "brief_sources_read": {
+    "message": "已讀取：$1。"
+  },
+  "brief_calendar_notConnected": {
+    "message": "行事曆：尚未連接。請到設定的「連線」連接，會議才會顯示在這裡。"
+  },
+  "brief_calendar_failed": {
+    "message": "行事曆：今天早上無法讀取，可能缺少會議。請到設定的「連線」檢查行事曆。"
+  },
+  "brief_calendar_failedAsOf": {
+    "message": "行事曆：今天早上無法讀取。以下是 $1 時的內容，之後的變更沒有包含。"
+  },
+  "brief_line_noMeetings": {
+    "message": "今天沒有會議。"
+  },
+  "brief_line_meeting": {
+    "message": "1 場會議，$1 開始。"
+  },
+  "brief_line_meetings": {
+    "message": "$1 場會議，第一場 $2 開始。"
+  },
+  "brief_line_noWaiting": {
+    "message": "沒有事情在等你。"
+  },
+  "brief_line_waiting": {
+    "message": "$1 件事在等你：$2。"
+  },
+  "brief_line_waitingMore": {
+    "message": "$1 件事在等你：$2，另外還有 $3 件。"
+  },
+  "brief_item_approve": {
+    "message": "核准 $1"
+  },
+  "brief_item_needsYou": {
+    "message": "$1 需要登入或驗證碼"
+  },
+  "brief_item_cap": {
+    "message": "$1 已達花費上限"
+  },
+  "brief_item_failed": {
+    "message": "$1 已停止"
+  },
+  "gate_allowedByRule": {
+    "message": "一律允許：$1"
+  },
+  "gate_approvedAlways": {
+    "message": "一律允許：$1。可在「設定 › 權限」中移除。"
+  },
+  "gate_rule_label": {
+    "message": "在 $2 $1"
+  },
+  "gate_rule_toolLabel": {
+    "message": "執行 $1"
+  },
+  "gate_card_allowOnce": {
+    "message": "允許一次"
+  },
+  "gate_card_allowAlways": {
+    "message": "一律允許"
+  },
+  "gate_card_allowAlwaysAgain": {
+    "message": "再按一次以一律允許"
+  },
+  "gate_card_allowAlwaysHint": {
+    "message": "一律：Ava 不會再為「$1」詢問。可在「設定 › 權限」中移除。"
+  },
+  "settings_permissions": {
+    "message": "一律允許"
+  },
+  "settings_permissions_empty": {
+    "message": "目前沒有。在確認卡上選「一律允許」，就會顯示在這裡。"
+  },
+  "settings_permissions_used": {
+    "message": "已使用 $1 次 · 自 $2 起"
+  },
+  "settings_permissions_remove": {
+    "message": "移除"
+  },
+  "settings_permissions_hint": {
+    "message": "這些步驟在任何聊天、代理或例行工作中都不再顯示確認卡。付款、刪除和授予存取權一律會詢問。"
+  },
+  "product_title": {
+    "message": "產品"
+  },
+  "product_add": {
+    "message": "新增此工作區銷售的產品"
+  },
+  "product_hint": {
+    "message": "每個代理對此工作區所售產品所依據的事實。留空的欄位會顯示為「未設定」，代理會說不知道。"
+  },
+  "product_notSet": {
+    "message": "未設定"
+  },
+  "product_missing": {
+    "message": "尚未設定：$1"
+  },
+  "product_missing_audience": {
+    "message": "目標對象"
+  },
+  "product_missing_pricing": {
+    "message": "定價"
+  },
+  "product_missing_email": {
+    "message": "聯絡用電子郵件"
+  },
+  "product_missing_postal": {
+    "message": "郵寄地址"
+  },
+  "product_missing_betaRule": {
+    "message": "Beta 規則"
+  },
+  "product_missing_social": {
+    "message": "社群帳號"
+  },
+  "product_missing_northStar": {
+    "message": "北極星指標"
+  },
+  "product_missing_notify": {
+    "message": "通知方式"
+  },
+  "product_group_facts": {
+    "message": "產品"
+  },
+  "product_group_places": {
+    "message": "所在位置"
+  },
+  "product_group_outreach": {
+    "message": "對外聯絡"
+  },
+  "product_group_limits": {
+    "message": "目標與限制"
+  },
+  "product_name": {
+    "message": "產品名稱"
+  },
+  "product_url": {
+    "message": "網站"
+  },
+  "product_oneLiner": {
+    "message": "一句話介紹"
+  },
+  "product_stage": {
+    "message": "階段"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "已上線"
+  },
+  "product_audience": {
+    "message": "目標對象（每行一項，最重要的在前）"
+  },
+  "product_problem": {
+    "message": "解決的問題"
+  },
+  "product_alternatives": {
+    "message": "大家改用什麼（每行一項）"
+  },
+  "product_differentiators": {
+    "message": "為什麼選這個（每行一項，皆可佐證）"
+  },
+  "product_pricing": {
+    "message": "定價，與網站完全一致"
+  },
+  "product_never": {
+    "message": "絕不說或做的事（每行一項）"
+  },
+  "product_repo": {
+    "message": "儲存庫（擁有者/名稱）"
+  },
+  "product_admin": {
+    "message": "管理主控台網址"
+  },
+  "product_adminAccount": {
+    "message": "管理員登入帳號"
+  },
+  "product_slack": {
+    "message": "接收其通知的 Slack 頻道（每行一個：#名稱，若知道再加上頻道 ID）"
+  },
+  "product_emailFrom": {
+    "message": "對外郵件寄件地址"
+  },
+  "product_replyTo": {
+    "message": "回覆寄往"
+  },
+  "product_postal": {
+    "message": "郵件頁尾的郵寄地址"
+  },
+  "product_notify": {
+    "message": "通知我的方式"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "兩者皆是"
+  },
+  "product_northStar": {
+    "message": "北極星指標"
+  },
+  "product_weeklyTarget": {
+    "message": "每週目標"
+  },
+  "product_budget": {
+    "message": "行銷預算（美元）"
+  },
+  "product_betaTesters": {
+    "message": "每週 Beta 測試者人數"
+  },
+  "product_betaPlan": {
+    "message": "Beta 方案"
+  },
+  "product_betaDays": {
+    "message": "Beta 期間（天）"
+  },
+  "product_card_now": {
+    "message": "目前：$1"
+  },
+  "product_api": {
+    "message": "數據 API 網址"
+  },
+  "growth_title": {
+    "message": "數據"
+  },
+  "growth_hint": {
+    "message": "Ava 每兩小時以程式從此產品自己的 API 讀取數據。讀不到的數字會顯示為「無讀數」，絕不顯示為 0。"
+  },
+  "growth_token": {
+    "message": "API 權杖"
+  },
+  "growth_token_saved": {
+    "message": "已儲存：$1"
+  },
+  "growth_token_placeholder": {
+    "message": "在此貼上權杖"
+  },
+  "growth_token_save": {
+    "message": "儲存權杖"
+  },
+  "growth_token_remove": {
+    "message": "移除權杖"
+  },
+  "growth_readNow": {
+    "message": "立即讀取"
+  },
+  "growth_reading": {
+    "message": "讀取中…"
+  },
+  "growth_connected": {
+    "message": "已連線。上次讀取：$1。"
+  },
+  "growth_connectedBut": {
+    "message": "已連線，但有一個數字讀不到：$1"
+  },
+  "growth_notConnected": {
+    "message": "未連線：$1"
+  },
+  "growth_never": {
+    "message": "尚未讀取。"
+  },
+  "growth_signupsToday": {
+    "message": "今日註冊數（UTC）：$1"
+  },
+  "growth_noReading": {
+    "message": "無讀數"
+  },
+  "growth_noApi": {
+    "message": "此產品尚未設定數據 API 網址。"
+  },
+  "growth_notice_title": {
+    "message": "$1：數據尚未連線"
+  },
+  "growth_notice_noZero": {
+    "message": "在修正之前，這些數字會顯示為「無讀數」。Ava 不會以 0 代替。"
+  },
+  "growth_reason_not_set": {
+    "message": "產品數據 API 的網址缺少或不是 https。請在工作區的產品中設定。"
+  },
+  "growth_reason_no_token": {
+    "message": "Ava 尚未儲存產品數據 API 的權杖。請在工作區的產品中的「數據」貼上。"
+  },
+  "growth_reason_agent_api_off": {
+    "message": "產品的 API 在它那一端是關閉的：那邊尚未設定權杖。請先在產品端設定權杖，再把同一個貼到這裡。"
+  },
+  "growth_reason_unauthorized": {
+    "message": "產品拒絕了權杖：權杖錯誤，或已在產品端變更。請貼上目前的權杖。"
+  },
+  "growth_reason_unreachable": {
+    "message": "產品的 API 沒有回應：這台電腦離線，或網址有誤。"
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "產品的 API 以 Ava 不認得的格式回應，因此沒有當作數字讀取。API 可能已變更。"
+  },
+  "growth_reason_not_available": {
+    "message": "產品本身沒有記錄這個數字。"
+  },
+  "growth_reason_failed": {
+    "message": "產品的 API 拒絕了請求。"
+  },
+  "growth_reason_no_collector": {
+    "message": "尚無任何程式讀取此來源。"
+  },
+  "rounds_settings_title": {
+    "message": "巡查與主動協助"
+  },
+  "rounds_toggle": {
+    "message": "Ava 進行巡查"
+  },
+  "rounds_toggle_hint": {
+    "message": "Ava 每天數次讀取你的產品數據、郵件與卡住的工作，並各在收件匣留下一則簡短摘要。不會寄出、發布或更改任何東西。"
+  },
+  "rounds_name_pulse": {
+    "message": "產品脈動"
+  },
+  "rounds_name_mail": {
+    "message": "郵件"
+  },
+  "rounds_name_stuck": {
+    "message": "卡住的工作"
+  },
+  "rounds_runNow": {
+    "message": "立即執行"
+  },
+  "rounds_runNow_named": {
+    "message": "立即執行 $1"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 已於 $2 執行"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 已錯過"
+  },
+  "rounds_offers": {
+    "message": "今日主動協助：已提出 $1 次，剩餘 $2 次。"
+  },
+  "rounds_offers_silenced": {
+    "message": "今天不再主動提供協助：你說了今天不要。"
+  },
+  "rounds_pulse_title": {
+    "message": "產品脈動 · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1：今日至今 $2，昨日 $3，平常每日 $4"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "尚不清楚"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1：無讀數。$2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 上升：$4 $2，平常每日 $3"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 下降：$4 $2，平常每日 $3"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "昨日"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "今日至今"
+  },
+  "rounds_pulse_slack": {
+    "message": "今日 Slack 通知：$1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Slack 通知：未讀取。$1"
+  },
+  "rounds_metric_signups": {
+    "message": "註冊"
+  },
+  "rounds_metric_waitlist": {
+    "message": "候補名單"
+  },
+  "rounds_metric_access_requests": {
+    "message": "存取申請"
+  },
+  "rounds_metric_feedback": {
+    "message": "意見回饋"
+  },
+  "rounds_stuck_title": {
+    "message": "卡住的工作 · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "沒有卡住的工作，也沒有等你處理的事。"
+  },
+  "rounds_stuck_approval": {
+    "message": "等你點擊"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "需要你完成一個步驟"
+  },
+  "rounds_stuck_decision": {
+    "message": "等你決定"
+  },
+  "rounds_stuck_failed": {
+    "message": "失敗"
+  },
+  "rounds_stuck_more": {
+    "message": "另有 $1 項"
+  },
+  "rounds_mail_title": {
+    "message": "郵件巡查 · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "未讀取郵件：郵件代理尚未設定或已暫停。請在「代理」中開啟，即可在此收到郵件摘要。"
+  },
+  "rounds_mail_failed": {
+    "message": "未讀取郵件：$1"
+  },
+  "checkin_mail": {
+    "message": "要我整理你的郵件嗎？有 $1 封未讀。"
+  },
+  "checkin_mailPlain": {
+    "message": "要我整理你的郵件嗎？"
+  },
+  "checkin_retry": {
+    "message": "有 $1 項工作失敗：$2。要我再試一次嗎？"
+  },
+  "checkin_body": {
+    "message": "同意的話我現在就開始，你可以在旁邊看。拒絕代表今天不要：明天之前我不會再問。沒有你的點擊，不會寄出任何東西。"
+  },
+  "rounds_failed_title": {
+    "message": "$2 的「$1」巡查未執行"
+  },
+  "rounds_failed_cut": {
+    "message": "尚未完成就被中斷：瀏覽器或擴充功能停止了。下一個時段會再執行。"
+  },
+  "checkin_failed": {
+    "message": "我無法開始你同意的工作"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "今日 Slack 通知，至少：$1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "產品未指定附有 ID 的 Slack 頻道。"
+  },
+  "rounds_slack_not_connected": {
+    "message": "此工作區未啟用 Slack 連接器。"
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "Slack 連接器需要你重新登入。"
+  },
+  "rounds_slack_asks_first": {
+    "message": "讀取頻道的 Slack 工具會先詢問才執行。請在「連接」中設定為不詢問即可執行。"
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "Slack 連接器沒有可讀取單一頻道單日訊息的工具。"
+  },
+  "rounds_slack_failed": {
+    "message": "無法讀取 Slack。"
+  },
+  "team_action_post": {
+    "message": "貼文"
+  },
+  "team_action_reply": {
+    "message": "回覆"
+  },
+  "team_action_outreach": {
+    "message": "開發信"
+  },
+  "team_action_followUp": {
+    "message": "後續跟進"
+  },
+  "team_action_listing": {
+    "message": "上架刊登"
+  },
+  "team_action_issue": {
+    "message": "來自客戶的 issue"
+  },
+  "team_action_beta": {
+    "message": "Beta 資格"
+  },
+  "team_action_spend": {
+    "message": "花費申請"
+  },
+  "team_action_channel": {
+    "message": "新通路"
+  },
+  "team_action_account": {
+    "message": "新帳號"
+  },
+  "team_action_plan": {
+    "message": "方案變更"
+  },
+  "team_action_tool": {
+    "message": "待連接的工具"
+  },
+  "team_item_title": {
+    "message": "$1 · $2：$3"
+  },
+  "team_item_where": {
+    "message": "位置"
+  },
+  "team_item_why": {
+    "message": "原因"
+  },
+  "team_item_namesCustomer": {
+    "message": "內容提到客戶，因此一律單獨詢問。"
+  },
+  "team_spend_amount": {
+    "message": "金額"
+  },
+  "team_spend_buys": {
+    "message": "買到什麼"
+  },
+  "team_spend_triedFree": {
+    "message": "先試過的免費做法"
+  },
+  "team_spend_expected": {
+    "message": "預期成果"
+  },
+  "team_batch_title": {
+    "message": "核准 $2 的全部 $1 份草稿"
+  },
+  "team_batch_body": {
+    "message": "點一下即可核准下列所有草稿。若要逐一決定，請在各自的列上回覆。目前不會發布或寄出任何內容：核准的草稿會保留到帳號檢查完成為止。"
+  },
+  "team_auto_done": {
+    "message": "$1 已完成：$2"
+  },
+  "team_auto_failed": {
+    "message": "$1 未能完成：$2"
+  },
+  "team_note_spendAgreed": {
+    "message": "你已同意 $1。付款由你自己進行；預算已計入這筆金額。"
+  },
+  "team_note_yours": {
+    "message": "你已同意。步驟由你自己進行，已寫在申請裡。"
+  },
+  "team_note_held": {
+    "message": "已核准。尚未送出任何內容：發布與寄送要等帳號檢查（#43）完成。"
+  },
+  "team_note_unknownOutcome": {
+    "message": "執行到一半中斷，可能已完成也可能沒有。不會自動重試：請確認後再提出。"
+  },
+  "team_note_declined": {
+    "message": "你已拒絕。"
+  },
+  "team_rule_label": {
+    "message": "$1：$2（在限額內）"
+  },
+  "team_ledger_title": {
+    "message": "預算與 Beta 名額"
+  },
+  "team_ledger_budget": {
+    "message": "行銷預算：已用 $1／$2，剩餘 $3。代理只能提出申請，由你付款。"
+  },
+  "team_ledger_noBudget": {
+    "message": "行銷預算：尚未設定。"
+  },
+  "team_ledger_beta": {
+    "message": "Beta 名額：過去 7 天已發出 $1／$2。"
+  },
+  "team_ledger_noBeta": {
+    "message": "Beta 規則：尚未設定，因此沒有你的決定不會發出任何名額。"
+  },
+  "team_ledger_waiting": {
+    "message": "$1 項等待你核准，$2 項已核准並保留中。"
+  },
+  "team_auto_held": {
+    "message": "$1 依「每次都允許」已核准並保留：$2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "成長負責人"
+  },
+  "persona_builtin_growth_description": {
+    "message": "靈感來自 Sean Ellis 公開的作品：先做出人們會捨不得的產品，一個北極星指標，排序過的實驗。"
+  },
+  "persona_builtin_positioning_name": {
+    "message": "定位與開發"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "靈感來自 April Dunford 公開的定位作品，加上《Traction》的通路測試：先問給誰，再問在哪裡。"
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "公開打造者"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "靈感來自 Arvid Kahl 公開分享的「公開打造」：找到人們已經在聊的地方，先幫忙，展示真實的工作。"
+  },
+  "agents_growth_title": {
+    "message": "成長團隊"
+  },
+  "agents_growth_intro": {
+    "message": "為下方所選工作區的產品工作。只會起草與規劃；沒有你的點擊，不會發文、寄送、授予或花錢。"
+  },
+  "agents_growth_lead": {
+    "message": "成長負責人"
+  },
+  "agents_growth_lead_hint": {
+    "message": "整理客戶回饋、提出 issue、追蹤各通路的註冊數，並維持每週計畫。"
+  },
+  "growth_setup_needsProduct": {
+    "message": "成長團隊只為一個產品工作：請選擇有產品的工作區（工作區 › 該工作區 › 新增產品）。"
+  },
+  "growth_models_fallback_title": {
+    "message": "成長團隊使用你自己的模型"
+  },
+  "growth_models_fallback_body": {
+    "message": "模型設定中沒有 Claude 金鑰，因此成長代理使用你的「smart」與「fast」模型。加入 Claude 金鑰後，日常工作用 Sonnet、整理用 Haiku、週一計畫用 Opus。"
+  },
+  "agents_growth_marketing": {
+    "message": "產品行銷經理"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "定位、依實際註冊數排序的管道清單，以及等待你點擊的開發信草稿。"
+  },
+  "agents_growth_social": {
+    "message": "產品社群經理"
+  },
+  "agents_growth_social_hint": {
+    "message": "本週內容計畫、以產品口吻撰寫的貼文與回覆，以及每則貼文帶來的成果。發布須等你點擊。"
+  },
+  "agents_standup_run": {
+    "message": "執行今天的站會"
+  },
+  "agents_standup_hint": {
+    "message": "每週一 07:30 訂計畫，每天 07:45 站會。讀取數字，每個代理寫一段短筆記，由 Growth Lead 在收件匣總結。"
+  },
+  "agents_standup_done": {
+    "message": "完成。已放在收件匣的「Growth standup」。"
+  },
+  "agents_standup_already": {
+    "message": "今天的站會已執行過，在收件匣的「Growth standup」。"
+  },
+  "agents_standup_running": {
+    "message": "今天的站會正在進行。"
+  },
+  "agents_standup_notRun": {
+    "message": "站會未執行：$1"
+  },
+  "brief_team_title": {
+    "message": "團隊 · $1"
+  },
+  "brief_team_notRun": {
+    "message": "站會未執行：$1。"
+  },
+  "brief_team_noReason": {
+    "message": "沒有記錄原因"
+  },
+  "brief_team_running": {
+    "message": "$1 時仍在進行，結束後會加到這裡"
+  },
+  "brief_team_later": {
+    "message": "站會 07:45 開始，晚於這份簡報"
+  },
+  "brief_team_notOpen": {
+    "message": "07:45 時瀏覽器沒有開啟；現在執行，結束後會加到這裡"
+  },
+  "brief_team_skipped": {
+    "message": "07:45 到 12:00 之間瀏覽器沒有開啟"
+  },
+  "brief_team_empty": {
+    "message": "站會已執行，但 Growth Lead 沒有寫摘要。筆記在收件匣中。"
+  },
+  "vocab_section": {
+    "message": "Vocabulary"
+  },
+  "vocab_hint": {
+    "message": "Names and terms Ava mishears. When she hears one of the words on the right, she writes the one on the left, in dictation, voice notes and meeting notes. Words from your workspaces and products are added by themselves."
+  },
+  "vocab_write_label": {
+    "message": "Write"
+  },
+  "vocab_heard_label": {
+    "message": "Heard as (separate with commas)"
+  },
+  "vocab_scope_label": {
+    "message": "Where"
+  },
+  "vocab_scope_all": {
+    "message": "Everywhere"
+  },
+  "vocab_add": {
+    "message": "Add"
+  },
+  "vocab_edit": {
+    "message": "Edit"
+  },
+  "vocab_save": {
+    "message": "Save"
+  },
+  "vocab_cancel": {
+    "message": "Cancel"
+  },
+  "vocab_delete": {
+    "message": "Remove"
+  },
+  "vocab_empty": {
+    "message": "Nothing yet. Add a name Ava gets wrong, or correct one in the text box after dictating."
+  },
+  "vocab_uses": {
+    "message": "Used $COUNT$ times",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "vocab_from_seed": {
+    "message": "from your workspaces"
+  },
+  "vocab_from_correction": {
+    "message": "learned from a correction"
+  },
+  "vocab_never_title": {
+    "message": "Never changed"
+  },
+  "vocab_refused": {
+    "message": "Not kept: $WORDS$. An ordinary word, a single letter or the same spelling would change words you meant.",
+    "placeholders": {
+      "words": {
+        "content": "$1",
+        "example": "\"album\""
+      }
+    }
+  },
+  "vocab_chip_rule": {
+    "message": "Always write “$TO$” for “$FROM$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      },
+      "from": {
+        "content": "$2",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_yes": {
+    "message": "Always"
+  },
+  "vocab_chip_no": {
+    "message": "Not now"
+  },
+  "vocab_chip_saved": {
+    "message": "Saved: from now on “$FROM$” becomes “$TO$”. You can change it in Settings › Voice › Vocabulary.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_unsure": {
+    "message": "Did you mean “$TO$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_use": {
+    "message": "Use it"
+  },
+  "vocab_chip_undo": {
+    "message": "Put back “$FROM$”",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_never": {
+    "message": "Never change this word"
+  },
+  "vocab_chip_changed": {
+    "message": "Changed “$FROM$” to “$TO$”.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
+  },
+  "brief_source_tasks": {
+    "message": "任務"
+  },
+  "tasks_who_avi": {
+    "message": "你"
+  },
+  "tasks_who_ava": {
+    "message": "Ava"
+  },
+  "tasks_doneBy": {
+    "message": "由 $WHO$ 完成，$WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_droppedBy": {
+    "message": "由 $WHO$ 放棄，$WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_toggle_done": {
+    "message": "將「$TITLE$」標為完成",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_toggle_reopen": {
+    "message": "重新開啟「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_due": {
+    "message": "截止 $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-11-27"
+      }
+    }
+  },
+  "tasks_error_toggle": {
+    "message": "無法變更任務，請再試一次。"
+  },
+  "tasks_summary_title": {
+    "message": "未完成的任務"
+  },
+  "tasks_title": {
+    "message": "任務"
+  },
+  "tasks_add": {
+    "message": "新增任務"
+  },
+  "tasks_add_placeholder": {
+    "message": "要做什麼"
+  },
+  "tasks_add_submit": {
+    "message": "新增"
+  },
+  "tasks_workspace": {
+    "message": "工作區"
+  },
+  "tasks_owner_placeholder": {
+    "message": "由誰負責"
+  },
+  "tasks_due_label": {
+    "message": "到期日"
+  },
+  "tasks_cancel": {
+    "message": "取消"
+  },
+  "tasks_save": {
+    "message": "儲存"
+  },
+  "tasks_noWorkspace": {
+    "message": "無工作區"
+  },
+  "tasks_noOwner": {
+    "message": "無負責人"
+  },
+  "tasks_from_meeting": {
+    "message": "來自會議"
+  },
+  "tasks_from_chat": {
+    "message": "來自對話"
+  },
+  "tasks_from_voice": {
+    "message": "語音新增"
+  },
+  "tasks_from_manual": {
+    "message": "由你新增"
+  },
+  "tasks_from_note": {
+    "message": "來自你的筆記"
+  },
+  "tasks_from_summary": {
+    "message": "來自摘要"
+  },
+  "tasks_from_whatsapp": {
+    "message": "來自 WhatsApp"
+  },
+  "tasks_menu": {
+    "message": "$TITLE$ 的更多選項",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "tasks_edit": {
+    "message": "編輯"
+  },
+  "tasks_give": {
+    "message": "交給某人"
+  },
+  "tasks_merge": {
+    "message": "合併至…"
+  },
+  "tasks_merge_pick": {
+    "message": "與此相同的任務（將併入此任務）："
+  },
+  "tasks_merge_submit": {
+    "message": "合併"
+  },
+  "tasks_moveTo": {
+    "message": "移至 $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Acme"
+      }
+    }
+  },
+  "tasks_drop": {
+    "message": "放棄"
+  },
+  "tasks_seenIn": {
+    "message": "在 $COUNT$ 處提到",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "tasks_byWorkspace": {
+    "message": "依工作區"
+  },
+  "tasks_byPerson": {
+    "message": "依人員"
+  },
+  "tasks_status_open": {
+    "message": "未完成"
+  },
+  "tasks_status_done": {
+    "message": "已完成"
+  },
+  "tasks_status_dropped": {
+    "message": "已放棄"
+  },
+  "tasks_empty_open": {
+    "message": "沒有未完成的任務。通話時說「Ava，記下一個任務…」，或在此新增。"
+  },
+  "tasks_empty_done": {
+    "message": "尚未完成任何任務。"
+  },
+  "tasks_empty_dropped": {
+    "message": "沒有放棄的任務。"
+  },
+  "tasks_old_banner": {
+    "message": "兩週未被提及的未完成任務：$COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_action": {
+    "message": "關閉它們"
+  },
+  "tasks_old_confirm": {
+    "message": "放棄超過兩週的任務（$COUNT$ 個）？你可以在「已放棄」中重新開啟。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_yes": {
+    "message": "關閉所有超過兩週的任務"
+  },
+  "people_title": {
+    "message": "人員"
+  },
+  "people_intro": {
+    "message": "Ava 從你的通話、邀請、收件匣與聊天中認識的所有人。資料都留在這台電腦上。"
+  },
+  "people_tab_people": {
+    "message": "人員"
+  },
+  "people_tab_sort": {
+    "message": "待整理（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "people_workspace_all": {
+    "message": "所有工作區"
+  },
+  "people_everywhere": {
+    "message": "所有地方"
+  },
+  "people_empty": {
+    "message": "還沒有人員。Ava 會從你的通話、邀請與收件匣中認識他們，不確定時會問你。"
+  },
+  "people_sort_empty": {
+    "message": "沒有待整理的名字。Ava 遇到不確定的名字時會問你。"
+  },
+  "people_add": {
+    "message": "新增人員"
+  },
+  "people_add_placeholder": {
+    "message": "對方的名字"
+  },
+  "people_save": {
+    "message": "儲存"
+  },
+  "people_cancel": {
+    "message": "取消"
+  },
+  "people_name_label": {
+    "message": "名字"
+  },
+  "people_about_label": {
+    "message": "對方是誰"
+  },
+  "people_names_a11y": {
+    "message": "$NAME$ 的名字與聯絡方式",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_alias_add": {
+    "message": "新增名字"
+  },
+  "people_alias_placeholder": {
+    "message": "對方的其他稱呼"
+  },
+  "people_alias_workspace": {
+    "message": "這個名字用在哪裡"
+  },
+  "people_alias_remove_a11y": {
+    "message": "移除名字 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "people_merge_label": {
+    "message": "與此人相同…"
+  },
+  "people_merge_action": {
+    "message": "合併"
+  },
+  "people_remove": {
+    "message": "移除"
+  },
+  "people_remove_confirm": {
+    "message": "永久移除"
+  },
+  "people_lastSeen": {
+    "message": "$WHEN$ 出現過",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "people_q_yes": {
+    "message": "是，$NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_like": {
+    "message": "和「$NAME$」是同一人",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_someoneElse": {
+    "message": "其他人"
+  },
+  "people_q_pick": {
+    "message": "選一個人"
+  },
+  "people_q_new": {
+    "message": "新的人"
+  },
+  "people_q_notPerson": {
+    "message": "不是人"
+  },
+  "people_q_me": {
+    "message": "那是我"
+  },
+  "people_q_saved": {
+    "message": "已存為 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_ignored": {
+    "message": "不是人：不會再問"
+  },
+  "people_card_title": {
+    "message": "誰是誰"
+  },
+  "people_card_done": {
+    "message": "都整理好了"
+  },
+  "people_card_open": {
+    "message": "開啟人員"
+  },
+  "people_card_meetingTitle": {
+    "message": "「$TITLE$」上的誰是誰",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "people_card_dailyTitle": {
+    "message": "誰是誰：$COUNT$ 個名字待整理",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "people_from_meet": {
+    "message": "Meet"
+  },
+  "people_from_spoken": {
+    "message": "通話中提到"
+  },
+  "people_from_calendar": {
+    "message": "行事曆"
+  },
+  "people_from_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "people_from_slack": {
+    "message": "Slack"
+  },
+  "people_from_gmail": {
+    "message": "Gmail"
+  },
+  "people_from_github": {
+    "message": "GitHub"
+  },
+  "people_from_chat": {
+    "message": "聊天"
+  },
+  "people_from_note": {
+    "message": "筆記"
+  },
+  "people_from_task": {
+    "message": "任務"
+  },
+  "people_from_avi": {
+    "message": "你"
+  },
+  "workspaces_label": {
+    "message": "工作區"
+  },
+  "workspaces_make_button": {
+    "message": "為這些建立工作區"
+  },
+  "workspaces_sheet_title": {
+    "message": "建立工作區"
+  },
+  "workspaces_sheet_loading": {
+    "message": "正在查看「無工作區」中的項目…"
+  },
+  "workspaces_sheet_thinking": {
+    "message": "正在想名稱…"
+  },
+  "workspaces_sheet_name": {
+    "message": "名稱"
+  },
+  "workspaces_sheet_keywords": {
+    "message": "關鍵字（以逗號分隔）"
+  },
+  "workspaces_sheet_keywordsExample": {
+    "message": "例如：發表, 定價"
+  },
+  "workspaces_sheet_moves": {
+    "message": "要移入的項目（預設全選）"
+  },
+  "workspaces_sheet_empty": {
+    "message": "目前「無工作區」中沒有項目。你仍可建立一個空的工作區。"
+  },
+  "workspaces_sheet_save": {
+    "message": "建立工作區（移入 $COUNT$ 項）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_close": {
+    "message": "關閉"
+  },
+  "workspaces_kind_task": {
+    "message": "任務"
+  },
+  "workspaces_kind_thread": {
+    "message": "對話"
+  },
+  "workspaces_kind_meeting": {
+    "message": "會議"
+  },
+  "workspaces_kind_kb": {
+    "message": "知識"
+  },
+  "workspaces_done_made": {
+    "message": "已建立「$NAME$」。移入 $COUNT$ 項。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_done_skipped": {
+    "message": "有 $COUNT$ 項維持原位：之後已被放置或移動。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_done_voice": {
+    "message": "已建立工作區「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo": {
+    "message": "復原"
+  },
+  "workspaces_undone": {
+    "message": "已復原。"
+  },
+  "workspaces_undo_seconds": {
+    "message": "剩下 $SECONDS$ 秒",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo_inbox": {
+    "message": "你仍可從收件匣復原。"
+  },
+  "workspaces_offer_looksLike": {
+    "message": "「無工作區」中有 $COUNT$ 項看起來屬於「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_wrong": {
+    "message": "有 $COUNT$ 項可能應該放在「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_move": {
+    "message": "將 $COUNT$ 項移到「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_notNow": {
+    "message": "現在不要"
+  },
+  "workspaces_offer_answered": {
+    "message": "已將 $COUNT$ 項移到「$NAME$」。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_moved": {
+    "message": "已移到「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_offer_dismissed": {
+    "message": "維持原位。"
+  },
+  "workspaces_offer_nothing": {
+    "message": "沒有移動任何項目：它們之後已有變動。"
+  },
+  "workspaces_move_gone": {
+    "message": "這次移動已不在記錄中。"
+  },
+  "recording_record": {
+    "message": "錄製畫面"
+  },
+  "recording_record_for": {
+    "message": "為 $TITLE$ 錄製畫面",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_picking": {
+    "message": "選擇要錄製的分頁。分頁會先列出。"
+  },
+  "recording_wholeWarning": {
+    "message": "你選了整個視窗或螢幕：上面看得到的一切都會被錄進去。"
+  },
+  "recording_recordAnyway": {
+    "message": "仍要錄製"
+  },
+  "recording_cancel": {
+    "message": "取消"
+  },
+  "recording_live": {
+    "message": "錄製中"
+  },
+  "recording_stop": {
+    "message": "停止"
+  },
+  "recording_stop_label": {
+    "message": "停止錄製"
+  },
+  "recording_noMic": {
+    "message": "沒有麥克風：只錄畫面和它的聲音。"
+  },
+  "recording_saving": {
+    "message": "儲存中…"
+  },
+  "recording_saving_pct": {
+    "message": "正在存到 Drive，$PCT$%",
+    "placeholders": {
+      "pct": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "recording_inDrive": {
+    "message": "在 Drive，私人 · $FOLDER$",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Ava recordings / Nexprove"
+      }
+    }
+  },
+  "recording_shared": {
+    "message": "已分享：任何有連結的人都能留言"
+  },
+  "recording_onMac": {
+    "message": "在你的 Mac：$PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1",
+        "example": "~/Movies/Ava recordings/Nexprove/2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_downloaded": {
+    "message": "已下載到「下載項目」資料夾，檔名 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_waiting": {
+    "message": "尚未儲存：Google Drive 未連線。"
+  },
+  "recording_failed": {
+    "message": "未儲存：$WHY$",
+    "placeholders": {
+      "why": {
+        "content": "$1",
+        "example": "Google Drive is full."
+      }
+    }
+  },
+  "recording_open": {
+    "message": "在 Drive 開啟"
+  },
+  "recording_share": {
+    "message": "分享"
+  },
+  "recording_share_hint": {
+    "message": "任何有連結的人都能留言"
+  },
+  "recording_unshare": {
+    "message": "停止分享"
+  },
+  "recording_copy": {
+    "message": "複製連結"
+  },
+  "recording_copied": {
+    "message": "已複製"
+  },
+  "recording_download": {
+    "message": "下載"
+  },
+  "recording_retry": {
+    "message": "再試一次"
+  },
+  "recording_play": {
+    "message": "播放"
+  },
+  "recording_hide": {
+    "message": "隱藏"
+  },
+  "recording_now": {
+    "message": "正在錄製"
+  },
+  "recording_list": {
+    "message": "$TITLE$ 的錄影",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_inbox_drive_title": {
+    "message": "連線 Google Drive 才能分享錄影"
+  },
+  "recording_inbox_drive_body": {
+    "message": "目前螢幕錄影存在這台電腦。到「連接器」連線 Google Drive，之後的錄影就會存到 Drive，按「分享」即可產生連結。"
+  },
+  "recording_inbox_drive_link": {
+    "message": "開啟連接器"
+  },
+  "recording_settings_title": {
+    "message": "螢幕錄影"
+  },
+  "recording_settings_max": {
+    "message": "螢幕錄影在幾分鐘後停止"
+  },
+  "recording_settings_max_hint": {
+    "message": "兩分鐘沒有聲音或通話結束時也會停止。"
+  },
+  "followups_wa_which": {
+    "message": "你是指哪一位 $NAME$：$LIST$？請寫出全名。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "list": {
+        "content": "$2",
+        "example": "Ada Obi, Ada Lee"
+      }
+    }
+  },
+  "followups_wa_notSaved": {
+    "message": "無法記下這則更新。請這樣說：Ada says 簡報在設計那邊，週四完成。"
+  },
+  "followups_wa_saved": {
+    "message": "已為 $NAME$ 記下。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_by": {
+    "message": "預計 $DAY$ 前完成。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 26 Nov"
+      }
+    }
+  },
+  "followups_wa_nextFollowUp": {
+    "message": "我會在 $DAY$ 提醒你跟進。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 27 Nov"
+      }
+    }
+  },
+  "followups_wa_didTitle": {
+    "message": "$NAME$ 完成這些了嗎？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_didHint": {
+    "message": "回覆 done 1 即可關閉一項。你不說，就不會關閉。"
+  },
+  "followups_error": {
+    "message": "發生問題，請再試一次。"
+  },
+  "followups_card_a11y": {
+    "message": "追蹤 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_gone": {
+    "message": "這項任務已不在看板上。"
+  },
+  "followups_card_closed": {
+    "message": "已完成"
+  },
+  "followups_card_why_overdue": {
+    "message": "到期日 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 20 Nov"
+      }
+    }
+  },
+  "followups_card_why_asked": {
+    "message": "$DAY$ 已詢問，尚無回覆",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_card_why_snoozed": {
+    "message": "已延後到今天"
+  },
+  "followups_card_why_update": {
+    "message": "對方說的日期到了"
+  },
+  "followups_card_why_quiet": {
+    "message": "已三個工作天沒有消息"
+  },
+  "followups_card_draft_a11y": {
+    "message": "給 $NAME$ 的訊息",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_drafting": {
+    "message": "正在撰寫訊息…"
+  },
+  "followups_card_copy": {
+    "message": "複製"
+  },
+  "followups_card_copied": {
+    "message": "已複製"
+  },
+  "followups_card_copy_fail": {
+    "message": "無法複製，請自行選取文字複製。"
+  },
+  "followups_card_whatsapp": {
+    "message": "在 WhatsApp 起草"
+  },
+  "followups_card_whatsapp_done": {
+    "message": "已輸入到與 $CHAT$ 的對話中，請檢查後自行按下傳送。",
+    "placeholders": {
+      "chat": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_asked": {
+    "message": "已詢問"
+  },
+  "followups_card_done": {
+    "message": "完成"
+  },
+  "followups_card_snooze_1": {
+    "message": "延後 1 天"
+  },
+  "followups_card_snooze_3": {
+    "message": "延後 3 天"
+  },
+  "followups_card_snooze_7": {
+    "message": "延後 7 天"
+  },
+  "followups_card_state_asked": {
+    "message": "已詢問 · 下次追蹤 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_card_state_snoozed": {
+    "message": "延後到 $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_inbox_other": {
+    "message": "這份清單是 $DAY$ 的。",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_ps_summary": {
+    "message": "進行中：$TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "finishing the login"
+      }
+    }
+  },
+  "followups_ps_latest": {
+    "message": "最新更新 $WHEN$ · $FROM$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Tue 17 Nov"
+      },
+      "from": {
+        "content": "$2",
+        "example": "a call"
+      }
+    }
+  },
+  "followups_ps_from_meeting": {
+    "message": "來自一場通話"
+  },
+  "followups_ps_from_whatsapp": {
+    "message": "來自 WhatsApp"
+  },
+  "followups_ps_from_manual": {
+    "message": "由你記下"
+  },
+  "followups_ps_did": {
+    "message": "已完成"
+  },
+  "followups_ps_doing": {
+    "message": "進行中"
+  },
+  "followups_ps_next": {
+    "message": "下一步"
+  },
+  "followups_ps_by": {
+    "message": "$DAY$ 前",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 27 Nov"
+      }
+    }
+  },
+  "followups_ps_blocked": {
+    "message": "受阻"
+  },
+  "followups_ps_open": {
+    "message": "未完成任務"
+  },
+  "followups_ps_none": {
+    "message": "還沒有更新。"
+  },
+  "followups_md_title": {
+    "message": "標記為完成？"
+  },
+  "followups_md_ask": {
+    "message": "$NAME$ 說：$SAID$。要將「$TASK$」標記為完成嗎？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "said": {
+        "content": "$2",
+        "example": "sent the login"
+      },
+      "task": {
+        "content": "$3",
+        "example": "Send the login"
+      }
+    }
+  },
+  "followups_md_yes": {
+    "message": "標記完成"
+  },
+  "followups_md_no": {
+    "message": "還沒"
+  },
+  "followups_md_answered_done": {
+    "message": "已標記完成"
+  },
+  "followups_md_answered_no": {
+    "message": "保持未完成"
+  },
+  "followups_report_label": {
+    "message": "$NAME$ 說了什麼？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_report_save": {
+    "message": "儲存"
+  },
+  "followups_report_saved": {
+    "message": "已記下。"
+  },
+  "calltasks_you": {
+    "message": "你"
+  },
+  "calltasks_wa_allTitle": {
+    "message": "通話中的任務"
+  },
+  "calltasks_wa_recordings": {
+    "message": "螢幕錄影："
+  },
+  "calltasks_draft_notYet": {
+    "message": "請先按「沒問題」：在那之前什麼都不會送出。"
+  },
+  "calltasks_draft_nobody": {
+    "message": "這個人已不在這次通話的清單上。"
+  },
+  "calltasks_draft_noTab": {
+    "message": "請在分頁中開啟 WhatsApp Web 並登入，然後再按一次。"
+  },
+  "calltasks_draft_loggedOut": {
+    "message": "WhatsApp Web 尚未登入。請用手機掃描條碼後再按一次。"
+  },
+  "calltasks_draft_noChat": {
+    "message": "找不到名為「$NAME$」的 WhatsApp 聊天。請在「人員」頁把這個人改成 WhatsApp 顯示的名字。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_wrongChat": {
+    "message": "WhatsApp 開啟的是「$SHOWN$」而不是「$NAME$」，所以沒有輸入任何內容。",
+    "placeholders": {
+      "shown": {
+        "content": "$1",
+        "example": "Ada Obi"
+      },
+      "name": {
+        "content": "$2",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_greeting": {
+    "message": "嗨 $NAME$，我們通話中提到的：",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_noBox": {
+    "message": "找不到那個聊天的訊息框。"
+  },
+  "calltasks_edit_words": {
+    "message": "要做的事"
+  },
+  "calltasks_edit_owner": {
+    "message": "給誰"
+  },
+  "calltasks_save": {
+    "message": "儲存"
+  },
+  "calltasks_cancel": {
+    "message": "取消"
+  },
+  "calltasks_edit": {
+    "message": "編輯"
+  },
+  "calltasks_edit_for": {
+    "message": "編輯「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_discard": {
+    "message": "捨棄"
+  },
+  "calltasks_discard_for": {
+    "message": "捨棄「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_status_captions": {
+    "message": "口說任務已開啟：說「Ava, note a task for Ada: …」。從你自己的字幕行聽取。"
+  },
+  "calltasks_status_mic": {
+    "message": "口說任務已開啟：說「Ava, note a task for Ada: …」。在這台電腦上從你的麥克風聽取。"
+  },
+  "calltasks_status_off_none": {
+    "message": "這次通話的口說任務已關閉：沒有字幕，也沒有你的麥克風可聽。請在通話中開啟字幕。"
+  },
+  "calltasks_status_off_recogniser": {
+    "message": "這次通話的口說任務已關閉：聽你的麥克風需要這台電腦上的語音模型（設定、語音）。或在通話中開啟字幕。"
+  },
+  "calltasks_status_off_micDenied": {
+    "message": "這次通話的口說任務已關閉：Chrome 不允許使用麥克風。或在通話中開啟字幕。"
+  },
+  "calltasks_status_off_mic": {
+    "message": "這次通話的口說任務已關閉：筆記沒有使用你的麥克風。請開啟字幕，或在會議筆記中加入麥克風。"
+  },
+  "calltasks_status_off_marker": {
+    "message": "這次通話的口說任務已關閉：通話字幕沒有標出哪些是你的話，無法分辨來賓和你。請在通話分頁上按工具列圖示，用你的麥克風錄下聲音。"
+  },
+  "calltasks_card_title": {
+    "message": "給 $NAME$ 的任務",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_card_forYou": {
+    "message": "給你的任務"
+  },
+  "calltasks_record_ask": {
+    "message": "要為這件事錄製螢幕嗎？"
+  },
+  "calltasks_yes": {
+    "message": "是"
+  },
+  "calltasks_no": {
+    "message": "否"
+  },
+  "calltasks_sent_sent": {
+    "message": "已在 WhatsApp 傳給你，可直接轉傳。"
+  },
+  "calltasks_sent_queued": {
+    "message": "等你的安靜時段結束後，再在 WhatsApp 傳給你。"
+  },
+  "calltasks_sent_off": {
+    "message": "未傳送：WhatsApp 設定中的任務訊息已關閉。"
+  },
+  "calltasks_sent_empty": {
+    "message": "未傳送：這些任務都已不再開放。"
+  },
+  "calltasks_sent_done": {
+    "message": "已在 WhatsApp 傳給你。"
+  },
+  "calltasks_sent_failed": {
+    "message": "未傳送：無法連到 WhatsApp。不會自動重試。"
+  },
+  "calltasks_draft": {
+    "message": "草擬給 $NAME$ 的訊息",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_drafted": {
+    "message": "已輸入到 WhatsApp Web 中 $NAME$ 的聊天。請確認後在那裡按傳送。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_list_title": {
+    "message": "這次通話的任務"
+  },
+  "calltasks_shareSkipped": {
+    "message": "有些錄影沒有分享：$REASONS$",
+    "placeholders": {
+      "reasons": {
+        "content": "$1",
+        "example": "Not in Google Drive."
+      }
+    }
+  },
+  "calltasks_confirm_duringCall": {
+    "message": "通話仍在記錄中。通話結束後再按這個。"
+  },
+  "calltasks_confirmed": {
+    "message": "已轉交。Drive 中的每段錄影現在都有連結，任何拿到連結的人都能開啟。"
+  },
+  "calltasks_looksRight": {
+    "message": "沒問題"
+  },
+  "calltasks_looksRight_hint": {
+    "message": "在你按下之前，不會傳送任何內容，也不會分享任何錄影。"
+  },
+  "settings_tracing_title": {
+    "message": "Hosted tracing"
+  },
+  "settings_tracing_on": {
+    "message": "Send agent traces to Suture"
+  },
+  "settings_tracing_on_hint": {
+    "message": "Off by default. When on, and only in a build that carries a Suture key, each planner and navigator call sends its timing, model name and token counts to the hosted Suture project (suture.nexprove.com) so its quality can be checked. Nothing is sent while this is off."
+  },
+  "settings_tracing_content": {
+    "message": "Include the text of prompts and replies"
+  },
+  "settings_tracing_content_hint": {
+    "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
   }
 }

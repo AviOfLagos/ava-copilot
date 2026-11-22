@@ -55,8 +55,35 @@ const GRAPH_PROMPT = 'and list what it talks about, for a knowledge graph';
 const BRIEF_PROMPT = "From the morning brief's data, pick at most three things";
 // A workspace's "where we are", in src/background/history/summary-prompt.ts
 const SUMMARY_PROMPT = 'You keep a running "where we are" note';
+const FOLLOW_UP_DRAFT_PROMPT = 'checking on one task';
 // The system prompt of teach mode, in src/background/skills/teach.ts
 const TEACH_PROMPT = 'You write a skill: a short page of tips';
+// The growth team's weekly plan and standup, in src/background/growth-team/standup/run.ts
+const PLAN_PROMPT = "Set this week's plan";
+const WEEK_PROMPT = 'Write your week against the plan';
+const NOTE_PROMPT = "in this morning's standup";
+const STANDUP_SUMMARY_PROMPT = 'Sum up the standup';
+
+/** What the growth team writes in the e2e standup: the Social Manager and the Lead each have one item off plan. */
+function standupReply(system) {
+  if (system.includes(PLAN_PROMPT))
+    return {
+      focus: 'First sign-ups from developers who run evals',
+      experiments: [
+        { what: 'A daily build-in-public thread', metric: 'signups', howWeKnow: '10 sign-ups by Friday', owner: 'Product Social Manager' },
+        { what: 'Outreach to eval engineers', metric: 'signups', howWeKnow: '5 replies by Friday', owner: 'Product Marketing Manager' },
+      ],
+    };
+  if (system.includes(WEEK_PROMPT)) return 'E1 and E2 all week.';
+  if (system.includes(STANDUP_SUMMARY_PROMPT))
+    return 'Yesterday was quiet: no sign-ups were read. Double down on E1. The one goal today: ship the first thread. Needed from you: approve the drafts.';
+  const offPlan = system.startsWith('You are Product Social Manager')
+    ? { text: 'Reply on Hacker News threads', experiment: null, reason: 'an evals thread is trending' }
+    : system.startsWith('You are Growth Lead')
+      ? { text: 'Tidy the issue labels', experiment: null, reason: 'labels are a mess' }
+      : { text: 'Find 20 eval engineers', experiment: 'E2', reason: '' };
+  return { did: 'Set up the week.', learned: 'Nothing new yet.', today: [offPlan], blocked: '' };
+}
 
 // Lowercase words hashed into 64 buckets, as a unit vector; the task prefixes are left out
 function bagOfWords(text) {
@@ -158,6 +185,7 @@ export async function startMockLlm(scenarios) {
       const audio = parts.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
       if (audio) {
         dictation.recordings.push({ mimeType: audio.inlineData.mimeType, bytes: audio.inlineData.data.length });
+        dictation.prompts.push(parts.map(part => part.text ?? '').join(' '));
         if (dictation.delayMs) await new Promise(resolve => setTimeout(resolve, dictation.delayMs));
         if (dictation.failStatus) {
           res.writeHead(dictation.failStatus, { 'Content-Type': 'application/json' });
@@ -210,6 +238,15 @@ export async function startMockLlm(scenarios) {
         return res.end(JSON.stringify(completion(request, kb.skillDraft)));
       }
 
+      // The growth team's plan and standup
+      if ([PLAN_PROMPT, WEEK_PROMPT, NOTE_PROMPT, STANDUP_SUMMARY_PROMPT].some(prompt => system.includes(prompt))) {
+        const reply = standupReply(system);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(
+          JSON.stringify(typeof reply === 'string' ? textCompletion(request, reply) : completion(request, reply)),
+        );
+      }
+
       // The morning brief's priorities
       if (system.includes(BRIEF_PROMPT)) {
         kb.briefData.push(textOf(request.messages[request.messages.length - 1]));
@@ -243,6 +280,16 @@ export async function startMockLlm(scenarios) {
         kb.questions.push(textOf(request.messages[request.messages.length - 1]));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify(textCompletion(request, kb.answer)));
+      }
+
+      // A follow-up's message (src/background/followups/draft.ts): worded from the facts it is given
+      if (system.includes(FOLLOW_UP_DRAFT_PROMPT)) {
+        const facts = textOf(request.messages[request.messages.length - 1]);
+        followUps.drafts.push(facts);
+        const name = facts.match(/"name":"([^"]*)"/)?.[1] ?? '';
+        const task = facts.match(/"task":"([^"]*)"/)?.[1] ?? '';
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(textCompletion(request, `Hi ${name}, how is "${task}" coming along? Anything you need from me?`)));
       }
 
       // Meeting notes: transcription, summaries and the final note answer from their own script
@@ -333,7 +380,7 @@ export async function startMockLlm(scenarios) {
   const calendar = { ics: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR' };
 
   // Dictation in the chat box: every recording sent to be written down, and the words that come back
-  const dictation = { recordings: [], text: 'remind me to call Ada at five', delayMs: 0, failStatus: 0 };
+  const dictation = { recordings: [], prompts: [], text: 'remind me to call Ada at five', delayMs: 0, failStatus: 0 };
 
   // What the knowledge base tests see: every text embedded and every question with its sources
   const kb = {
@@ -361,6 +408,8 @@ export async function startMockLlm(scenarios) {
 
   // What the meeting tests see: every audio clip received, and how many lines were handed out
   const meeting = { clips: [], lines: 0, summaries: 0, notes: 0, failTranscriptions: 0, failNotes: 0 };
+  // The follow-up drafts asked for, each the facts it was given
+  const followUps = { drafts: [] };
   const meetingReply = (kind, request) => {
     if (kind === 'transcribe') {
       const audio = request.messages
@@ -384,6 +433,8 @@ export async function startMockLlm(scenarios) {
       return `Answer from ${lines} transcript lines and ${captions} live captions.`;
     }
     meeting.notes += 1;
+    // A test's own note, e.g. one with people's updates
+    if (meeting.note) return meeting.note;
     return {
       title: 'Weekly sync notes',
       tldr: ['Stage 2 moves to Friday', 'Ada drafts the launch post', 'Budget unchanged'],
@@ -570,6 +621,7 @@ export async function startMockLlm(scenarios) {
     },
     runs,
     meeting,
+    followUps,
     live,
     kb,
     calendar,

@@ -276,7 +276,8 @@ test("each workspace's summary reads only its own items, and the all-workspaces 
   const rollup = await session.panelText();
   assert.match(rollup, /Acme.*Latest: Acme pricing page/);
   assert.match(rollup, /Tech Fest.*Latest: Build the speaker list page/);
-  assert.match(rollup, /Follow up on Acme pricing page \(by 2026-10-20\)/);
+  // Next actions come from the task board now, never from a summary's own "- [ ]" lines (docs/pm-desk.md, 2.5)
+  assert.doesNotMatch(rollup, /Follow up on Acme pricing page/);
   await screenshot(session, 'history-rollup');
 
   // One workspace: its summary with its sources only
@@ -304,7 +305,7 @@ test('the agent pulls the workspace summary with workspace_context, scoped to th
   await session.close();
 });
 
-test('the morning brief carries every workspace’s latest activity and next actions', async () => {
+test('the morning brief carries every workspace’s latest activity, and no task list from a summary', async () => {
   const session = await openSession(extension, mock);
   const { threadId } = await session.panel.evaluate(() => chrome.runtime.sendMessage({ type: 'brief_make' }));
   assert.ok(threadId);
@@ -313,7 +314,7 @@ test('the morning brief carries every workspace’s latest activity and next act
   assert.match(brief, /\*\*Across your workspaces\*\*/);
   assert.match(brief, /\*\*Acme\*\*: latest "Acme pricing page"/);
   assert.match(brief, /\*\*Tech Fest\*\*: latest "Build the speaker list page"/);
-  assert.match(brief, /- \[ \] Follow up on Acme pricing page \(by 2026-10-20\)/);
+  assert.doesNotMatch(brief, /Follow up on Acme pricing page/);
   await session.close();
 });
 

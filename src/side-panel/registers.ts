@@ -14,6 +14,7 @@ import './history/register';
 import './personalities/register';
 import './audio-devices/register';
 import './identity/register';
+import './vocabulary/register';
 import './capabilities/register';
 import './settings/register';
 import './meet-voice/register';
@@ -21,3 +22,10 @@ import './update/register';
 import './setup/register';
 import './ambient/register';
 import './feedback/register';
+import './rounds/register';
+import './tasks/register';
+// Before People: the call's task list shows above its Who's who card
+import './call-tasks/register';
+import './people/register';
+import './recordings/register';
+import './followups/register';

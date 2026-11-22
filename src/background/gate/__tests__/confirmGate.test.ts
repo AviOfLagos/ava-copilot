@@ -106,4 +106,18 @@ describe('ConfirmGate', () => {
     expect(await skipped).toBe('declined');
     expect(gate.takeReplies('s')).toEqual([]);
   });
+
+  it('remembers Allow every time once, and only with an approval', async () => {
+    const gate = new ConfirmGate();
+    const asked = gate.ask(request('al'), async () => {});
+    gate.answer('al', true, undefined, true);
+    expect(await asked).toBe('approved');
+    expect(gate.takeAlways('al')).toBe(true);
+    expect(gate.takeAlways('al')).toBe(false);
+
+    const declined = gate.ask(request('no'), async () => {});
+    gate.answer('no', false, undefined, true);
+    expect(await declined).toBe('declined');
+    expect(gate.takeAlways('no')).toBe(false);
+  });
 });

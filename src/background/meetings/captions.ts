@@ -36,6 +36,17 @@ export interface CallDom {
   leaveSelectors: string[];
   // Buttons that only show once the user has left (Meet's "You left the meeting" screen)
   leftNames: string;
+  // Who is on the call (docs/pm-desk.md 5.3): each video tile and its name label, read always; the People panel
+  // (a list with this accessible name) and its rows, read only while the user has it open. Nothing is clicked.
+  rosterTileSelectors: string[];
+  rosterNameSelectors: string[];
+  peoplePanelNames: string;
+  peopleRowSelectors: string[];
+  // The user's own tile or row: "You", or a name marked "(You)" (regex source, any language)
+  selfNames: string;
+  // A caption block the page marks as the local user's own words (docs/pm-desk.md, Part 6). Only these can make a
+  // spoken command. A page attribute, never a name: a guest can call themselves "You" or "Avi"
+  selfLineSelectors: string[];
 }
 
 export const CALL_DOM: CallDom = {
@@ -57,6 +68,13 @@ export const CALL_DOM: CallDom = {
   leaveSelectors: ['#hangup-button', '[data-tid="hangup-main-btn"]'],
   leftNames:
     '^(rejoin|return to home screen|participar novamente|voltar para a tela inicial|volver a unirse|rejoindre|erneut teilnehmen|重新加入|返回主畫面|返回主屏幕)$',
+  rosterTileSelectors: ['[data-participant-id]', '[data-requested-participant-id]'],
+  rosterNameSelectors: ['[data-self-name]', '.notranslate', '.zWGUib', '.XEazBc'],
+  peoplePanelNames:
+    '^(participants|people|in call|in the meeting|participantes|pessoas|personas|personnes|teilnehmer|personen|partecipanti|persone|参与者|參與者|参加者|참여자)$',
+  peopleRowSelectors: ['[role="listitem"]'],
+  selfNames: '^(you|você|tú|vous|du|tu|您|你|あなた|나)$|[(（](you|você|tú|vous|du|tu|您|你|あなた|나)[)）]',
+  selfLineSelectors: ['[data-self-name]'],
 };
 
 // Kept for pages other than calls that show captions (any of the line or block selectors)
@@ -218,8 +236,26 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
     );
   };
 
+  // Whether a caption block is the user's own: the page marks it (an attribute, never the name shown)
+  const selfSelector = (dom.selfLineSelectors ?? []).join(',');
+  const isSelf = (block: Element) =>
+    !!selfSelector && (block.matches(selfSelector) || !!block.querySelector(selfSelector));
+  // A key per caption block, so a block's later readings are known as the same speech
+  const keys = new WeakMap<Element, number>();
+  // Starting from the clock, so a watcher injected again later never reuses an earlier watcher's keys
+  let nextKey = Date.now();
+  const keyOf = (element: Element) => {
+    let key = keys.get(element);
+    if (key === undefined) {
+      nextKey += 1;
+      key = nextKey;
+      keys.set(element, key);
+    }
+    return key;
+  };
+
   // Each caption on the page right now: its element, who speaks, and the words
-  const readBlocks = (): { element: Element; speaker: string; text: string }[] => {
+  const readBlocks = (): { element: Element; speaker: string; text: string; self?: boolean }[] => {
     const region = findRegion();
     if (region) {
       let blocks = Array.from(region.querySelectorAll(dom.blockSelectors.join(',')));
@@ -242,7 +278,7 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
           text = clean(block.textContent);
           if (speaker && text.startsWith(speaker)) text = text.slice(speaker.length).trim();
         }
-        return { element: block, speaker, text };
+        return { element: block, speaker, text, self: isSelf(block) };
       });
     }
     return Array.from(document.querySelectorAll(dom.lineSelectors.join(','))).map(element => {
@@ -253,16 +289,30 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
     });
   };
 
-  const seen = new Map<Element, { speaker: string; text: string; sent: string; changedAt: number; sentAt: number }>();
+  type Seen = { speaker: string; text: string; sent: string; changedAt: number; sentAt: number; self: boolean };
+  const seen = new Map<Element, Seen>();
+  // Each line also carries the block's whole words now, its key, whether the page marks it as the user's own, and
+  // whether it has stood unchanged (settled) or is a part of long speech still going on
+  type Line = { speaker: string; text: string; self: boolean; key: number; whole: string; settled: boolean };
   const captionTimer = readCaptions
     ? setInterval(() => {
         const now = Date.now();
-        const lines: { speaker: string; text: string }[] = [];
+        const lines: Line[] = [];
         const current = new Set<Element>();
-        for (const { element, speaker, text } of readBlocks()) {
+        for (const { element, speaker, text, self } of readBlocks()) {
           current.add(element);
-          const entry = seen.get(element) ?? { speaker, text: '', sent: '', changedAt: now, sentAt: now };
+          const entry = seen.get(element) ?? { speaker, text: '', sent: '', changedAt: now, sentAt: now, self: false };
           if (speaker) entry.speaker = speaker;
+          // Read again each time: only the page's mark now counts
+          entry.self = self === true;
+          const line = (fresh: string, settled: boolean): Line => ({
+            speaker: entry.speaker,
+            text: fresh,
+            self: entry.self,
+            key: keyOf(element),
+            whole: entry.text,
+            settled,
+          });
           if (text !== entry.text) {
             entry.text = text;
             entry.changedAt = now;
@@ -270,13 +320,13 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
               // Long speech: send what is settled, keeping the last three words for later
               const settled = text.split(' ').slice(0, -3).join(' ');
               const fresh = delta(entry.sent, settled);
-              if (fresh) lines.push({ speaker: entry.speaker, text: fresh });
+              if (fresh) lines.push(line(fresh, false));
               entry.sent = settled;
               entry.sentAt = now;
             }
           } else if (text && text !== entry.sent && now - entry.changedAt >= SETTLE_MS) {
             const fresh = delta(entry.sent, text);
-            if (fresh) lines.push({ speaker: entry.speaker, text: fresh });
+            if (fresh) lines.push(line(fresh, true));
             entry.sent = text;
             entry.sentAt = now;
           }
@@ -286,7 +336,16 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
         for (const [element, entry] of seen) {
           if (current.has(element)) continue;
           const fresh = entry.text !== entry.sent ? delta(entry.sent, entry.text) : '';
-          if (fresh) lines.push({ speaker: entry.speaker, text: fresh });
+          if (fresh) {
+            lines.push({
+              speaker: entry.speaker,
+              text: fresh,
+              self: entry.self,
+              key: keyOf(element),
+              whole: entry.text,
+              settled: true,
+            });
+          }
           seen.delete(element);
         }
         if (lines.length > 0) send({ type: 'meeting_captions', lines });
@@ -330,6 +389,46 @@ export function watchCaptions(meetingId: string, dom: CallDom, readCaptions = tr
     },
   };
   return true;
+}
+
+export interface RosterReading {
+  names: string[];
+  // The People panel was open, so the list is everyone, not only the tiles in view
+  panelOpen: boolean;
+}
+
+/**
+ * Runs in the meeting page: the display names of the people on the call, from each video tile's name label and,
+ * only while the user has it open, the People panel. Never clicks, never opens anything. The user's own tile and
+ * row are left out. These names are stored on this computer only (docs/pm-desk.md, rule 5).
+ */
+export function readRoster(dom: CallDom): RosterReading {
+  const MAX = 100;
+  const clean = (value: string | null | undefined) => (value || '').replace(/\s+/g, ' ').trim();
+  const self = new RegExp(dom.selfNames, 'i');
+  const names: string[] = [];
+  const add = (value: string | null | undefined) => {
+    const name = clean(value);
+    if (!name || name.length > 80 || self.test(name) || names.length >= MAX) return;
+    if (!names.some(other => other.toLowerCase() === name.toLowerCase())) names.push(name);
+  };
+  for (const tile of Array.from(document.querySelectorAll(dom.rosterTileSelectors.join(',')))) {
+    // The user's own tile carries their name in data-self-name: left out
+    if (tile.matches('[data-self-name]') || tile.querySelector('[data-self-name]')) continue;
+    const label = tile.querySelector(dom.rosterNameSelectors.join(','));
+    if (label) add(label.textContent);
+  }
+  const panelPattern = new RegExp(dom.peoplePanelNames, 'i');
+  const panel = Array.from(document.querySelectorAll('[role="list"][aria-label], [role="region"][aria-label]')).find(
+    element => panelPattern.test(clean(element.getAttribute('aria-label'))),
+  );
+  if (panel) {
+    for (const row of Array.from(panel.querySelectorAll(dom.peopleRowSelectors.join(',')))) {
+      const label = row.getAttribute('aria-label') || row.querySelector(dom.rosterNameSelectors.join(','))?.textContent;
+      add(label);
+    }
+  }
+  return { names, panelOpen: !!panel };
 }
 
 /** Runs in the meeting page: stops watching captions and the call. */

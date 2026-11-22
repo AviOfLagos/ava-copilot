@@ -9,6 +9,7 @@ import {
 import Page, { build_initial_state } from './page';
 import { createLogger } from '@src/background/log';
 import { isUrlAllowed } from './util';
+import { tabRegistry } from './tabRegistry';
 import { TabNotBoundError } from '../threads/binding';
 import type { TabBinding } from '../threads/binding';
 
@@ -60,8 +61,9 @@ export default class BrowserContext {
   }
 
   /**
-   * Whether a tab outside the binding could be taken over: an ordinary web page, in a window the
-   * binding already works in, not private, and allowed by the firewall.
+   * Whether a tab outside the binding could be taken over: an ordinary web page, not private, allowed by the
+   * firewall, and in a window the binding already works in or, for a task the user gave, in any ordinary
+   * window (never the agents' own). Whether another task holds it is the caller's check (`canAdopt`).
    */
   private async _adoptable(tab: chrome.tabs.Tab): Promise<boolean> {
     if (!this._binding || tab.incognito || !tab.url || !/^https?:/.test(tab.url)) return false;
@@ -71,7 +73,26 @@ export default class BrowserContext {
       const bound = await chrome.tabs.get(boundId).catch(() => undefined);
       if (bound?.windowId !== undefined) windows.add(bound.windowId);
     }
-    return windows.size === 0 || windows.has(tab.windowId);
+    if (windows.size === 0 || windows.has(tab.windowId)) return true;
+    return this._binding.anyWindow && (await tabRegistry.reusableWindow(tab.windowId));
+  }
+
+  /** Whether this context may take a free tab from any of the user's windows, not only its own. */
+  public get roams(): boolean {
+    return this._binding?.anyWindow ?? false;
+  }
+
+  // Tabs the task closed itself (close_tab): they are not opened again for it
+  private _closedByTask = new Set<number>();
+
+  /** Whether the task closed this tab itself. */
+  public closedByTask(tabId: number): boolean {
+    return this._closedByTask.has(tabId);
+  }
+
+  /** The tab this context works in now, if any. */
+  public get currentTabId(): number | null {
+    return this._currentTabId;
   }
 
   public updateCurrentTabId(tabId: number): void {
@@ -354,6 +375,7 @@ export default class BrowserContext {
     if (this._binding && !this._binding.has(tabId)) {
       throw new TabNotBoundError(tabId);
     }
+    this._closedByTask.add(tabId);
     await this.detachPage(tabId);
     await chrome.tabs.remove(tabId);
     // update current tab id if needed

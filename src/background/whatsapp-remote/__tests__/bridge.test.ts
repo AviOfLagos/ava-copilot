@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ConfirmRequest, MeetingRecord, MessageAttachment, ThreadMessage, ThreadRecord } from '@extension/storage';
-import type { WhatsAppMediaReply, WhatsAppMessage, WhatsAppStatus } from '@src/shared/lib/protocol/companion';
-import type { Turn, VoiceReply } from '../bridge';
+import type {
+  WhatsAppMediaReply,
+  WhatsAppMessage,
+  WhatsAppReaction,
+  WhatsAppStatus,
+} from '@src/shared/lib/protocol/companion';
+import type { BridgeDeps, Turn, VoiceReply } from '../bridge';
 import type { WhatsAppRemoteState } from '../state';
 
 vi.mock('@extension/i18n', () => ({
@@ -79,6 +84,10 @@ function harness(
     voiceWaits?: Promise<void>;
     // Ava Brain refuses a reaction or a revision with this
     refuse?: Error;
+    // His reactions waiting in Ava Brain
+    reactions?: WhatsAppReaction[];
+    // The task desk's hooks (./task-desk.ts)
+    tasks?: Pick<BridgeDeps, 'taskCommand' | 'taskReaction' | 'sendBrief'>;
   } = {},
 ) {
   let state: WhatsAppRemoteState = { ...DEFAULT_WHATSAPP_REMOTE_STATE, status: options.status ?? LINKED };
@@ -107,7 +116,11 @@ function harness(
     fullTurns.push(turn);
   });
   const bridge = new WhatsAppBridge({
-    inbox: async () => ({ messages: inbox.splice(0), status: state.status ?? LINKED }),
+    inbox: async () => ({
+      messages: inbox.splice(0),
+      reactions: (options.reactions ?? []).splice(0),
+      status: state.status ?? LINKED,
+    }),
     ack: async ids => void acked.push(...ids),
     send: async message => {
       if (options.sendFails) throw options.sendFails;
@@ -180,6 +193,7 @@ function harness(
     settings: async () => settings,
     now: () => now,
     warn: () => {},
+    ...options.tasks,
   });
   const flush = () => new Promise(resolve => setTimeout(resolve, 0));
   return {
@@ -332,6 +346,24 @@ describe('answers back on WhatsApp', () => {
       error: { kind: 'tab_closed', message: 'The tab was closed.' },
     });
     expect(h.sent[0].text).toBe('wava_reply_stopped|The tab was closed.');
+  });
+
+  it('says nothing while a stopped turn is queued to try again, and says it stopped once the tries are used up', async () => {
+    const h = harness();
+    const stopped = {
+      status: 'error' as const,
+      error: { kind: 'tab_closed' as const, message: 'The tab was closed.' },
+    };
+    await h.bridge.onThreadUpdate(thread({ status: 'running' }), {
+      ...stopped,
+      failure: { cls: 'temporary', retryAt: Date.now() + 60_000, reported: false },
+    });
+    expect(h.sent).toEqual([]);
+    await h.bridge.onThreadUpdate(thread({ status: 'running' }), {
+      ...stopped,
+      failure: { cls: 'temporary', retryAt: null, reported: true },
+    });
+    expect(h.sent.map(message => message.text)).toEqual(['wava_reply_stopped|The tab was closed.']);
   });
 
   it('picks the answer after the last message he sent', () => {
@@ -902,5 +934,83 @@ describe('his commands about her own messages', () => {
         replyTo: 'a',
       },
     ]);
+  });
+});
+
+describe('tasks on WhatsApp, through the bridge', () => {
+  const taskWords = (handled: string[]) =>
+    vi.fn(async (message: WhatsAppMessage, words: string) => {
+      if (!/^(done|tasks)\b/i.test(words)) return false;
+      handled.push(`${message.id}:${words}`);
+      return true;
+    });
+
+  it('answers a task command in code before any turn, even while the chat works, and acks it', async () => {
+    const handled: string[] = [];
+    const h = harness({
+      messages: [msg('a', 'done 2'), msg('b', 'and book a table for four')],
+      thread: thread({ status: 'running' }),
+      tasks: { taskCommand: taskWords(handled) },
+    });
+    h.setState({ threadId: 'wa-thread', threadDay: '2026-10-20' });
+    await h.bridge.poll();
+    expect(handled).toEqual(['a:done 2']);
+    // The other message waits for the chat, as before
+    expect(h.acked).toEqual(['a']);
+    expect(h.turns).toEqual([]);
+  });
+
+  it('passes the rest to the chat when idle, and a voice note that says a task command to the desk', async () => {
+    const handled: string[] = [];
+    const h = harness({
+      messages: [
+        msg('v', '', { kind: 'voice', media: file('audio/ogg; codecs=opus', 900) }),
+        msg('t', 'tasks'),
+        msg('w', 'what is the weather?'),
+      ],
+      files: { v: { data: 'T2dnUw==' } },
+      heard: { 'T2dnUw==': 'Done 3.' },
+      tasks: { taskCommand: taskWords(handled) },
+    });
+    await h.bridge.poll();
+    expect(handled).toEqual(['t:tasks', 'v:Done 3.']);
+    expect(h.turns.map(turn => turn.text)).toEqual(['what is the weather?']);
+  });
+
+  it('passes each of his reactions to the desk once and acks them, even when one fails', async () => {
+    const seen: string[] = [];
+    const h = harness({
+      reactions: [
+        { id: 'r1', targetId: 'sent-1', emoji: '✅', at: 1 },
+        { id: 'r2', targetId: 'sent-2', emoji: '', at: 2 },
+      ],
+      tasks: {
+        taskReaction: async reaction => {
+          seen.push(`${reaction.targetId}:${reaction.emoji}`);
+          if (reaction.id === 'r1') throw new Error('store closed');
+        },
+      },
+    });
+    await h.bridge.poll();
+    expect(seen).toEqual(['sent-1:✅', 'sent-2:']);
+    expect(h.acked).toEqual(['r1', 'r2']);
+    await h.bridge.poll();
+    expect(seen).toHaveLength(2);
+  });
+
+  it('sends the morning brief through the desk, with its tasks; other notices as before', async () => {
+    const briefs: { text: string; key: string }[] = [];
+    const h = harness({
+      tasks: {
+        sendBrief: async (text, key) => {
+          briefs.push({ text, key });
+          return true;
+        },
+      },
+    });
+    await h.bridge.notice({ kind: 'brief', title: 'Your brief is ready', body: '3 meetings', key: 'brief:t-1' });
+    await h.bridge.notice({ kind: 'routine', title: 'A routine ran', key: 'routine:1' });
+    expect(briefs).toEqual([{ text: '*Your brief is ready*\n\n3 meetings', key: 'brief:t-1' }]);
+    expect(h.sent.map(item => item.kind)).toEqual(['routine']);
   });
 });

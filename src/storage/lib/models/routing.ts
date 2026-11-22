@@ -5,7 +5,7 @@ import type { RoleTarget } from './settings';
  * summaries, titles, classification, routine steps, Inbox summaries, the daily reflection. Heavy work (the browser
  * agent, vision) keeps the model chosen for its role and never comes here.
  */
-export type LightTask = 'summary' | 'title' | 'classify' | 'routine' | 'inbox' | 'reflection' | 'graph';
+export type LightTask = 'summary' | 'title' | 'classify' | 'routine' | 'inbox' | 'reflection' | 'graph' | 'draft';
 
 export interface LightRouteInputs {
   preferLocal: boolean;

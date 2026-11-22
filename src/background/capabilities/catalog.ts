@@ -103,6 +103,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   read_chat: 'memory',
   remember: 'memory',
   update_memory: 'memory',
+  person_note: 'memory',
   where_are_we: 'memory',
   drive_search: 'memory',
   drive_read: 'memory',
@@ -114,6 +115,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   read_inbox: 'inbox',
   manage_inbox: 'inbox',
   read_confirm_cards: 'inbox',
+  vocab_add: 'memory',
   what_can_you_do: 'settings',
   open_place: 'settings',
   check_audio: 'settings',
@@ -126,6 +128,18 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   list_connectors: 'settings',
   list_workspaces: 'settings',
   end_conversation: 'conversation',
+  // The task board (docs/pm-desk.md, Part 2.6)
+  task_add: 'tasks',
+  task_done: 'tasks',
+  task_reopen: 'tasks',
+  task_list: 'tasks',
+  task_assign: 'tasks',
+  task_move: 'tasks',
+  // Workspaces in one click, by voice (docs/pm-desk.md, Part 3)
+  workspace_create: 'tasks',
+  // Follow-ups: who is doing what (docs/pm-desk.md, Part 9)
+  person_status: 'tasks',
+  person_update: 'tasks',
 };
 
 const MAX_DESCRIPTION = 160;

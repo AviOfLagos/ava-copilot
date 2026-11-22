@@ -2,9 +2,10 @@ import 'webextension-polyfill';
 import { db, generalSettingsStore, meetingStore, threadStore } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { createLogger } from './log';
-import { holdForDictation, releaseDictation, sttErrorMessage, transcribeSpeech } from './voice/dictation';
+import { holdForDictation, releaseDictation, sttErrorMessage, transcribeAndCorrect } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
+import { runEndings } from './retry/register';
 import { MeetingManager } from './meetings/manager';
 import { dispatchCommand, registerRecovery, runRecoveries } from './registry';
 import { setServices } from './registry/services';
@@ -30,7 +31,8 @@ import { resolveModels } from './threads/factory';
 const logger = createLogger('background');
 
 // Every run belongs to a thread; the manager runs several at once, each on its own tabs
-const threads = new ThreadManager();
+// Failed runs are queued to try again, or reported once (./retry)
+const threads = new ThreadManager(undefined, runEndings);
 const meetings = new MeetingManager();
 const kb = new KnowledgeBase();
 setKnowledgeBase(kb);
@@ -181,21 +183,26 @@ chrome.runtime.onMessage.addListener(message => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Where each bound tab is now, so a closed one can be opened again on its last page
+  if (tabId && (changeInfo.url || changeInfo.status === 'complete')) {
+    void threads.onTabUpdated(tabId, tab);
+  }
   if (tabId && changeInfo.status === 'complete' && tab.url?.startsWith('http')) {
     await injectBuildDomTreeScripts(tabId);
   }
 });
 
-// The user dismissed Chrome's debugging bar on a tab: stop only the thread working there
+// The user dismissed Chrome's debugging bar on a tab: stop only the thread working there. A tab that closed
+// reports here too ('target_closed') as well as in tabs.onRemoved; the thread manager handles it once.
 chrome.debugger.onDetach.addListener(async (source, reason) => {
   logger.info('Debugger detached', source, reason);
-  if (reason === 'canceled_by_user' && source.tabId) {
-    await threads.onDebuggerDetached(source.tabId);
+  if ((reason === 'canceled_by_user' || reason === 'target_closed') && source.tabId) {
+    await threads.onDebuggerDetached(source.tabId, reason);
   }
 });
 
-chrome.tabs.onRemoved.addListener(tabId => {
-  void threads.onTabRemoved(tabId);
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  void threads.onTabRemoved(tabId, { windowClosing: removeInfo?.isWindowClosing });
   void meetings.onTabRemoved(tabId);
 });
 
@@ -290,10 +297,34 @@ async function teach(threadId: string): Promise<string> {
   return draftSkill(planner, teachTranscript(thread, await threadStore.messages(threadId), urls));
 }
 
-/** Gemini when there is a key, else the recogniser on this computer, or as the chat says (see voice/dictation.ts). */
-async function transcribe(audio: string, threadId?: string): Promise<string> {
+/**
+ * Gemini when there is a key, else the recogniser on this computer, or as the chat says (see voice/dictation.ts). The
+ * words come back corrected with the user's vocabulary, with what was changed and what is left unsure.
+ */
+async function transcribeWords(
+  audio: string,
+  threadId?: string | null,
+  mediaType = 'audio/webm',
+  workspaceId: string | null = null,
+) {
   const thread = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
-  return transcribeSpeech(audio, undefined, undefined, thread?.voice ?? null);
+  return transcribeAndCorrect(
+    audio,
+    mediaType,
+    undefined,
+    thread?.voice ?? null,
+    thread ? (thread.workspaceId ?? null) : workspaceId,
+  );
+}
+
+/** The words only: for a video's sound, which is attached to a chat that may not exist yet. */
+async function transcribe(
+  audio: string,
+  threadId?: string | null,
+  mediaType = 'audio/webm',
+  workspaceId: string | null = null,
+): Promise<string> {
+  return (await transcribeWords(audio, threadId, mediaType, workspaceId)).text;
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -322,7 +353,14 @@ chrome.runtime.onConnect.addListener(port => {
             text: String(message.text ?? ''),
             windowId: message.windowId,
             workspaceId: typeof message.workspaceId === 'string' ? message.workspaceId : null,
-            attachments: await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
+            attachments: await prepareAttachments(message.attachments, wav =>
+              transcribe(
+                wav,
+                threadId,
+                'audio/wav',
+                typeof message.workspaceId === 'string' ? message.workspaceId : null,
+              ),
+            ),
           });
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
@@ -340,15 +378,23 @@ chrome.runtime.onConnect.addListener(port => {
             const replies = Array.isArray(message.replies)
               ? message.replies.slice(0, 20).map((reply: unknown) => String(reply ?? '').slice(0, 2000))
               : undefined;
-            await threads.answer(threadId, String(message.requestId), message.approved === true, replies);
+            await threads.answer(
+              threadId,
+              String(message.requestId),
+              message.approved === true,
+              replies,
+              message.always === true,
+            );
           }
           return;
 
         case 'thread_workspace':
           if (threadId) {
             await threads.setWorkspace(threadId, typeof message.workspaceId === 'string' ? message.workspaceId : null);
-            // Its knowledge moves with it
+            // Its knowledge moves with it (a meeting's notes chat takes the meeting's)
             await kb.indexThread(threadId);
+            const meetingId = (await threadStore.get(threadId))?.meetingId;
+            if (meetingId) await kb.indexMeeting(meetingId);
           }
           return;
 
@@ -393,7 +439,7 @@ chrome.runtime.onConnect.addListener(port => {
         case 'voice_text':
           await voice.sendText(
             String(message.text ?? '').slice(0, 20_000),
-            await prepareAttachments(message.attachments, wav => transcribe(wav, 'audio/wav')),
+            await prepareAttachments(message.attachments, wav => transcribe(wav, threadId, 'audio/wav')),
           );
           return port.postMessage({ type: 'voice_text_sent', clientId: message.clientId });
 
@@ -454,7 +500,18 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'speech_to_text_error', error: t('bg_cmd_stt_noAudioData') });
           }
           try {
-            return port.postMessage({ type: 'speech_to_text_result', text: await transcribe(message.audio, message.threadId) });
+            const words = await transcribeWords(
+              message.audio,
+              message.threadId,
+              'audio/webm',
+              typeof message.workspaceId === 'string' ? message.workspaceId : null,
+            );
+            return port.postMessage({
+              type: 'speech_to_text_result',
+              text: words.text,
+              changes: words.changes,
+              unsure: words.unsure,
+            });
           } catch (error) {
             logger.error('Speech-to-text failed:', error);
             // A plain sentence; the panel keeps the recording and offers to try again

@@ -226,13 +226,7 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
     },
 
     storeAgentStepHistory: async (sessionId: string, task: string, history: string): Promise<void> => {
-      // Check if session exists
-      const sessionsMeta = await chatSessionsMetaStorage.get();
-      const sessionMeta = sessionsMeta.find(session => session.id === sessionId);
-      if (!sessionMeta) {
-        throw new Error(`Session with ID ${sessionId} not found`);
-      }
-
+      // Keyed by the task's id: chats now live in the threads database, so no chat session of this id need exist
       const agentStepHistoryStorage = getSessionAgentStepHistoryStorage(sessionId);
       await agentStepHistoryStorage.set({
         task,

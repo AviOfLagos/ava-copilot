@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Loader2, Mic, Paperclip, Play, Square, X } from 'lucide-react';
+import { ArrowUp, Loader2, Maximize2, Mic, Minimize2, Paperclip, Play, Square, X } from 'lucide-react';
 import { t } from '@extension/i18n';
 import { IMAGE_EXTENSIONS, IMAGE_TYPES, VIDEO_EXTENSIONS, VIDEO_TYPES, mediaTypeOf } from '@extension/storage';
 import type { OutgoingAttachment } from '@extension/storage';
@@ -7,7 +7,11 @@ import { AttachmentReadError, readAttachment } from '../attachments/media';
 import type { PendingAttachment } from '../attachments/media';
 import type { SpeechInput } from '../hooks/useSpeechInput';
 import { ListeningStrip } from './Dictation';
+import { useComposerVocabulary } from './composerVocabulary';
+import type { DictationVocabulary, VocabularyApi } from './composerVocabulary';
 import './ui/morph-orb.css';
+
+export type { DictationVocabulary, VocabularyApi } from './composerVocabulary';
 
 interface ComposerProps {
   // The words, and any pictures and videos attached
@@ -18,7 +22,9 @@ interface ComposerProps {
   // Dictation: the mic button, and what is shown while it listens and writes the words down
   speech?: Pick<SpeechInput, 'status' | 'startedAt' | 'level' | 'toggle' | 'cancel'>;
   // Lets the panel hand over the words of a dictation when they are written down
-  setTranscriptSink?: (sink: (words: string) => void) => void;
+  setTranscriptSink?: (sink: (words: string, vocabulary?: DictationVocabulary) => void) => void;
+  // The user's vocabulary: corrections made by hand are offered as rules (see composerVocabulary.tsx)
+  vocabulary?: VocabularyApi;
   disabled: boolean;
   showStopButton: boolean;
   setContent?: (setter: (text: string) => void) => void;
@@ -54,7 +60,22 @@ function problemText(error: unknown, name: string): string {
       return t('chat_attach_unreadable', [name]);
   }
 }
-const MAX_HEIGHT = 132;
+
+// The text box grows to the smaller of 40% of the panel and 320 px, then scrolls; expanded it takes 70% of the panel
+const GROW_SHARE = 0.4;
+const GROW_CAP_PX = 320;
+const EXPANDED_SHARE = 0.7;
+// Line height and padding of the text box (leading-5, p-2), and the room kept for the expand control
+const LINE_PX = 20;
+const PAD_PX = 16;
+const EXPAND_ROOM_PX = 48;
+// The expand control shows once the text passes three lines
+const SHOW_EXPAND_ABOVE_PX = PAD_PX + LINE_PX * 3;
+
+/** How tall the text box may be: what `expanded` and the panel's height allow. */
+export function boxHeightLimit(panelHeight: number, expanded: boolean): number {
+  return expanded ? panelHeight * EXPANDED_SHARE : Math.min(panelHeight * GROW_SHARE, GROW_CAP_PX);
+}
 
 /** What was typed, then the dictated words after it. */
 export function joinWords(typed: string, words: string): string {
@@ -74,6 +95,7 @@ export default function Composer({
   onStopTask,
   speech,
   setTranscriptSink,
+  vocabulary,
   disabled,
   showStopButton,
   setContent,
@@ -97,13 +119,39 @@ export default function Composer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimer = useRef<number>();
+  // Past three lines the box can be expanded; expanded it is 70% of the panel's height
+  const [tall, setTall] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(false);
+  expandedRef.current = expanded;
 
   const resize = () => {
     const area = textareaRef.current;
     if (!area) return;
     area.style.height = 'auto';
-    area.style.height = `${Math.min(area.scrollHeight, MAX_HEIGHT)}px`;
+    // Measured with the room for the expand control kept, so that showing it cannot change the answer
+    area.style.paddingRight = `${EXPAND_ROOM_PX}px`;
+    const over = area.scrollHeight > SHOW_EXPAND_ABOVE_PX;
+    if (!over) area.style.paddingRight = '';
+    const limit = boxHeightLimit(window.innerHeight, expandedRef.current && over);
+    // Expanded, the box is the full 70%; otherwise it follows its text up to the limit
+    area.style.height = `${expandedRef.current && over ? limit : Math.min(area.scrollHeight, limit)}px`;
+    setTall(over);
+    if (!over && expandedRef.current) setExpanded(false);
   };
+  const resizeRef = useRef(resize);
+  resizeRef.current = resize;
+  const vocab = useComposerVocabulary(text, setText, vocabulary, textareaRef);
+  // Text changed from outside the box (a correction put back, a word the user accepted) needs its height too
+  useEffect(() => resizeRef.current(), [text]);
+
+  // The expand control, the panel being resized and the text box coming back after dictation all change the height
+  useEffect(() => resizeRef.current(), [expanded]);
+  useEffect(() => {
+    const onResize = () => resizeRef.current();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     setContent?.(value => {
@@ -123,6 +171,10 @@ export default function Composer({
   const speechStatus = speech?.status ?? 'idle';
   const micOn = speechStatus === 'starting' || speechStatus === 'listening';
   const dictating = speechStatus !== 'idle';
+  // The text box is gone while dictating: size it again when it is back
+  useEffect(() => {
+    if (!dictating) requestAnimationFrame(() => resizeRef.current());
+  }, [dictating]);
   const ready = !disabled && reading === 0 && (text.trim().length > 0 || files.length > 0 || media.length > 0 || micOn);
 
   const waitToSend = (on: boolean) => {
@@ -148,6 +200,18 @@ export default function Composer({
     return () => window.removeEventListener('keydown', onKey);
   }, [micOn, cancelSpeech]);
 
+  // Esc shrinks an expanded box, wherever the focus is (while dictating it drops the recording first)
+  useEffect(() => {
+    if (!expanded || micOn) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      event.preventDefault();
+      setExpanded(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded, micOn]);
+
   const nudge = () => {
     const pill = pillRef.current;
     if (!pill) return;
@@ -172,19 +236,24 @@ export default function Composer({
       const attached = files
         .map(file => `\n\n<nano_file_content type="file" name="${file.name}">\n${file.content}\n</nano_file_content>`)
         .join('\n');
+      vocab.beforeSend(trimmed);
       onSendMessage(
         attached ? `${trimmed}\n\n<nano_attached_files>${attached}</nano_attached_files>` : trimmed,
         media.map(item => item.outgoing),
       );
       setText('');
+      setExpanded(false);
+      expandedRef.current = false;
       setFiles([]);
       media.forEach(item => URL.revokeObjectURL(item.preview));
       setMedia([]);
       requestAnimationFrame(resize);
       return true;
     },
-    [disabled, files, media, reading, onSendMessage],
+    [disabled, files, media, reading, onSendMessage, vocab.beforeSend],
   );
+  const onDictatedRef = useRef(vocab.onDictated);
+  onDictatedRef.current = vocab.onDictated;
   const sendTextRef = useRef(sendText);
   sendTextRef.current = sendText;
 
@@ -206,12 +275,15 @@ export default function Composer({
 
   // The words of a dictation: after what is typed, and sent at once when Send was pressed while dictating
   useEffect(() => {
-    setTranscriptSink?.(words => {
+    setTranscriptSink?.((words, found) => {
       const joined = joinWords(textRef.current, words);
       if (sendWhenReadyRef.current) {
         waitToSend(false);
         if (sendTextRef.current(joined)) return;
       }
+      // Where the dictated words start in the box, for marking what the vocabulary changed
+      const spoken = words.trim();
+      onDictatedRef.current(joined, joined.length - spoken.length - (words.length - words.trimStart().length), found);
       setText(joined);
       requestAnimationFrame(() => {
         resize();
@@ -363,9 +435,64 @@ export default function Composer({
             </ul>
           )}
 
-          <div className="flex items-end gap-1">
+          {vocab.chip}
+
+          {/* Row one: the words, or the listening strip, across the whole width */}
+          <div className="flex">
+            {speech && speechStatus !== 'idle' ? (
+              <ListeningStrip
+                status={speechStatus}
+                startedAt={speech.startedAt}
+                level={speech.level}
+                sendWhenReady={sendWhenReady}
+                onCancel={speech.cancel}
+              />
+            ) : (
+              <div className="relative min-w-0 flex-1">
+                {/* Behind the words: the same text, invisible, with the corrected words underlined */}
+                {vocab.mirror && (
+                  <div
+                    ref={vocab.mirrorRef}
+                    aria-hidden="true"
+                    data-testid="vocab-mirror"
+                    className={`vocab-mirror p-2 text-[14px] leading-5 ${tall ? 'pr-12' : ''}`}>
+                    {vocab.mirror}
+                  </div>
+                )}
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  rows={1}
+                  disabled={disabled}
+                  placeholder={placeholder ?? t('chat_input_placeholder')}
+                  aria-label={t('chat_input_editor')}
+                  onChange={onChange}
+                  onKeyDown={onKeyDown}
+                  onClick={event => vocab.onCaret(event.currentTarget)}
+                  onKeyUp={event => vocab.onCaret(event.currentTarget)}
+                  onScroll={event => vocab.syncScroll(event.currentTarget)}
+                  className="text-foreground placeholder:text-muted-foreground block min-h-9 w-full resize-none border-0 bg-transparent p-2 text-[14px] leading-5 outline-none disabled:cursor-not-allowed"
+                />
+                {tall && (
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground absolute right-4 top-1 flex size-7 items-center justify-center rounded-full transition-colors"
+                    onClick={() => {
+                      setExpanded(value => !value);
+                      textareaRef.current?.focus();
+                    }}
+                    aria-label={expanded ? t('chat_input_collapse') : t('chat_input_expand')}
+                    title={expanded ? t('chat_input_collapse') : t('chat_input_expand')}>
+                    {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Row two: the spark on the left, the buttons on the right */}
+          <div className="flex items-center justify-between gap-1">
             <svg
-              className="text-primary mb-2 ml-2 size-[18px] shrink-0"
+              className="text-primary ml-2 size-[18px] shrink-0"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -376,28 +503,7 @@ export default function Composer({
               <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z" />
               <path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
             </svg>
-            {speech && speechStatus !== 'idle' ? (
-              <ListeningStrip
-                status={speechStatus}
-                startedAt={speech.startedAt}
-                level={speech.level}
-                sendWhenReady={sendWhenReady}
-                onCancel={speech.cancel}
-              />
-            ) : (
-              <textarea
-                ref={textareaRef}
-                value={text}
-                rows={1}
-                disabled={disabled}
-                placeholder={placeholder ?? t('chat_input_placeholder')}
-                aria-label={t('chat_input_editor')}
-                onChange={onChange}
-                onKeyDown={onKeyDown}
-                className="text-foreground placeholder:text-muted-foreground max-h-[132px] min-h-9 flex-1 resize-none border-0 bg-transparent p-2 text-[14px] leading-5 outline-none disabled:cursor-not-allowed"
-              />
-            )}
-            <div className="flex shrink-0 items-center gap-0.5 pb-0.5">
+            <div className="flex shrink-0 items-center gap-0.5">
               {!dictating && (
                 <button
                   type="button"

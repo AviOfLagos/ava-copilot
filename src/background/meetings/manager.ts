@@ -10,6 +10,7 @@ import {
   meetingStore,
   speechToTextModelStore,
   threadStore,
+  peopleStore,
   usageStore,
   routeWorkspace,
   workspaceForAccount,
@@ -24,6 +25,7 @@ import type {
   TranscriptSegment,
 } from '@extension/storage';
 import { generatePlainText, generateStructured } from '../llm/generate';
+import { workspaceByParticipants } from '../workspaces/rules';
 import { systemMessage, textPart, userMessage } from '../llm/messages';
 import { createChatModel } from '../llm/providers';
 import type { ChatModel } from '../llm/types';
@@ -40,16 +42,19 @@ import {
   CAPTION_SELECTORS,
   pageHasCaptions,
   readCallState,
+  readRoster,
   stopWatchingCaptions,
   turnOnCaptions,
   watchCaptions,
 } from './captions';
-import type { CallState } from './captions';
+import type { CallState, RosterReading } from './captions';
+import { addMarks, mergeRoster, nameSegments, speakerMarks } from './speakers';
 import { afterAudioEnded, keepPlan, localClip, transcriptionRoute } from './capture';
 import { deliverMeetingEvent } from './alerts';
 import type { MeetingEvent } from './join-flow';
 import { isCallUrl } from './call-url';
 import { installedVoiceModels } from '../voice/engines/models';
+import { correctedText, vocabularyHint } from '../voice/vocabulary';
 import { toVoiceOffscreen } from '../voice/engines/offscreen';
 import {
   BLOCK_SUMMARY_INSTRUCTIONS,
@@ -60,11 +65,15 @@ import {
   QA_INSTRUCTIONS,
   NOTE_INSTRUCTIONS,
   noteToMarkdown,
+  taskIdsOf,
   noteSchema,
   ROLLING_SUMMARY_INSTRUCTIONS,
   TRANSCRIBE_INSTRUCTIONS,
 } from './notes';
+import { withMeetingTasks } from '../tasks/sources';
 import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, transcriptText } from './segments';
+import { learnFromMeeting } from '../people/meet';
+import { recordMeetingUpdates } from '../followups/updates';
 
 const logger = createLogger('Meetings');
 
@@ -167,8 +176,8 @@ export class MeetingManager {
     try {
       if (streamId) {
         await this.startRecorder(meeting.id, streamId, withMic, settings, 0);
-        // The call is watched too, so leaving it ends the notes at once
-        if (isCallUrl(tab.url ?? '')) await this.watchPage(tab.id, meeting.id, false).catch(() => {});
+        // The call is watched too, so leaving it ends the notes at once; its captions, when shown, name the speakers
+        if (isCallUrl(tab.url ?? '')) await this.watchPage(tab.id, meeting.id, true).catch(() => {});
       } else {
         await this.startCaptions(tab.id, meeting.id);
       }
@@ -236,8 +245,8 @@ export class MeetingManager {
     }
     const settings = await meetingSettingsStore.getSettings();
     await this.startRecorder(meeting.id, streamId, meeting.withMic, settings, (Date.now() - meeting.startedAt) / 1000);
-    // Captions stop being read (the audio has the same words); the call is still watched for leaving
-    await this.watchPage(tabId, meeting.id, false).catch(() => {});
+    // Captions stop being the words (the audio has them) and only name the speakers; the call is still watched
+    await this.watchPage(tabId, meeting.id, true).catch(() => {});
     await this.meetings.update(meeting.id, { source: 'audio' });
     await this.meetings.clearWarning(meeting.id, 'nothing_captured');
     await this.meetings.clearWarning(meeting.id, 'captions_off');
@@ -246,23 +255,33 @@ export class MeetingManager {
 
   /**
    * Puts a meeting, and its notes chat, in a workspace. What the user typed the call is about comes
-   * first and overrides any earlier choice, since one company's call link serves many workspaces. Else,
-   * once, the workspace of the Google account the user is in the call as. Never from an invite's or a
-   * page's title: anyone can write those.
+   * first and overrides any earlier choice a rule made, since one company's call link serves many workspaces. Then,
+   * once, the workspace most of the call's known participants belong to (docs/pm-desk.md, Part 3), then the workspace
+   * of the Google account the user is in the call as. Never from an invite's or a page's title: anyone can write those.
+   * A workspace the user chose himself is never changed here.
    */
   async placeInWorkspace(meetingId: string): Promise<void> {
     const meeting = await this.meetings.get(meetingId);
-    if (!meeting) return;
+    if (!meeting || meeting.workspaceSetBy === 'avi') return;
     const workspaces = await workspaceStore.list();
     let workspace = meeting.topicSource === 'user' && meeting.topic ? routeWorkspace(meeting.topic, workspaces) : null;
     if (!workspace) {
       if (meeting.workspaceId) return;
+      if (meeting.roster?.length) {
+        workspace = workspaceByParticipants(meeting.roster, await peopleStore.list(), workspaces);
+      }
+    }
+    if (!workspace) {
       const email = meeting.tabId !== null ? await this.meetAccount(meeting.tabId) : null;
       if (email) workspace = workspaceForAccount(email, workspaces);
     }
     if (!workspace || workspace.id === meeting.workspaceId) return;
-    await this.meetings.update(meetingId, { workspaceId: workspace.id });
-    if (meeting.threadId) await this.threads.update(meeting.threadId, { workspaceId: workspace.id });
+    // Read again: reading the call's account took a moment, and the user may have placed it since (never overwritten)
+    const now = await this.meetings.get(meetingId);
+    if (!now || now.workspaceSetBy === 'avi') return;
+    const placed = { workspaceId: workspace.id, workspaceSetBy: 'rule' as const };
+    await this.meetings.update(meetingId, placed);
+    if (meeting.threadId) await this.threads.update(meeting.threadId, placed);
   }
 
   /** The Google account a Meet tab is signed in as, read only while the tab is on Google Meet. */
@@ -297,6 +316,7 @@ export class MeetingManager {
       );
       await closeOffscreenIfIdle();
     }
+    if (meeting.tabId !== null) await this.readRosterInto(meeting.tabId, meetingId);
     if (meeting.tabId !== null) {
       await chrome.scripting
         .executeScript({ target: { tabId: meeting.tabId }, func: stopWatchingCaptions })
@@ -377,18 +397,26 @@ export class MeetingManager {
       return;
     }
     const now = (Date.now() - meeting.startedAt) / 1000;
+    if (meeting.source === 'audio') {
+      // The audio has the words; the captions only say who spoke when
+      await this.addSpeakerMarks(meetingId, speakerMarks(lines, now, CHARS_PER_SECOND));
+      return;
+    }
     await this.meetings.addSegments(
-      lines.map(line => {
-        const length = Math.max(1, line.text.length / CHARS_PER_SECOND);
-        return {
-          meetingId,
-          tStart: Math.max(0, now - length),
-          tEnd: now,
-          speaker: line.speaker,
-          text: line.text,
-          chunkIndex: -1,
-        };
-      }),
+      await this.corrected(
+        meeting,
+        lines.map(line => {
+          const length = Math.max(1, line.text.length / CHARS_PER_SECOND);
+          return {
+            meetingId,
+            tStart: Math.max(0, now - length),
+            tEnd: now,
+            speaker: line.speaker,
+            text: line.text,
+            chunkIndex: -1,
+          };
+        }),
+      ),
     );
     if (lines.length > 0) await this.heard(meeting);
     await this.maybeSummarize(meetingId);
@@ -441,6 +469,7 @@ export class MeetingManager {
     const tabId = meeting.tabId;
     const state = await this.callState(tabId, meetingId);
     if (!state) return null;
+    if (state.inCall) await this.readRosterInto(tabId, meetingId);
     const plan = keepPlan(meeting, state);
     if (plan.turnOnCaptions) {
       await this.ensureCaptionsOn(tabId, meetingId);
@@ -449,7 +478,7 @@ export class MeetingManager {
     }
     if (plan.reinject) {
       logger.info('Watching the call page again');
-      await this.watchPage(tabId, meetingId, meeting.source === 'captions').catch(() => {});
+      await this.watchPage(tabId, meetingId, meeting.source === 'captions' || isCallUrl(meeting.url)).catch(() => {});
     }
     return state;
   }
@@ -582,6 +611,53 @@ export class MeetingManager {
       func: watchCaptions,
       args: [meetingId, CALL_DOM, readCaptions],
     });
+  }
+
+  /**
+   * Who is on the call, read from Google Meet's page: the tile names always, the People panel only while the user
+   * has it open. Nothing is clicked. The names stay on this computer (docs/pm-desk.md, rule 5).
+   */
+  private async readRosterInto(tabId: number, meetingId: string): Promise<void> {
+    const meeting = await this.meetings.get(meetingId);
+    if (!meeting || meeting.platform !== 'Google Meet') return;
+    const [found] = await chrome.scripting
+      .executeScript({ target: { tabId }, func: readRoster, args: [CALL_DOM] })
+      .catch(() => []);
+    const names = (found?.result as RosterReading | undefined)?.names ?? [];
+    const roster = mergeRoster(meeting.roster ?? [], names);
+    if (roster.length !== (meeting.roster ?? []).length) {
+      await this.meetings.update(meetingId, { roster });
+      // Who is on the call can place it, while it has no workspace yet
+      if (!meeting.workspaceId) {
+        await this.placeInWorkspace(meetingId).catch(error => logger.warning('Could not place the meeting', error));
+      }
+    }
+  }
+
+  // Caption marks are added one batch at a time, so two batches arriving together both land
+  private marking: Promise<unknown> = Promise.resolve();
+
+  private addSpeakerMarks(meetingId: string, marks: ReturnType<typeof speakerMarks>): Promise<void> {
+    if (marks.length === 0) return Promise.resolve();
+    const next = this.marking.then(async () => {
+      const meeting = await this.meetings.get(meetingId);
+      if (!meeting) return;
+      await this.meetings.update(meetingId, { speakerMarks: addMarks(meeting.speakerMarks ?? [], marks) });
+    });
+    this.marking = next.catch(error => logger.warning('Could not keep who spoke when', error));
+    return next.catch(() => {});
+  }
+
+  /** Gives each audio segment the caption speaker it overlaps most; a segment no caption overlaps keeps its own. */
+  private async nameSpeakers(
+    meeting: MeetingRecord,
+    segments: Awaited<ReturnType<MeetingStore['segments']>>,
+  ): Promise<Awaited<ReturnType<MeetingStore['segments']>>> {
+    const changes = nameSegments(segments, meeting.speakerMarks ?? []);
+    if (changes.length === 0) return segments;
+    const named = new Map(changes.map(change => [change.id, change.speaker]));
+    for (const change of changes) await this.meetings.updateSegment(change.id, { speaker: change.speaker });
+    return segments.map(segment => (named.has(segment.id) ? { ...segment, speaker: named.get(segment.id)! } : segment));
   }
 
   private toOffscreen(message: Record<string, unknown>) {
@@ -731,7 +807,7 @@ export class MeetingManager {
         meetingId: chunk.meetingId,
       }));
       await this.stitch(chunk, segments);
-      await this.meetings.completeChunk(chunk, segments, keepAudio);
+      await this.meetings.completeChunk(chunk, await this.corrected(meeting, segments), keepAudio);
       await this.meetings.clearWarning(chunk.meetingId, 'transcription');
       if (segments.length > 0) await this.heard(meeting);
       return true;
@@ -763,6 +839,7 @@ export class MeetingManager {
 
   /** Writes a chunk down with a model that takes audio, with the last lines before it as context. */
   private async transcribeWithModel(model: ChatModel, chunk: AudioChunk, previous: TranscriptSegment[]) {
+    const hint = await vocabularyHint(await this.workspaceOf(chunk.meetingId));
     const { output } = await generateStructured({
       chatModel: model,
       schema: clipSchema,
@@ -771,15 +848,40 @@ export class MeetingManager {
         systemMessage(TRANSCRIBE_INSTRUCTIONS),
         userMessage([
           textPart(
-            previous.length
+            (previous.length
               ? `For context, the meeting just before this clip:\n${transcriptText(previous)}`
-              : 'This clip is the start of the meeting.',
+              : 'This clip is the start of the meeting.') + (hint ? `\n${hint}` : ''),
           ),
           { type: 'file', mediaType: chunk.mimeType, data: chunk.data ?? '' },
         ]),
       ],
     });
     return output;
+  }
+
+  /** The workspace the meeting's chat belongs to, for the vocabulary that applies in it. */
+  private async workspaceOf(meetingId: string): Promise<string | null> {
+    const meeting = await this.meetings.get(meetingId).catch(() => undefined);
+    if (!meeting?.threadId) return null;
+    return (await this.threads.get(meeting.threadId).catch(() => undefined))?.workspaceId ?? null;
+  }
+
+  /**
+   * The segments with the user's vocabulary applied to their words (docs/pm-desk.md, Part 4). What the recogniser
+   * wrote stays in `textRaw` wherever the text changed. Runs after stitching, so overlap is found on the raw words.
+   */
+  private async corrected<T extends { text: string; textRaw?: string }>(
+    meeting: MeetingRecord,
+    segments: T[],
+  ): Promise<T[]> {
+    if (segments.length === 0) return segments;
+    const workspaceId = await this.workspaceOf(meeting.id);
+    return Promise.all(
+      segments.map(async segment => {
+        const text = await correctedText(segment.text, { workspaceId });
+        return text === segment.text ? segment : { ...segment, text, textRaw: segment.text };
+      }),
+    );
   }
 
   /**
@@ -796,10 +898,17 @@ export class MeetingManager {
     if (!previous) {
       return;
     }
-    const joined = stitchOverlap(previous.text, segments[0].text);
-    if (joined.previous !== previous.text) {
-      if (joined.previous) await this.meetings.updateSegment(previous.id, { text: joined.previous });
-      else await this.meetings.deleteSegment(previous.id);
+    // Overlap is found on what the recogniser wrote, not on what the vocabulary made of it
+    const written = previous.textRaw ?? previous.text;
+    const joined = stitchOverlap(written, segments[0].text);
+    if (joined.previous !== written) {
+      if (joined.previous) {
+        const text = await correctedText(joined.previous, { workspaceId: await this.workspaceOf(chunk.meetingId) });
+        await this.meetings.updateSegment(previous.id, {
+          text,
+          textRaw: text === joined.previous ? undefined : joined.previous,
+        });
+      } else await this.meetings.deleteSegment(previous.id);
     }
     if (joined.next) segments[0].text = joined.next;
     else segments.shift();
@@ -875,8 +984,13 @@ export class MeetingManager {
       return;
     }
     try {
-      const segments = await this.meetings.segments(meetingId);
-      const note = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      const segments = await this.nameSpeakers(meeting, await this.meetings.segments(meetingId));
+      const written = segments.length > 0 ? await this.writeNote(meeting, segments) : emptyNote(meeting.title);
+      // Each action item goes on the task board, keeping its due date, and carries its task's id
+      const note = await withMeetingTasks(meeting, written).catch(error => {
+        logger.warning('Could not put the action items on the task board', error);
+        return written;
+      });
       const markdown = noteToMarkdown(meeting, note, segments);
       await this.meetings.update(meetingId, { note, markdown, status: 'done', error: null });
       if (meeting.warnings.includes('note_failed')) {
@@ -886,10 +1000,20 @@ export class MeetingManager {
 
       if (meeting.threadId) {
         // The thread gets the note without the transcript, which stays in the meeting
-        const summaryOnly = noteToMarkdown(meeting, note, []).replace(/\n\n## Transcript[\s\S]*$/, '');
-        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly);
+        // Its action items are live checkboxes: the message vouches for the tasks it names
+        const summaryOnly = noteToMarkdown(meeting, note, [], { markers: true }).replace(
+          /\n\n## Transcript[\s\S]*$/,
+          '',
+        );
+        await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly, { taskIds: taskIdsOf(note) });
         await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${note.title}`);
       }
+      // What each person said they did and will do: kept per person, with "Mark done?" offers (Part 9)
+      await recordMeetingUpdates(meeting, note, segments).catch(error =>
+        logger.warning('Could not keep the updates from a call', toAppError(error).kind),
+      );
+      // Who was there and who was named: learned for the meeting's workspace, and asked about on one card
+      void learnFromMeeting(meetingId).catch(error => logger.warning('Could not learn the names of a call', error));
     } catch (error) {
       logger.error('Could not write the meeting note', error);
       const reason = toAppError(error).message;
@@ -959,7 +1083,12 @@ function emptyNote(title: string): MeetingNote {
 
 /**
  * Runs in a Google Meet page: the signed-in account's address, from Google's own account button, a link
- * to accounts.google.com. Names and text that participants choose are never read.
+ * to accounts.google.com.
+ *
+ * Participants' display names were once never read. They are now (`readRoster` in ./captions.ts, and caption
+ * speakers), because Ava keeps who is who (docs/pm-desk.md, Part 5). What makes that acceptable is rule 5: the
+ * names stay on this computer, leave only inside a prompt that needs them, a message to the owner himself, or
+ * an export he starts, and are never looked up anywhere. Nothing in Meet is clicked to get them.
  */
 export const meetAccountEmail = (): string | null => {
   const links = Array.from(document.querySelectorAll('a[href^="https://accounts.google.com/"][aria-label]'));

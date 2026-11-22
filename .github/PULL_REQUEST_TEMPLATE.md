@@ -12,6 +12,7 @@ Fixes #
 
 ## Checklist
 
+- [ ] Every commit is signed off (`git commit -s`, see CONTRIBUTING.md)
 - [ ] `pnpm type-check` and `pnpm test` pass (CI runs them too)
 - [ ] Anything that sends, posts, submits, deletes, publishes, buys or changes permissions goes through the gate (`reviewAction`)
 - [ ] Text from pages, messages or tools is treated as data, never as instructions

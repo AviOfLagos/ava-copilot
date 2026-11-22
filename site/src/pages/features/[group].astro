@@ -88,6 +88,8 @@ const { routines } = home;
       </p>
     </header>
 
+    {
+      widget && (
     <section class={`fstage${wide ? ' fstage--wide' : ''}`} aria-label={`${group.title}, shown working`}>
       <div class="fstage__widget">
         {widget === 'trail' && <StepsBento />}
@@ -162,6 +164,8 @@ const { routines } = home;
         )
       }
     </section>
+      )
+    }
 
     <section class="block" aria-labelledby="list-title">
       <div class="block-head">
@@ -175,6 +179,16 @@ const { routines } = home;
               <span class="frow__text">
                 <span class="frow__name">{item.name}</span>
                 <span class="frow__body">{item.body}</span>
+                {item.you && (
+                  <span class="frow__body frow__how">
+                    <b>You:</b> {item.you}
+                  </span>
+                )}
+                {item.on && (
+                  <span class="frow__body frow__how">
+                    <b>You will see:</b> {item.on}
+                  </span>
+                )}
               </span>
             </li>
           ))

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { kbStore, threadStore, workspaceStore } from '@extension/storage';
+import { kbStore, onceStore, threadStore, workspaceStore } from '@extension/storage';
 import type { ConfirmRequest, Workspace } from '@extension/storage';
 import { Action } from '../agent/actions/builder';
 import { itemIdFor } from '../kb/scope';
@@ -9,7 +9,10 @@ import { wrapUntrustedContent } from '../agent/messages/utils';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { alwaysAsks } from '../gate/origins';
-import { reviewAction } from '../gate/review';
+import { reviewAction, settleCommit } from '../gate/review';
+import type { ApprovedCommit } from '../gate/review';
+import { beginOnce, stepFor } from '../once';
+import type { OnceInput } from '../once';
 import { getKnowledgeBase } from '../kb/shared';
 import { registerAgentAction } from '../registry';
 import { DriveError, DriveSignInError } from './service';
@@ -333,22 +336,41 @@ export function registerDriveActions(drive: DriveService): void {
         const what = `Create the Google Doc "${input.title}" in your Drive`;
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, input.intent || what);
         const { account } = await accountFor(context.taskId);
-        // A private Doc in the user's own Drive is an edit. A chat no one watches still asks first
-        if (await unattended(context.taskId)) {
+        const folder = input.folder.trim() || null;
+        // Do once: the same Doc is not created twice in a task. A try that was cut off stays "started", so the
+        // next one goes to the user, who can see in Drive whether the Doc is there.
+        const once: OnceInput = {
+          what: 'drive.create_doc',
+          scope: 'drive.google.com',
+          label: 'create a Google Doc',
+          parts: [input.title, folder ?? '', input.content],
+        };
+        const step = await stepFor(context, once);
+        let onceKey: string | null;
+        // A private Doc in the user's own Drive is an edit. A chat no one watches still asks first, and so does
+        // a Doc this task already made or may have made
+        const since = (await threadStore.get(context.taskId))?.runStartedAt ?? 0;
+        if ((await unattended(context.taskId)) || (await onceStore.blocking(step, since)) !== null) {
           const page = await context.browserContext.getCurrentPage();
           const review = await reviewAction(context, page, {
             action: 'send_keys',
             args: { keys: '', intent: `${what}: ${input.content.slice(0, 300)}`, commits: true },
+            once,
           });
           if (!review.proceed) return review.result;
+          onceKey = review.commit?.onceKey ?? null;
+        } else {
+          const claim = await beginOnce(context, step, null);
+          if ('result' in claim) return claim.result;
+          onceKey = claim.record.key;
         }
-        const folder = input.folder.trim() || null;
         const run = await inDrive(
           context,
           createDocUrl(input.title, folder ? (parseDriveRef(folder)?.id ?? null) : null, account),
           tab => drive.createDoc(tab, { title: input.title, content: input.content, folder }, account),
         );
         if (!run.ok) return run.result;
+        if (onceKey) await onceStore.finish(onceKey, 'created').catch(() => {});
         const { file: made, verified } = run.value;
         const message = `Created the Google Doc "${made.title}": ${made.link}${verified ? '' : ' (its text could not be checked yet; look at the Doc)'}`;
         void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, message);
@@ -366,6 +388,7 @@ export function registerDriveActions(drive: DriveService): void {
         );
         const { account } = await accountFor(context.taskId);
         let refusal: ActionResult | null = null;
+        let commit: ApprovedCommit | null = null;
         const run = await inDrive(context, firstUrlFor(input.file, account), tab =>
           drive.share(tab, { file: input.file, email: input.email, role: input.role }, account, async summary => {
             // Sharing changes who can see the file: always the user's click, with the page's own title on the card
@@ -373,13 +396,23 @@ export function registerDriveActions(drive: DriveService): void {
             const review = await reviewAction(context, page, {
               action: 'send_keys',
               args: { keys: '', intent: summary, commits: true },
+              // Do once per file, person and role
+              once: {
+                what: 'drive.share',
+                scope: 'drive.google.com',
+                label: 'share a Drive file',
+                parts: [input.file, input.email.toLowerCase(), input.role],
+              },
             });
-            if (!review.proceed) refusal = review.result;
+            if (review.proceed) commit = review.commit;
+            else refusal = review.result;
             return review.proceed;
           }),
         );
         if (!run.ok) return run.result;
         if (run.value.outcome === 'declined') return refusal ?? fail(context, 'Not shared.');
+        // Drive confirmed it: done. When it did not, the step stays "started" and is not sent again by itself
+        if (run.value.outcome === 'shared') await settleCommit(commit, 'shared');
         const message =
           run.value.outcome === 'shared'
             ? `Shared ${titleText(run.value.title)} with ${input.email} as ${input.role}.`

@@ -87,11 +87,15 @@ export async function fillFormAction(
       action: field.kind === 'tick' ? 'click_element' : 'input_text',
       args: { intent, index: field.index, text: field.value },
       node: field.node,
+      // Filling a field sends nothing: the button that submits the form is what takes a do-once key
+      once: false,
     });
     if (!review.proceed) return review.result;
   }
 
   const filled: string[] = [];
+  // Whatever gets filled below, the task is now in the middle of a form
+  if (planned.length > 0) context.markForm?.();
   for (const field of planned) {
     try {
       if (field.kind === 'select') {

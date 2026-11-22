@@ -19,6 +19,9 @@ export const GET: APIRoute = () => {
     `- [${PRODUCT}](${SITE_URL}/): ${home.description}`,
     `- [Install](${SITE_URL}/install): ${install.description}`,
     `- [Privacy](${SITE_URL}/privacy): ${privacy.description}`,
+    `- [Features](${SITE_URL}/features): Every feature, marked live, preview or planned.`,
+    `- [Changelog](${SITE_URL}/changelog): What changed, newest first, linked to GitHub.`,
+    `- [Roadmap](${SITE_URL}/roadmap): What comes next.`,
     '',
   ].join('\n');
   return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });

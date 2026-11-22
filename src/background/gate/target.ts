@@ -7,6 +7,7 @@ import type { RawElement } from './probes';
 const LABEL_ATTRIBUTES = ['aria-label', 'title', 'value', 'alt', 'placeholder', 'data-tooltip', 'data-original-title'];
 const HINT_ATTRIBUTES = ['id', 'name', 'data-testid', 'data-test-id', 'data-qa', 'data-action'];
 const SEARCH_PATTERN = /\bsearch\b/i;
+const GRID_ROLES = ['grid', 'treegrid', 'gridcell'];
 
 const attributeOf = (attributes: Record<string, string>, name: string): string => String(attributes[name] ?? '').trim();
 
@@ -71,6 +72,7 @@ export function targetFromRaw(raw: RawElement | null | undefined): GateTarget {
     formHasPassword: raw.form?.hasPassword ?? false,
     // A CAPTCHA widget shows through an iframe from its provider, or a container named after it
     inCaptcha: looksLikeCaptcha(raw.ancestry),
+    inGrid: raw.inGrid ?? false,
   };
 }
 
@@ -111,6 +113,9 @@ export function rawFromNode(node: DOMElementNode): RawElement {
           .join(' '),
       )
       .join(' '),
+    inGrid: [node, ...chain].some(element =>
+      GRID_ROLES.includes(attributeOf(element.attributes, 'role').toLowerCase()),
+    ),
   };
 }
 

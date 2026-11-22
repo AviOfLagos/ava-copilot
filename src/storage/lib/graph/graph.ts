@@ -70,6 +70,7 @@ export function createGraphStore(db: AviCopilotDb = defaultDb) {
                   sourceItemIds: [...new Set([...existing.sourceItemIds, sourceItemId])],
                   date: Math.min(existing.date, entity.date),
                   updatedAt: entity.updatedAt,
+                  ...(entity.taskId ? { taskId: entity.taskId } : {}),
                 }
               : { ...entity, sourceItemIds: [sourceItemId] },
           );

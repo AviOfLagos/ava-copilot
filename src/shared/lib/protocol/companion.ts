@@ -844,7 +844,8 @@ export type WhatsAppState = (typeof WHATSAPP_STATES)[number];
 // Digits only, with the country code: 2348012345678
 export const WHATSAPP_NUMBER = /^[1-9][0-9]{7,14}$/;
 export const WHATSAPP_TEXT_MAX = 4000;
-export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine'] as const;
+// 'tasks': a task list Ava sends first (after a call, the morning's open tasks); held in quiet hours like the others
+export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine', 'tasks'] as const;
 export type WhatsAppNoticeKind = (typeof WHATSAPP_NOTICE_KINDS)[number];
 
 export const whatsappStatusSchema = z.object({
@@ -936,9 +937,21 @@ export const whatsappMessageSchema = z.object({
 });
 export type WhatsAppMessage = z.infer<typeof whatsappMessageSchema>;
 
+// A reaction the owner put on a message in his chat (✅ on a task list closes its task), or took back: `emoji` is
+// empty then. Only the message's id and the emoji cross; a reaction from anyone else never reaches the queue.
+export const whatsappReactionSchema = z.object({
+  id: z.string().min(1).max(200),
+  targetId: z.string().min(1).max(200),
+  emoji: z.string().max(32),
+  at: z.number(),
+});
+export type WhatsAppReaction = z.infer<typeof whatsappReactionSchema>;
+
 export const whatsappInboxReplySchema = z.object({
   ok: z.literal(true),
   messages: z.array(whatsappMessageSchema).max(50),
+  // Older Ava Brain: none. A separate list, so an older extension reading this reply ignores them
+  reactions: z.array(whatsappReactionSchema).max(50).default([]),
   status: whatsappStatusSchema,
 });
 
@@ -1008,7 +1021,13 @@ export const whatsappReviseRequestSchema = z
   .refine(request => request.action === 'delete' || Boolean(request.text?.trim()), 'An edit needs the new words.');
 export type WhatsAppReviseRequest = z.infer<typeof whatsappReviseRequestSchema>;
 
-export const whatsappSendReplySchema = z.object({ ok: z.literal(true), status: whatsappStatusSchema });
+export const whatsappSendReplySchema = z.object({
+  ok: z.literal(true),
+  status: whatsappStatusSchema,
+  // The id of the message that went out, when the client gave one (older Ava Brain: absent), so a task list's
+  // numbers and a reaction on it can be matched later
+  messageId: z.string().max(200).nullable().default(null),
+});
 
 // A queued message's media: a voice note or picture as base64 bytes, a document as its text. Only for a message
 // still in the queue (the owner's, not yet acked), and never larger than WHATSAPP_MEDIA_MAX_BYTES.
@@ -1454,3 +1473,44 @@ export function meetingLinkIn(text: string): string | null {
 export function isErrorReply(value: unknown): value is ErrorReply {
   return errorReplySchema.safeParse(value).success;
 }
+
+// ── Screen recordings: a task's video, saved on the Mac when Google Drive is not connected ──────────
+// The extension sends the WebM in chunks; Ava Brain writes it to "~/Movies/Ava recordings/<workspace>/<file>".
+// A recording that was already saved answers with its path again, so a retried save never makes a second file.
+
+export const RECORDING_ROUTES = {
+  begin: '/v1/recordings/uploads',
+  // PUT
+  chunk: '/v1/recordings/uploads/:uploadId/chunks/:index',
+  commit: '/v1/recordings/uploads/:uploadId/commit',
+} as const;
+
+export const RECORDING_CHUNK_BYTES = BACKUP_CHUNK_BYTES;
+export const RECORDING_CHUNK_BODY_BYTES = BACKUP_CHUNK_BODY_BYTES;
+// An hour of screen and voice fits well within this
+export const RECORDING_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+
+export const recordingIdSchema = z.string().regex(/^rec_[a-z2-7]{10}$/);
+// A plain name: no slashes, no leading dot, nothing a Mac refuses
+const recordingNameSchema = z
+  .string()
+  .min(1)
+  .max(120)
+  // eslint-disable-next-line no-control-regex -- control characters are what it refuses
+  .regex(/^[^/\\:*?"<>|\u0000-\u001f\u007f.][^/\\:*?"<>|\u0000-\u001f\u007f]*$/);
+
+export const recordingBeginRequestSchema = z.object({
+  requestId: requestIdSchema,
+  recordingId: recordingIdSchema,
+  folder: recordingNameSchema,
+  fileName: recordingNameSchema.refine(name => name.endsWith('.webm'), 'A recording is a .webm file.'),
+  bytes: z.number().int().positive().max(RECORDING_MAX_BYTES),
+});
+export type RecordingBeginRequest = z.infer<typeof recordingBeginRequestSchema>;
+export const recordingBeginReplySchema = z.union([
+  z.object({ ok: z.literal(true), uploadId: backupUploadIdSchema, chunkBytes: z.number().int().positive() }),
+  // Saved before: nothing more to send
+  z.object({ ok: z.literal(true), path: z.string().min(1).max(1000) }),
+]);
+export const recordingChunkRequestSchema = z.object({ data: base64Schema.min(1).max(RECORDING_CHUNK_BODY_BYTES) });
+export const recordingCommitReplySchema = z.object({ ok: z.literal(true), path: z.string().min(1).max(1000) });

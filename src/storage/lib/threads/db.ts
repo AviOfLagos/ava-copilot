@@ -1,4 +1,5 @@
 import { Dexie } from 'dexie';
+import type { CallTasksState } from './callTasks';
 import type { AgentProfile, BusMessage } from '../agents/types';
 import type { AmbientSession, AmbientUtterance } from '../ambient/types';
 import type { ArtifactRecord } from '../artifacts/types';
@@ -7,7 +8,23 @@ import type { ConnectorRecord, ToolFingerprint } from '../integrations/types';
 import type { JobRecord } from '../jobs/types';
 import type { ModelCatalogEntry, UsageEvent } from '../models/types';
 import type { LogEntry } from '../observability/types';
+import type { OnceRecord } from '../once/types';
+import type { VocabEntry } from '../vocabulary/types';
+import type { NameCandidate, Person } from '../people/types';
+import type { WorkspaceSetBy } from '../tasks/types';
+import type { GrowthLink, GrowthMetric, GrowthReading, GrowthSourceState } from '../growth/types';
+import type {
+  FeedbackRecord,
+  LedgerEntry,
+  SuppressedAddress,
+  TeamChannel,
+  TeamContact,
+  TeamItem,
+} from '../growth-team/types';
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
+import type { TaskListRecord } from '../tasks/lists';
+import type { Task } from '../tasks/types';
+import type { PersonUpdate } from '../followups/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ThreadVoice } from '../settings/voiceEngineSettings';
@@ -17,6 +34,23 @@ export type ThreadStatus = 'idle' | 'running' | 'waiting_confirm' | 'error';
 
 // Why a thread stopped with an error: its tab closed, the background restarted, or the task failed
 export type ThreadErrorKind = 'tab_closed' | 'interrupted' | 'failed';
+
+/**
+ * Whether trying again can help a run that ended with an error (docs/growth-team.md, Part 2):
+ * - 'temporary': the tab closed, the network dropped, the model was overloaded, the background restarted, the
+ *   page did not load. Tried again by itself after 1, 5 and 15 minutes.
+ * - 'needs_user': a key, a sign-in or a step only the user can do. No retry; one Inbox item saying which step.
+ * - 'cannot': the site blocks it, or what was asked for cannot be done. No retry; one Inbox item saying why.
+ */
+export type FailureClass = 'temporary' | 'needs_user' | 'cannot';
+
+export interface ThreadFailure {
+  cls: FailureClass;
+  // When the next automatic try is due; null when none is queued
+  retryAt: number | null;
+  // The Inbox item (and the WhatsApp line) saying the task is stuck is out: there is never a second one
+  reported: boolean;
+}
 
 export type MessageActor = 'user' | 'system' | 'planner' | 'navigator';
 
@@ -32,12 +66,24 @@ export interface ThreadRecord {
   boundGroupId: number | null;
   // The page the thread was working on, to reopen it when the tab is gone
   boundUrl: string | null;
+  // The window that page was in, so it is reopened there (an agent's own window) and not in the user's
+  boundWindowId?: number | null;
   status: ThreadStatus;
   error: { kind: ThreadErrorKind; message: string } | null;
+  // With an error: its class, and whether another try is queued or the user has been told
+  failure?: ThreadFailure | null;
+  // How many times the current task was tried again by itself; a new request starts at 0
+  autoTries?: number;
+  // How often the user started the current task again themself (Retry, Continue): each round may get stuck, and
+  // be reported, once
+  retryRound?: number;
   // What the agent is doing right now, e.g. "Planning", while it runs
   activity: string;
   // The task of the current or interrupted run, kept so it can be resumed
   activeTask: string | null;
+  // The id of that task: the same when it is resumed or retried, new for every new request. Do-once keys start
+  // with it (../once), so a retry finds what the task already sent. Absent on chats from before it existed.
+  taskRunId?: string | null;
   runStartedAt: number | null;
   // The request waiting for the user's decision, shown by any panel that opens the thread
   pendingRequest: ConfirmRequest | null;
@@ -53,6 +99,9 @@ export interface ThreadRecord {
   meetingId: string | null;
   // The workspace it belongs to: its context and accounts guide the agent, and its knowledge stays there
   workspaceId?: string | null;
+  // Who set it: Avi's own pick always wins over a rule's or Ava's, and only things Avi did not place are ever moved
+  // for him (docs/pm-desk.md, Part 3). Absent: not known, which counts as not his
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent it runs as, when an agent or routine started it
   agentId?: string | null;
   // Who started it: the user typing or talking, an agent, a routine, the morning brief, or the user on WhatsApp
@@ -74,6 +123,12 @@ export interface ThreadMessage {
   ts: number;
   // Images and videos the user attached to this message (see ./attachments.ts)
   attachments?: MessageAttachment[];
+  // The tasks the code that built this message wrote into it (the brief, a meeting note). Only a task marker whose
+  // id is here gets a live checkbox; a marker a model wrote is plain text (src/storage/lib/tasks/markers.ts)
+  taskIds?: string[];
+  // The code that built this message wrote workspace lines into it (the brief's "Make a workspace" button and the
+  // Undo of a rule move); only then are they drawn as buttons (src/storage/lib/workspaces/markers.ts)
+  workspaceLines?: boolean;
 }
 
 /**
@@ -125,6 +180,8 @@ export interface ActionItem {
   owner: string;
   task: string;
   due: string | null;
+  // The task on the board this item is (src/storage/lib/tasks), written by code once the note is saved
+  taskId?: string;
 }
 
 // The structured note made when a meeting ends
@@ -135,6 +192,18 @@ export interface MeetingNote {
   actionItems: ActionItem[];
   openQuestions: string[];
   participants: string[];
+  // What each person who gave an update said (docs/pm-desk.md, Part 9.1); absent in notes written before it
+  personUpdates?: NoteUpdate[];
+}
+
+/** One person's update as the note's model read it from the call; `by` is the date words as said. */
+export interface NoteUpdate {
+  name: string;
+  did: string[];
+  doing: string[];
+  next: string[];
+  by: string | null;
+  blockers: string[];
 }
 
 export interface MeetingRecord {
@@ -174,10 +243,26 @@ export interface MeetingRecord {
   auto?: boolean;
   // The workspace the call belongs to
   workspaceId?: string | null;
+  // Who set it (see ThreadRecord.workspaceSetBy)
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent that took the notes, when one did
   agentId?: string | null;
   // Whether the call shows its captions, as last read from the page (null: no captions button found)
   captionsOn?: boolean | null;
+  // Who was on the call: display names read from the page (tiles, and the People panel while it was open).
+  // Kept on this computer only (docs/pm-desk.md, rule 5)
+  roster?: string[];
+  // When notes come from audio: who spoke when, from the call's captions, to name the audio's speakers
+  speakerMarks?: SpeakerMark[];
+  // Tasks Avi said on the call ("Ava, note a task for Ada…", docs/pm-desk.md Part 6) and what he did about them
+  callTasks?: CallTasksState;
+}
+
+// Seconds from the start, and the caption's speaker
+export interface SpeakerMark {
+  t0: number;
+  t1: number;
+  speaker: string;
 }
 
 export interface AudioChunk {
@@ -205,6 +290,8 @@ export interface TranscriptSegment {
   tEnd: number;
   speaker: string;
   text: string;
+  // What the recogniser wrote, kept when the vocabulary changed the text (docs/pm-desk.md, Part 4)
+  textRaw?: string;
   chunkIndex: number;
 }
 
@@ -241,6 +328,8 @@ export interface KnowledgeItem {
   unembedded: number;
   // The workspace of the chat or meeting it came from; a search in one workspace never sees another's
   workspaceId?: string | null;
+  // Who set it (see ThreadRecord.workspaceSetBy); a chat's or meeting's item follows its source and has none
+  workspaceSetBy?: WorkspaceSetBy;
   // The agent whose work it came from, for knowledge filtered by agent
   agentId?: string | null;
   // Who may read it (src/background/kb/scope.ts): 'private' to its agent (and Ava and the user), or the whole
@@ -293,6 +382,10 @@ export interface GraphNode {
   // When it happened: a source's date, or the date of the first source that named it
   date: number;
   updatedAt: number;
+  // An action's task on the board (src/storage/lib/tasks)
+  taskId?: string;
+  // A person node's person (../people), once one is known
+  personId?: string | null;
 }
 
 export type GraphEdgeKind = 'mentions' | 'attended' | 'decided_in' | 'raised_in' | 'assigned_to' | 'part_of';
@@ -331,6 +424,30 @@ export class AviCopilotDb extends Dexie {
   logs!: Table<LogEntry, string>;
   ambientSessions!: Table<AmbientSession, string>;
   ambientUtterances!: Table<AmbientUtterance, string>;
+  // Words the recogniser mishears and how to write them (../vocabulary)
+  vocabulary!: Table<VocabEntry, string>;
+  doOnce!: Table<OnceRecord, string>;
+  // The growth numbers (../growth): what was read, whether each day was read, each source's state, links made
+  growthMetrics!: Table<GrowthMetric, string>;
+  growthReadings!: Table<GrowthReading, string>;
+  growthSources!: Table<GrowthSourceState, string>;
+  growthLinks!: Table<GrowthLink, string>;
+  // The growth team (../growth-team): what its agents proposed, and the ledger of money and beta places
+  teamItems!: Table<TeamItem, string>;
+  teamLedger!: Table<LedgerEntry, string>;
+  // How the Growth Lead sorted each piece of customer feedback (one issue per feedback, three asks open one)
+  teamFeedback!: Table<FeedbackRecord, string>;
+  teamContacts!: Table<TeamContact, string>;
+  teamSuppressed!: Table<SuppressedAddress, string>;
+  teamChannels!: Table<TeamChannel, string>;
+  tasks!: Table<Task, string>;
+  // The task lists Ava sent on WhatsApp, by message id: which tasks each carried (ids only)
+  taskLists!: Table<TaskListRecord, string>;
+  // People (../people, docs/pm-desk.md Part 5): who is who, and the names not settled yet
+  people!: Table<Person, string>;
+  peopleNames!: Table<NameCandidate, string>;
+  // What each person said they did, are doing and will do next (../followups, docs/pm-desk.md Part 9)
+  personUpdates!: Table<PersonUpdate, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -378,6 +495,55 @@ export class AviCopilotDb extends Dexie {
     this.version(6).stores({
       ambientSessions: 'id, startedAt',
       ambientUtterances: 'id, sessionId, [sessionId+startedAt], endedAt',
+    });
+    // Do-once keys (docs/growth-team.md, Part 2): only added, nothing stored is rewritten
+    this.version(7).stores({
+      doOnce: 'key, taskId, threadId, startedAt',
+    });
+    this.version(8).stores({
+      growthMetrics: 'id, productId, [productId+metric+date]',
+      growthReadings: 'id, productId, [productId+metric+date]',
+      growthSources: 'id, productId',
+      growthLinks: 'id, productId',
+    });
+    // The growth team's approvals and ledger (docs/growth-team.md, Part 9): only added
+    this.version(9).stores({
+      teamItems: 'id, workspaceId, agentId, status, batchId',
+      teamLedger: 'id, workspaceId, itemId',
+    });
+    // v10: the Growth Lead's sorted feedback (#74). Additive
+    this.version(10).stores({
+      teamFeedback: 'id, workspaceId, topic',
+    });
+    // v11: the Product Marketing Manager's contacts, the shared suppression list and its channels (#75). Additive
+    this.version(11).stores({
+      teamContacts: 'id, workspaceId, firstAt',
+      teamSuppressed: 'email',
+      teamChannels: 'id, workspaceId',
+    });
+    // v12: the vocabulary (docs/pm-desk.md, Part 4). Additive. Parts 2 and 5 add tables too: whoever merges second
+    // takes the next free number
+    this.version(12).stores({
+      vocabulary: 'id, workspaceId, learnedFrom',
+    });
+    // v13: the task board (docs/pm-desk.md, Part 2). Additive
+    this.version(13).stores({
+      tasks: 'id, status, workspaceId, ownerId, [status+workspaceId], updatedAt, *mergedIds',
+    });
+    // v14: people and the names not settled yet (#107). Additive
+    this.version(14).stores({
+      people: 'id, nameKey, *aliasKeys, *emails, *phones, *handleKeys, *workspaceIds, updatedAt',
+      peopleNames: 'id, &key, status, askedOn, *emails, *phones, *handleKeys, *meetingIds, lastAt',
+    });
+    // v15: the task lists Ava sent on WhatsApp (docs/pm-desk.md, Part 8). Additive. Parts 3 and 7 add tables too:
+    // whoever merges second takes the next free number
+    this.version(15).stores({
+      taskLists: 'messageId, sentAt',
+    });
+    // v16: what each person said on a call or Avi reported back (docs/pm-desk.md, Part 9). Additive. Part 6 may add a
+    // step too: whoever merges second takes the next free number
+    this.version(16).stores({
+      personUpdates: 'id, personId, at, source.id',
     });
   }
 }

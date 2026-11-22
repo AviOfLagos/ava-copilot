@@ -16,6 +16,8 @@ import { installedVoiceModels } from './engines/models';
 import { toVoiceOffscreen } from './engines/offscreen';
 import { toOffscreen } from '../offscreen';
 import { registerOffscreenBusy } from '../registry';
+import { correctTranscript, vocabularyHint } from './vocabulary';
+import type { CorrectionResult } from './vocabulary';
 
 /**
  * Dictation in the chat box: writing the words down, and keeping the voice conversation and "Hey Ava" out of the
@@ -31,9 +33,13 @@ export function hasGeminiSpeechToText(
 }
 
 export interface DictationDeps {
-  gemini: (base64: string, mediaType: string, voice?: ThreadVoice | null) => Promise<string>;
+  // `hint` is the user's own words, for the recogniser (see ./vocabulary)
+  gemini: (base64: string, mediaType: string, voice?: ThreadVoice | null, hint?: string) => Promise<string>;
   local: (base64: string, voice?: ThreadVoice | null) => Promise<string>;
   geminiReady: (voice?: ThreadVoice | null) => Promise<boolean>;
+  // Words the recogniser tends to get wrong, and the correction of what it wrote; left out, nothing is added or changed
+  hint?: (workspaceId: string | null) => Promise<string>;
+  correct?: (text: string, workspaceId: string | null) => Promise<CorrectionResult>;
 }
 
 const browserDeps: DictationDeps = {
@@ -44,11 +50,12 @@ const browserDeps: DictationDeps = {
       await speechToTextModelStore.getSpeechToTextModel(),
       await llmProviderStore.getAllProviders(),
     ),
-  gemini: async (base64, mediaType, voice) =>
+  gemini: async (base64, mediaType, voice, hint) =>
     (await SpeechToTextService.create(await llmProviderStore.getAllProviders())).transcribeAudio(
       base64,
       mediaType,
       voice?.language,
+      hint,
     ),
   local: async (base64, voice) => {
     const language = voice?.language ?? (await voiceIdentityStore.getSettings()).language;
@@ -63,6 +70,8 @@ const browserDeps: DictationDeps = {
     if (!reply?.ok) throw new AppError('unknown', reply?.error || t('bg_cmd_stt_failed'));
     return reply.text ?? '';
   },
+  hint: workspaceId => vocabularyHint(workspaceId),
+  correct: (text, workspaceId) => correctTranscript(text, { workspaceId }),
 };
 
 // Recordings being written down on this computer now. The offscreen document does the work, so it must not be
@@ -98,12 +107,13 @@ export function sttErrorMessage(error: unknown): string {
  * a recogniser uses that one and no other. Writing down on this computer is pure work on the recording, so when
  * the offscreen document went away under it, it is asked once more.
  */
-export async function transcribeSpeech(
+export async function transcribeAndCorrect(
   audio: string,
   mediaType = 'audio/webm',
   deps = browserDeps,
   voice: ThreadVoice | null = null,
-): Promise<string> {
+  workspaceId: string | null = null,
+): Promise<CorrectionResult> {
   // Remove the data URL prefix if present
   const base64 = audio.startsWith('data:') ? audio.split(',')[1] : audio;
   const local = async () => {
@@ -119,16 +129,32 @@ export async function transcribeSpeech(
       writing--;
     }
   };
-  if (voice?.hear && voice.hear !== 'gemini') return local();
-  if (!(await deps.geminiReady(voice))) return local();
-  try {
-    return await deps.gemini(base64, mediaType, voice);
-  } catch (error) {
-    if (voice?.hear === 'gemini') throw error;
-    return local().catch(() => {
-      throw error;
-    });
-  }
+  const written = await (async () => {
+    if (voice?.hear && voice.hear !== 'gemini') return local();
+    if (!(await deps.geminiReady(voice))) return local();
+    try {
+      const hint = (await deps.hint?.(workspaceId).catch(() => '')) || '';
+      return await deps.gemini(base64, mediaType, voice, ...(hint ? [hint] : []));
+    } catch (error) {
+      if (voice?.hear === 'gemini') throw error;
+      return local().catch(() => {
+        throw error;
+      });
+    }
+  })();
+  // The one place the words are corrected, whichever recogniser wrote them
+  return deps.correct ? deps.correct(written, workspaceId) : { text: written, changes: [], unsure: [] };
+}
+
+/** The same, as plain text. */
+export async function transcribeSpeech(
+  audio: string,
+  mediaType = 'audio/webm',
+  deps = browserDeps,
+  voice: ThreadVoice | null = null,
+  workspaceId: string | null = null,
+): Promise<string> {
+  return (await transcribeAndCorrect(audio, mediaType, deps, voice, workspaceId)).text;
 }
 
 // The panel connection dictating now; its closing gives the microphone back

@@ -2470,6 +2470,537 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Known, not from this change: `companion/src/__tests__/sessions.test.ts` reads a spike recording deleted on
   2026-10-17 (631aa92) and fails; CI does not run the companion's tests.
 
+### Do-once keys (2026-11-20, #64, docs/growth-team.md Part 2)
+
+- Every step that sends, posts, submits, grants or creates writes a record before it acts ("started") and when its
+  result is in ("done"): table `doOnce` (Dexie version 7, `src/storage/lib/once`), logic in `src/background/once`.
+  The key is the task, what the step is, and a hash of what it acts on; no content is kept.
+- Where it is checked: `gate/review.ts` (every commit on a page: `reviewAction` writes "started" last,
+  `verifyCommit` / `settleCommit` close it) and `integrations/action.ts` (every connector tool that is not a plain
+  read). WhatsApp sends and Drive create/share name their own step.
+- A step that is done, or one cut off before its result was recorded, is not run again by itself: the model is told
+  once, and a second try goes to the user on the confirm card, which says why (`ConfirmRequest.repeat`).
+- A retry rarely words a message the same way, so the hash alone cannot tell a repeat. Two rules cover that: a
+  cut-off step holds back every other commit on the same site or tool in its chat (also after "continue", which is a
+  new task) until the user has seen a card about it; and in a retried or resumed run, a commit where an earlier run
+  of the task already finished one goes to the user with a note, whatever the confirm settings say.
+- A commit the page shows no sign of (`gate_verify_unknown`) is never called "done", and it is not treated as cut
+  off either: it holds back only itself (`onceStore.unsure`), and a later run that sends there again is shown it. A click that commits is
+  tried one way only (`Page.clickElementNode({ once })`): the fallback click could send twice.
+- If the records cannot be read, the step is refused.
+- The task id is `ThreadRecord.taskRunId`: new for every request (`ThreadManager.send`), kept through resume and
+  retry. A run that picks a task up again is told what it already sent (`onceNote`).
+- A tool whose schema has a string `idempotency_key` (or `idempotencyKey`) gets the key, so the far side can refuse
+  a repeat too.
+- Not covered here: routine (workflow) tool steps keep their own rule (a side effect cut off mid-call is
+  `unknown_outcome`); `hand_to_agent`, `run_agent`, `run_workflow` and `say_in_meeting` take no key yet. The page key
+  is coarse on purpose (site + what is filled in): the same words to two people in one chat app need a second try
+  and the user's click.
+
+### A closed tab does not end the task (2026-11-20, #65, docs/growth-team.md Part 1)
+
+- `ThreadManager` keeps the last page and window of every bound tab (`onTabUpdated`, from `tabs.onUpdated`) and keeps
+  `boundUrl` current, so "Reopen and continue" goes to the latest page.
+- A closed tab is handled once per tab id, whichever report comes first (`tabs.onRemoved`, or `debugger.onDetach`
+  with `target_closed`, which is ignored while the tab still exists).
+- When a run's last tab closes and it is not mid-form or mid-send (`AgentContext.isMidForm`: a field typed into, an
+  option chosen or a commit in the last 3 steps; or a commit waiting for the click), the tab is opened again on its
+  last page, in its window (or the last focused one, in the background, when the window closed too). The run is
+  paused while the page loads, so no step fails on the dead tab, and the next page state tells the model it is a
+  fresh page. One reopening per run.
+- Otherwise the run ends as `tab_closed`, as before; #66 queues that again.
+- Stop is the only signal that ends a task: a stopped run gets no tab back. Neither does a tab the task closed
+  itself (`close_tab`), a page the firewall or the agent's sites do not allow, or a tab whose own last page is not
+  known.
+- The mid-form marks start clean with every task (`AgentContext.startTask`): a kept executor runs follow-ups, and
+  what an earlier task typed says nothing about the next. A note to the model stays until a step that saw it goes
+  through.
+- E2E: `threads.e2e.mjs` "closing the tab while the task is only reading reopens it…".
+
+### Failed tasks retry, then report (2026-11-20, #66, docs/growth-team.md Part 2)
+
+- Every run that ends with an error gets a class (`src/background/retry/classify.ts`, on `ThreadRecord.failure`):
+  **temporary** (tab closed, background restarted, steps that kept failing, anything not understood), **needs the
+  user** (model key, another extension on the tab, the debugging bar closed), **cannot** (blocked site, refused
+  request, out of steps). The executor says what it knows through `Executor.failureCode`.
+- Temporary: the job runner tries again after 1, 5 and 15 minutes (job `thread.retry`, `retry/endings.ts`). A try is
+  `continueThread(…, { auto: true })`: the same task (`taskRunId`, so do-once keys hold), resumed from the transcript
+  with the note of what was already done, its page reopened in its own window without taking the screen.
+- After the last try, or at once for the other two classes: one Inbox item (`system|stuck:<task>`), and one WhatsApp
+  line for a temporary failure. `report` checks the Inbox first, so there is never a second one.
+- A step only the user can do (sign-in, CAPTCHA, code) is one Inbox item while the chat waits, per task and kind; an
+  agent's own Inbox item now names the step.
+- Agent runs use the same queue: while the chat is queued, the run stays open (`agents/service.ts`), so it is one run
+  for `runsPerDay`; model spend still counts toward `dailyUsd`, and an agent over its cap waits for tomorrow. A run
+  the agent stops itself (budget, time, off its sites) is `quiet`: the chat neither retries nor reports.
+- Stop on a queued task, a new message, or the user's own Retry/Continue drops the queued try. A run left for more
+  than an hour before the background came back is reported, not started by itself.
+- A chat is only tried while somebody follows it. An agent's chat needs its run still open (`ownerFollows`); a run
+  that ends first drops the chat's try (`AgentService.finish`). A routine's chat (origin `workflow`) is never tried
+  or reported from here: the routine fails its step and reports itself.
+- A try that cannot start (every slot busy) looks again every 30 s for 30 minutes as a job of its own, then gives up
+  and says so; it never leans on the job runner's five attempts. The tab it opened is closed again when it cannot
+  start.
+- "Too many failures" keeps the last step error: it is the reason in the Inbox item, and a missing model or an
+  account out of credit is classed as needing the user instead of being tried three times
+  (`codeOfStepError`).
+- The user's own Retry/Continue on a stuck task starts a new round (`retryRound`): the old Inbox item is settled, and
+  getting stuck again is reported again.
+- Known, not done: routines do not retry a browser step; time waited before a restart counts against an agent
+  run's 20 minutes; a tab reopened for an agent sits outside its tab group.
+- The unused `retryDelay` agent option is removed.
+- E2E: `threads.e2e.mjs` "a task that fails for a passing reason is tried again by itself a minute later…".
+
+### The morning brief tells the truth (2026-11-20, #67, docs/growth-team.md Part 5a)
+
+- A source that is not connected, or could not be read, is named ("Calendar: not connected."), never shown as 0 or
+  as a free day. Every source the brief reads is read on its own (`MorningBrief.build`), and the brief ends with the
+  line of what it read and what it could not, so an empty brief can be trusted. The strings are in the locale files
+  (`brief_source_*`, `brief_calendar_*`, `brief_line_*`).
+- The calendar says how far it can be trusted: `CalendarWatcher.reading()` returns `read`, `not_connected` or
+  `failed` with the events of the last read that worked (`asOf`). Events are kept in `upcomingEventsStore` with
+  `okAt`, and a new watcher starts from them (`hydrate`), so a restarted background no longer empties the day or
+  writes an empty day over the stored one after a failed read.
+- "Waiting on you" counts each thing once (`waitingItems` in `brief/brief.ts`): chats paused on an approval or on a
+  step only the user can do, agent and routine runs waiting for a click, Inbox items needing a decision, and failed
+  tasks. A task queued to try again by itself (#66) is not counted.
+- The WhatsApp line and the desktop notification name the first meeting by its time and the top waiting item by
+  name (`briefLine`): "2 meetings, first at 10:00. 3 waiting on you: approve Suture post, and 2 more." A meeting's
+  title is never in it. `brief_counts` is gone.
+- After review: a routine waiting on a click is one thing, whether it waits in a chat of its own or on an agent's
+  run (`waitingRuns` follows the chain); an all-day entry is not a meeting and has no time; "this is what it showed
+  at …" names the day and is only said with events to show; the Mac's Calendar with no calendar ticked counts as
+  not connected; an Inbox item whose chat was deleted and an archived chat are not counted.
+- Not built here: the Team section (#78). From #32, still open: asking for the Mac's Calendar permission again while
+  it is lost, and showing it on the setup checklist.
+
+### Ava knows every open tab (2026-11-20, #68, docs/growth-team.md Part 3)
+
+- `src/background/browser/tabRegistry.ts`: per tab its window, address, site, title, when it opened and when it was
+  last in front, fed by the tab events and kept in `chrome.storage.session`. `list()` always asks Chrome which tabs
+  exist now, so a missed event can make an age wrong but never lists a tab that is gone. Private windows, pop-up
+  windows and the agents' own window are never listed. Which task holds a tab is asked from the thread manager when
+  the list is read (`src/background/tabs/register.ts`).
+- A new task that names a site the user already has open starts on that tab, in whichever window it is
+  (`tabsToBind(windowId, hint)`, `tabs/reuse.ts`). The hint is plain code (`tabs/hint.ts`): a written address
+  ("facebook.com"), or the site's name after a word that points at a place ("on Slack", "go to Facebook"). A task
+  about the page in front ("summarise this page") names no site. The chat says "Using the facebook.com tab you
+  already have open." and the tab comes to the front of its own window.
+- `_adoptable` (`browser/context.ts`): a task a person gave (typed, said, sent from WhatsApp) may take a free tab from
+  any ordinary window. **A decision beyond the spec:** an agent's or a routine's run keeps the old rule, the windows
+  it already works in, so it never takes a tab the user has open (`TabBinding.anyWindow`).
+- The state message lists the task's own window one by one, as before, and sums up the other windows by site:
+  "facebook.com: 1 tab, open 3 h, last used 20 min ago", at most 30 lines, busy tabs marked (`tabs/section.ts`).
+  `find_tab(query)` gives ids for `switch_tab`; titles come back wrapped as outside content.
+- `groupTabs` groups only the tabs in the first tab's window: grouping a tab taken over elsewhere would move it.
+- No new permission. Not built here: `history` as an optional permission and `search_history` (the second half of
+  Part 3, to follow once reuse has been used for a while).
+- Tests: `browser/__tests__/tabRegistry.test.ts`, `tabs/__tests__`, the "#68" block in
+  `threads/__tests__/manager.test.ts`, and `e2e/tabs.e2e.mjs` (a second window, real tabs).
+
+### Product profile per workspace, and the Suture workspace (2026-11-20, #69, docs/growth-team.md Part 6)
+
+- `src/storage/lib/products`: `ProductProfile` (one per workspace, storage key `products`) and `productStore`.
+  `cleanProductProfile` is the one shape that is kept: a half-filled part (a beta rule with no numbers, a north
+  star with no target, a sender with no address) goes back to "not set" instead of being stored with a 0.
+- Agents read it in the state message, right after the workspace section (`background/products/section.ts`,
+  called from `workspaces/inject.ts`): "These are the only facts about this product you may state", then one line
+  per fact, and "not set" for every gap.
+- Edited in the workspace screen (`side-panel/workspaces/ProductFields.tsx`): a line under the heading names what
+  is not set yet. Ava changes it with `update_product_profile`, which shows every changed field with what it says
+  now and saves only after the user's click. That tool reaches the product's facts only: the budget, the beta
+  rule, the sender, the postal address, the accounts and the admin console are set by the user in the screen.
+- Seed (`products/seed.ts`): only when `VITE_SEED_PROFILE=avi`, once, and on an install that already had its
+  workspaces. Suture's facts come from the owner's brief and from trysuture.com as it read on 2026-11-20. Not
+  given yet, so empty: the outreach address, the postal address, the beta rule, the social accounts, the north
+  star, where to tell the owner, and the admin login.
+- **Differences from the spec's shape:** `slackChannels` holds a name and an id (the Slack connector reads by
+  id); `postalAddress` is a field of its own; `northStar`, `budget`, `notify` can be null (not set).
+- After review: number fields and the Slack rows keep what is typed (so "12.5" and a second row can be typed);
+  the stage is "not set" until picked; "spent" is only stated once something was spent; every text is kept on one
+  line, so a value cannot pass itself off as another line of the profile; Ava's change is applied to the profile
+  as it is when the user confirms, and nothing is saved for a workspace deleted meanwhile.
+- Known and left: the seed's text is in the public source and in every bundle (as the owner's other workspaces
+  already are); it only runs in the owner's build. Two extension pages saving two workspaces' products in the
+  same instant can lose one of the saves.
+- Tests: `storage/lib/products/__tests__`, `background/products/__tests__`, `e2e/products.e2e.mjs`.
+
+### Growth numbers: the store and the collectors (2026-11-20, #70, docs/growth-team.md Part 7)
+
+- Database version 8 (`src/storage/lib/growth`): `growthMetrics` (a number that was read: product, UTC day,
+  source, metric, value, and optionally channel, campaign, post), `growthReadings` (for one metric on one day:
+  read, or not and why), `growthSources` (whether a source can be reached now, and the reason last told), and
+  `growthLinks`. A day with no "ok" reading has no number: **it is "no reading", never 0.** A failed read never
+  replaces a number that was read earlier; the answer says when it was read.
+- The product collector (`background/growth/collect.ts`, `suture.ts`) reads the Suture agent API
+  (`<admin console>/api/agent/v1`, bearer token) for yesterday and today, every two hours and on "Read now":
+  sign-ups, waitlist, access requests and feedback (each with its sources and campaigns), spend, orgs, orgs
+  active in 7 days, orgs on a paid plan. Every answer is checked against the documented shape; anything else is
+  "no reading". Off (503 `agent_api_off`), a refused token (401), no token, or no answer make the source "not
+  connected" with that reason, after one request. One failure makes one Inbox item; the next comes after it
+  worked again or for another reason.
+- The token is in the vault (`product-api:<workspaceId>`), pasted in the workspace screen under Numbers, which
+  also shows the state and "Sign-ups today". It is never in source, storage.local, a log or a reply.
+- `metrics_query(metric, from/to or days, by)` is the only way an agent reads numbers, for the product of its own
+  workspace only. `make_link(url, source, medium, campaign)` tags a link to the product's own site and keeps it.
+- **Where the live API differs from Part 13** (the API wins): no emails or names come back, only counts and
+  sources; `/signups` can say it has no reading; `/payments` always does (Suture keeps no payment records), so
+  `payments` is "no reading" and `paid_orgs` is read instead; `/spend` is cost to serve, not revenue.
+- **Not built here, and why:** the page collector for the super admin (the API is live, and its rule, "check it
+  is the page you expect or record no reading", is applied to the API's answers instead); the social and email
+  collectors (their sources arrive with #76 and #79); Slack counts (they come with the product pulse, #71); link
+  clicks (nothing counts a click yet: a link's effect is read as sign-ups by campaign).
+- A new call outside the model provider: the product's own API, at the address in its profile, https only (plain
+  http on this computer for tests), with no cookies.
+- After review: a number that says how things stand (`orgs`, `active_orgs`, `paid_orgs`) is never added up over
+  days, the answer gives the latest; a day read before it was over is marked "not final" and is read again later,
+  as is a day that could not be read (up to two older days a run, within a week); a list cut at the row limit
+  never replaces a whole one; only the API's own `agent_api_off` counts as off; a notice is marked as told only
+  once the Inbox has it; the token is kept under the host it was saved for (`product-api:<workspace>@<host>`), so
+  changing the address never sends it elsewhere; `paid_orgs` is the product's own count; the collect job is
+  scheduled once, not on every start of the background.
+- Tests: `background/growth/__tests__`, `e2e/growth.e2e.mjs` with `e2e/mock-suture.mjs`.
+
+### Rounds and check-ins (2026-11-20, #71, docs/growth-team.md Part 4)
+
+- `src/background/rounds`: a job ticks every five minutes and does at most one thing, the one round that is due
+  or else one offer. Times are local: product pulse 08:30 and 16:00, mail 09:00 and 14:00, stuck work 12:00
+  (`plan.ts`, pure and tested with a fake clock). A slot is marked before its round runs. A round missed while
+  the browser was closed runs once when it opens that day: only its latest slot, the earlier ones are marked
+  missed. State is in `storage.local` (`rounds`), a new day starts clean.
+- Product pulse (plain code): collects each product's numbers, then per metric "today so far, yesterday, usually".
+  "What changed" is arithmetic (`whatChanged`): at least 50% and at least 5. **A choice beyond the spec:** a whole
+  day (yesterday) is compared with the seven before it and flagged up or down; today so far is flagged only when
+  it is already up, because a day that is not over always looks down. Slack notifications are counted by the
+  kind in square brackets, through the Slack connector's read tool when the user set it to run without asking;
+  otherwise the pulse says why they were not read. Counts are kept as `slack_<kind>` numbers.
+- Stuck work (plain code): the brief's own `waitingItems`, so the two never disagree.
+- Mail: asks the Mail agent (`team_mail`) for a run in the agents' own window, unattended, one per slot; its answer
+  in the Inbox is the digest. With no Mail agent the round says so once a day.
+- Each round is one Inbox item. A flagged change also goes to WhatsApp when the product's notify channel says so;
+  never to Slack, which would be a post.
+- Check-ins: after three quiet hours between 09:00 and 18:00 (from the user's last task, the browser opening, or
+  the last offer), not in a meeting, at most two a day: one Inbox approval built from what the rounds found
+  ("Want me to sort your mail? 14 unread.", or failed tasks to try again). Approve starts it with the user
+  there; decline is "not today" and silences offers until tomorrow. Offers left unanswered are closed when the
+  day turns. With nothing useful to offer, none is made.
+- Settings › General › Rounds and check-ins: the switch, each round's times and what ran, "Run now".
+- **Not built here:** reading Slack in the browser tab when no connector is on (it needs an agent run with a
+  skill, not plain code); the Slack count has not been run against the live Slack connector, only against a
+  stand-in with the documented tool shape.
+- After review: an offer is taken once (two clicks start the work once) and is closed in the Inbox when answered
+  or when the day turns; a retry offer only touches chats that still stand failed; an offer never counts as
+  "waiting on you" in the brief; a round that fails or was cut off by the background stopping says so in the
+  Inbox, once; "quiet" is the newest change to a chat the user started, not its creation; a yesterday read before
+  it ended is not flagged; Slack kinds count only at the start of a message, the eight most frequent; Settings
+  only looks at the state and never turns the day over.
+- Known and left: rounds are on by default; the pulse's days are UTC days (said in the digest); a Slack kind that
+  stops appearing is not flagged as a drop; only today's Slack messages are read.
+- Tests: `background/rounds/__tests__` (clock rules, arithmetic, the tick, offers, a simulated full day),
+  `e2e/rounds.e2e.mjs`.
+
+### Approval modes, the budget ledger and tool requests (2026-11-21, #72, docs/growth-team.md Part 9)
+
+- Store: `src/storage/lib/growth-team` (Dexie v9: `teamItems`, `teamLedger`). Code: `src/background/growth-team`
+  (`modes.ts`, `ledger.ts`, `privacy.ts`, `queue.ts`, `requests.ts`, `actions.ts`, `register.ts`).
+- Three agent actions: `queue_for_approval`, `request_spend` (amount, what it buys, tried for free, expected),
+  `request_tool` (the free-first ladder: connected, free API, browser, free tier, paid; paid becomes a spending
+  request, a free tier a new-account request).
+- Modes: posts, replies, outreach, follow-ups and listings go in one batch per agent per day, approved with one
+  tap ("Approve all 3 drafts from …"). An issue from a customer and a beta grant can be "Allow every time", kept as
+  a `team` rule in PR #92's `permissionRulesStore` (scope `team:<workspace>/<agent>/<action>`), and then run by
+  themselves. Spending, a new channel, a new account, a plan change, a tool, and anything that names a customer
+  always ask: `canAllowAlways` refuses those rules, and a forged one is ignored.
+- Limits in code: the beta rule (testers a week over a rolling 7 days, the plan, the days; the product's own
+  `grants.remaining` wins when it can be read), the marketing budget, 20 items per agent per day, 10 customer
+  issues a day. The check and the write of a ledger line are one transaction, so concurrent yeses cannot pass the
+  limit. An item is written down before anything happens and is carried out once.
+- Nothing goes out in this phase: an approved post or email is "held" until #43 lands an executor.
+- After review: a customer's email, phone, name or id link in a post, reply, issue or email is refused, not only
+  flagged; a grant agreed here and not yet given in the product counts against the product's own places; a tap on
+  the batch row approves only the drafts it showed (its answer carries a fingerprint of them); a spend or grant
+  agreed just before the background stopped is written to the ledger on the next start; a yes that a limit
+  stopped is said in the Inbox. Known and left: the daily item caps are counted outside a transaction, so two
+  proposals landing together can pass them by one.
+- The workspace screen shows the ledger: spent of budget, beta places this week, waiting and held.
+- Tests: `background/growth-team/__tests__` (rules, queue), `e2e/team-approvals.e2e.mjs`.
+
+### Three personalities for the growth team (2026-11-21, #73, docs/growth-team.md Part 8)
+
+- Built-ins `growth` (inspired by Sean Ellis), `positioning` (April Dunford, with the channel tests from
+  *Traction*) and `build_in_public` (Arvid Kahl) in `src/storage/lib/personalities/builtins.ts`. Each one's
+  instructions hold, in order, five beliefs, "When …" rules, first questions and what to avoid, in our own words,
+  under 2,000 characters. Sources: `docs/personas/<id>.md`.
+- Inspired by, never the person: the instructions say so, and code makes it hold. `PERSONA_SOURCE_NAMES` lists
+  the people and their books; `growth-team/persona.ts` refuses a post, reply, email, listing or issue that names
+  one (or speaks as one) before it reaches the Inbox. The operator's Bezos is on the list too.
+- The local voice engines have seven voices besides Ava's, so two of the nine built-ins share one there; the test
+  now says every voice is used before one is shared.
+- Eval kind `draft` (`evals/runner/draft.ts`): four cases, three refused drafts and one clean one.
+
+### The Growth Lead (2026-11-21, #74, docs/growth-team.md Part 8)
+
+- Template `growth_lead` in a new "Growth team" group of the team setup, off until turned on, `executor:
+  'browser'`, personality `growth`. It needs a workspace with a product (`growth-team/setup.ts`); with a Claude key
+  it gets Sonnet 5.5 for `smart` and Haiku 5.5 for `fast`, without one the Inbox says once that it uses the user's
+  own roles. The Monday plan's Opus comes with #77.
+- Feedback: `read_feedback` reads the product's `GET /feedback` for yesterday and today, drops what was sorted
+  (Dexie v10 `teamFeedback`), and fences the customers' text as data. `sort_feedback` takes the model's sort and
+  the facts of what broke; code does the rest (`lead/feedback.ts`): the priority from the rule (`lead/priority.ts`),
+  one `customer_issue` per feedback through the approval queue, labelled `from-customer` with the super admin link,
+  feature requests counted by topic until the third ask opens one issue, praise put on the bus as `growth.praise`
+  with no name. A summary that holds an email or phone is refused, and a refused issue unsorts the feedback.
+- `request_beta_grant` proposes a `beta_grant` on the product's rule; the limits are #72's code.
+- Signals: a 07:40 job (`growth-signals`) puts `growth.signal` on the bus for each channel whose sign-ups moved
+  yesterday against the 7 days before (`lead/signals.ts`), only on days that were read.
+- Not in this phase: filing the approved issue on GitHub, granting the beta place, and the Slack line for each
+  filed issue. Approved items stay held with their text ready until an executor lands (after #43).
+- Eval kind `lead` (`evals/runner/lead.ts`): recorded tool calls through this code, five cases (priority by rule,
+  duplicates, customer details blocked, a grant past the rule, a grant inside it).
+- After review: the signals job is scheduled once (a restart no longer pushes a due run to tomorrow); a proposal
+  or a praise hand-off that throws unsorts the feedback; every angle bracket in a customer's text is escaped and
+  the tag's attributes keep plain characters only; one malformed feedback row is left out instead of the day; a
+  team setup with a growth agent checks the product before making any draft. Left as they are, and why: a
+  sort of an id the model was never shown is not refused (a read id can be mis-sorted just the same; the user
+  approves every issue); a P0 that arrives after the day's 10 issues waits for tomorrow; feedback older than
+  yesterday is not read again; the 07:40 job reads the UTC day before.
+- E2E `e2e/growth-lead.e2e.mjs`: the Growth team group, the product check, and a sort that ends as "[P0] …"
+  waiting in the Inbox while a customer's email is sent back.
+
+### The Product Marketing Manager (2026-11-21, #75, docs/growth-team.md Parts 8 and 12)
+
+- Template `growth_marketing` in the Growth team group, personality `positioning`, `executor: 'browser'`,
+  weekdays at 10:00 and on `growth.signal`. Positioning goes through `update_product_profile`, which shows the
+  change first; the instructions say positioning comes before channels.
+- Channels (`marketing/channels.ts`, Dexie v11 `teamChannels`): `add_channel` keeps ideas with who is there and
+  a test's cost; `rank_channels` ranks by sign-ups a week over the last 28 read days, then the untested cheapest
+  first, and marks three "test next". `propose_channel_test` asks only for those (a `new_channel` request, always
+  asked); the user's yes starts the 7-day week through `registerAgreedHook` in the queue, which changes only
+  Ava's own list. After the week code keeps or drops it by the rounds' test against the week before; a day not
+  read leaves it testing.
+- Outreach (`marketing/outreach.ts`, Dexie v11 `teamContacts` and the shared `teamSuppressed`): drafts only.
+  Code refuses a suppressed address or a personal mailbox, a person already written to, more than 20 new people a
+  day per product, and a follow-up before 3 whole working days or after the first one. Every draft ends with the
+  sender, the postal address, why this person and how to opt out; a missing sender or address reads "not set" and
+  the agent is told to say so. `stop_contact` puts an address on the list for every product.
+- Eval kind `lead` is now `team` in `evals/runner/team.ts` (kinds `lead` and `marketing`): four new cases
+  (suppressed address, the daily limit, one follow-up, ranking from numbers).
+- E2E in `e2e/growth-lead.e2e.mjs`: the draft waits in the Inbox with "sender: not set", and the unsubscribed
+  address is refused.
+- Not yet: sending (Nex Mail, Part 12, after #43), and finding people (the agent browses public pages itself).
+- After review: the address rules live in `propose` itself (`growth-team/addresses.ts`), so no tool goes around
+  them, and `queue_for_approval` no longer takes emails; addresses are kept in one form (lower case, no "+tag");
+  personal mailboxes are matched by name whatever the country ending; the footer is added after the checks, so a
+  postal code is not taken for a phone number; a follow-up counts from the user's yes to the first email and
+  never follows a declined one; a person takes the day's place in one transaction; an address stopped while its
+  email waited is not carried out; a declined channel test may be asked for again; `startTest` keeps the three-at-
+  once cap in a transaction; a test unread two weeks after its week is dropped; "no reading" is never shown as 0.
+  The send executor (after #43) must check the do-not-write list again right before sending. Also: the queue
+  takes extra draft checks (`registerProposalCheck`), used by #76.
+
+### The Product Social Manager (2026-11-21, #76, docs/growth-team.md Part 8)
+
+- Template `growth_social` in the Growth team group, personality `build_in_public`, `executor: 'browser'` on
+  x.com and linkedin.com with the account-switching skill, weekdays at 11:00 and on `growth.signal` and
+  `growth.praise`. It is built on `team_social`, which stays as it is.
+- Facts (`social/facts.ts`): every agent's post, reply, listing or email goes through a draft check registered in
+  the queue. Code refuses a number that neither the product profile nor the metrics store holds (sums over 7, 28
+  and 35 days ending today or yesterday, read days only; a day with no reading counts for nothing), and any
+  quote of four words or more. Links, handles, times, years and counts up to 10 pass. The user's own chat is
+  never checked.
+- `post_results` (`social/posts.ts`) sums what each post brought over 14 read days; with none it says "no
+  reading".
+- Evals: three `social` cases (an invented number, a customer quote, the product's voice and the approval step).
+- E2E: the Product Social Manager is in the Growth team group and starts with its own personality.
+- Not yet: posting (after #43). The product's social accounts are "not set" in the profile until someone sets
+  them, and the agent says so instead of posting from another account.
+- After review: "12k", "1.5m", "100x" and "1.200" are read as the numbers they say (a rounded "12k" matches a
+  known 12,345); every window metrics_query can total (up to 92 days ending today or yesterday), whole months,
+  and the change on the week or four weeks before (matched only by a number written with "%") are known, as is
+  any number metrics_query or rank_channels showed in the last day; single, curly and corner quotation marks and
+  Markdown quote lines count as quotes, apostrophes do not; a routine's or agent-started chat is checked even
+  with no agent id, and the draft's fields are checked with its text.
+
+### Weekly plan and daily standup (2026-11-21, #77, docs/growth-team.md Part 10)
+
+- `src/background/growth-team/standup`: `plan.ts` (the clock, the word limits, the off-plan check; no model),
+  `run.ts` (the plan and the standup, with the model calls behind a `StandupWriter`), `writer.ts` (the real
+  calls). State: `standupStore` (`storage.local`, `src/storage/lib/standup`), last three weeks kept.
+- Monday 07:30 (job `growth-plan`, caught up through the week): the Growth Lead sets one focus and at most three
+  experiments (E1-E3, an owner off the team becomes the Lead) on Opus when a Claude key is set, then each agent
+  writes its week against them. A week that has no plan gets one before its first standup.
+- Every day 07:45 (job `growth-standup`): code reads yesterday and the last 7 days (a number never read is listed
+  once as "no reading"); each switched-on growth agent writes a note, cut by code to 80 words; a "today" item that
+  names no experiment is marked off plan with the agent's reason; the Lead's summary is cut to 200 words, and
+  with more than one off-plan item code adds "Off plan (n): <agent>: <item> (<reason>)". A number in the summary
+  no reading holds is flagged. Four model calls a day. The result goes to the Inbox ("Growth standup · <product>
+  · <day>") and to `growth.standup` on the bus.
+- A missed standup runs once if the browser opens before noon (also checked at startup); after noon it is skipped
+  and says "Standup did not run: the browser was not open between 07:45 and 12:00". Over the spending cap it
+  fails with that reason.
+- The Growth Lead's page has "Run today's standup" (`gteam_standup_run`), still once a day.
+- Tests: `standup.test.ts` (three mornings on a fake clock, the off-plan items named, late and skipped mornings);
+  evals: `standup` kind, two cases; E2E: the three agents switched on, the standup run, opened in the Inbox.
+- After review: a start older than 15 minutes (the browser closed mid-run) is taken over, so a lost run never
+  holds the day; the button runs a skipped or failed day again; at most three "today" items per note, reasons
+  cut, the off-plan line lists five by name and the rest as "and n more", and the whole summary, flagged numbers
+  included, stays within 200 words; on Monday before 07:30 a click writes this week's plan; a team switched on
+  after the standup's hours gets no "did not run" item; the plan in prompts is quoted as data; a failed standup
+  shows a model error by its kind only. "Yesterday" is the last whole UTC day, as the product's numbers are kept.
+
+### The Team section of the morning brief (2026-11-21, #78, docs/growth-team.md Part 5b)
+
+- `src/background/brief/extras.ts`: other features add brief sections through `registerBriefExtra` (`pending`,
+  `sections`); the brief waits while one is pending and shows each section under its bold title.
+- `src/background/growth-team/standup/brief.ts` registers "Team · <product>" for each workspace whose Growth Lead
+  is on: the Lead's standup summary (at most 200 words), or "Standup did not run: <reason>" (it starts at 07:45,
+  after this brief; still running, added when it ends; the browser was not open at 07:45, it runs now; the
+  browser was not open between 07:45 and 12:00; or the recorded reason). The brief waits for a running standup
+  until 07:58, or 13 minutes after a late one started.
+- A standup that ends after the brief adds its section to the brief's chat (`addSection`) and lets a waiting brief
+  come (`check`).
+- Tests: `team-brief.test.ts` (every wording, the waiting rule, a ran day and a skipped day on a fake clock) and
+  `brief/__tests__/manager.test.ts` (the brief waits, then shows the section); E2E: the brief made after the
+  standup shows the Team section with the off-plan line.
+- After review: a section that ends while a brief is being made is added once that brief is saved, not dropped; a
+  standup that ends before the background has started leaves its record for the brief to read; an empty summary
+  says the standup ran and the notes are in the Inbox. Not changed: a standup re-run by hand after the brief adds a
+  second Team section to the chat, under the first.
+
+### The task board (2026-11-21, #104, docs/pm-desk.md Part 2)
+
+- One `tasks` table (Dexie v12) and `taskStore` in `src/storage/lib/tasks`: add, update, setStatus, setOwner, list,
+  get, merge, move, record, closeOlderThan, onChange. `recordTask` is the only way in for meeting action items, graph
+  `action` readings and the agent's `task_add`; it applies the 2.2 rules in code (same workspace, same or no owner,
+  within 14 days, titles equal or 85% word overlap, the same numbers) and fills gaps without reopening.
+- A one-time backfill of the last 30 days of meetings and graph readings (`src/background/tasks/backfill.ts`).
+- Live checkboxes: a task line is `- [ ] words ^tsk_xxxxxxxxxx`. A box is live only when the message's own `taskIds`
+  name the id and the task exists; anything else, including a marker a model wrote, is plain text. Markers are
+  stripped from WhatsApp, voice, copy, export, memory and the knowledge base.
+- The brief shows one list per workspace (top 5 open tasks, then "…and N more"); workspace summaries no longer
+  write "Next actions" and show the board's open tasks instead.
+- The Tasks page (drawer, after Inbox): by workspace or by person; open, done, dropped; add, edit, give, move, merge,
+  drop; "Close everything older than two weeks" drops them (reopenable).
+- Tools `task_add`, `task_done`, `task_reopen`, `task_list`, `task_assign`, `task_move` for the agent (acts as Ava,
+  in its chat's workspace, never moves a task Avi placed) and for voice (acts as Avi, every workspace). When several
+  tasks fit the words, the answer lists them with ids and the model asks which.
+- Tests: `src/storage/lib/tasks/__tests__`, `src/background/tasks/__tests__`, `src/side-panel/tasks/__tests__`,
+  brief, meetings, summaries; E2E `e2e/tasks.e2e.mjs`.
+
+### People: who is who, under every name (2026-11-21, #107, docs/pm-desk.md Part 5)
+
+- Store: `src/storage/lib/people` (Dexie v14 `people`, `peopleNames`). `observe` is the one way in, plain code: a
+  known email, phone or handle is that person whatever the name; a bare name seen once is only watched; it is asked
+  about after a second sighting, at once when a task waits on it, and at once for names on a call. `resolve` goes
+  exact name in the workspace, alias for the workspace, alias for everywhere, unique first name. An alias saved for
+  one workspace never resolves in another.
+- Safety rules in code: a name match never adds an email, phone or handle (it becomes a "Yes, <name>?" question);
+  a first-name match adds nothing; an identifier only suggests on an open question; a roster/invite name pair links
+  an address only when the name is unique on both and the person has none yet.
+- Sources: Meet roster (tiles always, the People panel only while open, never a click) and caption speakers given
+  to audio segments by time overlap (`meetings/speakers.ts`); names in a finished note's action items; calendar
+  `ATTENDEE`/`ORGANIZER` (`calendar/ics.ts`); Gmail senders with their address; Slack direct messages with their id;
+  WhatsApp chats read or drafted into; GitHub connector results (authors, assignees, reviewers); the knowledge
+  graph's person readings of chats and notes. Not yet: the owner's own WhatsApp messages ("Ada says…") need names
+  read out of free text; the Mac calendar has no attendees (#32).
+- "Who's who" (`background/people/cards.ts`): a card after each call and one Inbox card a day at 17:30, at most six
+  questions, each saying where the name was seen. Answers: yes to the offered match, the other name on the card,
+  someone else, a new person, not a person. Every answer is kept for that workspace.
+- People page (`side-panel/people`): people with their names per workspace, edit, merge, remove, and "To sort".
+  `person_note` is a voice tool and an agent action; from a chat it takes only names the owner typed.
+- Task board and vocabulary (`background/people/links.ts`): action-item and graph-action owners go through
+  `observe` with source `task` and their task id; a resolved owner is linked with `taskStore.setOwner`, an unknown
+  one is asked about and linked on the answer; a merge moves the tasks, a removal unlinks them (`replaceOwner`).
+  Owners the task tools name (`task_add`, `task_assign`) are observed from the board's changes. Every person's name
+  and the other names that hold in each workspace are vocabulary seeds (`addPersonSeeds`), synced after changes.
+- Tests: store, sources, cards, note, meet and calendar unit tests; E2E `people-pages.e2e.mjs` (Meet, Gmail and
+  Slack readers on saved pages) and `people.e2e.mjs` (answer a card in the Inbox, see the name on the People page).
+
+### Screen recordings for a task (2026-11-22, #109, docs/pm-desk.md Part 7)
+
+- Panel (`side-panel/recordings`): "Record screen" on an open task's row and in its menu. `getDisplayMedia` is the
+  first call in the click (tabs first, `selfBrowserSurface: 'exclude'`); without a user activation nothing starts.
+  A window or a whole screen asks "Record anyway" first. Mic is added when allowed; tab sound when a tab is picked.
+  The bar shows a red mark, a timer and Stop. It also stops when the call ends, after 2 minutes of silence, at the
+  limit (Settings → Meetings, default 10 minutes), or when the shared tab closes.
+- Storage: chunks of one second go to a separate IndexedDB, `ava-recordings` (`storage/lib/recordings`), which
+  backups never read (they snapshot only the main database). The panel writes chunks; the background owns every
+  other write. A port (`screen-recording`) tells the background the panel closed: the recording stops there and
+  what was captured is saved. Recovery closes a recording with no chunk for 30 s.
+- Saving (`background/recordings`, job `recording_save`): Google Drive when the `google_drive` connector is
+  connected with the `drive.file` scope, to "Ava recordings / <workspace> / <date> <title>.webm", resumable in 8 MiB
+  pieces with the session URL saved so a retry continues the same file. The file starts private. Otherwise Ava
+  Brain saves it to `~/Movies/Ava recordings/<workspace>/`, otherwise the panel downloads it, and one Inbox item
+  offers to connect Drive. Do-once keys guard the upload and each share.
+- Share (`share.ts`): only the Share click makes the file "anyone with the link can comment" and adds the link to
+  the task; Stop sharing removes the permission and the link. `shareRecordingsFor(taskIds)` for other features.
+- Limits: MediaRecorder WebM has no duration index, so some players cannot seek until it has played through. No
+  manifest permission was added.
+- Tests: Drive client against a fake that drops connections, save and share, backup exclusion, store, recorder,
+  Brain routes; E2E `recording.e2e.mjs` records a tab with the mic while meeting notes run (file checked with
+  ffprobe), and uploads to a fake Drive through CDP on the service worker, with one dropped piece.
+
+### Tasks said on a call (2026-11-22, #108, docs/pm-desk.md Part 6)
+
+- Hearing (`src/background/call-tasks/match.ts`, plain code, no model): "(hey) Ava, (please) note/add/log/create (a)
+  task for <name>: <words>", with the recognisers' spellings of "Ava" from `offscreen/stt/addressed.ts`. The name and
+  words go through the vocabulary; the owner comes from `people.resolve`, an unknown name is kept as said and goes to
+  Who's who (`people.observe`, source `spoken`).
+- Whose voice (`signal.ts`), never decided by a name:
+  - notes from captions: only lines the page marks as the user's own (`CALL_DOM.selfLineSelectors`,
+    `[data-self-name]`) and labels "You". A "You" line without the mark (before any marked line), or the mark on a
+    line with another name, turns commands off for the call, and the panel says so. Not yet seen on a live Meet.
+  - notes from the tab's audio with the mic: a separate echo-cancelled mic stream (`src/offscreen/call-mic.ts`) and the
+    local recogniser; a match is refused when the same words were in another speaker's caption within 3 s.
+  - neither: commands off, and the status line says why.
+- Timing and drafting (`engine.ts`): a caption line counts once it stood unchanged for 1.5 s; the task is stored by
+  `recordTask` at once; it stays open two minutes for "also / and / add to that / Ava, …" lines, and closes four
+  seconds after any other sentence or at the next command. Meet's rewrites of a line change the same task.
+- State: `MeetingRecord.callTasks` (`CallTasksState`, no Dexie step). Panel: `CallTaskCards` during the call (Edit,
+  Discard, "Record the screen for this?"), and the turn addon "Tasks from this call" after it.
+- After the call (`after.ts`): nothing is sent or shared before "Looks right". The click shares the recordings
+  (`shareRecordingsFor`), sends one WhatsApp message per person to the user (one message for more than five; quiet
+  hours hold), and offers "Draft a message to Ada", which types into Ada's WhatsApp Web chat and never sends.
+- Seams for #111: `addCallListRows(meetingId, rows)`, `onCallListRowAction(kind, handler)` and
+  `onCallTasksConfirmed(listener)` in `call-tasks/register.ts`.
+- Tests: replayed caption and mic fixtures (another speaker, a guest named "You", a guest named "Avi", a line
+  rewritten three times, follow-ons, two commands); E2E `call-tasks.e2e.mjs` on a fake Meet page.
+
+### Follow-ups: who is doing what, and who to chase (2026-11-22, #111, docs/pm-desk.md Part 9)
+
+- Person updates (`background/followups/note.ts`, `updates.ts`): the meeting note gains `personUpdates` (did, doing,
+  next, by, blockers) and a "## Updates" section. Code keeps one per person in the Dexie table `personUpdates` (v16):
+  not Avi, not "the team", and, when captions name the speakers, only someone who spoke. Names go through
+  `people.resolve`, else `people.observe` (the call's Who's who card). The id is fixed per call and name, so a rerun
+  keeps one record and Avi's answers.
+- "Mark done?": a "did" that clearly matches one open task of that person (`match.ts`: three quarters of the title's
+  words, the opening verb left out, no line that says "not") is only offered, as a card
+  under the call's note in its chat (`side-panel/followups/MarkDoneOffers.tsx`, until #108's after-call list takes
+  it). Only the Yes click closes the task, as Avi's.
+- Status (`status.ts`): latest update plus open tasks, on the person's row and page, as `person_status` (voice and
+  agent), and Avi can type what someone said on their page.
+- Who to chase (`rules.ts`, `today.ts`, plain code): tasks someone other than Avi owns (`owner.ts`: "me", "Me.",
+  "(You)", his profile name, its first word and "Avi E.", a person record with his name or a workspace's Google
+  address). Nobody is chased until his profile has a name; the brief says to set it. Due when the due date has passed; with no due date,
+  after 3 working days with nothing heard (task made, mentioned on a call, or an update); or when `followUp.nextAt`
+  comes. Weekends are skipped, except the day after a weekend due date (that weekend only). Five a day at most, most overdue first; the
+  day's pick is kept (`followup-day` in `storage.local`) and never refilled.
+- Surfaces: "Follow up today" in the brief (`^fu_<taskId>` lines drawn as cards), WhatsApp `who's next`, and one
+  Inbox item a day (job `followups_daily`, 08:30).
+- The card (`FollowUpCard.tsx`): a draft from fixed facts (name, task, where it came from, due date) worded by the
+  light model (`draft`), checked (names the person, no links, short), else a template; cached per facts. Copy;
+  Draft in WhatsApp (only for a task linked to a person; opens their chat in Avi's WhatsApp Web tab, checks the
+  header, refuses if the box already has his text, types, never sends);
+  Asked (next follow-up two working days on); Done (closes it as Avi's); Snooze 1, 3 or 7 days.
+- Reporting back: "<name> says …" on WhatsApp (matched in `task-commands.ts`) or typed on the person's page is a
+  `PersonUpdate` (the agent and voice tools keep one only when the name and most of the words are the user's own);
+  the light model reads the words, a named day becomes `by`, and the person's named tasks move their
+  next follow-up to the first working day after it (or 3 working days on). A "did" is offered, never closed.
+- Tests: rules on a fake clock (weekend, month end, snooze, Asked, a Saturday due date, five of eight), today, buttons,
+  match, updates, report, owner, store, the `says` command; eval `note_updates` (two people, only talked about,
+  nobody); E2E `followups.e2e.mjs` runs a captions call with two speakers and moves the background clock to a
+  Tuesday for the brief card, Asked and Done.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

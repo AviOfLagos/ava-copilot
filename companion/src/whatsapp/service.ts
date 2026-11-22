@@ -11,6 +11,7 @@ import type {
   WhatsAppMessage,
   WhatsAppNoticeKind,
   WhatsAppPresenceRequest,
+  WhatsAppReaction,
   WhatsAppReactRequest,
   WhatsAppReviseRequest,
   WhatsAppState,
@@ -60,6 +61,9 @@ const ECHOES_MAX = 1000;
 const HOUR_MS = 60 * 60_000;
 // A message dated this long before the session became ready is history being synced, not something new
 const HISTORY_GRACE_MS = 60_000;
+// What he sent while the line was down (the Mac asleep, a dropped connection) still gets an answer when it comes
+// back, unless it is older than this: a stale instruction is not carried out hours later
+export const OFFLINE_MAX_MS = 12 * HOUR_MS;
 export const REACTIONS_PER_HOUR = 60;
 // WhatsApp lets a message be edited this long after it was sent, and deleted for everyone about this long
 export const EDIT_WINDOW_MS = 15 * 60_000;
@@ -68,6 +72,8 @@ export const DELETE_WINDOW_MS = 48 * HOUR_MS;
 const OWN_MAX = 20;
 // His recent messages' words kept in memory only, never on disk, to quote them above an answer
 const QUOTABLE_MAX = 100;
+// Her own reaction comes back in the self chat as one of the account's: taken for hers this long after she sent it
+const REACTION_ECHO_MS = 10 * 60_000;
 
 /** Invisible (two invisible separators around a zero-width space): ends every message Ava sends. */
 export const OWN_MARK = '\u2063\u200b\u2063';
@@ -124,6 +130,11 @@ interface Queued extends WhatsAppMessage {
   savedAs?: string | null;
 }
 
+// A reaction of his waiting for the extension: ids, the emoji and times only
+interface QueuedReaction extends WhatsAppReaction {
+  chatId: string;
+}
+
 interface Saved {
   version: 1;
   // A session exists to restore when Ava Brain starts
@@ -154,6 +165,8 @@ interface Saved {
   // Her own sends, newest last: ids, chats and times only
   own: { id: string; chatId: string; at: number; kind: 'text' | 'voice' }[];
   reactedAt: number[];
+  // His reactions (and reactions taken back) waiting for the extension, like the queue
+  reactions: QueuedReaction[];
 }
 
 const EMPTY: Saved = {
@@ -176,6 +189,7 @@ const EMPTY: Saved = {
   lastOutAt: null,
   own: [],
   reactedAt: [],
+  reactions: [],
 };
 
 export interface WhatsAppServiceDeps {
@@ -211,6 +225,18 @@ export function inQuietHours(at: Date, start: string, end: string): boolean {
 
 // Seconds or milliseconds since the epoch, as milliseconds
 const millisOf = (at: number) => (at > 0 && at < 1e12 ? at * 1000 : at);
+
+// A message that came more than this after WhatsApp says he sent it waited somewhere (the Mac was asleep or offline)
+const LATE_MS = 60_000;
+
+/**
+ * When he wrote a message, by this Mac's clock: the moment it came, unless it plainly waited, then WhatsApp's own time.
+ * A "done 2" typed before a list went out is then never read against that list (the extension compares the two).
+ */
+const writtenAt = (messageAt: number, now: number) => {
+  const sent = millisOf(messageAt);
+  return sent > 0 && now - sent > LATE_MS ? sent : now;
+};
 const cUs = (number: string) => `${number}@c.us`;
 
 export class WhatsAppService {
@@ -233,7 +259,8 @@ export class WhatsAppService {
   private generation = 0;
   private lastPullAt: number;
   private awayNoticeSent = false;
-  // When the session last became ready: anything dated well before is synced history
+  // When this session first became ready: anything dated well before is synced history. Reconnects keep it, so
+  // what arrived while the line was down is still new
   private readyAt: number | null = null;
   // His recent messages, to quote above an answer: in memory only, gone on a restart (the answer is then unquoted)
   private readonly quotable = new Map<string, { text: string; voiceSeconds: number | null }>();
@@ -319,6 +346,7 @@ export class WhatsAppService {
     // A session that dropped starts over from its saved files
     await this.driver?.stop().catch(() => {});
     const generation = ++this.generation;
+    this.readyAt = null;
     const executablePath = this.deps.findBrowser();
     privateDir(this.sessionDir);
     const driver = this.deps.driver({ sessionDir: this.sessionDir, executablePath });
@@ -393,6 +421,7 @@ export class WhatsAppService {
       this.saved.queue = this.saved.queue.filter(item => this.isOwnerChat(item.chatId));
       this.saved.chats = this.saved.chats.filter(item => this.isOwnerChat(item.chatId));
       this.saved.own = this.saved.own.filter(item => this.isOwnerChat(item.chatId));
+      this.saved.reactions = this.saved.reactions.filter(item => this.isOwnerChat(item.chatId));
       this.quotable.clear();
       this.save();
     }
@@ -422,6 +451,12 @@ export class WhatsAppService {
       link: link ?? null,
       quotedId: quotedId ?? null,
     }));
+  }
+
+  /** His reactions waiting for the extension, oldest first: which message, which emoji (or none: taken back). */
+  pullReactions(): WhatsAppReaction[] {
+    this.dropExpired();
+    return this.saved.reactions.slice(0, PULL_MAX).map(({ id, targetId, emoji, at }) => ({ id, targetId, emoji, at }));
   }
 
   /**
@@ -464,19 +499,24 @@ export class WhatsAppService {
     this.saved.chats = this.saved.chats.slice(-CHATS_MAX);
     this.dropMedia(this.saved.queue.filter(item => taken.has(item.id)));
     this.saved.queue = this.saved.queue.filter(item => !taken.has(item.id));
-    if (this.saved.queue.length !== before) this.save();
+    const reactions = this.saved.reactions.length;
+    this.saved.reactions = this.saved.reactions.filter(item => !taken.has(item.id));
+    if (this.saved.queue.length !== before || this.saved.reactions.length !== reactions) this.save();
   }
 
-  /** Sends to the owner: to the chat `replyTo` came from, else the owner's own number, else the self chat. */
+  /**
+   * Sends to the owner: to the chat `replyTo` came from, else the owner's own number, else the self chat. Returns
+   * the id of the message that went out (null when the client gave none), so a task list can be matched later.
+   */
   async send(request: {
     text: string;
     kind: WhatsAppNoticeKind;
     replyTo?: string;
     quote?: boolean;
-  }): Promise<WhatsAppStatus> {
+  }): Promise<{ status: WhatsAppStatus; messageId: string | null }> {
     const chatId = this.answerChat(request);
-    await this.sendTo(chatId, request.text, { quote: this.quoteOf(request, chatId) });
-    return this.status();
+    const messageId = await this.sendTo(chatId, request.text, { quote: this.quoteOf(request, chatId) });
+    return { status: this.status(), messageId };
   }
 
   /** A voice note the extension made (Ogg/Opus), to the same chat an answer in words would go to. */
@@ -527,6 +567,8 @@ export class WhatsAppService {
         retryAfterMs: recent[0] + HOUR_MS - this.now(),
       });
     }
+    // Her reaction comes back in the self chat as the account's own: never taken for his
+    this.remember(`react:${target.id}:${request.emoji}`);
     await driver.react(target, request.emoji);
     this.saved.reactedAt = [...recent, this.now()];
     this.save();
@@ -571,12 +613,12 @@ export class WhatsAppService {
    * The only way words are sent. Refuses any chat that is not the owner's, whoever asks, and holds to the
    * hourly limit.
    */
-  async sendTo(chatId: string, text: string, options: { quote?: WaQuote } = {}): Promise<void> {
+  async sendTo(chatId: string, text: string, options: { quote?: WaQuote } = {}): Promise<string | null> {
     const driver = this.ready(chatId);
     const body = bodyOf(text);
     if (!body) fail('invalid', 'There is nothing to send.');
     this.remember(`text:${hashOf(body)}`);
-    await this.deliver(chatId, 'text', () => driver.sendText(chatId, `${body}${OWN_MARK}`, options));
+    return this.deliver(chatId, 'text', () => driver.sendText(chatId, `${body}${OWN_MARK}`, options));
   }
 
   /** The driver, when a send to this chat may go now: his chat only, linked, and under the hourly limit. */
@@ -600,7 +642,7 @@ export class WhatsAppService {
     chatId: string,
     kind: 'text' | 'voice' | null,
     attempt: () => Promise<string | null>,
-  ): Promise<void> {
+  ): Promise<string | null> {
     this.saved.sentAt = [...this.recentSends(), this.now()];
     this.save();
     let id: unknown;
@@ -630,6 +672,7 @@ export class WhatsAppService {
       if (kind) this.saved.own = [...this.saved.own, { id, chatId, at: this.now(), kind }].slice(-OWN_MAX);
     }
     this.save();
+    return typeof id === 'string' && id ? id : null;
   }
 
   async stop(): Promise<void> {
@@ -652,7 +695,7 @@ export class WhatsAppService {
     this.saved.selfIds = [...new Set([...(number ? [cUs(number)] : []), ...account.selfIds])];
     if (this.saved.ownerNumber === number) this.saved.ownerNumber = null;
     this.save();
-    this.readyAt = this.now();
+    this.readyAt ??= this.now();
     this.qr = null;
     this.setState('linked', null);
   }
@@ -662,12 +705,15 @@ export class WhatsAppService {
     // WhatsApp's own bookkeeping (key shares, settings, receipts): never something he said, never answered
     if (message.type === 'system') return;
     if (await this.connectFrom(message)) return;
+    // A reaction goes through the same owner check as words: one from anyone else, or in any other chat, is
+    // dropped here before anything about it is kept
     const chatId = this.ownerChatFor(message);
     if (!chatId) return;
+    if (message.type === 'reaction') return this.takeReaction(message, chatId);
     if (this.isEcho(message)) return;
     // History synced at link or after a restart is not something he just said
     const at = millisOf(message.at);
-    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return;
+    if (!this.isNew(at)) return;
     if (this.saved.seen.includes(message.id)) return;
     this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
     // Someone else's words, voice or files he passed on are never taken as his instructions
@@ -702,12 +748,37 @@ export class WhatsAppService {
   }
 
   /**
+   * His reaction on a message in his chat, or its removal, for the extension: the message's id and the emoji only.
+   * Her own reactions coming back in the self chat, history, and repeats are not his.
+   */
+  private takeReaction(message: WaIncoming, chatId: string): void {
+    const reaction = message.reaction;
+    if (!reaction?.targetId || !message.id) return;
+    const since = this.now() - REACTION_ECHO_MS;
+    const echo = `react:${reaction.targetId}:${reaction.emoji}`;
+    if (message.fromMe && this.saved.echoes.some(item => item.key === echo && item.at > since)) return;
+    if (!this.isNew(millisOf(message.at))) return;
+    if (this.saved.seen.includes(message.id)) return;
+    this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
+    this.saved.lastInAt = this.now();
+    const item: QueuedReaction = {
+      id: message.id.slice(0, 200),
+      targetId: reaction.targetId.slice(0, 200),
+      emoji: reaction.emoji.slice(0, 32),
+      at: this.now(),
+      chatId,
+    };
+    this.saved.reactions = [...this.saved.reactions, item].slice(-QUEUE_MAX);
+    this.save();
+  }
+
+  /**
    * What goes in the queue for an owner's message: his words (a link marked as one), or a voice note, picture or
    * document with its caption, its file fetched and capped. Anything else gets a plain answer here, and null.
    */
   private async itemOf(message: WaIncoming, chatId: string): Promise<Queued | null> {
     const text = message.body.trim().slice(0, WHATSAPP_TEXT_MAX);
-    const base = { id: message.id, text, at: this.now(), chatId, media: null, link: null };
+    const base = { id: message.id, text, at: writtenAt(message.at, this.now()), chatId, media: null, link: null };
     const quotedId = message.quotedId ?? null;
     if (message.type === 'chat') {
       if (!text) return null;
@@ -839,7 +910,7 @@ export class WhatsAppService {
     if (this.isSelfChat(message.chatId)) {
       if (!message.fromMe || message.body.trim().toUpperCase() !== code) return false;
       const at = millisOf(message.at);
-      if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+      if (!this.isNew(at)) return false;
       this.saved.connectCode = null;
       this.saved.lastInAt = this.now();
       this.saved.seen = [...this.saved.seen, message.id].slice(-SEEN_MAX);
@@ -863,7 +934,7 @@ export class WhatsAppService {
     }
     // A code in synced history is not him sending it now
     const at = millisOf(message.at);
-    if (this.readyAt === null || !(at > 0) || at < this.readyAt - HISTORY_GRACE_MS) return false;
+    if (!this.isNew(at)) return false;
     this.saved.connectCode = null;
     this.saved.needsFirstMessage = false;
     this.saved.lastInAt = this.now();
@@ -873,6 +944,13 @@ export class WhatsAppService {
     this.deps.log.info('WhatsApp phone connected');
     await this.sendTo(message.chatId, CONNECTED_TEXT).catch(() => {});
     return true;
+  }
+
+  /** Said since this session was ready (or while its line was down), and not so long ago it is stale. */
+  private isNew(at: number): boolean {
+    return (
+      this.readyAt !== null && at > 0 && at >= this.readyAt - HISTORY_GRACE_MS && at >= this.now() - OFFLINE_MAX_MS
+    );
   }
 
   /** One of Ava's own sends coming back in the self chat: her mark, her id, or her words. */
@@ -951,6 +1029,10 @@ export class WhatsAppService {
 
   private dropExpired(): void {
     const since = this.now() - QUEUE_TTL_MS;
+    if (this.saved.reactions.some(item => item.at <= since)) {
+      this.saved.reactions = this.saved.reactions.filter(item => item.at > since);
+      this.save();
+    }
     const kept = this.saved.queue.filter(item => item.at > since);
     if (kept.length !== this.saved.queue.length) {
       this.dropMedia(this.saved.queue.filter(item => item.at <= since));

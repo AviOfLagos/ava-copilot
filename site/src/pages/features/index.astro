@@ -3,7 +3,7 @@
 // status, so the hub shows at a glance how much of each group ships today. The two signature groups (the gate and
 // ambient listening) carry a small piece of their widget.
 import { ArrowRight } from 'lucide-react';
-import { featureHref, features, groupMeta, projectLinks, statusLabel, widgetCopy } from '../../content/project';
+import { featureHref, featurePaths, features, groupMeta, projectLinks, statusLabel, widgetCopy } from '../../content/project';
 import type { Status } from '../../content/project';
 import { PRODUCT, links } from '../../content/site';
 import Base from '../../layouts/Base.astro';
@@ -15,7 +15,8 @@ import '../../styles/features.css';
 const path = projectLinks.features;
 const all = features.groups.flatMap(group => group.items);
 const count = (status: Status, items = all) => items.filter(item => item.status === status).length;
-const wide = new Set(['gate', 'ambient', 'brain', 'trust']);
+const wide = new Set(['gate', 'ambient', 'team', 'brain', 'trust']);
+const titleOf = (id: string) => features.groups.find(group => group.id === id)?.title ?? id;
 const tally = (items: typeof all) =>
   (['live', 'preview', 'planned'] as Status[])
     .map(status => [status, count(status, items)] as const)
@@ -55,6 +56,27 @@ const tally = (items: typeof all) =>
         }
       </ul>
     </header>
+
+    <section class="block" aria-labelledby="paths-title">
+      <div class="block-head">
+        <h2 class="h2" id="paths-title">{featurePaths.title}</h2>
+      </div>
+      <ul class="fpaths">
+        {
+          featurePaths.items.map(item => (
+            <li class="fpaths__item">
+              <p class="fpaths__title">{item.title}</p>
+              <p class="fpaths__body">{item.body}</p>
+              <p class="fpaths__links">
+                {item.ids.map(id => (
+                  <a href={featureHref(id)}>{titleOf(id)}</a>
+                ))}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
 
     <section class="block" aria-labelledby="groups-title">
       <h2 class="sr-only" id="groups-title">Feature groups</h2>

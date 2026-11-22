@@ -1,0 +1,42 @@
+{
+  "kind": "note_updates",
+  "name": "Someone only talked about on a call gets no update, even when the note names them",
+  "source": {
+    "found": "2026-11-22",
+    "issue": "AviOfLagos/ava-copilot#111",
+    "spec": "docs/pm-desk.md, Part 9.1"
+  },
+  "started": "2026-11-23T10:00",
+  "transcript": [
+    {
+      "speaker": "Avi Example",
+      "text": "Ben, has Chidi sent the invoices?"
+    },
+    {
+      "speaker": "Ben",
+      "text": "Chidi said he finished the invoices last week. I'm still on the payments page."
+    }
+  ],
+  "people": [
+    {
+      "name": "Ben",
+      "tasks": ["Build the payments page"]
+    },
+    {
+      "name": "Chidi",
+      "tasks": ["Send the invoices"]
+    }
+  ],
+  "replay": {
+    "note": "{\"title\": \"Weekly sync\", \"tldr\": [\"a\", \"b\", \"c\"], \"decisions\": [], \"actionItems\": [], \"openQuestions\": [], \"participants\": [], \"personUpdates\": [{\"name\": \"Ben\", \"did\": [], \"doing\": [\"Payments page\"], \"next\": [], \"by\": null, \"blockers\": []}, {\"name\": \"Chidi\", \"did\": [\"Finished the invoices\"], \"doing\": [], \"next\": [], \"by\": null, \"blockers\": []}]}"
+  },
+  "expect": {
+    "updates": [
+      {
+        "name": "Ben",
+        "doing_matches": ["payments page"],
+        "offers": []
+      }
+    ]
+  }
+}

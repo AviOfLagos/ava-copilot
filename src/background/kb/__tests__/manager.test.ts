@@ -224,6 +224,48 @@ describe('KnowledgeBase', () => {
     expect(hits[0].chunk.anchor).toEqual({ kind: 'page', url: 'https://example.com/handbook' });
   });
 
+  it('records who placed an item: the user by default, a rule when told, and nobody for what follows its source', async () => {
+    const page = await kb.savePage(1);
+    expect(await kb.setWorkspace([page.id], 'ws-a')).toBe(1);
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-a', workspaceSetBy: 'avi' });
+    // The same placing again changes nothing
+    expect(await kb.setWorkspace([page.id], 'ws-a')).toBe(0);
+    expect(await kb.setWorkspace([page.id], 'ws-b', 'rule')).toBe(1);
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-b', workspaceSetBy: 'rule' });
+    expect(await kb.setWorkspace([page.id], 'ws-c', null)).toBe(1);
+    expect((await store.item(page.id))?.workspaceSetBy).toBeUndefined();
+    expect(await kb.setWorkspace(['page:gone'], 'ws-a')).toBe(0);
+  });
+
+  it('moves an item only when it is still as it was read, so a rule never overwrites the user’s own placing', async () => {
+    const page = await kb.savePage(1);
+    await kb.setWorkspace([page.id], 'ws-a', 'avi');
+    // A rule read it as in no workspace and placed by no one; the user has placed it since
+    expect(await kb.setWorkspace([page.id], 'ws-b', 'rule', { workspaceId: null, setBy: null })).toBe(0);
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-a', workspaceSetBy: 'avi' });
+    expect(await kb.setWorkspace([page.id], 'ws-b', 'avi', { workspaceId: 'ws-a', setBy: 'avi' })).toBe(1);
+  });
+
+  it('keeps the workspace the user gave a saved page when it is saved again, and a rule’s mark, but not for a chat', async () => {
+    const page = await kb.savePage(1, 'ws-a');
+    await kb.setWorkspace([page.id], 'ws-b');
+    await kb.savePage(1, 'ws-a');
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-b', workspaceSetBy: 'avi' });
+
+    await kb.setWorkspace([page.id], 'ws-c', 'rule');
+    await kb.savePage(1, 'ws-a');
+    // A rule's placing gives way to the new one, and the mark stays a rule's
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-a', workspaceSetBy: 'rule' });
+
+    const thread = await chat('Deadlines', [['When is Stage 2 due?', 'Friday 10 October.']]);
+    await kb.indexThread(thread.id);
+    await db.kbItems.update(`thread:${thread.id}`, { workspaceSetBy: 'avi', workspaceId: 'ws-b' });
+    await threads.update(thread.id, { workspaceId: 'ws-a' });
+    await kb.indexThread(thread.id, true);
+    // A chat's knowledge follows the chat
+    expect((await store.item(`thread:${thread.id}`))?.workspaceId).toBe('ws-a');
+  });
+
   it('keeps a document under its own source id, and saving it again replaces it', async () => {
     const link = 'https://docs.google.com/document/d/abc123def456/edit';
     const first = await kb.saveDocument({

@@ -51,6 +51,12 @@ export interface UpcomingEvent {
   start: number;
   end: number;
   joinUrl: string | null;
+  // Kept so a restarted background can go on from what it stored (reminders skip all-day events)
+  allDay?: boolean;
+  location?: string;
+  // Who was invited and who sent it, so a call can be matched to its invite after a restart
+  attendees?: { name: string; email: string | null }[];
+  organizer?: { name: string; email: string | null } | null;
 }
 
 // Where the events came from: the Mac's Calendar (through Ava Brain) or the iCal address
@@ -62,6 +68,8 @@ export const upcomingEventsStore = createStorage<{
   readAt: number;
   error: string | null;
   source?: CalendarSourceName | null;
+  // When the calendar was last read without an error: the events are as of then
+  okAt?: number;
 }>(
   'calendar-upcoming',
   { events: [], readAt: 0, error: null, source: null },

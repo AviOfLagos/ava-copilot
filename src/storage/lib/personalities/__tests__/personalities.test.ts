@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILTIN_PERSONALITIES, DEFAULT_PERSONALITY_ID } from '../builtins';
+import { BUILTIN_PERSONALITIES, DEFAULT_PERSONALITY_ID, PERSONA_SOURCE_NAMES } from '../builtins';
 import {
   checkPersonality,
   duplicatePersonality,
@@ -12,6 +12,7 @@ import {
   switchesWorkspace,
   withActive,
 } from '../personalities';
+import { PERSONALITY_INSTRUCTIONS_MAX } from '../types';
 import type { PersonalitiesState, Personality } from '../types';
 
 const custom = (changes: Partial<Personality> = {}): Personality => ({
@@ -64,7 +65,7 @@ describe('checkPersonality', () => {
 });
 
 describe('the built-ins', () => {
-  it('ship six, the default first and empty, every other one with instructions under the cap', () => {
+  it('ship nine, the default first and empty, every other one with instructions under the cap', () => {
     expect(BUILTIN_PERSONALITIES.map(item => item.id)).toEqual([
       'default',
       'engineer',
@@ -72,6 +73,9 @@ describe('the built-ins', () => {
       'legal',
       'auntie',
       'operator',
+      'growth',
+      'positioning',
+      'build_in_public',
     ]);
     expect(BUILTIN_PERSONALITIES[0].instructions).toBe('');
     for (const item of BUILTIN_PERSONALITIES.slice(1)) {
@@ -85,6 +89,44 @@ describe('the built-ins', () => {
     expect(byId('operator').instructions).toContain('never claim to be him');
     expect(byId('operator').description.toLowerCase()).toContain('inspired by');
     expect(byId('auntie').instructions).toContain('Never insult');
+  });
+
+  it("give the growth team's three their beliefs, rules, first questions and what to avoid, in that order", () => {
+    for (const id of ['growth', 'positioning', 'build_in_public']) {
+      const item = BUILTIN_PERSONALITIES.find(candidate => candidate.id === id)!;
+      const text = item.instructions;
+      const order = ['Beliefs:', 'Rules:', 'First questions:', 'Avoid:'].map(heading => text.indexOf(heading));
+      expect(
+        order.every(index => index > 0),
+        id,
+      ).toBe(true);
+      expect(
+        [...order].sort((a, b) => a - b),
+        id,
+      ).toEqual(order);
+      // Five to seven beliefs, each a line of its own
+      const beliefs = text
+        .slice(order[0], order[1])
+        .split('\n')
+        .filter(line => line.startsWith('- '));
+      expect(beliefs.length, id).toBeGreaterThanOrEqual(5);
+      expect(beliefs.length, id).toBeLessThanOrEqual(7);
+      // Every rule says when, then what
+      const rules = text
+        .slice(order[1], order[2])
+        .split('\n')
+        .filter(line => line.startsWith('- '));
+      expect(
+        rules.every(line => line.startsWith('- When ')),
+        id,
+      ).toBe(true);
+      // Inspired by, never the person, and never named in what goes out
+      expect(item.description.toLowerCase(), id).toContain('inspired by');
+      expect(text, id).toMatch(/never claim to be (him|them)/);
+      expect(text, id).toContain('anything written for customers or the public');
+      expect(text.length, id).toBeLessThanOrEqual(PERSONALITY_INSTRUCTIONS_MAX);
+      expect(PERSONA_SOURCE_NAMES[id]?.length, id).toBeGreaterThan(0);
+    }
   });
 });
 

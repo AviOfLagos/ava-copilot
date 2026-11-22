@@ -1,0 +1,64 @@
+{
+  "kind": "note_updates",
+  "name": "Two people give updates on a call: each is kept with did, doing, next and the day, and a finished task is offered, not closed",
+  "source": {
+    "found": "2026-11-22",
+    "issue": "AviOfLagos/ava-copilot#111",
+    "spec": "docs/pm-desk.md, Part 9.1"
+  },
+  "started": "2026-11-23T10:00",
+  "transcript": [
+    {
+      "speaker": "Avi Example",
+      "text": "Morning. Quick round, then I'll send the contract myself."
+    },
+    {
+      "speaker": "Ada Obi",
+      "text": "I sent the deck to the venue yesterday. Now I'm on the sponsor list, ready Thursday."
+    },
+    {
+      "speaker": "Ben",
+      "text": "I finished the login page. Next is the payments page, done by Friday. I'm blocked on the API keys."
+    },
+    {
+      "speaker": "Avi Example",
+      "text": "Great, thanks both."
+    }
+  ],
+  "people": [
+    {
+      "name": "Ada Obi",
+      "tasks": ["Send the deck to the venue"]
+    },
+    {
+      "name": "Ben",
+      "tasks": ["Build the login page", "Write the FAQ"]
+    }
+  ],
+  "replay": {
+    "note": "{\"title\": \"Weekly sync\", \"tldr\": [\"a\", \"b\", \"c\"], \"decisions\": [], \"actionItems\": [], \"openQuestions\": [], \"participants\": [], \"personUpdates\": [{\"name\": \"Avi Example\", \"did\": [], \"doing\": [], \"next\": [\"Send the contract\"], \"by\": null, \"blockers\": []}, {\"name\": \"Ada\", \"did\": [\"Sent the deck to the venue\"], \"doing\": [\"Sponsor list\"], \"next\": [], \"by\": \"Thursday\", \"blockers\": []}, {\"name\": \"Ben\", \"did\": [\"Finished the login page\"], \"doing\": [], \"next\": [\"Payments page\"], \"by\": \"Friday\", \"blockers\": [\"API keys\"]}]}"
+  },
+  "expect": {
+    "prompt_matches": [
+      "Updates: one entry for each person",
+      "Someone others only talk about gets no entry",
+      "If nobody gave an update, give an empty list"
+    ],
+    "updates": [
+      {
+        "name": "Ada",
+        "did": ["x"],
+        "doing_matches": ["sponsor list"],
+        "by": "2026-11-26",
+        "offers": ["Send the deck to the venue"]
+      },
+      {
+        "name": "Ben",
+        "did": ["x"],
+        "next_matches": ["payments page"],
+        "by": "2026-11-27",
+        "offers": ["Build the login page"]
+      }
+    ]
+  }
+}

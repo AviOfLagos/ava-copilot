@@ -1,10 +1,20 @@
-import { useState } from 'react';
-import { ChevronRight, Plus, Star, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronRight, Package, Plus, Star, Trash2 } from 'lucide-react';
 import { t } from '@extension/i18n';
-import { ACCOUNT_PLATFORMS, workspaceId, workspaceStore } from '@extension/storage';
-import type { AccountPlatform, Workspace } from '@extension/storage';
+import {
+  ACCOUNT_PLATFORMS,
+  emptyProductProfile,
+  isEmptyProfile,
+  productStore,
+  workspaceId,
+  workspaceStore,
+} from '@extension/storage';
+import type { AccountPlatform, ProductProfile, Workspace } from '@extension/storage';
 import { cn } from '@extension/ui';
 import { Button } from '../components/ui/button';
+import ProductFields from './ProductFields';
+import ProductLedger from './ProductLedger';
+import ProductNumbers from './ProductNumbers';
 import { useDefaultWorkspaceId, useWorkspaces } from './WorkspacePicker';
 
 const PLATFORM_LABELS: Record<AccountPlatform, { label: string; placeholder: string }> = {
@@ -34,6 +44,25 @@ function Editor({
   const [draft, setDraft] = useState(initial);
   const [keywords, setKeywords] = useState(initial.keywords.join(', '));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The product this workspace sells, if any; null until the user adds one
+  const [product, setProduct] = useState<ProductProfile | null>(null);
+  const [hadProduct, setHadProduct] = useState(false);
+  // Until the stored product is read, there is nothing to add to: a product typed meanwhile would be replaced
+  const [productRead, setProductRead] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void productStore.forWorkspace(initial.id).then(found => {
+      if (!live) return;
+      if (found) {
+        setProduct(found);
+        setHadProduct(true);
+      }
+      setProductRead(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [initial.id]);
   const isNew = !initial.name;
   const taken = others.map(item => item.id);
   // Two workspaces of one name could not be told apart, by the user or by routing a chat's words
@@ -43,6 +72,12 @@ function Editor({
     if (!draft.name.trim() || clash) return;
     const id = isNew ? workspaceId(draft.name, taken) : draft.id;
     await workspaceStore.save({ ...draft, id, keywords: keywords.split(',') });
+    // A product with nothing in it is no product
+    if (product && !isEmptyProfile({ ...product, name: '' })) {
+      await productStore.save({ ...product, workspaceId: id, name: product.name.trim() || draft.name.trim() });
+    } else if (hadProduct) {
+      await productStore.remove(id);
+    }
     onDone();
   };
 
@@ -93,6 +128,23 @@ function Editor({
           </label>
         ))}
       </fieldset>
+      {product ? (
+        <>
+          <ProductFields value={product} onChange={setProduct} />
+          {/* Numbers are read for a product that is saved: until then there is nothing to connect */}
+          {hadProduct && <ProductNumbers workspaceId={initial.id} hasApi={!!product.agentApi?.baseUrl.trim()} />}
+          {/* The budget and the beta places as the ledger counts them: they change only by an answer in the Inbox */}
+          {hadProduct && <ProductLedger workspaceId={initial.id} />}
+        </>
+      ) : !productRead ? null : (
+        <button
+          type="button"
+          onClick={() => setProduct(emptyProductProfile({ id: draft.id, name: draft.name }))}
+          className="text-primary hover:bg-accent/50 flex items-center gap-2 rounded-xl px-1 py-1.5 text-left text-[12.5px]">
+          <Package className="size-3.5" />
+          {t('product_add')}
+        </button>
+      )}
       <div className="mt-1 flex items-center gap-2">
         {!isNew &&
           (confirmDelete ? (
@@ -100,6 +152,12 @@ function Editor({
               variant="destructive"
               size="sm"
               onClick={async () => {
+                // The product first: a workspace gone with its product left behind would leave an orphan
+                await productStore.remove(draft.id);
+                // Its numbers and its API token are the background's to remove
+                void chrome.runtime
+                  .sendMessage({ type: 'growth_forget', workspaceId: draft.id, requestId: crypto.randomUUID() })
+                  .catch(() => undefined);
                 await workspaceStore.remove(draft.id);
                 onDone();
               }}>

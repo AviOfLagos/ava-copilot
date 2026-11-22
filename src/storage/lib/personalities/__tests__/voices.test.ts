@@ -12,6 +12,7 @@ import {
   pickSystemVoice,
 } from '../personalities';
 import { liveSpeechConfig } from '../../identity/voice';
+import { KITTEN_VOICES, KOKORO_VOICES } from '../../settings/voiceEngineSettings';
 import { VOICE_SLOTS } from '../types';
 import type { Personality } from '../types';
 
@@ -85,12 +86,18 @@ describe('voices per engine', () => {
 describe('the built-in personalities', () => {
   const others = BUILTIN_PERSONALITIES.filter(item => item.id !== DEFAULT_PERSONALITY_ID);
 
-  it('sound different from each other on every engine', () => {
+  it('sound different from each other on every engine, as far as its voices go', () => {
+    // The local engines have seven voices besides Ava's: all are used before one is shared
+    const voicesOf: Partial<Record<(typeof VOICE_SLOTS)[number], number>> = {
+      kitten: KITTEN_VOICES.length - 1,
+      kokoro: KOKORO_VOICES.length - 1,
+    };
     for (const slot of VOICE_SLOTS) {
       const voices = others.map(item => item.voices[slot]);
       expect(voices.every(Boolean), slot).toBe(true);
       // System entries list fallbacks, so compare their first choice
-      expect(new Set(voices.map(voice => voice!.split('|')[0])).size, slot).toBe(others.length);
+      const distinct = new Set(voices.map(voice => voice!.split('|')[0])).size;
+      expect(distinct, slot).toBe(Math.min(others.length, voicesOf[slot] ?? others.length));
     }
   });
 

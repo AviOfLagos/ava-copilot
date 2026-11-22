@@ -9,7 +9,7 @@ import '../styles/widgets.css';
 import UpdateDemo from '../components/widgets/UpdateDemo.astro';
 
 const path = links.install;
-const { tabs, script, load, update, remove, voices, brain, paths, notify } = install;
+const { tabs, script, load, update, remove, voices, brain, paths, notify, connect } = install;
 const pathIcons = { download: Download, terminal: Terminal, source: Code2 };
 const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
 ---
@@ -49,7 +49,7 @@ const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
                       <>
                         <span class="pv-file">
                           <Icon strokeWidth={1.75} />
-                          <span>nex-copilot-latest.zip</span>
+                          <span>ava-copilot-latest.zip</span>
                         </span>
                         <span class="pv-arrow" />
                         <span class="pv-folder">Ava Copilot</span>
@@ -270,7 +270,30 @@ const notifyIcons = [PanelRight, Bell, MonitorSmartphone, Rss];
             {brain.needs.map(item => <li>{item}</li>)}
           </ul>
           <p class="prose" style="font-size: 15px; line-height: 24px; margin-top: 4px">{brain.setup}</p>
+          <InstallCommand id={`command-${brain.id}`} command={brain.command} label={brain.title} />
         </section>
+      </div>
+    </section>
+
+    <section class="block" id={connect.id} aria-labelledby={`${connect.id}-title`}>
+      <div class="block-head">
+        <p class="label">Connect</p>
+        <h2 class="h2" id={`${connect.id}-title`}>{connect.title}</h2>
+        <p class="prose">{connect.body}</p>
+      </div>
+      <div class="two-col">
+        {
+          connect.cards.map(card => (
+            <section class="card panel-card" id={card.id} aria-labelledby={`${card.id}-title`}>
+              <p><span class="badge">{card.badge}</span></p>
+              <h3 class="h3" id={`${card.id}-title`}>{card.title}</h3>
+              <ol class="list list--steps">
+                {card.steps.map(step => <li>{step}</li>)}
+              </ol>
+              <p class="prose" style="font-size: 15px; line-height: 24px">{card.note}</p>
+            </section>
+          ))
+        }
       </div>
     </section>
   </div>

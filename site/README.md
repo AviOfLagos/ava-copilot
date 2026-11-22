@@ -1,7 +1,8 @@
 # Ava Copilot website
 
-The marketing and install site for Ava Copilot: `/`, `/install`, `/privacy`, a 404, `robots.txt`, a sitemap,
-`llms.txt` and link-preview images. Static HTML, a few small islands and scripts, no analytics and nothing loaded from
+The marketing and install site for Ava Copilot: `/`, `/install` (with how to connect Ava Brain, WhatsApp and Drive),
+`/features` and one page per feature group, `/roadmap`, `/changelog`, `/contribute`, `/donate`, `/privacy`, a 404,
+`robots.txt`, a sitemap, `llms.txt`, a release feed and link-preview images. Static HTML, a few small islands and scripts, no analytics and nothing loaded from
 anyone else. Decisions live in `docs/` (`BRIEF.md`, `DIRECTION.md` — v2, "Ava gives the tour" — and
 `ARCHITECTURE.md`).
 
@@ -41,10 +42,15 @@ SITE_URL=https://avicopilot.example pnpm build
 ## Where things are
 
 ```text
-src/content/site.ts              every word on the site (the content model); PRODUCT is the product name, in one place
+src/content/site.ts              the words of the home, install and privacy pages, the nav, footer and FAQ; PRODUCT is the product name, in one place
+src/content/project.ts           the features (groups of items, each marked live / preview / planned, with an optional
+                                 `you` and `on` line: what you do, what tells you it is on), the roadmap, contribute, donate and
+                                 the changelog page's own words; `featurePaths` is the hub's "find it by what you want" list
+../CHANGELOG.md                  the changelog's entries, read at build time by src/lib/changelog.ts (see "The changelog")
 src/content/narration.json       Ava's lines, one per section (`text` is shown, `say` is what the voice reads if different)
 src/content/narration-audio.json written by `pnpm narrate`: each line's file, length and the hash of what was said
-src/pages/                       index, install, privacy, 404, robots.txt, llms.txt, og-card/[slug] (OG templates)
+src/pages/                       index, install, features/ (hub + [group]), roadmap, changelog, contribute, donate, privacy, 404,
+                                 robots.txt, llms.txt, releases.xml, version.json, og-card/[slug] (OG templates)
 src/layouts/Base.astro           metadata, JSON-LD, the no-flash theme script, header, footer, the `after` slot
 src/components/                  Section (pill + headline + sentence), Globe, TourDock, Flutes, and the widgets:
                                  TrailRun.tsx (build-time), StepsBento, KnowledgeGraph, RoutineFlow, InboxStack,
@@ -87,6 +93,24 @@ The site imports the extension's own components and CSS from `../src`, read-only
 | Confirm card, "Your turn" card | gate demo, section 02 | `ConfirmCard`'s markup and classes repeated with the site's labels |
 | Workflow node card | section 05 routine | `FlowDiagram`'s node markup and classes repeated (React Flow is too heavy for a page) |
 | Inbox row | section 05 | `InboxRow`'s markup repeated, the app's buttons and labels |
+
+## The changelog
+
+`/changelog` is built from the repository's `CHANGELOG.md` (`src/lib/changelog.ts` imports it raw), so the page and
+the file cannot drift: to add an entry, write it in `CHANGELOG.md`. The format is described at the top of that file:
+`## <dates> · <label>` per week or release (a label that starts with `next release` marks merged work that is not in
+the download yet, and gets the amber mark), `### <theme>`, and one `- <what changed>. ([#123](pull-request-url))`
+line each. Only `code` and **bold** are read inside a line; everything else is escaped.
+
+When a release is cut, rename the "next release" heading to its version and date, and bump `RELEASE` in
+`src/content/release-notes.ts` (that is what the extension's update banner and the release feed read).
+
+## Adding a feature or a page
+
+Add the item to its group in `src/content/project.ts` with an honest status (`live` only if it is merged; `preview`
+if it works but is rough or needs a setup that is not one click; `planned` if it is not built). Give it a `you` and an
+`on` line when there is something to do or look for. A new group needs an icon in `src/lib/feature-icons.ts` and an
+entry in `groupMeta`; its link-preview card and page are made for it. Then add a line to `CHANGELOG.md`.
 
 ## The globe
 

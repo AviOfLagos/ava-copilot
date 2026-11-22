@@ -39,6 +39,22 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   `src/side-panel/components/ai` are ported from AI Elements (Apache 2.0, keep the header notice); `components/ui` holds
   the orbs (MorphOrb, LiveOrb, the dotted ThinkingOrb) and primitives. MorphOrb animates on animation frames, so E2E
   tests bring the panel tab to the front before using it.
+- Open tabs: `src/background/browser/tabRegistry.ts` (ages and last use, in session storage) and `src/background/tabs`
+  (the site a task names, `find_tab`, the state message's list by site). A person's task may start on, or move to, a
+  free tab in any ordinary window; an agent's run stays in the windows it already uses (`TabBinding.anyWindow`).
+- Product profile: `src/storage/lib/products` (one per workspace; the owner's Suture seed only under
+  `VITE_SEED_PROFILE=avi`) and `src/background/products` (the state-message section, `update_product_profile`).
+  Product facts come from there only; an empty field reads "not set" and is never filled with a guess.
+- Growth numbers: `src/storage/lib/growth` (Dexie v8) and `src/background/growth` (the product collector for the
+  Suture agent API, `metrics_query`, `make_link`). Plain code, no model. A number that could not be read is "no
+  reading" with a reason, never 0; the product API token lives in the vault under `product-api:<workspaceId>@<host>`.
+- Rounds and check-ins: `src/background/rounds` (`plan.ts` holds the clock rules and the "what changed"
+  arithmetic; the tick does one round or one offer). Rounds only read; an offer starts nothing until the user
+  approves it in the Inbox. The state is `roundsStore` (`storage.local`).
+- Workspaces made and sorted (`docs/pm-desk.md` Part 3): `src/background/workspaces` (`rules.ts` decides, `place.ts` moves and
+  undoes, `sort.ts` is the pass; plain code, a light model only suggests names and guesses) and `src/side-panel/workspaces`.
+  Every writer of a chat's, meeting's, knowledge item's or task's `workspaceId` also writes `workspaceSetBy`; anything `'avi'`
+  is never moved except by his own click. Moves and offers are kept in `storage.local` (`workspacePlacement`), not Dexie.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

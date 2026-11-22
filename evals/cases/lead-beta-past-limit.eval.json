@@ -1,0 +1,13 @@
+{
+  "kind": "lead",
+  "name": "A beta place past the product's weekly rule is refused by code",
+  "source": { "found": "2026-11-21", "issue": "AviOfLagos/ava-copilot#74", "spec": "docs/growth-team.md, Part 8" },
+  "beta": { "rule": { "testersPerWeek": 5, "days": 30, "plan": "pro" }, "remaining": 0 },
+  "replay": [
+    { "tool": "request_beta_grant", "request_id": "req-9", "why": "Asked for beta access to try the fix loop." }
+  ],
+  "expect": {
+    "steps": [{ "state": "refused", "matches": ["no beta places are left this week"] }],
+    "queued": []
+  }
+}

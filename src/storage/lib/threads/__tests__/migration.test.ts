@@ -45,8 +45,20 @@ describe('database upgrade to version 5', () => {
     });
     // The job key is unique: the same key twice is refused
     await expect(db.jobs.add({ ...(await db.jobs.get('j1'))!, id: 'j2' })).rejects.toThrow();
-    // Later versions only add tables (version 6: ambient listening)
-    expect(db.verno).toBe(6);
+    // Later versions only add tables (version 6: ambient listening; version 7: do-once keys; version 8: the
+    // growth numbers; version 9: the growth team's approvals and ledger)
+    // (at least version 11; the parts of the PM desk each add a table, so the exact number is not pinned here)
+    expect(db.verno).toBeGreaterThanOrEqual(11);
+    expect(await db.vocabulary.count()).toBe(0);
+    expect(await db.people.count()).toBe(0);
+    expect(await db.peopleNames.count()).toBe(0);
+    expect(await db.doOnce.count()).toBe(0);
+    // The task board (docs/pm-desk.md, Part 2)
+    expect(await db.tasks.count()).toBe(0);
+    expect(await db.growthMetrics.count()).toBe(0);
+    expect(await db.growthReadings.count()).toBe(0);
+    expect(await db.growthSources.count()).toBe(0);
+    expect(await db.growthLinks.count()).toBe(0);
     expect(await db.ambientSessions.count()).toBe(0);
     expect(await db.ambientUtterances.count()).toBe(0);
     db.close();

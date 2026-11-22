@@ -1,0 +1,24 @@
+{
+  "kind": "draft",
+  "name": "A growth draft post that names the person behind the personality never reaches the Inbox",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#73",
+    "spec": "docs/growth-team.md, Part 8"
+  },
+  "personality": "growth",
+  "action": "post",
+  "replay": {
+    "title": "The one question we ask every user",
+    "text": "Sean Ellis's must-have test changed how we build: we asked 40 Suture users how they would feel without it."
+  },
+  "expect": {
+    "refused": true,
+    "why_matches": ["names \"Sean Ellis\"", "Never name the person"],
+    "prompt_matches": [
+      "inspired by the public work of Sean Ellis",
+      "never claim to be him",
+      "anything written for customers or the public"
+    ]
+  }
+}

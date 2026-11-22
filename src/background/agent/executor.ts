@@ -1,4 +1,4 @@
-import { flushSuture } from 'suture-trace';
+import { flushHostedTracing } from '@src/background/telemetry/suture';
 import type { ChatModel } from '@src/background/llm/types';
 import { type ActionResult, AgentContext, type AgentOptions, type AgentOutput } from './types';
 import { t } from '@extension/i18n';
@@ -22,6 +22,8 @@ import {
   MaxFailuresReachedError,
 } from './agents/errors';
 import { URLNotAllowedError } from '../browser/views';
+import { codeOfStepError } from '../retry/classify';
+import type { FailureCode } from '../retry/classify';
 import { chatHistoryStore } from '@extension/storage/lib/chat';
 import type { AgentStepHistory } from './history';
 import type { GeneralSettingsConfig, Personality } from '@extension/storage';
@@ -53,6 +55,17 @@ export interface ExecutorExtraArgs {
   channel?: string;
 }
 
+/** What an error's type says about why the task failed. */
+export function failureCodeOf(error: unknown): FailureCode {
+  if (error instanceof ChatModelAuthError) return 'auth';
+  if (error instanceof ChatModelForbiddenError) return 'forbidden';
+  if (error instanceof ChatModelBadRequestError) return 'bad_request';
+  if (error instanceof URLNotAllowedError) return 'url_not_allowed';
+  if (error instanceof ExtensionConflictError) return 'extension_conflict';
+  if (error instanceof MaxFailuresReachedError) return 'max_failures';
+  return 'unknown';
+}
+
 export class Executor {
   private readonly navigator: NavigatorAgent;
   private readonly planner: PlannerAgent;
@@ -64,6 +77,11 @@ export class Executor {
   private readonly summarizer: ChatModel;
   private tasks: string[] = [];
   private readonly channel: string | undefined;
+  // Why the last run failed, as far as the error's type says; the thread manager classes the run by it
+  failureCode: FailureCode | null = null;
+  // The last step error behind a "too many failures" end, in its own words: it says more than the count
+  failureDetail: string | null = null;
+  private lastStepError: string | null = null;
   constructor(
     task: string,
     taskId: string,
@@ -148,13 +166,28 @@ export class Executor {
    *
    * @returns false when no such request is waiting
    */
-  answerConfirmation(requestId: string, approved: boolean, replies?: string[]): boolean {
-    return this.context.confirmGate.answer(requestId, approved, replies);
+  answerConfirmation(requestId: string, approved: boolean, replies?: string[], always = false): boolean {
+    return this.context.confirmGate.answer(requestId, approved, replies, always);
   }
 
   /** The task this executor works on now: the latest follow-up, or the first task. */
   get currentTask(): string {
     return this.tasks[this.tasks.length - 1];
+  }
+
+  /** Whether the task typed into a field or committed something in its last few steps. */
+  isMidForm(): boolean {
+    return this.context.isMidForm();
+  }
+
+  /**
+   * Lets a held task (see pause) go on in a fresh page: the model is told once, with the next page state it
+   * reads, and the steps that failed on the page it lost do not count against it.
+   */
+  resumeOnFreshPage(note: string): void {
+    this.context.notes.push(note);
+    this.context.consecutiveFailures = 0;
+    this.context.paused = false;
   }
 
   /**
@@ -195,7 +228,10 @@ export class Executor {
     logger.info(`🚀 Executing task: ${this.tasks[this.tasks.length - 1]}`);
     // reset the step counter
     const context = this.context;
-    context.nSteps = 0;
+    context.startTask();
+    this.failureCode = null;
+    this.failureDetail = null;
+    this.lastStepError = null;
     const allowedMaxSteps = this.context.options.maxSteps;
     // The turn's trace (telemetry/traces.ts): the user's message, every model call, and what they got back
     startTurn(this.context.taskId, { task: this.tasks[this.tasks.length - 1], channel: this.channel });
@@ -256,6 +292,7 @@ export class Executor {
       } else if (step >= allowedMaxSteps) {
         logger.error('❌ Task failed: Max steps reached');
         outcome = { answer: t('exec_errors_maxStepsReached'), status: 'error', error: 'max steps reached' };
+        this.failureCode = 'max_steps';
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_errors_maxStepsReached'));
       } else if (this.context.stopped) {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
@@ -267,12 +304,19 @@ export class Executor {
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_CANCEL, t('exec_task_cancel'));
       } else {
         const errorMessage = error instanceof Error ? error.message : String(error);
+        this.failureCode = failureCodeOf(error);
+        // Three failed steps in a row: what the last one said tells a dropped network from a missing model
+        const lastStepError = this.lastStepError as string | null;
+        if (this.failureCode === 'max_failures' && lastStepError) {
+          this.failureCode = codeOfStepError(lastStepError);
+          this.failureDetail = lastStepError.replace(/\s+/g, ' ').trim().slice(0, 300);
+        }
         outcome = { answer: t('exec_task_fail', [errorMessage]), status: 'error', error: errorMessage };
         this.context.emitEvent(Actors.SYSTEM, ExecutionState.TASK_FAIL, t('exec_task_fail', [errorMessage]));
       }
     } finally {
       finishTurn(this.context.taskId, outcome);
-      void flushSuture(); // the service worker may stop soon after a turn
+      void flushHostedTracing(); // the service worker may stop soon after a turn
       if (import.meta.env.DEV) {
         logger.debug('Executor history', JSON.stringify(this.context.history, null, 2));
       }
@@ -280,7 +324,10 @@ export class Executor {
       if (this.generalSettings?.replayHistoricalTasks) {
         const historyString = JSON.stringify(this.context.history);
         logger.info(`Executor history size: ${historyString.length}`);
-        await chatHistoryStore.storeAgentStepHistory(this.context.taskId, this.tasks[0], historyString);
+        // Kept for replay only: a failure here must never turn a finished task into a failed one
+        await chatHistoryStore
+          .storeAgentStepHistory(this.context.taskId, this.tasks[0], historyString)
+          .catch(error => logger.warning('Task history was not kept for replay', error));
       } else {
         logger.info('Replay historical tasks is disabled, skipping history storage');
       }
@@ -325,6 +372,7 @@ export class Executor {
         throw error;
       }
       context.consecutiveFailures++;
+      this.lastStepError = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to execute planner: ${error}`);
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));
@@ -351,6 +399,8 @@ export class Executor {
         throw new Error(navOutput.error);
       }
       context.consecutiveFailures = 0;
+      // The model saw the page state of this step, notes included
+      context.notesDelivered();
       if (navOutput.result?.done) {
         return true;
       }
@@ -370,6 +420,7 @@ export class Executor {
         throw error;
       }
       context.consecutiveFailures++;
+      this.lastStepError = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to execute step: ${error}`);
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));

@@ -1,0 +1,40 @@
+{
+  "kind": "note_updates",
+  "name": "A call where nobody gives an update keeps no updates",
+  "source": {
+    "found": "2026-11-22",
+    "issue": "AviOfLagos/ava-copilot#111",
+    "spec": "docs/pm-desk.md, Part 9.1"
+  },
+  "started": "2026-11-23T10:00",
+  "transcript": [
+    {
+      "speaker": "Avi Example",
+      "text": "Let's pick the venue for the launch."
+    },
+    {
+      "speaker": "Ada Obi",
+      "text": "I like the hall on Main Street."
+    },
+    {
+      "speaker": "Ben",
+      "text": "Me too, it is cheaper."
+    }
+  ],
+  "people": [
+    {
+      "name": "Ada Obi",
+      "tasks": ["Book the venue"]
+    },
+    {
+      "name": "Ben",
+      "tasks": []
+    }
+  ],
+  "replay": {
+    "note": "{\"title\": \"Weekly sync\", \"tldr\": [\"a\", \"b\", \"c\"], \"decisions\": [], \"actionItems\": [], \"openQuestions\": [], \"participants\": [], \"personUpdates\": []}"
+  },
+  "expect": {
+    "updates": []
+  }
+}

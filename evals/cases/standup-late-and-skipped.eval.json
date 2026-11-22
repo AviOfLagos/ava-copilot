@@ -1,0 +1,127 @@
+{
+  "kind": "standup",
+  "name": "A standup missed at 07:45 runs once before noon, and after noon it is skipped and says why",
+  "source": {
+    "found": "2026-11-21",
+    "issue": "AviOfLagos/ava-copilot#77",
+    "spec": "docs/growth-team.md, Part 10 and Evals"
+  },
+  "plan": {
+    "focus": "First 40 sign-ups from developers who run evals",
+    "experiments": [
+      {
+        "what": "A daily build-in-public thread",
+        "metric": "signups",
+        "howWeKnow": "10 sign-ups by Friday",
+        "owner": "Product Social Manager"
+      },
+      {
+        "what": "Outreach to eval engineers",
+        "metric": "signups",
+        "howWeKnow": "5 replies by Friday",
+        "owner": "Product Marketing Manager"
+      }
+    ]
+  },
+  "mornings": [
+    {
+      "day": 3,
+      "hour": 11.5,
+      "notes": {
+        "Growth Lead": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Write the fix-loop thread",
+              "experiment": "E1",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        },
+        "Product Marketing Manager": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Find 20 eval engineers",
+              "experiment": "E2",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        },
+        "Product Social Manager": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Write the fix-loop thread",
+              "experiment": "E1",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        }
+      },
+      "summary": "Late but fine."
+    },
+    {
+      "day": 4,
+      "hour": 13,
+      "notes": {
+        "Growth Lead": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Write the fix-loop thread",
+              "experiment": "E1",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        },
+        "Product Marketing Manager": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Find 20 eval engineers",
+              "experiment": "E2",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        },
+        "Product Social Manager": {
+          "did": "Queued two drafts.",
+          "learned": "Threads beat single posts.",
+          "today": [
+            {
+              "text": "Write the fix-loop thread",
+              "experiment": "E1",
+              "reason": ""
+            }
+          ],
+          "blocked": ""
+        }
+      },
+      "summary": "Never written."
+    }
+  ],
+  "expect": {
+    "mornings": [
+      {
+        "status": "done",
+        "off_plan": []
+      },
+      {
+        "status": "skipped",
+        "off_plan": [],
+        "matches": ["^Standup did not run: the browser was not open between 07:45 and 12:00\\.$"]
+      }
+    ]
+  }
+}

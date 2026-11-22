@@ -1322,7 +1322,16 @@ export default class Page {
     }
   }
 
-  async clickElementNode(useVision: boolean, elementNode: DOMElementNode): Promise<void> {
+  /**
+   * @param options.once - The click commits something (a send, a submit): it is tried one way only. The second
+   *   way below is for a click that did not land, but a click that timed out may well have landed (the page is
+   *   busy sending), and clicking again would send twice.
+   */
+  async clickElementNode(
+    useVision: boolean,
+    elementNode: DOMElementNode,
+    options: { once?: boolean } = {},
+  ): Promise<void> {
     if (!this._puppeteerPage) {
       throw new Error('Puppeteer is not connected');
     }
@@ -1352,6 +1361,11 @@ export default class Page {
         // if URLNotAllowedError, throw it
         if (error instanceof URLNotAllowedError) {
           throw error;
+        }
+        if (options.once) {
+          throw new Error(
+            `The click may or may not have gone through (${error instanceof Error ? error.message : String(error)}). It was not tried a second time.`,
+          );
         }
         // Second attempt: Use evaluate to perform a direct click
         logger.info('Failed to click element, trying again', error);

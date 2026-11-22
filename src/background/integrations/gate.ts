@@ -1,3 +1,5 @@
+import { t } from '@extension/i18n';
+import { canAllowAlways, permissionRulesStore, toolScope } from '@extension/storage';
 import type { ConfirmField, ConfirmRequest, ConnectorRecord, ToolFingerprint } from '@extension/storage';
 import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentContext } from '../agent/types';
@@ -15,10 +17,12 @@ const MAX_FIELDS = 20;
 const FIELD_CHARS = 2000;
 
 export interface ToolCallReview {
-  connector: Pick<ConnectorRecord, 'name' | 'url'>;
-  tool: Pick<ToolFingerprint, 'tool' | 'title' | 'annotations'>;
+  connector: Pick<ConnectorRecord, 'name' | 'url'> & Partial<Pick<ConnectorRecord, 'id'>>;
+  tool: Pick<ToolFingerprint, 'tool' | 'title' | 'annotations'> & Partial<Pick<ToolFingerprint, 'hash'>>;
   args: Record<string, unknown>;
   intent: string;
+  // Set when this call, or a cut-off one to the same tool, already exists in the task: the card says so
+  repeat?: ConfirmRequest['repeat'];
 }
 
 /**
@@ -55,31 +59,60 @@ export function argumentFields(args: Record<string, unknown>): ConfirmField[] {
 
 /** The request the confirm card shows for a tool call. */
 export function toolCallRequest(context: Pick<AgentContext, 'taskId'>, review: ToolCallReview): ConfirmRequest {
+  const kind = confirmKindFor(review.tool);
+  const target = `${review.connector.name} › ${review.tool.title || review.tool.tool}`;
+  const scope = ruleScope(review);
+  // A tool that deletes, pays or grants access is asked about every time, and so is a repeat
+  const always = !!scope && !review.repeat && canAllowAlways(kind);
   return {
     id: crypto.randomUUID(),
     taskId: context.taskId,
     mode: 'commit',
-    kind: confirmKindFor(review.tool),
+    kind,
     intent: review.intent,
-    target: `${review.connector.name} › ${review.tool.title || review.tool.tool}`,
+    target,
+    ...(always ? { always: { kind: 'tool' as const, scope, label: t('gate_rule_toolLabel', [target]) } } : {}),
     pageTitle: review.connector.name,
     pageUrl: review.connector.url ?? '',
     fields: argumentFields(review.args),
     // The server's own description is not shown here: it does not get a voice on the card that approves it
     context: '',
+    ...(review.repeat ? { repeat: review.repeat } : {}),
   };
 }
 
+/** The place a rule for this tool covers: the connector, the tool, and the tool as it is now. */
+function ruleScope(review: ToolCallReview): string {
+  return review.connector.id && review.tool.hash
+    ? toolScope(review.connector.id, review.tool.tool, review.tool.hash)
+    : '';
+}
+
 /**
- * Shows the confirm card for a tool call and waits for the user's answer.
+ * Shows the confirm card for a tool call and waits for the user's answer. A tool the user allowed every time
+ * runs without the card, unless the call repeats one already made.
  *
  * @returns 'approved', 'declined', or 'cancelled' when the task was stopped while it waited
  */
 export async function reviewToolCall(context: AgentContext, review: ToolCallReview): Promise<GateAnswer> {
+  const scope = ruleScope(review);
+  const kind = confirmKindFor(review.tool);
+  if (scope && !review.repeat && canAllowAlways(kind)) {
+    const rule = await permissionRulesStore.find('tool', scope).catch(() => null);
+    if (rule) {
+      await permissionRulesStore.used(rule.id).catch(() => undefined);
+      await context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, t('gate_allowedByRule', [rule.label]));
+      return 'approved';
+    }
+  }
   const request = toolCallRequest(context, review);
-  return context.confirmGate.ask(
+  const answer = await context.confirmGate.ask(
     request,
     shown => context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(shown)),
     context.controller.signal,
   );
+  if (answer === 'approved' && request.always && context.confirmGate.takeAlways(request.id)) {
+    await permissionRulesStore.allow(request.always).catch(() => null);
+  }
+  return answer;
 }

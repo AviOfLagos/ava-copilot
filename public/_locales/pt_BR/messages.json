@@ -1035,6 +1035,24 @@
   "gate_stale": {
     "message": "The page changed while waiting for confirmation, so nothing was done."
   },
+  "gate_once_done": {
+    "message": "Já foi feito nesta tarefa, por isso não foi repetido: $1"
+  },
+  "gate_once_cutOff": {
+    "message": "Uma tentativa anterior pode ter funcionado, por isso não foi repetido: $1"
+  },
+  "gate_card_repeat_done": {
+    "message": "Isto já foi feito nesta tarefa às $1 ($2). Aprove apenas se quiser que seja feito de novo."
+  },
+  "gate_card_repeat_started": {
+    "message": "Uma tentativa anterior às $1 ($2) foi interrompida, então pode já ter funcionado. Verifique antes de aprovar."
+  },
+  "gate_card_repeat_earlier": {
+    "message": "Uma execução anterior desta tarefa já fez um passo parecido às $1 ($2). Confirme que não é o mesmo de novo antes de aprovar."
+  },
+  "gate_repeat_short": {
+    "message": "pode ser uma repetição"
+  },
   "gate_userContinued": {
     "message": "The user finished this step on the page themselves. Read the page again before the next action."
   },
@@ -1091,6 +1109,9 @@
   },
   "threads_tabInUse": {
     "message": "Tab is in use by thread \"$1\"."
+  },
+  "threads_reusedTab": {
+    "message": "Usando a aba de $1 que você já tem aberta."
   },
   "threads_tabClosed": {
     "message": "The tab this thread was working in was closed."
@@ -1796,6 +1817,12 @@
   },
   "chat_input_attach": {
     "message": "Attach a text file"
+  },
+  "chat_input_expand": {
+    "message": "Expand the text box"
+  },
+  "chat_input_collapse": {
+    "message": "Shrink the text box"
   },
   "chat_input_attachments": {
     "message": "Attached files"
@@ -2794,19 +2821,6 @@
   "brief_ready": {
     "message": "Seu resumo da manhã está pronto"
   },
-  "brief_counts": {
-    "message": "$MEETINGS$ na agenda hoje, $WAITING$ esperando por você.",
-    "placeholders": {
-      "meetings": {
-        "content": "$1",
-        "example": "3"
-      },
-      "waiting": {
-        "content": "$2",
-        "example": "1"
-      }
-    }
-  },
   "brief_open": {
     "message": "Resumo de hoje"
   },
@@ -3238,6 +3252,69 @@
   },
   "retry_action": {
     "message": "Tentar de novo"
+  },
+  "retry_queued": {
+    "message": "Parou antes de terminar. Tentando de novo em $1 min (tentativa $2 de $3)."
+  },
+  "retry_stopped": {
+    "message": "Parado. Não será tentado de novo sozinho."
+  },
+  "retry_banner": {
+    "message": "Tentando de novo às $1 (tentativa $2 de $3)"
+  },
+  "retry_stopTrying": {
+    "message": "Parar de tentar"
+  },
+  "retry_untitled": {
+    "message": "uma tarefa"
+  },
+  "retry_stuck_title": {
+    "message": "Travado em $1"
+  },
+  "retry_stuck_line": {
+    "message": "Travado em $1: $2 $3"
+  },
+  "retry_need_temporary": {
+    "message": "Tentei mais $1 vezes. Abra a conversa e pressione Tentar de novo quando quiser outra tentativa."
+  },
+  "retry_need_cannot": {
+    "message": "Não consigo fazer esta. Abra a conversa para ver onde parou."
+  },
+  "retry_need_key": {
+    "message": "Verifique a chave do modelo em Configurações e pressione Tentar de novo na conversa."
+  },
+  "retry_need_model": {
+    "message": "O modelo das Configurações não foi encontrado. Escolha outro e pressione Tentar de novo na conversa."
+  },
+  "retry_need_billing": {
+    "message": "A conta do modelo está sem crédito ou acima do limite. Resolva isso e pressione Tentar de novo na conversa."
+  },
+  "retry_need_debugger": {
+    "message": "A barra de depuração precisa ficar aberta enquanto eu trabalho. Pressione Tentar de novo na conversa."
+  },
+  "retry_need_extension": {
+    "message": "Outra extensão está usando a aba. Desative-a e pressione Tentar de novo na conversa."
+  },
+  "retry_need_user": {
+    "message": "Precisa de você. Abra a conversa para ver o passo e pressione Continuar."
+  },
+  "retry_needs_login": {
+    "message": "É preciso entrar na conta: $1"
+  },
+  "retry_needs_captcha": {
+    "message": "Um CAPTCHA precisa de você: $1"
+  },
+  "retry_needs_code": {
+    "message": "É preciso um código: $1"
+  },
+  "retry_needs_cap": {
+    "message": "O limite de gastos precisa de você: $1"
+  },
+  "retry_needs_body": {
+    "message": "Abra a conversa, faça o passo em $1 você mesmo e pressione Continuar."
+  },
+  "retry_needs_bodyNoHost": {
+    "message": "Abra a conversa, faça o passo você mesmo e pressione Continuar."
   },
   "retry_fromHere": {
     "message": "Repetir a partir daqui"
@@ -8924,6 +9001,236 @@
   "wava_settings_notify_routine": {
     "message": "Um lembrete ou rotina tem um resultado"
   },
+  "wava_settings_notify_tasks": {
+    "message": "Listas de tarefas (depois de uma chamada, tarefas abertas)"
+  },
+  "wava_tasks_listTitle": {
+    "message": "Tarefas abertas"
+  },
+  "wava_tasks_listTitleFor": {
+    "message": "Tarefas de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_listTitleIn": {
+    "message": "Tarefas abertas em $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_more": {
+    "message": "…e mais $COUNT$ na página Tarefas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "wava_tasks_hint": {
+    "message": "Responda \"done 2\" para concluir uma, \"undo 2\" para reabrir."
+  },
+  "wava_tasks_none": {
+    "message": "Nenhuma tarefa aberta."
+  },
+  "wava_tasks_noneFor": {
+    "message": "Nenhuma tarefa aberta para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "wava_tasks_noneIn": {
+    "message": "Nenhuma tarefa aberta em $WORKSPACE$.",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Tech Ember"
+      }
+    }
+  },
+  "wava_tasks_noList": {
+    "message": "Ainda não enviei uma lista numerada. Envie \"tasks\" e eu envio uma."
+  },
+  "wava_tasks_notAList": {
+    "message": "Essa mensagem não tem tarefas numeradas. Envie \"tasks\" para ver a lista."
+  },
+  "wava_tasks_outOfRange": {
+    "message": "Essa lista tem $COUNT$ tarefas. Qual delas?",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "wava_tasks_outOfRangeOne": {
+    "message": "Essa lista tem 1 tarefa. Qual você quis dizer?"
+  },
+  "wava_tasks_done": {
+    "message": "Concluída: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_reopened": {
+    "message": "Reaberta: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_dropped": {
+    "message": "Descartada: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "~Send the deck~"
+      }
+    }
+  },
+  "wava_tasks_unchanged": {
+    "message": "Já estava assim: $TASKS$",
+    "placeholders": {
+      "tasks": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "wava_tasks_gone": {
+    "message": "Não está mais no quadro: $NUMBERS$",
+    "placeholders": {
+      "numbers": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "wava_tasks_which": {
+    "message": "Você quer dizer $NAME$ ou o espaço de trabalho $WORKSPACE$? Envie \"tasks for $WORD$\" para a pessoa ou \"tasks in $WORD$\" para o espaço de trabalho.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "workspace": {
+        "content": "$2",
+        "example": "Ada Labs"
+      },
+      "word": {
+        "content": "$3",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_people": {
+    "message": "$COUNT$ pessoas se chamam \"$WORD$\": $NAMES$. Envie \"tasks for\" e o nome completo.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "word": {
+        "content": "$2",
+        "example": "ada"
+      },
+      "names": {
+        "content": "$3",
+        "example": "Ada Obi, Ada Lin"
+      }
+    }
+  },
+  "wava_tasks_workspaces": {
+    "message": "Mais de um espaço de trabalho corresponde a \"$WORD$\": $NAMES$. Envie \"tasks in\" e o nome completo.",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      },
+      "names": {
+        "content": "$2",
+        "example": "Tech Ember, Ember Labs"
+      }
+    }
+  },
+  "wava_tasks_noOne": {
+    "message": "Nenhuma pessoa ou espaço de trabalho se chama \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_nobody": {
+    "message": "Não conheço ninguém chamado \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ada"
+      }
+    }
+  },
+  "wava_tasks_noWorkspace": {
+    "message": "Nenhum espaço de trabalho se chama \"$WORD$\".",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "ember"
+      }
+    }
+  },
+  "wava_tasks_addEmpty": {
+    "message": "Qual é a tarefa? Envie assim: \"task for Ada: send the deck by Friday\"."
+  },
+  "wava_tasks_added": {
+    "message": "Adicionada: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_exists": {
+    "message": "Já está no quadro: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Send the deck (Ada, Fri)"
+      }
+    }
+  },
+  "wava_tasks_followUpTitle": {
+    "message": "Acompanhar hoje"
+  },
+  "wava_tasks_followUpsNone": {
+    "message": "Ninguém para cobrar hoje."
+  },
+  "wava_tasks_overdue": {
+    "message": "atrasada"
+  },
+  "wava_tasks_dueToday": {
+    "message": "hoje"
+  },
+  "wava_tasks_dueTomorrow": {
+    "message": "amanhã"
+  },
   "wava_settings_qr_label": {
     "message": "Código para escanear com o WhatsApp"
   },
@@ -10085,13 +10392,13 @@
     "message": "Seu celular"
   },
   "wava_settings_phone_hint": {
-    "message": "Conecte o celular de onde você vai escrever para a Ava, para ela responder lá."
+    "message": "Envie um código curto para a Ava do celular que você vai usar, para ela saber onde responder. Não precisa escanear nada."
   },
   "wava_settings_phone_connect": {
-    "message": "Conectar meu celular"
+    "message": "Gerar código para enviar à Ava"
   },
   "wava_settings_phone_send": {
-    "message": "Do seu celular, envie este código para o número da Ava:"
+    "message": "No WhatsApp do seu celular, envie este código como mensagem para o número da Ava:"
   },
   "wava_settings_phone_waiting": {
     "message": "Aguardando sua mensagem… O código vale por 15 minutos."
@@ -10224,5 +10531,2036 @@
   },
   "voice_engine_name_gemini": {
     "message": "Gemini"
+  },
+  "threads_tabReopened": {
+    "message": "A aba foi fechada, então foi aberta de novo em $1 e a tarefa continua. Pressione Parar para encerrá-la."
+  },
+  "brief_source_calendar": {
+    "message": "Agenda"
+  },
+  "brief_source_chats": {
+    "message": "conversas"
+  },
+  "brief_source_inbox": {
+    "message": "Caixa de entrada"
+  },
+  "brief_source_agents": {
+    "message": "agentes"
+  },
+  "brief_source_knowledge": {
+    "message": "notas e reuniões"
+  },
+  "brief_source_notConnected": {
+    "message": "$1: não conectada."
+  },
+  "brief_source_failed": {
+    "message": "$1: não foi possível ler."
+  },
+  "brief_sources_read": {
+    "message": "Lido: $1."
+  },
+  "brief_calendar_notConnected": {
+    "message": "Agenda: não conectada. Conecte-a em Configurações, em Conexões, para as reuniões aparecerem aqui."
+  },
+  "brief_calendar_failed": {
+    "message": "Agenda: não foi possível ler esta manhã, então podem faltar reuniões. Verifique a Agenda em Configurações, em Conexões."
+  },
+  "brief_calendar_failedAsOf": {
+    "message": "Agenda: não foi possível ler esta manhã. Isto é o que ela mostrava às $1; mudanças mais recentes estão faltando."
+  },
+  "brief_line_noMeetings": {
+    "message": "Nenhuma reunião hoje."
+  },
+  "brief_line_meeting": {
+    "message": "1 reunião, às $1."
+  },
+  "brief_line_meetings": {
+    "message": "$1 reuniões, a primeira às $2."
+  },
+  "brief_line_noWaiting": {
+    "message": "Nada esperando por você."
+  },
+  "brief_line_waiting": {
+    "message": "$1 esperando por você: $2."
+  },
+  "brief_line_waitingMore": {
+    "message": "$1 esperando por você: $2, e mais $3."
+  },
+  "brief_item_approve": {
+    "message": "aprovar $1"
+  },
+  "brief_item_needsYou": {
+    "message": "$1 precisa de login ou de um código"
+  },
+  "brief_item_cap": {
+    "message": "$1 chegou ao limite de gastos"
+  },
+  "brief_item_failed": {
+    "message": "$1 parou"
+  },
+  "gate_allowedByRule": {
+    "message": "Permitido sempre: $1"
+  },
+  "gate_approvedAlways": {
+    "message": "Permitido sempre: $1. Remova em Configurações › Permissões."
+  },
+  "gate_rule_label": {
+    "message": "$1 em $2"
+  },
+  "gate_rule_toolLabel": {
+    "message": "Executar $1"
+  },
+  "gate_card_allowOnce": {
+    "message": "Permitir uma vez"
+  },
+  "gate_card_allowAlways": {
+    "message": "Permitir sempre"
+  },
+  "gate_card_allowAlwaysAgain": {
+    "message": "Clique de novo para permitir sempre"
+  },
+  "gate_card_allowAlwaysHint": {
+    "message": "Sempre: a Ava não vai perguntar de novo para “$1”. Remova em Configurações › Permissões."
+  },
+  "settings_permissions": {
+    "message": "Permitido sempre"
+  },
+  "settings_permissions_empty": {
+    "message": "Nada ainda. Escolha “Permitir sempre” em um cartão de confirmação e aparece aqui."
+  },
+  "settings_permissions_used": {
+    "message": "Usado $1 vezes · desde $2"
+  },
+  "settings_permissions_remove": {
+    "message": "Remover"
+  },
+  "settings_permissions_hint": {
+    "message": "Estes passos rodam sem cartão, em qualquer chat, agente ou rotina. Pagar, excluir e dar acesso sempre perguntam."
+  },
+  "product_title": {
+    "message": "Produto"
+  },
+  "product_add": {
+    "message": "Adicionar o produto que este espaço vende"
+  },
+  "product_hint": {
+    "message": "Os fatos que todo agente usa sobre o que este espaço vende. Um campo vazio aparece como “não definido”, e os agentes dizem que não sabem."
+  },
+  "product_notSet": {
+    "message": "Não definido"
+  },
+  "product_missing": {
+    "message": "Ainda não definido: $1"
+  },
+  "product_missing_audience": {
+    "message": "para quem é"
+  },
+  "product_missing_pricing": {
+    "message": "preço"
+  },
+  "product_missing_email": {
+    "message": "e-mail de contato"
+  },
+  "product_missing_postal": {
+    "message": "endereço postal"
+  },
+  "product_missing_betaRule": {
+    "message": "regra do beta"
+  },
+  "product_missing_social": {
+    "message": "contas sociais"
+  },
+  "product_missing_northStar": {
+    "message": "métrica principal"
+  },
+  "product_missing_notify": {
+    "message": "onde avisar você"
+  },
+  "product_group_facts": {
+    "message": "O produto"
+  },
+  "product_group_places": {
+    "message": "Onde ele fica"
+  },
+  "product_group_outreach": {
+    "message": "Contato"
+  },
+  "product_group_limits": {
+    "message": "Metas e limites"
+  },
+  "product_name": {
+    "message": "Nome do produto"
+  },
+  "product_url": {
+    "message": "Site"
+  },
+  "product_oneLiner": {
+    "message": "Em uma linha"
+  },
+  "product_stage": {
+    "message": "Estágio"
+  },
+  "product_stage_beta": {
+    "message": "Beta"
+  },
+  "product_stage_live": {
+    "message": "No ar"
+  },
+  "product_audience": {
+    "message": "Para quem é (um por linha, o mais valioso primeiro)"
+  },
+  "product_problem": {
+    "message": "O problema que resolve"
+  },
+  "product_alternatives": {
+    "message": "O que as pessoas usam no lugar (um por linha)"
+  },
+  "product_differentiators": {
+    "message": "Por que este (um por linha, cada um comprovável)"
+  },
+  "product_pricing": {
+    "message": "Preço, exatamente como no site"
+  },
+  "product_never": {
+    "message": "Nunca dizer ou fazer (um por linha)"
+  },
+  "product_repo": {
+    "message": "Repositório (dono/nome)"
+  },
+  "product_admin": {
+    "message": "Endereço do console de administração"
+  },
+  "product_adminAccount": {
+    "message": "Login de administração"
+  },
+  "product_slack": {
+    "message": "Canais do Slack com as notificações (um por linha: #nome e depois o id do canal, se souber)"
+  },
+  "product_emailFrom": {
+    "message": "O e-mail de contato sai de"
+  },
+  "product_replyTo": {
+    "message": "As respostas vão para"
+  },
+  "product_postal": {
+    "message": "Endereço postal para o rodapé dos e-mails"
+  },
+  "product_notify": {
+    "message": "Avise-me por"
+  },
+  "product_notify_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "product_notify_slack": {
+    "message": "Slack"
+  },
+  "product_notify_both": {
+    "message": "Ambos"
+  },
+  "product_northStar": {
+    "message": "Métrica principal"
+  },
+  "product_weeklyTarget": {
+    "message": "Meta semanal"
+  },
+  "product_budget": {
+    "message": "Orçamento de marketing (USD)"
+  },
+  "product_betaTesters": {
+    "message": "Testadores beta por semana"
+  },
+  "product_betaPlan": {
+    "message": "Plano do beta"
+  },
+  "product_betaDays": {
+    "message": "Duração do beta (dias)"
+  },
+  "product_card_now": {
+    "message": "agora: $1"
+  },
+  "product_api": {
+    "message": "Endereço da API de números"
+  },
+  "growth_title": {
+    "message": "Números"
+  },
+  "growth_hint": {
+    "message": "A Ava lê os números deste produto na API dele, por código, a cada duas horas. Um número que não pôde ser lido aparece como “sem leitura”, nunca como 0."
+  },
+  "growth_token": {
+    "message": "Token da API"
+  },
+  "growth_token_saved": {
+    "message": "Salvo: $1"
+  },
+  "growth_token_placeholder": {
+    "message": "Cole o token aqui"
+  },
+  "growth_token_save": {
+    "message": "Salvar token"
+  },
+  "growth_token_remove": {
+    "message": "Remover token"
+  },
+  "growth_readNow": {
+    "message": "Ler agora"
+  },
+  "growth_reading": {
+    "message": "Lendo…"
+  },
+  "growth_connected": {
+    "message": "Conectado. Última leitura: $1."
+  },
+  "growth_connectedBut": {
+    "message": "Conectado, mas um número não pôde ser lido: $1"
+  },
+  "growth_notConnected": {
+    "message": "Não conectado: $1"
+  },
+  "growth_never": {
+    "message": "Ainda não lido."
+  },
+  "growth_signupsToday": {
+    "message": "Cadastros hoje (UTC): $1"
+  },
+  "growth_noReading": {
+    "message": "sem leitura"
+  },
+  "growth_noApi": {
+    "message": "Nenhum endereço de API de números está definido para este produto."
+  },
+  "growth_notice_title": {
+    "message": "$1: os números não estão conectados"
+  },
+  "growth_notice_noZero": {
+    "message": "Até isso ser resolvido, esses números aparecem como “sem leitura”. A Ava não mostra 0 no lugar deles."
+  },
+  "growth_reason_not_set": {
+    "message": "O endereço da API de números do produto está faltando ou não é https. Defina-o no produto do espaço de trabalho."
+  },
+  "growth_reason_no_token": {
+    "message": "Ainda não há token da API de números do produto salvo na Ava. Cole-o no produto do espaço de trabalho, em Números."
+  },
+  "growth_reason_agent_api_off": {
+    "message": "A API do produto está desligada do lado dele: ainda não há token definido lá. Defina o token no produto e cole o mesmo aqui."
+  },
+  "growth_reason_unauthorized": {
+    "message": "O produto recusou o token: está errado ou foi alterado no produto. Cole o atual."
+  },
+  "growth_reason_unreachable": {
+    "message": "A API do produto não respondeu: este computador está offline ou o endereço está errado."
+  },
+  "growth_reason_unexpected_shape": {
+    "message": "A API do produto respondeu em um formato que a Ava não conhece, então não foi lida como números. A API pode ter mudado."
+  },
+  "growth_reason_not_available": {
+    "message": "O próprio produto não registra esse número."
+  },
+  "growth_reason_failed": {
+    "message": "A API do produto recusou o pedido."
+  },
+  "growth_reason_no_collector": {
+    "message": "Nada lê esta fonte ainda."
+  },
+  "rounds_settings_title": {
+    "message": "Rondas e ofertas de ajuda"
+  },
+  "rounds_toggle": {
+    "message": "A Ava faz suas rondas"
+  },
+  "rounds_toggle_hint": {
+    "message": "Algumas vezes por dia a Ava lê os números dos seus produtos, seu e-mail e o que está travado, e deixa um resumo curto de cada na Caixa de entrada. Nada é enviado, publicado ou alterado."
+  },
+  "rounds_name_pulse": {
+    "message": "Pulso do produto"
+  },
+  "rounds_name_mail": {
+    "message": "E-mail"
+  },
+  "rounds_name_stuck": {
+    "message": "Trabalho travado"
+  },
+  "rounds_runNow": {
+    "message": "Rodar agora"
+  },
+  "rounds_runNow_named": {
+    "message": "Rodar $1 agora"
+  },
+  "rounds_slot_ran": {
+    "message": "$1 rodou às $2"
+  },
+  "rounds_slot_skipped": {
+    "message": "$1 perdida"
+  },
+  "rounds_offers": {
+    "message": "Ofertas de ajuda hoje: $1 feitas, $2 restantes."
+  },
+  "rounds_offers_silenced": {
+    "message": "Sem mais ofertas de ajuda hoje: você disse hoje não."
+  },
+  "rounds_pulse_title": {
+    "message": "Pulso do produto · $1"
+  },
+  "rounds_pulse_metric": {
+    "message": "$1: $2 hoje até agora, $3 ontem, normalmente $4 por dia"
+  },
+  "rounds_pulse_noAverage": {
+    "message": "ainda não se sabe"
+  },
+  "rounds_pulse_noReading": {
+    "message": "$1: sem leitura. $2"
+  },
+  "rounds_pulse_flagUp": {
+    "message": "▲ $1 subiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_flagDown": {
+    "message": "▼ $1 caiu: $2 $4, normalmente $3 por dia"
+  },
+  "rounds_pulse_yesterday": {
+    "message": "ontem"
+  },
+  "rounds_pulse_todaySoFar": {
+    "message": "hoje até agora"
+  },
+  "rounds_pulse_slack": {
+    "message": "Notificações do Slack hoje: $1"
+  },
+  "rounds_pulse_slackOff": {
+    "message": "Notificações do Slack: não lidas. $1"
+  },
+  "rounds_metric_signups": {
+    "message": "Cadastros"
+  },
+  "rounds_metric_waitlist": {
+    "message": "Lista de espera"
+  },
+  "rounds_metric_access_requests": {
+    "message": "Pedidos de acesso"
+  },
+  "rounds_metric_feedback": {
+    "message": "Feedback"
+  },
+  "rounds_stuck_title": {
+    "message": "Trabalho travado · $1"
+  },
+  "rounds_stuck_none": {
+    "message": "Nada está travado e nada espera por você."
+  },
+  "rounds_stuck_approval": {
+    "message": "espera o seu clique"
+  },
+  "rounds_stuck_needsUser": {
+    "message": "precisa de um passo seu"
+  },
+  "rounds_stuck_decision": {
+    "message": "espera a sua decisão"
+  },
+  "rounds_stuck_failed": {
+    "message": "falhou"
+  },
+  "rounds_stuck_more": {
+    "message": "e mais $1"
+  },
+  "rounds_mail_title": {
+    "message": "Ronda de e-mail · $1"
+  },
+  "rounds_mail_noAgent": {
+    "message": "O e-mail não foi lido: o agente de E-mail não está configurado ou está pausado. Ative-o em Agentes para receber um resumo aqui."
+  },
+  "rounds_mail_failed": {
+    "message": "O e-mail não foi lido: $1"
+  },
+  "checkin_mail": {
+    "message": "Quer que eu organize seu e-mail? $1 não lidos."
+  },
+  "checkin_mailPlain": {
+    "message": "Quer que eu organize seu e-mail?"
+  },
+  "checkin_retry": {
+    "message": "$1 tarefas falharam: $2. Quer que eu tente de novo?"
+  },
+  "checkin_body": {
+    "message": "Aprove e eu começo agora, onde você pode ver. Recusar significa hoje não: só ofereço de novo amanhã. Nada é enviado sem o seu clique."
+  },
+  "rounds_failed_title": {
+    "message": "A ronda de $1 das $2 não rodou"
+  },
+  "rounds_failed_cut": {
+    "message": "Foi interrompida antes de terminar: o navegador ou a extensão parou. Roda de novo no próximo horário."
+  },
+  "checkin_failed": {
+    "message": "Não consegui começar o que você aprovou"
+  },
+  "rounds_pulse_slackAtLeast": {
+    "message": "Notificações do Slack hoje, pelo menos: $1"
+  },
+  "rounds_slack_no_channels": {
+    "message": "o produto não indica nenhum canal do Slack com o id."
+  },
+  "rounds_slack_not_connected": {
+    "message": "nenhum conector do Slack está ativo neste espaço de trabalho."
+  },
+  "rounds_slack_needs_sign_in": {
+    "message": "o conector do Slack precisa que você entre de novo."
+  },
+  "rounds_slack_asks_first": {
+    "message": "a ferramenta do Slack que lê um canal pede permissão antes de rodar. Deixe-a rodar sem perguntar em Conexões."
+  },
+  "rounds_slack_no_read_tool": {
+    "message": "o conector do Slack não tem ferramenta que leia um canal por um dia."
+  },
+  "rounds_slack_failed": {
+    "message": "não foi possível ler o Slack."
+  },
+  "team_action_post": {
+    "message": "Publicação"
+  },
+  "team_action_reply": {
+    "message": "Resposta"
+  },
+  "team_action_outreach": {
+    "message": "E-mail de prospecção"
+  },
+  "team_action_followUp": {
+    "message": "Acompanhamento"
+  },
+  "team_action_listing": {
+    "message": "Cadastro em diretório"
+  },
+  "team_action_issue": {
+    "message": "Issue vinda de um cliente"
+  },
+  "team_action_beta": {
+    "message": "Acesso beta"
+  },
+  "team_action_spend": {
+    "message": "Pedido de gasto"
+  },
+  "team_action_channel": {
+    "message": "Novo canal"
+  },
+  "team_action_account": {
+    "message": "Nova conta"
+  },
+  "team_action_plan": {
+    "message": "Mudança de plano"
+  },
+  "team_action_tool": {
+    "message": "Ferramenta para conectar"
+  },
+  "team_item_title": {
+    "message": "$1 · $2: $3"
+  },
+  "team_item_where": {
+    "message": "Onde"
+  },
+  "team_item_why": {
+    "message": "Por quê"
+  },
+  "team_item_namesCustomer": {
+    "message": "Isto cita um cliente, por isso é sempre perguntado à parte."
+  },
+  "team_spend_amount": {
+    "message": "Valor"
+  },
+  "team_spend_buys": {
+    "message": "O que compra"
+  },
+  "team_spend_triedFree": {
+    "message": "Tentado de graça antes"
+  },
+  "team_spend_expected": {
+    "message": "Resultado esperado"
+  },
+  "team_batch_title": {
+    "message": "Aprovar os $1 rascunhos de $2"
+  },
+  "team_batch_body": {
+    "message": "Um toque aprova todos os rascunhos abaixo. Para decidir um a um, responda cada um na própria linha. Nada é publicado nem enviado ainda: os rascunhos aprovados ficam retidos até a verificação de conta existir."
+  },
+  "team_auto_done": {
+    "message": "$1 fez: $2"
+  },
+  "team_auto_failed": {
+    "message": "$1 não conseguiu: $2"
+  },
+  "team_note_spendAgreed": {
+    "message": "Você concordou com $1. O pagamento é com você; o orçamento já conta esse valor."
+  },
+  "team_note_yours": {
+    "message": "Você disse sim. Os passos são com você; estão no pedido."
+  },
+  "team_note_held": {
+    "message": "Aprovado. Nada saiu: publicar e enviar aguardam a verificação de conta (#43)."
+  },
+  "team_note_unknownOutcome": {
+    "message": "Foi interrompido no meio, então pode ou não ter sido concluído. Não é repetido sozinho: confira e peça de novo."
+  },
+  "team_note_declined": {
+    "message": "Você recusou."
+  },
+  "team_rule_label": {
+    "message": "$1: $2, dentro do limite"
+  },
+  "team_ledger_title": {
+    "message": "Orçamento e vagas beta"
+  },
+  "team_ledger_budget": {
+    "message": "Orçamento de marketing: $1 de $2 gastos, $3 restantes. Os agentes só pedem; quem paga é você."
+  },
+  "team_ledger_noBudget": {
+    "message": "Orçamento de marketing: não definido."
+  },
+  "team_ledger_beta": {
+    "message": "Vagas beta: $1 de $2 concedidas nos últimos 7 dias."
+  },
+  "team_ledger_noBeta": {
+    "message": "Regra do beta: não definida, então nenhuma vaga é dada sem você."
+  },
+  "team_ledger_waiting": {
+    "message": "$1 aguardando sua aprovação, $2 aprovados e retidos."
+  },
+  "team_auto_held": {
+    "message": "$1, com permissão sempre, deixou aprovado: $2"
+  },
+  "persona_builtin_growth_name": {
+    "message": "Líder de crescimento"
+  },
+  "persona_builtin_growth_description": {
+    "message": "Inspirado no trabalho público de Sean Ellis: primeiro um produto que as pessoas sentiriam falta, uma métrica norte, testes priorizados."
+  },
+  "persona_builtin_positioning_name": {
+    "message": "Posicionamento e prospecção"
+  },
+  "persona_builtin_positioning_description": {
+    "message": "Inspirado no trabalho público de April Dunford sobre posicionamento, com os testes de canais de “Traction”: para quem é, depois onde."
+  },
+  "persona_builtin_buildInPublic_name": {
+    "message": "Construindo em público"
+  },
+  "persona_builtin_buildInPublic_description": {
+    "message": "Inspirado no trabalho público de Arvid Kahl sobre construir em público: ache onde as pessoas já conversam, ajude primeiro, mostre o trabalho real."
+  },
+  "agents_growth_title": {
+    "message": "Time de crescimento"
+  },
+  "agents_growth_intro": {
+    "message": "Trabalha para o produto do workspace escolhido abaixo. Faz rascunhos e planos; nada é postado, enviado, concedido ou gasto sem o seu clique."
+  },
+  "agents_growth_lead": {
+    "message": "Líder de crescimento"
+  },
+  "agents_growth_lead_hint": {
+    "message": "Organiza o feedback dos clientes, propõe issues, acompanha os cadastros por canal e mantém o plano da semana."
+  },
+  "growth_setup_needsProduct": {
+    "message": "O time de crescimento trabalha para um produto: escolha um workspace que tenha um produto (Workspaces › o workspace › Adicionar o produto)."
+  },
+  "growth_models_fallback_title": {
+    "message": "O time de crescimento usa os seus modelos"
+  },
+  "growth_models_fallback_body": {
+    "message": "Nenhuma chave do Claude está nas configurações de modelos, então os agentes de crescimento usam seus modelos \"smart\" e \"fast\". Adicione uma chave do Claude para usarem Sonnet no dia a dia, Haiku para organizar e Opus no plano de segunda."
+  },
+  "agents_growth_marketing": {
+    "message": "Gerente de Marketing de Produto"
+  },
+  "agents_growth_marketing_hint": {
+    "message": "Posicionamento, uma lista de canais classificada por cadastros reais e rascunhos de contato que esperam o seu clique."
+  },
+  "agents_growth_social": {
+    "message": "Gerente de Redes Sociais do Produto"
+  },
+  "agents_growth_social_hint": {
+    "message": "O plano de conteúdo da semana, posts e respostas na voz do produto, e o que cada post trouxe. Publicar espera o seu clique."
+  },
+  "agents_standup_run": {
+    "message": "Fazer a reunião diária de hoje"
+  },
+  "agents_standup_hint": {
+    "message": "Plano às segundas, 07:30; reunião diária às 07:45. Lê os números, cada agente escreve uma nota curta e o Growth Lead resume tudo na Caixa de entrada."
+  },
+  "agents_standup_done": {
+    "message": "Pronto. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_already": {
+    "message": "A reunião de hoje já aconteceu. Está na Caixa de entrada como \"Growth standup\"."
+  },
+  "agents_standup_running": {
+    "message": "A reunião de hoje está em andamento."
+  },
+  "agents_standup_notRun": {
+    "message": "A reunião não aconteceu: $1"
+  },
+  "brief_team_title": {
+    "message": "Equipe · $1"
+  },
+  "brief_team_notRun": {
+    "message": "A reunião diária não aconteceu: $1."
+  },
+  "brief_team_noReason": {
+    "message": "nenhum motivo foi registrado"
+  },
+  "brief_team_running": {
+    "message": "ainda estava em andamento às $1 e entra aqui quando terminar"
+  },
+  "brief_team_later": {
+    "message": "ela começa às 07:45, depois deste resumo"
+  },
+  "brief_team_notOpen": {
+    "message": "o navegador não estava aberto às 07:45; ela acontece agora e entra aqui quando terminar"
+  },
+  "brief_team_skipped": {
+    "message": "o navegador não estava aberto entre 07:45 e 12:00"
+  },
+  "brief_team_empty": {
+    "message": "A reunião diária aconteceu, mas o Growth Lead não escreveu um resumo. As notas estão na Caixa de entrada."
+  },
+  "vocab_section": {
+    "message": "Vocabulary"
+  },
+  "vocab_hint": {
+    "message": "Names and terms Ava mishears. When she hears one of the words on the right, she writes the one on the left, in dictation, voice notes and meeting notes. Words from your workspaces and products are added by themselves."
+  },
+  "vocab_write_label": {
+    "message": "Write"
+  },
+  "vocab_heard_label": {
+    "message": "Heard as (separate with commas)"
+  },
+  "vocab_scope_label": {
+    "message": "Where"
+  },
+  "vocab_scope_all": {
+    "message": "Everywhere"
+  },
+  "vocab_add": {
+    "message": "Add"
+  },
+  "vocab_edit": {
+    "message": "Edit"
+  },
+  "vocab_save": {
+    "message": "Save"
+  },
+  "vocab_cancel": {
+    "message": "Cancel"
+  },
+  "vocab_delete": {
+    "message": "Remove"
+  },
+  "vocab_empty": {
+    "message": "Nothing yet. Add a name Ava gets wrong, or correct one in the text box after dictating."
+  },
+  "vocab_uses": {
+    "message": "Used $COUNT$ times",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "vocab_from_seed": {
+    "message": "from your workspaces"
+  },
+  "vocab_from_correction": {
+    "message": "learned from a correction"
+  },
+  "vocab_never_title": {
+    "message": "Never changed"
+  },
+  "vocab_refused": {
+    "message": "Not kept: $WORDS$. An ordinary word, a single letter or the same spelling would change words you meant.",
+    "placeholders": {
+      "words": {
+        "content": "$1",
+        "example": "\"album\""
+      }
+    }
+  },
+  "vocab_chip_rule": {
+    "message": "Always write “$TO$” for “$FROM$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      },
+      "from": {
+        "content": "$2",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_yes": {
+    "message": "Always"
+  },
+  "vocab_chip_no": {
+    "message": "Not now"
+  },
+  "vocab_chip_saved": {
+    "message": "Saved: from now on “$FROM$” becomes “$TO$”. You can change it in Settings › Voice › Vocabulary.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_unsure": {
+    "message": "Did you mean “$TO$”?",
+    "placeholders": {
+      "to": {
+        "content": "$1",
+        "example": "Ellum"
+      }
+    }
+  },
+  "vocab_chip_use": {
+    "message": "Use it"
+  },
+  "vocab_chip_undo": {
+    "message": "Put back “$FROM$”",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      }
+    }
+  },
+  "vocab_chip_never": {
+    "message": "Never change this word"
+  },
+  "vocab_chip_changed": {
+    "message": "Changed “$FROM$” to “$TO$”.",
+    "placeholders": {
+      "from": {
+        "content": "$1",
+        "example": "Illum"
+      },
+      "to": {
+        "content": "$2",
+        "example": "Ellum"
+      }
+    }
+  },
+  "brief_source_tasks": {
+    "message": "tarefas"
+  },
+  "tasks_who_avi": {
+    "message": "você"
+  },
+  "tasks_who_ava": {
+    "message": "Ava"
+  },
+  "tasks_doneBy": {
+    "message": "Concluída por $WHO$, $WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_droppedBy": {
+    "message": "Descartada por $WHO$, $WHEN$",
+    "placeholders": {
+      "who": {
+        "content": "$1",
+        "example": "you"
+      },
+      "when": {
+        "content": "$2",
+        "example": "21 Nov, 14:02"
+      }
+    }
+  },
+  "tasks_toggle_done": {
+    "message": "Marcar \"$TITLE$\" como concluída",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_toggle_reopen": {
+    "message": "Reabrir \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the login to Ada"
+      }
+    }
+  },
+  "tasks_due": {
+    "message": "até $DATE$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-11-27"
+      }
+    }
+  },
+  "tasks_error_toggle": {
+    "message": "Não foi possível alterar a tarefa. Tente de novo."
+  },
+  "tasks_summary_title": {
+    "message": "Tarefas abertas"
+  },
+  "tasks_title": {
+    "message": "Tarefas"
+  },
+  "tasks_add": {
+    "message": "Adicionar tarefa"
+  },
+  "tasks_add_placeholder": {
+    "message": "O que precisa ser feito"
+  },
+  "tasks_add_submit": {
+    "message": "Adicionar"
+  },
+  "tasks_workspace": {
+    "message": "Espaço de trabalho"
+  },
+  "tasks_owner_placeholder": {
+    "message": "Quem faz"
+  },
+  "tasks_due_label": {
+    "message": "Prazo"
+  },
+  "tasks_cancel": {
+    "message": "Cancelar"
+  },
+  "tasks_save": {
+    "message": "Salvar"
+  },
+  "tasks_noWorkspace": {
+    "message": "Sem espaço de trabalho"
+  },
+  "tasks_noOwner": {
+    "message": "Sem responsável"
+  },
+  "tasks_from_meeting": {
+    "message": "De uma reunião"
+  },
+  "tasks_from_chat": {
+    "message": "De uma conversa"
+  },
+  "tasks_from_voice": {
+    "message": "Dita por voz"
+  },
+  "tasks_from_manual": {
+    "message": "Adicionada por você"
+  },
+  "tasks_from_note": {
+    "message": "Das suas notas"
+  },
+  "tasks_from_summary": {
+    "message": "De um resumo"
+  },
+  "tasks_from_whatsapp": {
+    "message": "Do WhatsApp"
+  },
+  "tasks_menu": {
+    "message": "Mais para $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "tasks_edit": {
+    "message": "Editar"
+  },
+  "tasks_give": {
+    "message": "Passar para alguém"
+  },
+  "tasks_merge": {
+    "message": "Juntar com…"
+  },
+  "tasks_merge_pick": {
+    "message": "A mesma tarefa que esta (ela é juntada a esta):"
+  },
+  "tasks_merge_submit": {
+    "message": "Juntar"
+  },
+  "tasks_moveTo": {
+    "message": "Mover para $WORKSPACE$",
+    "placeholders": {
+      "workspace": {
+        "content": "$1",
+        "example": "Acme"
+      }
+    }
+  },
+  "tasks_drop": {
+    "message": "Descartar"
+  },
+  "tasks_seenIn": {
+    "message": "Mencionada em $COUNT$ lugares",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "tasks_byWorkspace": {
+    "message": "Por espaço"
+  },
+  "tasks_byPerson": {
+    "message": "Por pessoa"
+  },
+  "tasks_status_open": {
+    "message": "Abertas"
+  },
+  "tasks_status_done": {
+    "message": "Concluídas"
+  },
+  "tasks_status_dropped": {
+    "message": "Descartadas"
+  },
+  "tasks_empty_open": {
+    "message": "Nenhuma tarefa aberta. Diga \"Ava, anote uma tarefa para…\" numa chamada, ou adicione uma aqui."
+  },
+  "tasks_empty_done": {
+    "message": "Nada concluído ainda."
+  },
+  "tasks_empty_dropped": {
+    "message": "Nada descartado."
+  },
+  "tasks_old_banner": {
+    "message": "Tarefas abertas sem menção há duas semanas: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_action": {
+    "message": "Fechar"
+  },
+  "tasks_old_confirm": {
+    "message": "Descartar as tarefas com mais de duas semanas ($COUNT$)? Você pode reabrir qualquer uma em Descartadas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "tasks_old_yes": {
+    "message": "Fechar tudo com mais de duas semanas"
+  },
+  "people_title": {
+    "message": "Pessoas"
+  },
+  "people_intro": {
+    "message": "Todos que a Ava conhece, aprendidos das suas chamadas, convites, caixa de entrada e conversas. Tudo fica neste computador."
+  },
+  "people_tab_people": {
+    "message": "Pessoas"
+  },
+  "people_tab_sort": {
+    "message": "Para organizar ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "people_workspace_all": {
+    "message": "Todos os espaços"
+  },
+  "people_everywhere": {
+    "message": "em todo lugar"
+  },
+  "people_empty": {
+    "message": "Ainda não há pessoas. A Ava aprende com suas chamadas, convites e caixa de entrada, e pergunta quando não tem certeza."
+  },
+  "people_sort_empty": {
+    "message": "Nada para organizar. A Ava pergunta quando encontra um nome de que não tem certeza."
+  },
+  "people_add": {
+    "message": "Adicionar pessoa"
+  },
+  "people_add_placeholder": {
+    "message": "Nome da pessoa"
+  },
+  "people_save": {
+    "message": "Salvar"
+  },
+  "people_cancel": {
+    "message": "Cancelar"
+  },
+  "people_name_label": {
+    "message": "Nome"
+  },
+  "people_about_label": {
+    "message": "Quem é"
+  },
+  "people_names_a11y": {
+    "message": "Nomes e endereços de $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_alias_add": {
+    "message": "Adicionar nome"
+  },
+  "people_alias_placeholder": {
+    "message": "Outro nome que a pessoa usa"
+  },
+  "people_alias_workspace": {
+    "message": "Onde este nome é usado"
+  },
+  "people_alias_remove_a11y": {
+    "message": "Remover o nome $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "people_merge_label": {
+    "message": "Mesma pessoa que…"
+  },
+  "people_merge_action": {
+    "message": "Juntar"
+  },
+  "people_remove": {
+    "message": "Remover"
+  },
+  "people_remove_confirm": {
+    "message": "Remover de vez"
+  },
+  "people_lastSeen": {
+    "message": "Visto $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "people_q_yes": {
+    "message": "Sim, $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_like": {
+    "message": "O mesmo que “$NAME$”",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_someoneElse": {
+    "message": "Outra pessoa"
+  },
+  "people_q_pick": {
+    "message": "Escolha uma pessoa"
+  },
+  "people_q_new": {
+    "message": "Pessoa nova"
+  },
+  "people_q_notPerson": {
+    "message": "Não é uma pessoa"
+  },
+  "people_q_me": {
+    "message": "Sou eu"
+  },
+  "people_q_saved": {
+    "message": "salvo como $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada Obi"
+      }
+    }
+  },
+  "people_q_ignored": {
+    "message": "não é uma pessoa: não será perguntado de novo"
+  },
+  "people_card_title": {
+    "message": "Quem é quem"
+  },
+  "people_card_done": {
+    "message": "Tudo organizado"
+  },
+  "people_card_open": {
+    "message": "Abrir Pessoas"
+  },
+  "people_card_meetingTitle": {
+    "message": "Quem é quem em “$TITLE$”",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Weekly sync"
+      }
+    }
+  },
+  "people_card_dailyTitle": {
+    "message": "Quem é quem: $COUNT$ nomes para organizar",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "people_from_meet": {
+    "message": "Meet"
+  },
+  "people_from_spoken": {
+    "message": "dito numa chamada"
+  },
+  "people_from_calendar": {
+    "message": "Agenda"
+  },
+  "people_from_whatsapp": {
+    "message": "WhatsApp"
+  },
+  "people_from_slack": {
+    "message": "Slack"
+  },
+  "people_from_gmail": {
+    "message": "Gmail"
+  },
+  "people_from_github": {
+    "message": "GitHub"
+  },
+  "people_from_chat": {
+    "message": "uma conversa"
+  },
+  "people_from_note": {
+    "message": "uma nota"
+  },
+  "people_from_task": {
+    "message": "uma tarefa"
+  },
+  "people_from_avi": {
+    "message": "você"
+  },
+  "workspaces_label": {
+    "message": "Espaços de trabalho"
+  },
+  "workspaces_make_button": {
+    "message": "Criar um espaço de trabalho para estes"
+  },
+  "workspaces_sheet_title": {
+    "message": "Criar um espaço de trabalho"
+  },
+  "workspaces_sheet_loading": {
+    "message": "Vendo o que está em Sem espaço de trabalho…"
+  },
+  "workspaces_sheet_thinking": {
+    "message": "Pensando em um nome…"
+  },
+  "workspaces_sheet_name": {
+    "message": "Nome"
+  },
+  "workspaces_sheet_keywords": {
+    "message": "Palavras-chave (separe com vírgulas)"
+  },
+  "workspaces_sheet_keywordsExample": {
+    "message": "por exemplo: lançamento, preços"
+  },
+  "workspaces_sheet_moves": {
+    "message": "O que vai para lá (tudo marcado)"
+  },
+  "workspaces_sheet_empty": {
+    "message": "Não há nada em Sem espaço de trabalho agora. Você ainda pode criar um espaço vazio."
+  },
+  "workspaces_sheet_save": {
+    "message": "Criar espaço de trabalho (move $COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_close": {
+    "message": "Fechar"
+  },
+  "workspaces_kind_task": {
+    "message": "Tarefa"
+  },
+  "workspaces_kind_thread": {
+    "message": "Conversa"
+  },
+  "workspaces_kind_meeting": {
+    "message": "Reunião"
+  },
+  "workspaces_kind_kb": {
+    "message": "Conhecimento"
+  },
+  "workspaces_done_made": {
+    "message": "“$NAME$” criado. $COUNT$ movidos para lá.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_done_skipped": {
+    "message": "$COUNT$ ficaram onde estão: foram colocados ou movidos desde então.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_done_voice": {
+    "message": "Espaço de trabalho “$NAME$” criado.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo": {
+    "message": "Desfazer"
+  },
+  "workspaces_undone": {
+    "message": "Desfeito."
+  },
+  "workspaces_undo_seconds": {
+    "message": "$SECONDS$ s restantes",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo_inbox": {
+    "message": "Você ainda pode desfazer isso pela Caixa de entrada."
+  },
+  "workspaces_offer_looksLike": {
+    "message": "$COUNT$ em Sem espaço de trabalho parecem ser de $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_wrong": {
+    "message": "$COUNT$ talvez pertençam a $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_move": {
+    "message": "Mover $COUNT$ para $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_notNow": {
+    "message": "Agora não"
+  },
+  "workspaces_offer_answered": {
+    "message": "$COUNT$ movidos para $NAME$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_moved": {
+    "message": "Movidos para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_offer_dismissed": {
+    "message": "Deixados onde estão."
+  },
+  "workspaces_offer_nothing": {
+    "message": "Nada foi movido: eles mudaram desde então."
+  },
+  "workspaces_move_gone": {
+    "message": "Esse movimento não está mais registrado."
+  },
+  "recording_record": {
+    "message": "Gravar tela"
+  },
+  "recording_record_for": {
+    "message": "Gravar tela para $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_picking": {
+    "message": "Escolha uma aba para gravar. As abas aparecem primeiro."
+  },
+  "recording_wholeWarning": {
+    "message": "Você escolheu uma janela ou a tela inteira: tudo o que estiver visível nela vai aparecer na gravação."
+  },
+  "recording_recordAnyway": {
+    "message": "Gravar mesmo assim"
+  },
+  "recording_cancel": {
+    "message": "Cancelar"
+  },
+  "recording_live": {
+    "message": "Gravando"
+  },
+  "recording_stop": {
+    "message": "Parar"
+  },
+  "recording_stop_label": {
+    "message": "Parar a gravação"
+  },
+  "recording_noMic": {
+    "message": "Sem microfone: só a tela e o som dela."
+  },
+  "recording_saving": {
+    "message": "Salvando…"
+  },
+  "recording_saving_pct": {
+    "message": "Salvando no Drive, $PCT$%",
+    "placeholders": {
+      "pct": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "recording_inDrive": {
+    "message": "No Drive, privado · $FOLDER$",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Ava recordings / Nexprove"
+      }
+    }
+  },
+  "recording_shared": {
+    "message": "Compartilhado: qualquer pessoa com o link pode comentar"
+  },
+  "recording_onMac": {
+    "message": "No seu Mac: $PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1",
+        "example": "~/Movies/Ava recordings/Nexprove/2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_downloaded": {
+    "message": "Baixado na sua pasta Downloads como $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_waiting": {
+    "message": "Ainda não salvo: o Google Drive não está conectado."
+  },
+  "recording_failed": {
+    "message": "Não salvo: $WHY$",
+    "placeholders": {
+      "why": {
+        "content": "$1",
+        "example": "Google Drive is full."
+      }
+    }
+  },
+  "recording_open": {
+    "message": "Abrir no Drive"
+  },
+  "recording_share": {
+    "message": "Compartilhar"
+  },
+  "recording_share_hint": {
+    "message": "Qualquer pessoa com o link pode comentar"
+  },
+  "recording_unshare": {
+    "message": "Parar de compartilhar"
+  },
+  "recording_copy": {
+    "message": "Copiar link"
+  },
+  "recording_copied": {
+    "message": "Copiado"
+  },
+  "recording_download": {
+    "message": "Baixar"
+  },
+  "recording_retry": {
+    "message": "Tentar de novo"
+  },
+  "recording_play": {
+    "message": "Reproduzir"
+  },
+  "recording_hide": {
+    "message": "Ocultar"
+  },
+  "recording_now": {
+    "message": "Gravando agora"
+  },
+  "recording_list": {
+    "message": "Gravações de $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_inbox_drive_title": {
+    "message": "Conecte o Google Drive para compartilhar gravações"
+  },
+  "recording_inbox_drive_body": {
+    "message": "Por enquanto, as gravações de tela ficam neste computador. Conecte o Google Drive em Conectores e as próximas vão para o Drive, onde Compartilhar cria um link."
+  },
+  "recording_inbox_drive_link": {
+    "message": "Abrir Conectores"
+  },
+  "recording_settings_title": {
+    "message": "Gravações de tela"
+  },
+  "recording_settings_max": {
+    "message": "Parar a gravação de tela após (minutos)"
+  },
+  "recording_settings_max_hint": {
+    "message": "Ela também para após dois minutos de silêncio e quando a chamada termina."
+  },
+  "followups_wa_which": {
+    "message": "Qual $NAME$ você quer dizer: $LIST$? Escreva o nome completo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "list": {
+        "content": "$2",
+        "example": "Ada Obi, Ada Lee"
+      }
+    }
+  },
+  "followups_wa_notSaved": {
+    "message": "Não consegui guardar isso. Diga assim: Ada says o deck está com o design, pronto quinta."
+  },
+  "followups_wa_saved": {
+    "message": "Anotado para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_by": {
+    "message": "Pronto até $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 26 Nov"
+      }
+    }
+  },
+  "followups_wa_nextFollowUp": {
+    "message": "Vou lembrar você de cobrar em $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 27 Nov"
+      }
+    }
+  },
+  "followups_wa_didTitle": {
+    "message": "$NAME$ terminou estas?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_didHint": {
+    "message": "Responda done 1 para fechar uma. Nada é fechado sem você dizer."
+  },
+  "followups_error": {
+    "message": "Algo deu errado. Tente de novo."
+  },
+  "followups_card_a11y": {
+    "message": "Acompanhamento com $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_gone": {
+    "message": "Essa tarefa não está mais no quadro."
+  },
+  "followups_card_closed": {
+    "message": "Concluída"
+  },
+  "followups_card_why_overdue": {
+    "message": "Prazo era $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 20 Nov"
+      }
+    }
+  },
+  "followups_card_why_asked": {
+    "message": "Perguntou em $DAY$, sem resposta ainda",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_card_why_snoozed": {
+    "message": "Adiada até hoje"
+  },
+  "followups_card_why_update": {
+    "message": "Chegou o dia que a pessoa deu"
+  },
+  "followups_card_why_quiet": {
+    "message": "Sem notícias há três dias úteis"
+  },
+  "followups_card_draft_a11y": {
+    "message": "Mensagem para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_drafting": {
+    "message": "Escrevendo uma mensagem…"
+  },
+  "followups_card_copy": {
+    "message": "Copiar"
+  },
+  "followups_card_copied": {
+    "message": "Copiado"
+  },
+  "followups_card_copy_fail": {
+    "message": "Não foi possível copiar. Selecione o texto e copie você mesmo."
+  },
+  "followups_card_whatsapp": {
+    "message": "Rascunho no WhatsApp"
+  },
+  "followups_card_whatsapp_done": {
+    "message": "Escrito na conversa com $CHAT$. Confira e envie você mesmo.",
+    "placeholders": {
+      "chat": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_asked": {
+    "message": "Perguntei"
+  },
+  "followups_card_done": {
+    "message": "Concluída"
+  },
+  "followups_card_snooze_1": {
+    "message": "Adiar 1 dia"
+  },
+  "followups_card_snooze_3": {
+    "message": "Adiar 3 dias"
+  },
+  "followups_card_snooze_7": {
+    "message": "Adiar 7 dias"
+  },
+  "followups_card_state_asked": {
+    "message": "Perguntado · próximo acompanhamento $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_card_state_snoozed": {
+    "message": "Adiada até $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_inbox_other": {
+    "message": "Esta lista era de $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_ps_summary": {
+    "message": "Fazendo: $TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "finishing the login"
+      }
+    }
+  },
+  "followups_ps_latest": {
+    "message": "Última atualização $WHEN$ · $FROM$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Tue 17 Nov"
+      },
+      "from": {
+        "content": "$2",
+        "example": "a call"
+      }
+    }
+  },
+  "followups_ps_from_meeting": {
+    "message": "de uma reunião"
+  },
+  "followups_ps_from_whatsapp": {
+    "message": "do WhatsApp"
+  },
+  "followups_ps_from_manual": {
+    "message": "anotada por você"
+  },
+  "followups_ps_did": {
+    "message": "Fez"
+  },
+  "followups_ps_doing": {
+    "message": "Fazendo agora"
+  },
+  "followups_ps_next": {
+    "message": "Próximo"
+  },
+  "followups_ps_by": {
+    "message": "até $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 27 Nov"
+      }
+    }
+  },
+  "followups_ps_blocked": {
+    "message": "Bloqueado"
+  },
+  "followups_ps_open": {
+    "message": "Tarefas abertas"
+  },
+  "followups_ps_none": {
+    "message": "Nenhuma atualização ainda."
+  },
+  "followups_md_title": {
+    "message": "Marcar como concluída?"
+  },
+  "followups_md_ask": {
+    "message": "$NAME$ disse: $SAID$. Marcar '$TASK$' como concluída?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "said": {
+        "content": "$2",
+        "example": "sent the login"
+      },
+      "task": {
+        "content": "$3",
+        "example": "Send the login"
+      }
+    }
+  },
+  "followups_md_yes": {
+    "message": "Marcar concluída"
+  },
+  "followups_md_no": {
+    "message": "Ainda não"
+  },
+  "followups_md_answered_done": {
+    "message": "Marcada como concluída"
+  },
+  "followups_md_answered_no": {
+    "message": "Deixada aberta"
+  },
+  "followups_report_label": {
+    "message": "O que $NAME$ disse?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_report_save": {
+    "message": "Salvar"
+  },
+  "followups_report_saved": {
+    "message": "Anotado."
+  },
+  "calltasks_you": {
+    "message": "Você"
+  },
+  "calltasks_wa_allTitle": {
+    "message": "Tarefas da chamada"
+  },
+  "calltasks_wa_recordings": {
+    "message": "Gravações de tela:"
+  },
+  "calltasks_draft_notYet": {
+    "message": "Pressione \"Está certo\" primeiro: nada sai antes disso."
+  },
+  "calltasks_draft_nobody": {
+    "message": "Essa pessoa não está mais na lista desta chamada."
+  },
+  "calltasks_draft_noTab": {
+    "message": "Abra o WhatsApp Web em uma aba e entre, depois pressione de novo."
+  },
+  "calltasks_draft_loggedOut": {
+    "message": "O WhatsApp Web não está conectado. Leia o código com o celular e pressione de novo."
+  },
+  "calltasks_draft_noChat": {
+    "message": "Nenhuma conversa do WhatsApp chamada \"$NAME$\" foi encontrada. Renomeie a pessoa na página Pessoas para o nome que o WhatsApp mostra.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_wrongChat": {
+    "message": "O WhatsApp abriu \"$SHOWN$\", não \"$NAME$\", então nada foi digitado.",
+    "placeholders": {
+      "shown": {
+        "content": "$1",
+        "example": "Ada Obi"
+      },
+      "name": {
+        "content": "$2",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_greeting": {
+    "message": "Oi $NAME$, da nossa chamada:",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_noBox": {
+    "message": "A caixa de mensagem dessa conversa não foi encontrada."
+  },
+  "calltasks_edit_words": {
+    "message": "O que deve ser feito"
+  },
+  "calltasks_edit_owner": {
+    "message": "Para quem"
+  },
+  "calltasks_save": {
+    "message": "Salvar"
+  },
+  "calltasks_cancel": {
+    "message": "Cancelar"
+  },
+  "calltasks_edit": {
+    "message": "Editar"
+  },
+  "calltasks_edit_for": {
+    "message": "Editar \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_discard": {
+    "message": "Descartar"
+  },
+  "calltasks_discard_for": {
+    "message": "Descartar \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_status_captions": {
+    "message": "Tarefas faladas ativadas: diga \"Ava, note a task for Ada: …\". Ouvidas nas suas próprias legendas."
+  },
+  "calltasks_status_mic": {
+    "message": "Tarefas faladas ativadas: diga \"Ava, note a task for Ada: …\". Ouvidas no seu microfone, neste computador."
+  },
+  "calltasks_status_off_none": {
+    "message": "Tarefas faladas desativadas nesta chamada: não há legendas nem microfone seu para ouvir. Ative as legendas na chamada."
+  },
+  "calltasks_status_off_recogniser": {
+    "message": "Tarefas faladas desativadas nesta chamada: ouvir seu microfone exige um modelo de fala neste computador (Configurações, Voz). Ou ative as legendas."
+  },
+  "calltasks_status_off_micDenied": {
+    "message": "Tarefas faladas desativadas nesta chamada: o Chrome não permitiu o microfone. Ou ative as legendas."
+  },
+  "calltasks_status_off_mic": {
+    "message": "Tarefas faladas desativadas nesta chamada: as notas não usam seu microfone. Ative as legendas, ou inclua o microfone nas notas."
+  },
+  "calltasks_status_off_marker": {
+    "message": "Tarefas faladas desativadas nesta chamada: as legendas não marcam quais linhas são suas, então as palavras de um convidado não podem ser distinguidas das suas. Clique no ícone da barra na aba da chamada para gravar o som com seu microfone."
+  },
+  "calltasks_card_title": {
+    "message": "Tarefa para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_card_forYou": {
+    "message": "Tarefa para você"
+  },
+  "calltasks_record_ask": {
+    "message": "Gravar a tela para isto?"
+  },
+  "calltasks_yes": {
+    "message": "Sim"
+  },
+  "calltasks_no": {
+    "message": "Não"
+  },
+  "calltasks_sent_sent": {
+    "message": "Enviado a você no WhatsApp, pronto para encaminhar."
+  },
+  "calltasks_sent_queued": {
+    "message": "Aguarda o fim do horário de silêncio e então vai para você no WhatsApp."
+  },
+  "calltasks_sent_off": {
+    "message": "Não enviado: mensagens de tarefas estão desativadas nas configurações do WhatsApp."
+  },
+  "calltasks_sent_empty": {
+    "message": "Não enviado: nenhuma destas tarefas está mais aberta."
+  },
+  "calltasks_sent_done": {
+    "message": "Já enviado a você no WhatsApp."
+  },
+  "calltasks_sent_failed": {
+    "message": "Não enviado: não foi possível alcançar o WhatsApp. Não será tentado de novo sozinho."
+  },
+  "calltasks_draft": {
+    "message": "Rascunhar mensagem para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_drafted": {
+    "message": "Digitado na conversa de $NAME$ no WhatsApp Web. Leia e pressione enviar lá.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_list_title": {
+    "message": "Tarefas desta chamada"
+  },
+  "calltasks_shareSkipped": {
+    "message": "Algumas gravações não foram compartilhadas: $REASONS$",
+    "placeholders": {
+      "reasons": {
+        "content": "$1",
+        "example": "Not in Google Drive."
+      }
+    }
+  },
+  "calltasks_confirm_duringCall": {
+    "message": "A chamada ainda está sendo anotada. Pressione isto quando ela terminar."
+  },
+  "calltasks_confirmed": {
+    "message": "Repassado. Cada gravação no Drive agora tem um link que qualquer pessoa com ele pode abrir."
+  },
+  "calltasks_looksRight": {
+    "message": "Está certo"
+  },
+  "calltasks_looksRight_hint": {
+    "message": "Nada é enviado e nenhuma gravação é compartilhada até você pressionar isto."
+  },
+  "settings_tracing_title": {
+    "message": "Hosted tracing"
+  },
+  "settings_tracing_on": {
+    "message": "Send agent traces to Suture"
+  },
+  "settings_tracing_on_hint": {
+    "message": "Off by default. When on, and only in a build that carries a Suture key, each planner and navigator call sends its timing, model name and token counts to the hosted Suture project (suture.nexprove.com) so its quality can be checked. Nothing is sent while this is off."
+  },
+  "settings_tracing_content": {
+    "message": "Include the text of prompts and replies"
+  },
+  "settings_tracing_content_hint": {
+    "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
   }
 }

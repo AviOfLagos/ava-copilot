@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { memoryLogger } from '../log';
@@ -105,7 +107,7 @@ describe('Baileys driver', () => {
     dir.remove();
   });
 
-  it('passes on only what just arrived, and sends to the service’s chat ids in Baileys’ form', async () => {
+  it('passes on what just arrived or came while offline, and sends to the service’s chat ids in Baileys’ form', async () => {
     const { driver, events, sockets, dir } = harness();
     await driver.start(events);
     sockets[0].emit('messages.upsert', {
@@ -122,7 +124,16 @@ describe('Baileys driver', () => {
         },
       ],
     });
-    expect(events.message).toHaveBeenCalledTimes(1);
+    // Delivered on reconnect: what he sent while the line was down comes as 'append' too; her own sends do not count
+    sockets[0].emit('messages.upsert', {
+      type: 'append',
+      messages: [
+        { key: { id: 'offline', remoteJid: '1@lid', fromMe: false }, message: { conversation: 'You there?' } },
+        { key: { id: 'own', remoteJid: '1@lid', fromMe: true }, message: { conversation: 'Her answer' } },
+      ],
+    });
+    expect(events.message).toHaveBeenCalledTimes(2);
+    expect(events.message.mock.calls[1][0]).toMatchObject({ id: 'offline', body: 'You there?' });
     expect(events.message.mock.calls[0][0]).toMatchObject({
       id: 'new',
       chatId: '1@lid',
@@ -138,11 +149,17 @@ describe('Baileys driver', () => {
   it('says so when the phone removed this Mac, and gives up on a code nobody scanned', async () => {
     const first = harness();
     await first.driver.start(first.events);
+    // The login WhatsApp just refused for good
+    const authDir = join(first.dir.path, 'baileys');
+    mkdirSync(authDir, { recursive: true });
+    writeFileSync(join(authDir, 'creds.json'), '{}');
     first.sockets[0].emit('connection.update', {
       connection: 'close',
       lastDisconnect: { error: { output: { statusCode: 401 } } },
     });
-    expect(first.events.disconnected).toHaveBeenCalled();
+    expect(first.events.disconnected).toHaveBeenCalledWith(expect.stringMatching(/Relink/));
+    // Gone, so Relink shows a new code instead of being refused again
+    expect(existsSync(authDir)).toBe(false);
     await tick();
     expect(first.sockets).toHaveLength(1);
     first.dir.remove();

@@ -6,6 +6,7 @@ import type {
   WhatsAppMessage,
   WhatsAppNoticeKind,
   WhatsAppPresence,
+  WhatsAppReaction,
   WhatsAppStatus,
 } from '@src/shared/lib/protocol/companion';
 import { wrapUntrustedContent } from '../agent/messages/utils';
@@ -31,7 +32,7 @@ import type { InFlightAnswer, WhatsAppRemoteSettings, WhatsAppRemoteState } from
  */
 
 export interface BridgeDeps {
-  inbox: () => Promise<{ messages: WhatsAppMessage[]; status: WhatsAppStatus }>;
+  inbox: () => Promise<{ messages: WhatsAppMessage[]; reactions?: WhatsAppReaction[]; status: WhatsAppStatus }>;
   ack: (ids: string[]) => Promise<void>;
   send: (request: { text: string; kind: WhatsAppNoticeKind; replyTo?: string; quote?: boolean }) => Promise<void>;
   sendVoice: (request: VoiceReply) => Promise<void>;
@@ -70,6 +71,13 @@ export interface BridgeDeps {
   settings: () => Promise<WhatsAppRemoteSettings>;
   now: () => number;
   warn: (message: string, error?: unknown) => void;
+  // Tasks on WhatsApp (./task-desk.ts): a whole message that is a task command ("done 2", "tasks ada"), answered
+  // in code, never by a model; true when it was one
+  taskCommand?: (message: WhatsAppMessage, words: string) => Promise<boolean>;
+  // His reaction on a message of hers (a ✅ on a one-task message closes it), or its removal
+  taskReaction?: (reaction: WhatsAppReaction) => Promise<void>;
+  // The morning brief with its open tasks, sent once under the notice's key; true when it went
+  sendBrief?: (text: string, key: string) => Promise<boolean>;
 }
 
 // The most of a notice's own text
@@ -170,9 +178,14 @@ export class WhatsAppBridge {
   }
 
   private async pullOnce(): Promise<void> {
-    const { messages, status } = await this.deps.inbox();
+    const pulled = await this.deps.inbox();
+    const { status } = pulled;
     await this.deps.updateState({ status: { ...status, qr: null }, checkedAt: this.deps.now() });
-    if (status.state !== 'linked' || messages.length === 0) return;
+    await this.reactions(pulled.reactions ?? []);
+    if (status.state !== 'linked') return;
+    // Task commands are code and take a moment: answered now, even while the chat works on something else
+    const messages = await this.withoutTaskCommands(pulled.messages);
+    if (messages.length === 0) return;
 
     const thread = await this.todaysThread();
     const last = messages[messages.length - 1];
@@ -223,6 +236,36 @@ export class WhatsAppBridge {
     this.deps.later(() => void this.acknowledge(thread.id, last.id), ACK_AFTER_MS);
   }
 
+  /** His reactions, each passed to the task desk once and taken off the queue whatever came of it. */
+  private async reactions(reactions: WhatsAppReaction[]): Promise<void> {
+    if (!reactions.length) return;
+    for (const reaction of reactions) {
+      await this.deps
+        .taskReaction?.(reaction)
+        .catch(error => this.deps.warn('A WhatsApp reaction was not read', error));
+    }
+    await this.deps.ack(reactions.map(reaction => reaction.id));
+  }
+
+  /** The messages left once those that are a whole task command are answered (and taken off the queue). */
+  private async withoutTaskCommands(messages: WhatsAppMessage[]): Promise<WhatsAppMessage[]> {
+    if (!this.deps.taskCommand) return messages;
+    const rest: WhatsAppMessage[] = [];
+    const answered: string[] = [];
+    for (const message of messages) {
+      const command =
+        message.kind === 'text' &&
+        (await this.deps.taskCommand(message, message.text.trim()).catch(error => {
+          this.deps.warn('A WhatsApp task command failed', error);
+          return false;
+        }));
+      if (command) answered.push(message.id);
+      else rest.push(message);
+    }
+    if (answered.length) await this.deps.ack(answered);
+    return rest;
+  }
+
   /** "typing…" in his chat now, and again every few seconds while the chat still works on his message. */
   private keepTyping(threadId: string, replyTo: string): void {
     const token = `${threadId}:${replyTo}`;
@@ -254,6 +297,8 @@ export class WhatsAppBridge {
    * done on WhatsApp right away, and true. "That" is the message he quoted, else her last one.
    */
   private async command(message: WhatsAppMessage, words: string): Promise<boolean> {
+    // A voice note that says a task command ("done 2"); typed ones were answered before the turn
+    if (message.kind === 'voice' && this.deps.taskCommand && (await this.deps.taskCommand(message, words))) return true;
     const command = commandOf(words);
     if (!command) return false;
     const quoted = message.quotedId ? { messageId: message.quotedId } : {};
@@ -500,6 +545,8 @@ export class WhatsAppBridge {
         return;
       }
       if (thread.status === 'error') {
+        // Queued to try again by itself (src/background/retry): he hears when it is done, or stuck for good
+        if (thread.failure?.retryAt) return;
         await this.say(t('wava_reply_stopped', [plainOutside(thread.error?.message ?? '', 200)]), 'reply', replyTo);
         return;
       }
@@ -579,6 +626,13 @@ export class WhatsAppBridge {
       .slice(0, 12);
     const title = plainOutside(notice.title, 120);
     const body = lines.length ? `\n\n${clip(lines.join('\n'), NOTICE_BODY_MAX, t('wava_reply_more'))}` : '';
+    // The morning brief gains its open tasks, numbered so "done 2" works on it (./task-desk.ts)
+    if (notice.kind === 'brief' && this.deps.sendBrief) {
+      await this.deps.sendBrief(`*${title}*${body}`, notice.key).catch(error => {
+        this.deps.warn('A WhatsApp brief was not sent', error);
+      });
+      return;
+    }
     await this.say(`*${title}*${body}`, notice.kind);
   }
 

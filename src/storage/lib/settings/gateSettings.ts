@@ -1,6 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
+import type { RuleCandidate } from './permissionRules';
 
 // The kinds of action that change something outside the browser and cannot be taken back
 export const COMMIT_KINDS = ['send', 'publish', 'submit', 'delete', 'purchase', 'permission'] as const;
@@ -37,6 +38,12 @@ export interface ConfirmRequest {
   context: string;
   // What the agent needs to know to finish a form, all asked at once (kind 'questions')
   questions?: string[];
+  // This step, or one like it, already exists (see ../once): it is 'done'; or it was 'started' and cut off
+  // before its result was recorded; or an 'earlier' run of the task finished a step on the same site or tool.
+  // The card says so, and only the user's click runs it.
+  repeat?: { status: 'started' | 'done' | 'earlier'; at: number; label: string };
+  // Offered as "Allow every time": the rule saved if the user picks it (see ./permissionRules)
+  always?: RuleCandidate;
 }
 
 // Interface for the confirm gate settings
