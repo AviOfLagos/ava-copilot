@@ -16,7 +16,7 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | Tool | In | Group | Channels | Chars | What it does |
 | --- | --- | --- | --- | --- | --- |
 | `add_channel` (add channel) | chat | Tasks | panel, whatsapp, agent, routine | 501 / - | Put a channel on the product's channel list, or update it: where the audience already is. |
-| `ask_knowledge` (ask knowledge) | voice | Memory and knowledge | voice | - / 269 | Answers a question from the user's knowledge base: past meetings, past chats and saved pages. |
+| `ask_knowledge` (ask knowledge) | voice | Memory and knowledge | voice | - / 299 | Answers a question from the user's knowledge base: past meetings, past chats, saved pages and their notes (Obsidian vault). |
 | `ask_meeting` (ask meeting) | voice | Meetings and calendar | voice | - / 235 | Answers a question about the meeting being recorded, or the most recent one, from its transcript. |
 | `cache_content` (cache content) | chat | Screen and tabs | panel, whatsapp, agent, routine | 211 / - | Cache what you have found so far from the current page for future use |
 | `call_tool` (call tool) | chat | Settings and checks | panel, whatsapp, agent, routine | 548 / - | Run a tool from one of the user's connectors (MCP servers), listed under [Connector tools] in the state: it reads their data or acts in another app without bro… |
