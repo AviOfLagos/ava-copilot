@@ -136,6 +136,28 @@ describe('workspace lines', () => {
   });
 });
 
+describe('workspace lines a model or a page writes', () => {
+  const id = 'wsm_abcdefghij';
+
+  it('never become a button in a message that is not vouched for, whatever whitespace dresses them', () => {
+    for (const pad of ['', ' ', '\t', '\r', '\u00a0', '\v', '\f', '\ufeff', '\u2003']) {
+      for (const line of [`${pad}${MAKE_WORKSPACE_LINE}${pad}`, `${pad}${undoMoveLine(id)}${pad}`]) {
+        const stripped = stripWorkspaceMarkers(`before\n${line}\nafter`);
+        // What the panel and the strip functions both see: nothing a button could be made of is left
+        expect(stripped, JSON.stringify(line)).not.toContain('^ws_');
+        expect(splitWorkspaceLines(stripped).every(part => part.kind === 'markdown')).toBe(true);
+      }
+    }
+  });
+
+  it('are taken out wherever a line parses as a button (the two readings agree)', () => {
+    for (const pad of ['', ' ', '\t', '\r', '\u00a0', '\u2003']) {
+      const line = `${pad}${MAKE_WORKSPACE_LINE}${pad}`;
+      if (parseWorkspaceLine(line)) expect(stripWorkspaceMarkers(line).trim()).toBe('');
+    }
+  });
+});
+
 describe('matchWorkspaces', () => {
   const ws = (id: string, name: string, keywords: string[] = []): Workspace => ({
     id,
@@ -152,5 +174,14 @@ describe('matchWorkspaces', () => {
     expect(routeWorkspace('Harbor call', all)).toBeNull();
     expect(routeWorkspace('Orchid launch', all)?.id).toBe('a');
     expect(matchWorkspaces('nothing here', all)).toEqual([]);
+  });
+
+  it('reads a company domain from the Google account, never an address anyone can have', () => {
+    const own = { ...ws('a', 'Orchid Labs'), accounts: { google: 'sam@orchid-labs.example' } };
+    const personal = { ...ws('b', 'Home'), accounts: { google: 'sam.person@gmail.com' } };
+    expect(matchWorkspaces('Quote for orchid-labs.example', [own, personal]).map(item => item.id)).toEqual(['a']);
+    // "gmail.com" in a text says nothing about the one workspace that happens to use a Gmail account
+    expect(matchWorkspaces('Email bo@gmail.com the quote', [own, personal])).toEqual([]);
+    expect(matchWorkspaces('https://mail.google.com/outlook.com', [own, personal])).toEqual([]);
   });
 });

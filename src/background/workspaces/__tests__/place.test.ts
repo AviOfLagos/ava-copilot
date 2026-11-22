@@ -50,6 +50,32 @@ describe('moveItems', () => {
     expect(await deps.placement.state().then(state => state.moves)).toEqual([]);
   });
 
+  it('does not overwrite what Avi places between a rule reading a thing and writing it', async () => {
+    const deps = rig([item('1', 'a'), item('2', 'b')]);
+    // Avi's click lands right after the rule's read of the first thing
+    deps.source.afterGet = ref => {
+      deps.source.afterGet = null;
+      deps.source.items.get(`task:${ref.id}`)!.workspaceId = 'harbor';
+      deps.source.items.get(`task:${ref.id}`)!.setBy = 'avi';
+    };
+    const { move, skipped } = await moveItems(deps, {
+      refs: [
+        { kind: 'task', id: '1' },
+        { kind: 'task', id: '2' },
+      ],
+      workspace: ORCHID,
+      by: 'rule',
+      setBy: 'rule',
+      expectFrom: new Map([
+        ['task:1', null],
+        ['task:2', null],
+      ]),
+    });
+    expect(skipped).toBe(1);
+    expect(move?.items.map(one => one.id)).toEqual(['2']);
+    expect(deps.source.at('1')).toMatchObject({ workspaceId: 'harbor', setBy: 'avi' });
+  });
+
   it('skips a thing that is no longer where it was offered from', async () => {
     const deps = rig([item('1', 'a'), item('2', 'b', { workspaceId: 'harbor', setBy: 'avi' })]);
     const { move, skipped } = await moveItems(deps, {
@@ -105,6 +131,22 @@ describe('undoMove', () => {
     const result = await undoMove(deps, move!.id, INBOX_UNDO_MS);
     expect(result).toMatchObject({ ok: true, restored: 1, left: 1 });
     expect(deps.source.at('2')).toMatchObject({ workspaceId: 'harbor', setBy: 'avi' });
+  });
+
+  it('does not undo over what Avi places while the undo runs', async () => {
+    const deps = rig([item('1', 'a')]);
+    const { move } = await moveItems(deps, {
+      refs: [{ kind: 'task', id: '1' }],
+      workspace: ORCHID,
+      by: 'rule',
+      setBy: 'rule',
+    });
+    deps.source.afterGet = ref => {
+      deps.source.afterGet = null;
+      deps.source.items.get(`task:${ref.id}`)!.setBy = 'avi';
+    };
+    expect(await undoMove(deps, move!.id, INBOX_UNDO_MS)).toMatchObject({ ok: true, restored: 0, left: 1 });
+    expect(deps.source.at('1')).toMatchObject({ workspaceId: 'orchid', setBy: 'avi' });
   });
 
   it('works once, and only while it is recent enough', async () => {
@@ -174,6 +216,17 @@ describe('makeWorkspace', () => {
     expect(deps.book).toHaveLength(2);
   });
 
+  it('makes a name once when two asks for it arrive together (a double click, a voice command and a sheet)', async () => {
+    const deps = rig([item('1', 'a')]);
+    const [one, two] = await Promise.all([
+      makeWorkspace(deps, { name: 'Newco', by: 'sheet', refs: [{ kind: 'task', id: '1' }] }),
+      makeWorkspace(deps, { name: 'newco', by: 'voice' }),
+    ]);
+    expect([one.kind, two.kind].sort()).toEqual(['exists', 'made']);
+    expect(deps.book.filter(next => next.id.startsWith('newco'))).toHaveLength(1);
+    expect((await deps.state()).moves).toHaveLength(1);
+  });
+
   it('keeps a made workspace when something else is in it by the time of the undo', async () => {
     const deps = rig([item('1', 'a')]);
     const made = await makeWorkspace(deps, { name: 'Newco', by: 'voice' });
@@ -181,6 +234,29 @@ describe('makeWorkspace', () => {
     await deps.source.set({ kind: 'task', id: '1' }, 'newco', 'avi');
     expect(await undoMove(deps, made.move.id, INBOX_UNDO_MS)).toMatchObject({ ok: true, removedWorkspace: false });
     expect(deps.book.map(one => one.id)).toContain('newco');
+  });
+
+  it('keeps a made workspace Avi has worked on since, however empty it is', async () => {
+    for (const change of [
+      (one: typeof ORCHID) => ({ ...one, keywords: [...one.keywords, 'pipeline'] }),
+      (one: typeof ORCHID) => ({ ...one, about: 'Our lead engine.' }),
+      (one: typeof ORCHID) => ({ ...one, accounts: { google: 'sam@newco.example' } }),
+      (one: typeof ORCHID) => ({ ...one, name: 'Newco Two' }),
+    ]) {
+      const deps = rig([]);
+      const made = await makeWorkspace(deps, { name: 'Newco', by: 'voice' });
+      if (made.kind !== 'made') throw new Error('expected a new workspace');
+      const at = deps.book.findIndex(one => one.id === 'newco');
+      deps.book[at] = change(deps.book[at]);
+      expect(await undoMove(deps, made.move.id, INBOX_UNDO_MS)).toMatchObject({ ok: true, removedWorkspace: false });
+      expect(deps.book.map(one => one.id)).toContain('newco');
+    }
+    // Untouched, it goes
+    const deps = rig([]);
+    const made = await makeWorkspace(deps, { name: 'Newco', by: 'voice' });
+    if (made.kind !== 'made') throw new Error('expected a new workspace');
+    expect(await undoMove(deps, made.move.id, INBOX_UNDO_MS)).toMatchObject({ ok: true, removedWorkspace: true });
+    expect(deps.book.map(one => one.id)).not.toContain('newco');
   });
 
   it('refuses an empty name', async () => {
@@ -211,6 +287,25 @@ describe('offers', () => {
     expect(deps.source.at('1')).toMatchObject({ workspaceId: 'orchid', setBy: 'avi' });
     expect(deps.source.at('2')).toMatchObject({ workspaceId: 'harbor', setBy: 'avi' });
     await expect(acceptOffer(deps, offer.id)).rejects.toThrow('answered already');
+  });
+
+  it('leave alone a thing Avi placed himself since it was offered, even to where it already was', async () => {
+    const deps = rig([
+      item('1', 'a', { workspaceId: 'harbor', setBy: 'rule' }),
+      item('2', 'b'),
+      item('3', 'c', { workspaceId: 'harbor', setBy: 'rule' }),
+    ]);
+    const things = await deps.source.list();
+    const wrong = (await makeOffer(deps, { kind: 'wrong', workspace: ORCHID, items: [things[0], things[2]] }))!;
+    const guess = (await makeOffer(deps, { kind: 'guess', workspace: ORCHID, items: [things[1]] }))!;
+    // Avi confirms harbor for the first himself, and chooses "No workspace" for the second
+    await deps.source.set({ kind: 'task', id: '1' }, 'harbor', 'avi');
+    await deps.source.set({ kind: 'task', id: '2' }, null, 'avi');
+    expect(await acceptOffer(deps, wrong.id)).toMatchObject({ moved: 1, skipped: 1 });
+    expect(await acceptOffer(deps, guess.id)).toMatchObject({ moved: 0, skipped: 1 });
+    expect(deps.source.at('1')).toMatchObject({ workspaceId: 'harbor', setBy: 'avi' });
+    expect(deps.source.at('2')).toMatchObject({ workspaceId: null, setBy: 'avi' });
+    expect(deps.source.at('3')).toMatchObject({ workspaceId: 'orchid', setBy: 'avi' });
   });
 
   it('record what Avi unticked as a no for that workspace', async () => {

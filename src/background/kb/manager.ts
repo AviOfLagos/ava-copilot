@@ -436,13 +436,26 @@ export class KnowledgeBase {
    * placed them (docs/pm-desk.md, Part 3): Avi's own click by default; `null` for an item that follows its chat or
    * meeting and so has no placement of its own.
    */
-  setWorkspace(itemIds: string[], workspaceId: string | null, setBy: WorkspaceSetBy | null = 'avi'): Promise<number> {
+  setWorkspace(
+    itemIds: string[],
+    workspaceId: string | null,
+    setBy: WorkspaceSetBy | null = 'avi',
+    // When given, an item that is not still where it was and placed by whom it was read is left alone (checked here, in
+    // the same step as the write, so a rule never overwrites the user's own placing made a moment before)
+    unchanged?: { workspaceId: string | null; setBy: WorkspaceSetBy | null },
+  ): Promise<number> {
     return this.serial(async () => {
       const now = Date.now();
       let moved = 0;
       for (const id of itemIds) {
         const item = await this.deps.store.item(id);
         if (!item) continue;
+        if (
+          unchanged &&
+          ((item.workspaceId ?? null) !== unchanged.workspaceId || (item.workspaceSetBy ?? null) !== unchanged.setBy)
+        ) {
+          continue;
+        }
         if ((item.workspaceId ?? null) === workspaceId && (item.workspaceSetBy ?? null) === setBy) continue;
         await this.deps.store.db.kbItems.update(id, {
           workspaceId,

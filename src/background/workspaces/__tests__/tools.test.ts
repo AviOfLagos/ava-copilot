@@ -61,6 +61,25 @@ describe('workspace_create', () => {
     expect((await deps.state()).moves).toEqual([]);
   });
 
+  it('makes nothing for a name that is only a piece of what the user said', async () => {
+    const deps = rig([]);
+    for (const name of ['sum', 'summar', 'a']) {
+      const text = await workspaceCreate(deps, { by: 'agent', userWords: 'Summarise this page for me' }, { name });
+      expect(text, name).toContain('did not come from the user');
+    }
+    expect(deps.book).toHaveLength(2);
+  });
+
+  it('keeps only keywords the user said, since rules move things by them later', async () => {
+    const deps = rig([]);
+    await workspaceCreate(
+      deps,
+      { by: 'voice', userWords: 'create a workspace called Lead Engine, with the word pipeline' },
+      { name: 'Lead Engine', keywords: ['pipeline', 'invoice', 'wire transfer', ' '] },
+    );
+    expect(deps.book.at(-1)?.keywords).toEqual(['pipeline']);
+  });
+
   it('asks for a name when none was given', async () => {
     expect(await workspaceCreate(rig([]), said, { name: '  ' })).toContain('needs a name');
   });
@@ -69,6 +88,8 @@ describe('workspace_create', () => {
     expect(saidByUser('Lead Engine', 'create a workspace called lead-engine')).toBe(true);
     expect(saidByUser('Lead Engine', 'create a workspace called lead')).toBe(false);
     expect(saidByUser('', 'anything')).toBe(false);
+    expect(saidByUser('LeadEngine', 'create a workspace called Lead Engine')).toBe(true);
+    expect(saidByUser('Sum', 'summarise this')).toBe(false);
   });
 });
 

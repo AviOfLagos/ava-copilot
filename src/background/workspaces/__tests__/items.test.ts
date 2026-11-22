@@ -42,10 +42,22 @@ beforeEach(() => {
   kbCalls.length = 0;
   source = createItemSource({
     db,
-    kbSetWorkspace: vi.fn(async (ids, workspaceId, setBy) => {
+    kbSetWorkspace: vi.fn(async (ids, workspaceId, setBy, unchanged) => {
       kbCalls.push({ ids, workspaceId, setBy });
-      for (const id of ids) await db.kbItems.update(id, { workspaceId, workspaceSetBy: setBy ?? undefined });
-      return ids.length;
+      let moved = 0;
+      for (const id of ids) {
+        const record = await db.kbItems.get(id);
+        if (
+          unchanged &&
+          ((record?.workspaceId ?? null) !== unchanged.workspaceId ||
+            (record?.workspaceSetBy ?? null) !== unchanged.setBy)
+        ) {
+          continue;
+        }
+        await db.kbItems.update(id, { workspaceId, workspaceSetBy: setBy ?? undefined });
+        moved++;
+      }
+      return moved;
     }),
   });
 });
@@ -159,6 +171,39 @@ describe('moving', () => {
     expect(await db.kbItems.get('page:p1')).toMatchObject({ workspaceId: 'orchid', workspaceSetBy: 'rule' });
     expect(await source.set({ kind: 'kb', id: 'page:missing' }, 'orchid', 'rule')).toBe(false);
     expect(await source.set({ kind: 'thread', id: 'nope' }, 'orchid', 'rule')).toBe(false);
+  });
+
+  it('writes only when the thing is still as it was read, whatever kind it is', async () => {
+    const tasks = createTaskStore(db);
+    const { task } = (await tasks.record({ title: 'Do it', workspaceId: null, source: { kind: 'chat' } }))!;
+    await db.threads.add(newThread({ id: 'chat-1' }));
+    await db.threads.add(newThread({ id: 'notes', meetingId: 'meet-1' }));
+    await db.meetings.add(newMeeting({ id: 'meet-1', status: 'done', threadId: 'notes' }));
+    await db.kbItems.add(kbItem('page:p1', 'page'));
+    const refs = [
+      { kind: 'task', id: task.id },
+      { kind: 'thread', id: 'chat-1' },
+      { kind: 'meeting', id: 'meet-1' },
+      { kind: 'kb', id: 'page:p1' },
+    ] as const;
+    // Each was read as in no workspace, placed by a rule (a task) or by no one; then Avi placed each himself
+    const read = { workspaceId: null, setBy: null } as const;
+    await db.tasks.update(task.id, { workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    await db.threads.update('chat-1', { workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    await db.meetings.update('meet-1', { workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    await db.kbItems.update('page:p1', { workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    for (const ref of refs) {
+      const stale = ref.kind === 'task' ? { workspaceId: null, setBy: 'rule' as const } : read;
+      expect(await source.set(ref, 'orchid', 'rule', stale), ref.kind).toBe(false);
+    }
+    expect(await db.tasks.get(task.id)).toMatchObject({ workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    expect(await db.threads.get('chat-1')).toMatchObject({ workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    expect(await db.meetings.get('meet-1')).toMatchObject({ workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    expect((await db.threads.get('notes'))?.workspaceId ?? null).toBeNull();
+    expect(await db.kbItems.get('page:p1')).toMatchObject({ workspaceId: 'harbor', workspaceSetBy: 'avi' });
+    // As read, it writes
+    const now = { workspaceId: 'harbor', setBy: 'avi' as const };
+    for (const ref of refs) expect(await source.set(ref, 'orchid', 'avi', now), ref.kind).toBe(true);
   });
 
   it('counts what is in a workspace, done or not, of every kind', async () => {

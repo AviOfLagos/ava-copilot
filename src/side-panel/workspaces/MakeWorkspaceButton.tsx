@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FolderPlus } from 'lucide-react';
+import { SHEET_HOLD_MS } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { Button } from '../components/ui/button';
 import { usePlacement, workspacesRequest } from './client';
@@ -59,10 +60,12 @@ export function UndoMoveButton({ moveId }: { moveId: string }) {
  */
 export function PendingWorkspaceOffers() {
   const { offers, moves } = usePlacement();
-  const sheet = [...offers].reverse().find(offer => offer.status === 'open' && offer.kind === 'sheet');
   // Read at render: the toast lasts thirty seconds from when it was made
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
+  const sheet = [...offers]
+    .reverse()
+    .find(offer => offer.status === 'open' && offer.kind === 'sheet' && now - offer.createdAt < SHEET_HOLD_MS);
   const fresh = [...moves]
     .reverse()
     .find(move => (move.by === 'voice' || move.by === 'agent') && move.undoneAt === null && now - move.at < 30_000);

@@ -275,6 +275,9 @@ export class MeetingManager {
       if (email) workspace = workspaceForAccount(email, workspaces);
     }
     if (!workspace || workspace.id === meeting.workspaceId) return;
+    // Read again: reading the call's account took a moment, and the user may have placed it since (never overwritten)
+    const now = await this.meetings.get(meetingId);
+    if (!now || now.workspaceSetBy === 'avi') return;
     const placed = { workspaceId: workspace.id, workspaceSetBy: 'rule' as const };
     await this.meetings.update(meetingId, placed);
     if (meeting.threadId) await this.threads.update(meeting.threadId, placed);

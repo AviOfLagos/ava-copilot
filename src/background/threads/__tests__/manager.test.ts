@@ -330,6 +330,17 @@ describe('ThreadManager', () => {
     expect(await store.get(thread.id)).toMatchObject({ workspaceId: null, workspaceSetBy: 'avi' });
   });
 
+  it('does not put a chat the user took out of every workspace back in one when they write to it again', async () => {
+    const thread = await store.create({ workspaceId: null, workspaceSetBy: 'avi' });
+    browser.open('https://chat.example');
+    await manager.send({ threadId: thread.id, text: 'Check the inbox', windowId: 1 });
+    await settle();
+    expect(await store.get(thread.id)).toMatchObject({ workspaceId: null, workspaceSetBy: 'avi' });
+    expect((await store.messages(thread.id)).filter(m => m.actor === 'system')).toEqual([]);
+    await lastExecutor().complete('Done.');
+    await runEnded(lastExecutor());
+  });
+
   it('runs threads at the same time, up to the limit', async () => {
     browser.open('https://a.example');
     await manager.send({ text: 'task a' });

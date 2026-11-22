@@ -131,6 +131,19 @@ describe('placing a meeting in a workspace (docs/pm-desk.md, Part 3)', () => {
     expect(updates.thread).toEqual([]);
   });
 
+  it('does not overwrite a workspace the user chooses while the call’s account is being read', async () => {
+    meeting.roster = ['Someone New'];
+    (manager as unknown as { meetAccount: () => Promise<string | null> }).meetAccount = async () => {
+      // The user's click lands during the read
+      Object.assign(meeting, { workspaceId: 'harbor', workspaceSetBy: 'avi' });
+      return 'sam@orchid-labs.example';
+    };
+    await manager.placeInWorkspace('m1');
+    expect(updates.meeting).toEqual([]);
+    expect(updates.thread).toEqual([]);
+    expect(meeting).toMatchObject({ workspaceId: 'harbor', workspaceSetBy: 'avi' });
+  });
+
   it('does not read a call from the topic an invite carries', async () => {
     meeting.roster = [];
     meeting.topic = 'Harbor weekly';

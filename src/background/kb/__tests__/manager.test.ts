@@ -237,6 +237,15 @@ describe('KnowledgeBase', () => {
     expect(await kb.setWorkspace(['page:gone'], 'ws-a')).toBe(0);
   });
 
+  it('moves an item only when it is still as it was read, so a rule never overwrites the user’s own placing', async () => {
+    const page = await kb.savePage(1);
+    await kb.setWorkspace([page.id], 'ws-a', 'avi');
+    // A rule read it as in no workspace and placed by no one; the user has placed it since
+    expect(await kb.setWorkspace([page.id], 'ws-b', 'rule', { workspaceId: null, setBy: null })).toBe(0);
+    expect(await store.item(page.id)).toMatchObject({ workspaceId: 'ws-a', workspaceSetBy: 'avi' });
+    expect(await kb.setWorkspace([page.id], 'ws-b', 'avi', { workspaceId: 'ws-a', setBy: 'avi' })).toBe(1);
+  });
+
   it('keeps the workspace the user gave a saved page when it is saved again, and a rule’s mark, but not for a chat', async () => {
     const page = await kb.savePage(1, 'ws-a');
     await kb.setWorkspace([page.id], 'ws-b');

@@ -31,6 +31,9 @@ export interface WorkspaceMove {
   workspaceName: string;
   // The workspace was made by this move: undoing it takes the workspace away again (when nothing else is in it)
   createdWorkspace: boolean;
+  // How the made workspace read when it was made (its name, words and accounts): an undo takes it away only while it
+  // still reads so, never a workspace Avi has since worked on. Absent on records from before this field existed
+  workspaceStamp?: string;
   items: MovedItem[];
   at: number;
   undoneAt: number | null;
@@ -72,6 +75,10 @@ export interface PlacementState {
 }
 
 export const emptyPlacementState = (): PlacementState => ({ moves: [], offers: [], declined: [], guessed: {} });
+
+// A workspace made by voice shows its sheet this long; rules leave what it lists alone meanwhile, and the panel stops
+// showing it after
+export const SHEET_HOLD_MS = 3 * 24 * 60 * 60 * 1000;
 
 const MAX_MOVES = 60;
 const MAX_OFFERS = 80;

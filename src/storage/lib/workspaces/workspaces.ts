@@ -186,6 +186,23 @@ function domainOf(account: string | undefined): string | null {
   return match ? match[1].toLowerCase() : null;
 }
 
+// Addresses anyone can have: their domain says nothing about a workspace
+const PUBLIC_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'yahoo.com',
+  'icloud.com',
+]);
+
+/** What a Google account says in a text: its company domain, or for a public one (Gmail) the whole address. */
+function accountWords(account: string | undefined): string {
+  const domain = domainOf(account);
+  if (!domain) return '';
+  return PUBLIC_DOMAINS.has(domain) ? (account?.trim().toLowerCase() ?? '') : domain;
+}
+
 /** Whether a phrase appears in the text as whole words. */
 function mentions(text: string, phrase: string): boolean {
   const escaped = phrase
@@ -202,7 +219,7 @@ function mentions(text: string, phrase: string): boolean {
 export function matchWorkspaces(text: string, workspaces: Workspace[]): Workspace[] {
   const lower = text.toLowerCase();
   return workspaces.filter(workspace =>
-    [workspace.name, ...workspace.keywords, domainOf(workspace.accounts.google) ?? '']
+    [workspace.name, ...workspace.keywords, accountWords(workspace.accounts.google)]
       .filter(phrase => phrase.trim().length >= 3)
       .some(phrase => mentions(lower, phrase)),
   );
@@ -217,16 +234,6 @@ export function routeWorkspace(text: string, workspaces: Workspace[]): Workspace
   const matched = matchWorkspaces(text, workspaces);
   return matched.length === 1 ? matched[0] : null;
 }
-
-// Addresses anyone can have: their domain says nothing about a workspace
-const PUBLIC_DOMAINS = new Set([
-  'gmail.com',
-  'googlemail.com',
-  'outlook.com',
-  'hotmail.com',
-  'yahoo.com',
-  'icloud.com',
-]);
 
 /**
  * The workspace a Google account belongs to: the one set to that account, else the one whose account

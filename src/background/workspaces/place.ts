@@ -38,6 +38,10 @@ export interface PlaceDeps {
   now?: () => number;
 }
 
+/** What of a workspace Avi works on: its name, what it is about, its words and accounts. */
+export const stampOf = (workspace: Workspace): string =>
+  JSON.stringify([workspace.name, workspace.about, workspace.keywords, workspace.accounts]);
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 export const things = (n: number) => plural(n, 'thing', 'things');
 
@@ -59,7 +63,11 @@ export interface MoveRequest {
   // Each thing must still be where it was when it was offered (null: in no workspace); anything that moved since,
   // Avi's own placing included, is left alone
   expectFrom?: Map<string, string | null>;
+  // Leave alone anything Avi placed, even when the request is his: an offer he answers later is about things he had
+  // not placed when it was made, so what he placed since is his word, not the offer's
+  keepAvis?: boolean;
   createdWorkspace?: boolean;
+  workspaceStamp?: string;
 }
 
 export const keyOf = (ref: PlaceRef) => `${ref.kind}:${ref.id}`;
@@ -80,7 +88,8 @@ export async function moveItems(
     const current = await deps.items.get(ref);
     if (!current) continue;
     const here = isUnplaced(current, known) ? null : current.workspaceId;
-    if (request.setBy !== 'avi' && current.setBy === 'avi') {
+    const careful = request.setBy !== 'avi' || request.keepAvis === true;
+    if (careful && current.setBy === 'avi') {
       skipped++;
       continue;
     }
@@ -89,7 +98,11 @@ export async function moveItems(
       continue;
     }
     if (here === request.workspace.id) continue;
-    if (!(await deps.items.set(ref, request.workspace.id, request.setBy))) continue;
+    // Unless this is Avi's own plain click, written only if nothing changed it since it was read: Avi may act between
+    if (!(await deps.items.set(ref, request.workspace.id, request.setBy, careful ? current : undefined))) {
+      skipped++;
+      continue;
+    }
     moved.push({ ...ref, fromWorkspaceId: current.workspaceId, fromSetBy: current.setBy, toSetBy: request.setBy });
   }
   // A move that moved nothing and made nothing is not worth an undo
@@ -99,6 +112,7 @@ export async function moveItems(
     workspaceId: request.workspace.id,
     workspaceName: request.workspace.name,
     createdWorkspace: request.createdWorkspace ?? false,
+    ...(request.workspaceStamp ? { workspaceStamp: request.workspaceStamp } : {}),
     items: moved,
   });
   return { move, skipped };
@@ -126,8 +140,12 @@ export async function undoMove(deps: PlaceDeps, moveId: string, maxAgeMs: number
   for (const item of move.items) {
     const current = await deps.items.get(item);
     if (!current) continue;
-    if (current.workspaceId === move.workspaceId && current.setBy === item.toSetBy) {
-      await deps.items.set(item, item.fromWorkspaceId, item.fromSetBy);
+    if (
+      current.workspaceId === move.workspaceId &&
+      current.setBy === item.toSetBy &&
+      // Still so in the same step as the write: what Avi does while the undo runs stays
+      (await deps.items.set(item, item.fromWorkspaceId, item.fromSetBy, current))
+    ) {
       restored++;
       // An undo is a no: a rule never puts this thing back there, nor is it offered there again
       await deps.placement.decline([item], move.workspaceId);
@@ -136,7 +154,13 @@ export async function undoMove(deps: PlaceDeps, moveId: string, maxAgeMs: number
     }
   }
   let removedWorkspace = false;
-  if (move.createdWorkspace && (await deps.items.countIn(move.workspaceId)) === 0) {
+  // A made workspace goes with the undo only while it is empty and still as it was made: one Avi has since given words,
+  // an account or a description is his work, and stays
+  const made = move.createdWorkspace
+    ? (await deps.workspaces.list()).find(workspace => workspace.id === move.workspaceId)
+    : undefined;
+  const untouched = !move.workspaceStamp || (made !== undefined && stampOf(made) === move.workspaceStamp);
+  if (made && untouched && (await deps.items.countIn(move.workspaceId)) === 0) {
     await deps.workspaces.remove(move.workspaceId);
     removedWorkspace = true;
   }
@@ -160,7 +184,16 @@ export type MakeResult =
  * Makes a workspace and moves the chosen things into it as one move, so one undo takes both back. A name that is
  * already a workspace's is not made twice. The things are Avi's choice: they are marked as his.
  */
-export async function makeWorkspace(deps: PlaceDeps, request: MakeRequest): Promise<MakeResult> {
+export function makeWorkspace(deps: PlaceDeps, request: MakeRequest): Promise<MakeResult> {
+  // One at a time: two asks for the same name together (a double click, a voice command and the sheet) make it once
+  const next = making.then(() => makeOne(deps, request));
+  making = next.catch(() => undefined);
+  return next;
+}
+
+let making: Promise<unknown> = Promise.resolve();
+
+async function makeOne(deps: PlaceDeps, request: MakeRequest): Promise<MakeResult> {
   const name = request.name.trim().replace(/\s+/g, ' ').slice(0, 60);
   if (!name) throw new Error('A workspace needs a name.');
   const existing = await deps.workspaces.list();
@@ -178,7 +211,10 @@ export async function makeWorkspace(deps: PlaceDeps, request: MakeRequest): Prom
     createdAt: (deps.now ?? Date.now)(),
   };
   await deps.workspaces.save(workspace);
+  // As saved (the store tidies the words), so the undo can tell later whether Avi has changed it
+  const saved = (await deps.workspaces.list()).find(item => item.id === workspace.id) ?? workspace;
   const { move, skipped } = await moveItems(deps, {
+    workspaceStamp: stampOf(saved),
     refs: request.refs ?? [],
     workspace,
     by: request.by,
@@ -257,6 +293,7 @@ export async function acceptOffer(
     by: 'offer',
     setBy: 'avi',
     expectFrom: new Map(items.map(item => [keyOf(item), item.fromWorkspaceId])),
+    keepAvis: true,
   });
   await deps.placement.resolveOffer(offerId, { status: 'moved', moveId: move?.id ?? null });
   // What Avi unticked he declined for this workspace

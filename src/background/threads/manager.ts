@@ -261,7 +261,11 @@ export class ThreadManager {
    * words name. Says so in the chat, so a wrong guess is seen and changed.
    */
   private async placeInWorkspace(thread: ThreadRecord, text: string, picked?: string | null): Promise<void> {
-    if (thread.workspaceId) return;
+    // Read again: a rule or the user may have placed it since this send began. A chat the user took out of every
+    // workspace stays out (rule 8); only the user's own pick, in the same send, may place it
+    const current = (await this.store.get(thread.id)) ?? thread;
+    if (current.workspaceId) return;
+    if (current.workspaceSetBy === 'avi' && !picked) return;
     // A chat with no workspace still runs: placing it never fails a send
     const workspaces = await workspaceStore.list().catch(() => []);
     // The user's pick, else the one the words name, else the default workspace. A pick since deleted counts as none

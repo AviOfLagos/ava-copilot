@@ -40,6 +40,8 @@ export const person = (name: string, workspaceIds: string[], aliases: string[] =
 export class MemoryItems implements ItemSource {
   items = new Map<string, PlaceItem>();
   moved: string[] = [];
+  // A hook for a test: Avi acts right after a read, before the write that read led to
+  afterGet: ((ref: { kind: string; id: string }) => void) | null = null;
   constructor(items: PlaceItem[] = []) {
     for (const one of items) this.items.set(`${one.ref.kind}:${one.ref.id}`, one);
   }
@@ -48,11 +50,20 @@ export class MemoryItems implements ItemSource {
   }
   async get(ref: { kind: string; id: string }) {
     const found = this.items.get(`${ref.kind}:${ref.id}`);
-    return found ? { ...found } : null;
+    const snapshot = found ? { ...found } : null;
+    this.afterGet?.(ref);
+    return snapshot;
   }
-  async set(ref: { kind: string; id: string }, workspaceId: string | null, setBy: WorkspaceSetBy | null) {
+  async set(
+    ref: { kind: string; id: string },
+    workspaceId: string | null,
+    setBy: WorkspaceSetBy | null,
+    unchanged?: { workspaceId: string | null; setBy: WorkspaceSetBy | null },
+  ) {
     const found = this.items.get(`${ref.kind}:${ref.id}`);
     if (!found) return false;
+    if (unchanged && (found.workspaceId !== unchanged.workspaceId || found.setBy !== unchanged.setBy)) return false;
+
     found.workspaceId = workspaceId;
     found.setBy = setBy;
     this.moved.push(`${ref.kind}:${ref.id}`);

@@ -10,7 +10,8 @@ export function placeDeps(): PlaceDeps {
   return {
     items: createItemSource({
       db,
-      kbSetWorkspace: (ids, workspaceId, setBy) => services().kb.setWorkspace(ids, workspaceId, setBy),
+      kbSetWorkspace: (ids, workspaceId, setBy, unchanged) =>
+        services().kb.setWorkspace(ids, workspaceId, setBy, unchanged),
     }),
     placement: workspacePlacement,
     workspaces: {

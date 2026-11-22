@@ -20,16 +20,31 @@ import type { PlaceItem } from './rules';
 export interface ItemSource {
   list(): Promise<PlaceItem[]>;
   get(ref: PlaceRef): Promise<PlaceItem | null>;
-  /** Puts a thing in a workspace (or none) and records who did. False when the thing is gone. */
-  set(ref: PlaceRef, workspaceId: string | null, setBy: WorkspaceSetBy | null): Promise<boolean>;
+  /**
+   * Puts a thing in a workspace (or none) and records who did. False when the thing is gone, or when `unchanged` is
+   * given and the thing is no longer as it was read (where it is, who placed it): checked in the same step as the
+   * write, so a rule or an offer that read it a moment ago never overwrites what Avi did in between.
+   */
+  set(ref: PlaceRef, workspaceId: string | null, setBy: WorkspaceSetBy | null, unchanged?: Placement): Promise<boolean>;
   /** How many things of any kind sit in a workspace, done or not. */
   countIn(workspaceId: string): Promise<number>;
+}
+
+/** Where a thing sits and who put it there, as read. */
+export interface Placement {
+  workspaceId: string | null;
+  setBy: WorkspaceSetBy | null;
 }
 
 export interface ItemSourceDeps {
   db: AviCopilotDb;
   // Moves knowledge items and keeps the search index in step (the knowledge base's own `setWorkspace`)
-  kbSetWorkspace: (ids: string[], workspaceId: string | null, setBy: WorkspaceSetBy | null) => Promise<number>;
+  kbSetWorkspace: (
+    ids: string[],
+    workspaceId: string | null,
+    setBy: WorkspaceSetBy | null,
+    unchanged?: Placement,
+  ) => Promise<number>;
   now?: () => number;
 }
 
@@ -137,30 +152,51 @@ export function createItemSource({ db, kbSetWorkspace, now = Date.now }: ItemSou
 
     countIn: workspaceId => countIn(db, workspaceId),
 
-    async set(ref, workspaceId, setBy) {
+    async set(ref, workspaceId, setBy, unchanged) {
       if (!(await get(ref))) return false;
+      // Whether the record is still as it was read (no check when none was asked for)
+      const as = (record: { workspaceId?: string | null; workspaceSetBy?: WorkspaceSetBy }) =>
+        !unchanged ||
+        ((record.workspaceId ?? null) === unchanged.workspaceId && (record.workspaceSetBy ?? null) === unchanged.setBy);
       switch (ref.kind) {
-        case 'task':
+        case 'task': {
           // Where a task is says nothing about how recently it was worked on, so its date is left alone
-          await db.tasks.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? 'rule' });
-          return true;
+          const done = await db.transaction('rw', db.tasks, async () => {
+            const record = await db.tasks.get(ref.id);
+            if (!record || !as(record)) return false;
+            await db.tasks.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? 'rule' });
+            return true;
+          });
+          return done;
+        }
         case 'thread': {
-          await db.threads.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? undefined });
-          await kbSetWorkspace([kbItemId('thread', ref.id)], workspaceId, null);
-          return true;
+          const done = await db.transaction('rw', db.threads, async () => {
+            const record = await db.threads.get(ref.id);
+            if (!record || !as(record)) return false;
+            await db.threads.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? undefined });
+            return true;
+          });
+          if (done) await kbSetWorkspace([kbItemId('thread', ref.id)], workspaceId, null);
+          return done;
         }
         case 'meeting': {
-          const record = await db.meetings.get(ref.id);
-          await db.meetings.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? undefined });
-          if (record?.threadId) {
-            await db.threads.update(record.threadId, { workspaceId, workspaceSetBy: setBy ?? undefined });
-          }
+          const threadId = await db.transaction('rw', db.meetings, db.threads, async () => {
+            const record = await db.meetings.get(ref.id);
+            if (!record || !as(record)) return undefined;
+            await db.meetings.update(ref.id, { workspaceId, workspaceSetBy: setBy ?? undefined });
+            if (record.threadId) {
+              await db.threads.update(record.threadId, { workspaceId, workspaceSetBy: setBy ?? undefined });
+            }
+            return record.threadId ?? null;
+          });
+          if (threadId === undefined) return false;
           await kbSetWorkspace([kbItemId('meeting', ref.id)], workspaceId, null);
           return true;
         }
-        default:
-          await kbSetWorkspace([ref.id], workspaceId, setBy);
-          return true;
+        default: {
+          const moved = await kbSetWorkspace([ref.id], workspaceId, setBy, unchanged);
+          return unchanged ? moved > 0 : true;
+        }
       }
     },
   };

@@ -22,6 +22,16 @@ describe('evidenceFor', () => {
     expect(evidenceFor(item('4', 'Orchids need water'), all, [])).toEqual([]);
   });
 
+  it('does not read a workspace from a Gmail address in a thing: that is no company', () => {
+    const home = workspace('home', 'Home', [], 'sam.person@gmail.com');
+    const plan = planSort(
+      input([item('1', 'Reply to bo@gmail.com'), item('2', 'Send bo@gmail.com the file')], {
+        workspaces: [home, ORCHID],
+      }),
+    );
+    expect(plan.moves).toEqual([]);
+  });
+
   it('counts a person only when they belong to exactly one workspace', () => {
     const solo = person('Ada Obi', ['harbor']);
     const both = person('Kunle Bello', ['harbor', 'orchid']);

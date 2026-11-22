@@ -1,4 +1,4 @@
-import { declinedKey, refKey } from '@extension/storage';
+import { declinedKey, refKey, SHEET_HOLD_MS } from '@extension/storage';
 import type { Person, PlaceRef, Workspace, WorkspaceMove } from '@extension/storage';
 import { checkGuesses } from './suggest';
 import type { SuggestModel } from './suggest';
@@ -12,8 +12,6 @@ import type { PlaceItem } from './rules';
 // the Inbox. Nothing Avi placed is ever touched, and nothing here runs a command a page or a call can give.
 
 const DAY = 24 * 60 * 60 * 1000;
-// A workspace made by voice shows its sheet first; rules leave those things alone this long
-const SHEET_HOLDS = 3 * DAY;
 // A thing the model has already guessed about is not asked about again for this long
 const GUESS_AGAIN = 14 * DAY;
 const GUESS_BATCH = 30;
@@ -41,7 +39,7 @@ export async function sortUnplaced(deps: SortDeps, options: { guess?: boolean } 
   const reserved = new Set<string>();
   for (const offer of state.offers) {
     if (offer.status !== 'open') continue;
-    if (offer.kind === 'sheet' && now - offer.createdAt > SHEET_HOLDS) continue;
+    if (offer.kind === 'sheet' && now - offer.createdAt > SHEET_HOLD_MS) continue;
     for (const item of offer.items) reserved.add(refKey(item));
   }
   const plan = planSort({ items, workspaces, people, declined: new Set(state.declined), reserved });
