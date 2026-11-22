@@ -5125,6 +5125,12 @@
   "voice_engine_stt_gemini_hint": {
     "message": "節省模式絕不把音訊傳給 Gemini：會改用第一個已安裝的本機模型。"
   },
+  "voice_engine_stt_englishOnly": {
+    "message": "這個辨識器只聽得懂英文。其他語言請選 Whisper，或在即時對話中使用 Gemini。"
+  },
+  "voice_engine_stt_whisperLanguages": {
+    "message": "Whisper base 聽得懂英文和其他語言，速度比 Moonshine 慢。"
+  },
   "voice_engine_moonshine_label": {
     "message": "Moonshine 模型"
   },

@@ -5125,6 +5125,12 @@
   "voice_engine_stt_gemini_hint": {
     "message": "Economy mode never sends audio to Gemini: it uses the first local model installed instead."
   },
+  "voice_engine_stt_englishOnly": {
+    "message": "This recogniser only understands English. For other languages pick Whisper, or Gemini in a live conversation."
+  },
+  "voice_engine_stt_whisperLanguages": {
+    "message": "Whisper base understands English and other languages. It is slower than Moonshine."
+  },
   "voice_engine_moonshine_label": {
     "message": "Moonshine model"
   },

@@ -8,6 +8,7 @@ import {
   ttsSettingsStore,
   VOICE_MODEL_SIZES_MB,
   voiceEngineSettingsStore,
+  voiceIdentityStore,
   voiceTtsEngine,
 } from '@extension/storage';
 import { toAppError } from '@extension/shared';
@@ -77,7 +78,9 @@ registerCommand('voice_engine_status', requestOnly('voice_engine_status'), async
     installedVoiceModels(),
     askVoiceOffscreen<VoiceEngineRuntimeStatus>({ type: 'voice_engine_runtime' }),
   ]);
-  const economy = chooseEconomyEngines(settings, tts, installed);
+  // The language a conversation hears in: Whisper takes over an untouched Moonshine, so the line must say so
+  const { language } = await voiceIdentityStore.getSettings();
+  const economy = chooseEconomyEngines(settings, tts, installed, { language });
   context.reply({
     type: 'voice_engine_status',
     requestId: context.requestId,
