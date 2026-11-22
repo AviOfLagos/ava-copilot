@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { t } from '@extension/i18n';
 import { kbStore, onceStore, threadStore, workspaceStore } from '@extension/storage';
 import type { ConfirmRequest, Workspace } from '@extension/storage';
 import { Action } from '../agent/actions/builder';
@@ -172,6 +173,8 @@ async function inDrive<T>(
       await tab.show().catch(() => {});
       void context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, SIGN_IN_SAY);
       const { url, title } = await tab.info();
+      // A sign-in wait, not an approval to act: nothing here can be allowed every time. Drive edits and shares go
+      // through reviewAction, which keeps the rules (an edit per site, sharing as a permission change: always asked)
       const request: ConfirmRequest = {
         id: crypto.randomUUID(),
         taskId: context.taskId,
@@ -356,6 +359,12 @@ export function registerDriveActions(drive: DriveService): void {
             action: 'send_keys',
             args: { keys: '', intent: `${what}: ${input.content.slice(0, 300)}`, commits: true },
             once,
+            // Allow every time for Docs in this folder (or the user's own Drive), never for another place
+            rule: {
+              kind: 'submit',
+              scope: `drive:${folder ? (parseDriveRef(folder)?.id ?? folder) : 'my-drive'}`,
+              label: t('drive_rule_createDoc', [folder ? titleText(folder) : 'my Drive']),
+            },
           });
           if (!review.proceed) return review.result;
           onceKey = review.commit?.onceKey ?? null;

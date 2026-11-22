@@ -11,6 +11,7 @@ import {
   userMessage,
 } from '@src/background/llm/messages';
 import { MessageHistory, MessageMetadata } from '@src/background/agent/messages/views';
+import type { ManagedMessage } from '@src/background/agent/messages/views';
 import { createLogger } from '@src/background/log';
 import {
   filterExternalContent,
@@ -80,6 +81,13 @@ function withImages(text: string, media?: TaskImages | null): UserModelMessage {
     ...media.images.map(image => imagePart(image.data, image.mediaType)),
   ]);
 }
+
+const ACTION_RESULT_PREFIX = 'Action result: ';
+// A result at or under this stays whole (the one-liners that say what a step did)
+const CLEAR_RESULT_ABOVE_CHARS = 600;
+const CLEARED_KEEP_CHARS = 160;
+// Cleared together once this many characters (about 1,000 tokens) are waiting
+const CLEAR_BATCH_CHARS = 4000;
 
 export default class MessageManager {
   private history: MessageHistory;
@@ -221,6 +229,41 @@ export default class MessageManager {
     }
     const replaced = messages.slice(marker + 1, cut).filter(m => !isTaskMessage(m.message));
     return replaced.length > 0 ? { cut, messages: replaced.map(m => m.message) } : null;
+  }
+
+  /**
+   * Shortens the long action results of older steps to one line each, before anything is summarised (issue #132):
+   * code only, no model call. Only results that are in the history at all (those marked `includeInMemory`) can be
+   * here, and short ones are kept whole, as are the last `keepLast` messages and the user's own messages. A result
+   * is cleared only once enough of them are waiting to be worth changing the start of the prompt (batching).
+   *
+   * @returns The characters cleared, 0 when nothing was worth clearing yet
+   */
+  public clearOldActionResults(keepLast: number): number {
+    const messages = this.history.messages;
+    const marker = messages.findIndex(m => m.message.content === HISTORY_START_MARKER);
+    if (marker === -1) return 0;
+    const end = messages.length - keepLast;
+    const candidates: { managed: ManagedMessage; text: string }[] = [];
+    for (let i = marker + 1; i < end; i++) {
+      const managed = messages[i];
+      const { role, content } = managed.message;
+      if (role === 'user' && typeof content === 'string' && content.startsWith(ACTION_RESULT_PREFIX)) {
+        if (content.length > CLEAR_RESULT_ABOVE_CHARS) candidates.push({ managed, text: content });
+      }
+    }
+    const waiting = candidates.reduce((sum, item) => sum + item.text.length - CLEARED_KEEP_CHARS, 0);
+    if (waiting < CLEAR_BATCH_CHARS) return 0;
+    for (const { managed, text } of candidates) {
+      const cleared = userMessage(
+        `${text.slice(0, CLEARED_KEEP_CHARS).trimEnd()}… [${text.length - CLEARED_KEEP_CHARS} more characters cleared to save space; look again if you need them]`,
+      );
+      const tokens = this._countTokens(cleared);
+      this.history.totalTokens += tokens - managed.metadata.tokens;
+      managed.message = cleared;
+      managed.metadata.tokens = tokens;
+    }
+    return waiting;
   }
 
   /**

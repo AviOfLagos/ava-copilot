@@ -115,6 +115,20 @@ Nothing is cached on purpose. I found no `cache_control`, `cacheControl` or cach
 
 Usage is metered per model call with the role and input and output tokens (`src/background/usage/meter.ts:95-173`, role field at `:31`), stored by day and by chat session (`src/storage/lib/usage/index.ts:17-22`). It does not say which part of the prompt was the tools, so Avi cannot see "tool tokens" as a number today.
 
+
+### Measured (issue #130)
+
+Real sizes from `src/background/prompt-budget` (run `pnpm test -t "size of what each channel sends"`; the test fails when a channel or a part grows by more than 10% against `baseline.json`, and `UPDATE_PROMPT_BUDGET=1` rewrites it). Tokens are characters divided by four. These replace the estimates above; page state and the conversation are not counted. Tool definitions are the JSON Schema of every action; the workspace row uses the longest "about" the app keeps (4,000 characters).
+
+| Channel | Tool definitions | Rules, identity, channel, capability list | Workspace block | Total fixed |
+|---|---:|---:|---:|---:|
+| panel navigator | 53,197 ch (~13,300 tok) | 27,793 ch (~6,949 tok) | - | **80,990 ch (~20,248 tok)** |
+| panel navigator, in a workspace | 53,197 ch (~13,300 tok) | 27,793 ch (~6,949 tok) | 4,773 ch (~1,194 tok) | **85,763 ch (~21,441 tok)** |
+| whatsapp navigator | 53,197 ch (~13,300 tok) | 28,409 ch (~7,103 tok) | - | **81,606 ch (~20,402 tok)** |
+| agent and routine chats | 53,197 ch (~13,300 tok) | 27,874 ch (~6,969 tok) | - | **81,071 ch (~20,268 tok)** |
+| panel planner | 0 | 12,132 ch (~3,033 tok) | - | **12,132 ch (~3,033 tok)** |
+| voice | 22,321 ch (~5,581 tok) | 6,103 ch (~1,526 tok) | - | **28,424 ch (~7,106 tok)** |
+
 ---
 
 ## 3. The proposal for tool tokens

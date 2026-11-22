@@ -25,6 +25,8 @@ export interface MeetingSettingsConfig {
   // Listen on the device for "Hey Ava", which starts a voice conversation; off until the user turns it on
   wakeWord: boolean;
   liveModel: string;
+  // How long a pause may be before the voice conversation counts the user as finished (Live voice only)
+  turnPatience: 'quick' | 'normal' | 'patient';
   // The Live API address; tests point it at a local server
   liveEndpoint: string;
 }
@@ -43,6 +45,7 @@ export const DEFAULT_MEETING_SETTINGS: MeetingSettingsConfig = {
   nothingCapturedSeconds: 45,
   wakeWord: false,
   liveModel: 'gemini-3.8-live',
+  turnPatience: 'normal',
   liveEndpoint:
     'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
 };

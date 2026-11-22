@@ -23,7 +23,7 @@ import {
   ModelsSection,
   SkillsSection,
 } from './sections/OtherSections';
-import { WakeWordSection } from './sections/VoiceSections';
+import { TurnPatienceSection, WakeWordSection } from './sections/VoiceSections';
 
 // General
 registerSettingsSection({
@@ -110,6 +110,14 @@ registerSettingsSection({
   order: 60,
   keywords: ['wake word', 'hey', 'listen', 'vosk'],
   Component: WakeWordSection,
+});
+registerSettingsSection({
+  id: 'patience',
+  label: 'settings_section_patience',
+  page: 'voice',
+  order: 61,
+  keywords: ['patience', 'pause', 'interrupt', 'cut in', 'turn', 'wait', 'think'],
+  Component: TurnPatienceSection,
 });
 
 // Memory

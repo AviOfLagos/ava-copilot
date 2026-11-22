@@ -172,6 +172,7 @@ async function readCalendar(paired: boolean): Promise<SetupReadings['calendar']>
   return {
     source: upcoming?.source ?? null,
     error: upcoming?.error ?? null,
+    needsAccess: upcoming?.needsAccess === true,
     configured: Boolean(settings.icsUrl.trim()) || (settings.macEnabled && paired),
   };
 }

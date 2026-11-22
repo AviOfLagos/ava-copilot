@@ -2352,6 +2352,24 @@
       }
     }
   },
+  "settings_section_patience": {
+    "message": "Paciência"
+  },
+  "settings_patience": {
+    "message": "Quanto tempo a Ava espera você terminar"
+  },
+  "settings_patience_hint": {
+    "message": "Quanto tempo uma pausa pode durar antes de a Ava responder. “Deixe-me pensar” serve para uma fala lenta e pensada. Vale para uma conversa ao vivo com o Gemini; a voz no dispositivo já espera o fim da frase."
+  },
+  "settings_patience_quick": {
+    "message": "Rápido"
+  },
+  "settings_patience_normal": {
+    "message": "Normal"
+  },
+  "settings_patience_patient": {
+    "message": "Deixe-me pensar"
+  },
   "settings_wake_hint": {
     "message": "Sempre ativo, mesmo com o painel fechado. Ouve só neste computador; nada é enviado até você dizer “$PHRASE$”.",
     "placeholders": {
@@ -5124,6 +5142,12 @@
   },
   "voice_engine_stt_gemini_hint": {
     "message": "O modo econômico nunca envia áudio ao Gemini: usa o primeiro modelo local instalado."
+  },
+  "voice_engine_stt_englishOnly": {
+    "message": "Este reconhecedor só entende inglês. Para outros idiomas, escolha o Whisper, ou o Gemini em uma conversa ao vivo."
+  },
+  "voice_engine_stt_whisperLanguages": {
+    "message": "O Whisper base entende inglês e outros idiomas. É mais lento que o Moonshine."
   },
   "voice_engine_moonshine_label": {
     "message": "Modelo Moonshine"
@@ -8874,6 +8898,12 @@
   "meetvoice_confirm_words": {
     "message": "Palavras, exatamente como ditas"
   },
+  "meetvoice_rule_label": {
+    "message": "Falar em chamadas do Google Meet"
+  },
+  "drive_rule_createDoc": {
+    "message": "Criar Google Docs em $1"
+  },
   "meetvoice_needsBrain": {
     "message": "$NAME$ entra na sua chamada pelo Ava Brain, o app auxiliar no seu Mac. Configure-o uma vez e volte aqui.",
     "placeholders": {
@@ -9930,6 +9960,9 @@
   "setup_problem_cal_error": {
     "message": "A agenda não pôde ser lida da última vez."
   },
+  "setup_problem_cal_denied": {
+    "message": "O Ava Brain perdeu a permissão para ler sua Agenda. O macOS pede de novo após uma atualização do Node."
+  },
   "setup_problem_obs_none": {
     "message": "Nenhum cofre do Obsidian escolhido."
   },
@@ -10028,6 +10061,9 @@
   },
   "setup_action_calendar": {
     "message": "Conectar uma agenda"
+  },
+  "setup_action_calendarAllow": {
+    "message": "Permitir acesso à Agenda"
   },
   "setup_action_obsidian": {
     "message": "Escolher um cofre"

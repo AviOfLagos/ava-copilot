@@ -128,3 +128,13 @@ describe('voice tool guard', () => {
     }
   });
 });
+
+describe('turn-taking in the voice instructions (issue #35)', () => {
+  it('tells her to wait on an unfinished sentence and on "wait" or "hold on", without asking if they are done', async () => {
+    const { voiceInstructions } = await import('../prompt');
+    const text = voiceInstructions('Ava');
+    expect(text).toMatch(/Never cut in/);
+    for (const cue of ['"and"', '"wait"', '"hold on"', '"let me finish"']) expect(text).toContain(cue);
+    expect(text).toMatch(/say nothing at all/);
+  });
+});

@@ -198,6 +198,14 @@ function ItemActions({ item, state, api, name, recheck }: RowProps) {
     case 'wa_not_linked':
       link('wa', t('setup_action_whatsapp'), '#connections/whatsapp-remote');
       break;
+    case 'cal_denied':
+      button(
+        'calallow',
+        t('setup_action_calendarAllow'),
+        () => api.request({ type: 'calendar_mac_request' }, 30_000),
+        'default',
+      );
+      break;
     case 'cal_none':
     case 'cal_error':
       link('cal', t('setup_action_calendar'), '#connections/calendar');

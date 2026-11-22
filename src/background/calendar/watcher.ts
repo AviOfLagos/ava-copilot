@@ -19,7 +19,8 @@ const REMINDED_KEY = 'calendar-reminded';
 // Said at most this often: Ava Brain cannot read the Mac's Calendar until it is allowed again
 export const CALENDAR_ACCESS_NOTICE = 'calendar-access';
 const ACCESS_NOTICE_KEY = 'calendar-access-noticed';
-const ACCESS_NOTICE_EVERY_MS = 6 * HOUR;
+// Asked again this often for as long as the permission stays lost (the first time at once)
+const ACCESS_NOTICE_EVERY_MS = HOUR;
 
 /** A calendar title made safe to speak or show: one line, no quotes, at most 80 characters. */
 export function quoteTitle(title: string): string {
@@ -137,6 +138,7 @@ export class CalendarWatcher {
         readAt: now,
         error: read.error,
         source: this.source,
+        needsAccess: Boolean(read.macNeedsAccess),
         ...(this.okAt !== null ? { okAt: this.okAt } : {}),
       });
       return read.error;
@@ -153,6 +155,7 @@ export class CalendarWatcher {
       error: null,
       source: read.source,
       okAt: now,
+      needsAccess: false,
     });
     return null;
   }
@@ -229,7 +232,7 @@ export class CalendarWatcher {
 
   /**
    * Ava Brain lost Calendar permission (macOS asks again when the program it runs as changes, e.g. a Node update):
-   * one notice, whose button shows the macOS prompt on the Mac.
+   * a notice, repeated every hour while it stays lost, whose button shows the macOS prompt on the Mac.
    */
   private async noticeAccess(now: number): Promise<void> {
     const last = ((await chrome.storage.local.get(ACCESS_NOTICE_KEY))[ACCESS_NOTICE_KEY] as number | undefined) ?? 0;

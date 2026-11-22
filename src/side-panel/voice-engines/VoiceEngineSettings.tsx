@@ -21,6 +21,7 @@ import type { PanelApi } from '../registry';
 import { localChatRequirement, voiceModelRequirement } from '../requirements/catalog';
 import { RequirementCard, installSuffix, useRequirementFlow } from '../requirements/RequirementCard';
 import { DownloadBar, progressText } from '../voice-models/VoiceModelsCard';
+import { languageNoteKey } from './languages';
 import {
   bytesFor,
   cancelDownload,
@@ -185,9 +186,19 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
     return 'missing';
   };
 
+  // The recogniser actually in use, with its size: Whisper takes over a Moonshine nobody picked, so the setting
+  // alone does not say
+  const inUse = status?.economy?.stt;
+  const inUseName = inUse
+    ? t(
+        MODEL_ROWS.find(row => row.id === inUse.model)?.label ??
+          ENGINE_NAMES[inUse.engine] ??
+          'voice_engine_name_moonshine',
+      )
+    : '';
   const economyLine = status?.economy
     ? t('voice_engine_economy_uses', [
-        t(ENGINE_NAMES[status.economy.stt.engine] ?? 'voice_engine_name_moonshine'),
+        inUseName,
         t(ENGINE_NAMES[status.economy.tts.engine] ?? 'voice_engine_name_system'),
       ])
     : status?.economyError;
@@ -256,6 +267,11 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
           <p className={HINT}>{t('voice_engine_stt_gemini_hint')}</p>
         )}
       </div>
+      {languageNoteKey(inUse?.engine ?? settings.stt) && (
+        <p className={HINT} data-testid="voice-engine-languages">
+          {t(languageNoteKey(inUse?.engine ?? settings.stt)!)}
+        </p>
+      )}
       {card('stt')}
 
       {settings.stt === 'moonshine' && (

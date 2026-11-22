@@ -112,6 +112,24 @@ export function registeredActions(context: AgentContext): Action[] {
 }
 
 /**
+ * Builds every registered action, and says which ones could not be built instead of leaving them out. The list of
+ * what Ava can do skips an action that throws (see `registeredActionSchemas`); the tool inventory test uses this so
+ * that such an action fails a test rather than vanishing.
+ */
+export function buildRegisteredActionsStrict(context: AgentContext): { actions: Action[]; failures: string[] } {
+  const built: Action[] = [];
+  const failures: string[] = [];
+  actions.forEach((action, index) => {
+    try {
+      built.push(action.create(context));
+    } catch (error) {
+      failures.push(`registered action #${index}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+  return { actions: built, failures };
+}
+
+/**
  * Each registered action's name and description, for the capability list (what Ava can do). Built from a stand-in
  * context: creating an action only wraps its handler, which never runs here. One that cannot be made this way is
  * left out rather than failing the list.

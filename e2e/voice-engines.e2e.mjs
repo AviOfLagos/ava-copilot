@@ -297,6 +297,16 @@ test(
       async () => (await extension.getStorage('voice-engine-settings'))?.mode === 'economy',
       'economy mode',
     );
+    // Settings says which recogniser hears (with its size) and that it only understands English (issue #42)
+    await panel.waitForSelector('[data-testid="voice-engine-economy"]');
+    const inUse = await panel.evaluate(
+      () => document.querySelector('[data-testid="voice-engine-economy"]').textContent,
+    );
+    assert.match(inUse, /Moonshine tiny|Whisper base/);
+    const note = await panel.evaluate(
+      () => document.querySelector('[data-testid="voice-engine-languages"]').textContent,
+    );
+    assert.match(note, /English/);
     // The answer is spoken by KittenTTS (chosen in the first test; set here too so this test stands alone)
     const tts = await extension.getStorage('tts-settings');
     await extension.setStorage({ 'tts-settings': { ...tts, engine: 'kitten' } });

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { APICallError } from 'ai';
 import { mockChatModel, textResult, toolCallResult } from '../../../llm/__tests__/mockModel';
 import type { MockResult } from '../../../llm/__tests__/mockModel';
-import { END_CONVERSATION, runEconomyTurn, turnMessages } from '../economy';
+import { END_CONVERSATION, runEconomyTurn, TOOLS_REFUSED_SENTENCE, turnMessages } from '../economy';
 import type { EconomyBrainDeps } from '../economy';
 import type { EconomyTurnRequest } from '../protocol';
 
@@ -119,7 +119,7 @@ describe('runEconomyTurn', () => {
     expect(await runEconomyTurn(turn(), local.deps)).toEqual({ said: 'Hello.' });
   });
 
-  it('answers without tools when the model cannot use them', async () => {
+  it('says why, and never answers without tools, when the model cannot use them', async () => {
     const { chatModel } = mockChatModel(textResult('unused'));
     let calls = 0;
     const model = {
@@ -135,7 +135,7 @@ describe('runEconomyTurn', () => {
             isRetryable: false,
           });
         }
-        return textResult('I can only talk, not act.');
+        return textResult("I can't access your past conversations or your vault.");
       },
     };
     const reply = await runEconomyTurn(turn(), {
@@ -144,8 +144,10 @@ describe('runEconomyTurn', () => {
       overBudget: async () => false,
       capSentence: '',
     });
-    expect(reply).toEqual({ said: 'I can only talk, not act.' });
-    expect(calls).toBe(2);
+    expect(reply).toEqual({ said: TOOLS_REFUSED_SENTENCE });
+    // Asked once, with tools; never again without them
+    expect(calls).toBe(1);
+    expect(reply.said).not.toMatch(/can't access/);
   });
 
   it('turns a failure into a plain reason, with nothing to say', async () => {

@@ -11,6 +11,7 @@ import { ensureMasker, maskerContent, sha256 } from '../keys/install';
 import { applyMask, MASK_MARKER, type MaskReport, planMask, secretEntries, variants } from '../keys/mask-core';
 import { parseList, parseReport, promptLine, runWithSecrets, vaultEnv } from '../keys/run';
 import { agentName, createKeysServer } from '../keys/server';
+import { getStatus, listSecrets, maskerCurrent } from '../keys/status';
 import { fakeRunner, tempDir } from './helpers';
 
 const SECRET = 'sup3r-Secret/Value+42=';
@@ -37,10 +38,21 @@ const report = (over: Partial<MaskReport> = {}): string =>
 
 describe('masking', () => {
   it('treats everything as a secret except what offboard fixes and what Ava Brain sent', () => {
-    const env = { HOME: '/Users/x', PATH: '/bin', __CF_USER_TEXT_ENCODING: '0x1F5', LANG: 'en_US.UTF-8', TERM: 'dumb', PWD: '/work', API_KEY: SECRET, EMPTY: '' };
+    const env = {
+      HOME: '/Users/x',
+      PATH: '/bin',
+      __CF_USER_TEXT_ENCODING: '0x1F5',
+      LANG: 'en_US.UTF-8',
+      TERM: 'dumb',
+      PWD: '/work',
+      API_KEY: SECRET,
+      EMPTY: '',
+    };
     expect(secretEntries(env, '/work').map(e => e.name)).toEqual(['API_KEY']);
     // a vault secret may carry a pass-through name (offboard applies secrets after its allow-list)
-    expect(secretEntries({ CI: 'secret-ci-token', TERM: 'xterm-256color', PWD: '/other' }, '/work').map(e => e.name)).toEqual(['CI', 'TERM', 'PWD']);
+    expect(
+      secretEntries({ CI: 'secret-ci-token', TERM: 'xterm-256color', PWD: '/other' }, '/work').map(e => e.name),
+    ).toEqual(['CI', 'TERM', 'PWD']);
   });
 
   it('masks a value inside a longer base64 stream, as in an Authorization: Basic header', () => {
@@ -62,7 +74,15 @@ describe('masking', () => {
   it('masks the raw value and its common encodings', () => {
     const plan = planMask([{ name: 'API_KEY', value: SECRET }]);
     const b64 = Buffer.from(SECRET).toString('base64');
-    const text = [SECRET, b64, b64.replace(/=+$/, ''), Buffer.from(SECRET).toString('base64url'), encodeURIComponent(SECRET), Buffer.from(SECRET).toString('hex'), JSON.stringify({ k: SECRET })].join('\n');
+    const text = [
+      SECRET,
+      b64,
+      b64.replace(/=+$/, ''),
+      Buffer.from(SECRET).toString('base64url'),
+      encodeURIComponent(SECRET),
+      Buffer.from(SECRET).toString('hex'),
+      JSON.stringify({ k: SECRET }),
+    ].join('\n');
     const counts: Record<string, number> = {};
     const out = applyMask(text, plan, counts);
     for (const form of variants(SECRET)) expect(out).not.toContain(form);
@@ -89,7 +109,14 @@ describe('the masker process', () => {
   const dir = tempDir();
   const masker = join(dir.path, 'mask.mjs');
   beforeAll(async () => {
-    await build({ entryPoints: [resolve(import.meta.dirname, '../keys/mask.ts')], outfile: masker, bundle: true, platform: 'node', format: 'esm', logLevel: 'silent' });
+    await build({
+      entryPoints: [resolve(import.meta.dirname, '../keys/mask.ts')],
+      outfile: masker,
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      logLevel: 'silent',
+    });
   });
   afterAll(() => dir.remove());
 
@@ -102,7 +129,10 @@ describe('the masker process', () => {
   };
 
   it('runs the command and returns no value, in any common form, on either stream', { timeout: 30_000 }, () => {
-    const r = runMasker('echo "token=$API_KEY"; printf %s "$API_KEY" | base64; echo "$API_KEY" >&2; echo "short=$PIN"; printf "u:%s" "$API_KEY" | base64; exit 3', { API_KEY: SECRET, PIN: '7' });
+    const r = runMasker(
+      'echo "token=$API_KEY"; printf %s "$API_KEY" | base64; echo "$API_KEY" >&2; echo "short=$PIN"; printf "u:%s" "$API_KEY" | base64; exit 3',
+      { API_KEY: SECRET, PIN: '7' },
+    );
     expect(r.raw).not.toContain(SECRET);
     expect(r.raw).not.toContain(Buffer.from(SECRET).toString('base64'));
     expect(r.report?.stdout).toContain('token=«API_KEY»');
@@ -115,7 +145,10 @@ describe('the masker process', () => {
 
   it('never returns part of a value cut off at the output limit', { timeout: 30_000 }, () => {
     // 400 000 bytes is the masker's cap: put the value across it
-    const r = runMasker('head -c 399990 /dev/zero | tr "\\0" x; printf %s "$API_KEY"; head -c 1000 /dev/zero | tr "\\0" y', { API_KEY: SECRET });
+    const r = runMasker(
+      'head -c 399990 /dev/zero | tr "\\0" x; printf %s "$API_KEY"; head -c 1000 /dev/zero | tr "\\0" y',
+      { API_KEY: SECRET },
+    );
     expect(r.report?.truncated).toBe(true);
     expect(r.raw).not.toContain(SECRET.slice(0, 6));
   });
@@ -141,7 +174,10 @@ describe('the masker process', () => {
   }, 30_000);
 
   it('refuses a relative command', () => {
-    const r = spawnSync(process.execPath, [masker, 'x: y', 'sh', '-c', 'true'], { encoding: 'utf8', env: { PATH: '/bin' } });
+    const r = spawnSync(process.execPath, [masker, 'x: y', 'sh', '-c', 'true'], {
+      encoding: 'utf8',
+      env: { PATH: '/bin' },
+    });
     expect(parseReport(r.stdout)?.error).toMatch(/absolute/);
   });
 });
@@ -152,8 +188,22 @@ describe('run_with_secrets', () => {
   const short = mkdtempSync('/tmp/ak-');
   const maskPath = join(short, 'mask');
   writeFileSync(maskPath, 'masker');
-  const deps = (runner: ReturnType<typeof fakeRunner>) => ({ runner, maskPath, expectedMaskHash: sha256('masker'), home: dir.path, searchPath: '/usr/bin:/bin' });
-  const req = { project: 'go-solar-me', env: 'local', command: 'printenv', args: ['AGENT_SECRET'], purpose: 'check the agent secret', agent: 'claude-code', cwd: dir.path };
+  const deps = (runner: ReturnType<typeof fakeRunner>) => ({
+    runner,
+    maskPath,
+    expectedMaskHash: sha256('masker'),
+    home: dir.path,
+    searchPath: '/usr/bin:/bin',
+  });
+  const req = {
+    project: 'go-solar-me',
+    env: 'local',
+    command: 'printenv',
+    args: ['AGENT_SECRET'],
+    purpose: 'check the agent secret',
+    agent: 'claude-code',
+    cwd: dir.path,
+  };
   afterAll(() => {
     dir.remove();
     rmSync(short, { recursive: true, force: true });
@@ -168,10 +218,29 @@ describe('run_with_secrets', () => {
   it('asks offboard-vault to start the masker with who, why and the absolute command', async () => {
     const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : { stdout: `${report()}\n` }));
     const result = await runWithSecrets({ ...req, only: ['AGENT_SECRET'] }, deps(runner));
-    expect(result).toMatchObject({ approved: true, ran: true, exitCode: 0, stdout: 'ok «AGENT_SECRET»\n', masked: { AGENT_SECRET: 1 } });
+    expect(result).toMatchObject({
+      approved: true,
+      ran: true,
+      exitCode: 0,
+      stdout: 'ok «AGENT_SECRET»\n',
+      masked: { AGENT_SECRET: 1 },
+    });
     const run = runner.calls[1];
     expect(run.command).toBe('/usr/local/bin/offboard-vault');
-    expect(run.args).toEqual(['run', '--project', 'go-solar-me', '--env', 'local', '--only', 'AGENT_SECRET', '--', maskPath, 'claude-code: check the agent secret', '/usr/bin/printenv', 'AGENT_SECRET']);
+    expect(run.args).toEqual([
+      'run',
+      '--project',
+      'go-solar-me',
+      '--env',
+      'local',
+      '--only',
+      'AGENT_SECRET',
+      '--',
+      maskPath,
+      'claude-code: check the agent secret',
+      '/usr/bin/printenv',
+      'AGENT_SECRET',
+    ]);
     // offboard's helper refuses NODE_* and friends; nothing of this process's environment goes along
     expect(Object.keys(run.options.env).sort()).toEqual(Object.keys(vaultEnv(dir.path, dir.path)).sort());
     expect(run.options.cwd).toBe(dir.path);
@@ -179,17 +248,24 @@ describe('run_with_secrets', () => {
 
   it('never says nothing ran once the command started, even when the result is lost', async () => {
     const started = JSON.stringify({ marker: MASK_MARKER, started: true });
-    const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : { stdout: `${started}\n{"marker":"ava-ke`, timedOut: true, code: 143 }));
+    const runner = fakeRunner(call =>
+      call.args[0] === 'list'
+        ? { stdout: LIST }
+        : { stdout: `${started}\n{"marker":"ava-ke`, timedOut: true, code: 143 },
+    );
     const result = await runWithSecrets(req, deps(runner));
     expect(result).toMatchObject({ approved: true, ran: true, timedOut: true });
     expect(result.message).toMatch(/result was lost/);
   });
 
-  it('passes on only offboard\'s own lines when nothing ran', async () => {
+  it("passes on only offboard's own lines when nothing ran", async () => {
     const runner = fakeRunner(call =>
       call.args[0] === 'list'
         ? { stdout: LIST }
-        : { code: 1, stderr: `node: something quoting ${SECRET}\nvault: The property 'options.env['X']' Received '${SECRET}'\nvault: refused: parent has NODE_X set\n` },
+        : {
+            code: 1,
+            stderr: `node: something quoting ${SECRET}\nvault: The property 'options.env['X']' Received '${SECRET}'\nvault: refused: parent has NODE_X set\n`,
+          },
     );
     const result = await runWithSecrets(req, deps(runner));
     expect(result.message).toContain('vault: refused');
@@ -198,13 +274,17 @@ describe('run_with_secrets', () => {
 
   it('refuses a purpose with quotes that could fake extra prompt arguments', async () => {
     const runner = fakeRunner(() => new Error('must not run'));
-    expect((await runWithSecrets({ ...req, purpose: 'x" "/usr/bin/true' }, deps(runner))).message).toMatch(/purpose may use/);
+    expect((await runWithSecrets({ ...req, purpose: 'x" "/usr/bin/true' }, deps(runner))).message).toMatch(
+      /purpose may use/,
+    );
     expect(runner.calls).toHaveLength(0);
   });
 
   it('says nothing ran when Avi denies the prompt', async () => {
     const runner = fakeRunner(call =>
-      call.args[0] === 'list' ? { stdout: LIST } : { code: 1, stderr: 'vault: not approved (denied); nothing was done\n' },
+      call.args[0] === 'list'
+        ? { stdout: LIST }
+        : { code: 1, stderr: 'vault: not approved (denied); nothing was done\n' },
     );
     const result = await runWithSecrets(req, deps(runner));
     expect(result).toMatchObject({ approved: false, ran: false, exitCode: null, stdout: '' });
@@ -213,7 +293,9 @@ describe('run_with_secrets', () => {
 
   it('redacts anything that still looks like a key', async () => {
     const token = `ghp_${'a'.repeat(36)}`;
-    const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : { stdout: report({ stdout: `leaked ${token}\n` }) }));
+    const runner = fakeRunner(call =>
+      call.args[0] === 'list' ? { stdout: LIST } : { stdout: report({ stdout: `leaked ${token}\n` }) },
+    );
     const result = await runWithSecrets(req, deps(runner));
     expect(result.stdout).toBe('leaked «redacted: GitHub token»\n');
     expect(result.redacted).toEqual(['GitHub token']);
@@ -221,7 +303,9 @@ describe('run_with_secrets', () => {
 
   it('refuses before any prompt: unknown names, unknown env, a changed masker, a prompt too long', async () => {
     const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : new Error('must not run')));
-    expect((await runWithSecrets({ ...req, only: ['NOPE'] }, deps(runner))).message).toMatch(/not in go-solar-me\/local: NOPE/);
+    expect((await runWithSecrets({ ...req, only: ['NOPE'] }, deps(runner))).message).toMatch(
+      /not in go-solar-me\/local: NOPE/,
+    );
     expect((await runWithSecrets({ ...req, env: 'staging' }, deps(runner))).message).toMatch(/nothing stored/);
     expect((await runWithSecrets(req, { ...deps(runner), expectedMaskHash: 'other' })).message).toMatch(/keys install/);
     expect((await runWithSecrets({ ...req, args: ['x'.repeat(120)] }, deps(runner))).message).toMatch(/too long/);
@@ -234,7 +318,11 @@ describe('run_with_secrets', () => {
 });
 
 describe('ask_human', () => {
-  const req = { purpose: 'Approve the GitHub login', steps: [{ text: 'Open Brave' }, { text: 'Click Continue', target: 'css:button' }], agent: 'claude-code' };
+  const req = {
+    purpose: 'Approve the GitHub login',
+    steps: [{ text: 'Open Brave' }, { text: 'Click Continue', target: 'css:button' }],
+    agent: 'claude-code',
+  };
 
   it('shows numbered steps with who asks and maps the buttons', async () => {
     const runner = fakeRunner(() => ({ stdout: 'Done\n' }));
@@ -246,8 +334,22 @@ describe('ask_human', () => {
     expect(call.args[1]).not.toContain('Open Brave');
     expect(call.args[3]).toBe(dialogText(req));
     expect(dialogText(req)).toContain('claude-code asks: Approve the GitHub login\n\n1. Open Brave\n2. Click Continue');
-    expect((await askHuman(req, fakeRunner(() => ({ stdout: "I can't\n" })))).answer).toBe('cant');
-    expect((await askHuman(req, fakeRunner(() => ({ stdout: 'timeout\n' })))).answer).toBe('timeout');
+    expect(
+      (
+        await askHuman(
+          req,
+          fakeRunner(() => ({ stdout: "I can't\n" })),
+        )
+      ).answer,
+    ).toBe('cant');
+    expect(
+      (
+        await askHuman(
+          req,
+          fakeRunner(() => ({ stdout: 'timeout\n' })),
+        )
+      ).answer,
+    ).toBe('timeout');
   });
 
   it('refuses empty, long or invisible-character steps', () => {
@@ -284,21 +386,33 @@ describe('install and the MCP server', () => {
       if (call.command === '/usr/bin/osascript') return { stdout: 'Done\n' };
       return call.args[0] === 'list' ? { stdout: LIST } : { stdout: report() };
     });
-    const server = createKeysServer({ runner, packageDir, nodePath: process.execPath, home: dir.path, version: 'test' });
+    const server = createKeysServer({
+      runner,
+      packageDir,
+      nodePath: process.execPath,
+      home: dir.path,
+      version: 'test',
+    });
     const [a, b] = InMemoryTransport.createLinkedPair();
     await server.connect(a);
     const client = new Client({ name: 'claude-code', version: '1' });
     await client.connect(b);
     const tools = (await client.listTools()).tools.map(t => t.name).sort();
-    expect(tools).toEqual(['ask_human', 'run_with_secrets', 'switch_account']);
+    expect(tools).toEqual(['ask_human', 'get_status', 'list_secrets', 'run_with_secrets', 'switch_account']);
 
-    const ran = await client.callTool({ name: 'run_with_secrets', arguments: { project: 'go-solar-me', env: 'local', command: '/usr/bin/true', purpose: 'test run', cwd: dir.path } });
+    const ran = await client.callTool({
+      name: 'run_with_secrets',
+      arguments: { project: 'go-solar-me', env: 'local', command: '/usr/bin/true', purpose: 'test run', cwd: dir.path },
+    });
     const ranText = (ran.content as { text: string }[])[0].text;
     expect(JSON.parse(ranText)).toMatchObject({ approved: true, ran: true });
     const vaultCall = runner.calls.find(call => call.args[0] === 'run')!;
     expect(vaultCall.args).toContain('claude-code: test run');
 
-    const asked = await client.callTool({ name: 'ask_human', arguments: { purpose: 'Enter the 2FA code', steps: [{ text: 'Type the code from your phone' }] } });
+    const asked = await client.callTool({
+      name: 'ask_human',
+      arguments: { purpose: 'Enter the 2FA code', steps: [{ text: 'Type the code from your phone' }] },
+    });
     expect(JSON.parse((asked.content as { text: string }[])[0].text).answer).toBe('done');
     await client.close();
   });
@@ -322,8 +436,14 @@ describe('switch_account', () => {
   const req = { purpose: 'push the fix', agent: 'claude-code' };
 
   it('parses accounts, never the token line', () => {
-    expect(parseGhStatus(GH('getvettika-ui'))).toEqual({ active: 'getvettika-ui', accounts: ['AviOfLagos', 'getvettika-ui'] });
-    expect([...parseVercelList(VLIST)]).toEqual([['avi', 'S7M'], ['nexprove', 'Iwk']]);
+    expect(parseGhStatus(GH('getvettika-ui'))).toEqual({
+      active: 'getvettika-ui',
+      accounts: ['AviOfLagos', 'getvettika-ui'],
+    });
+    expect([...parseVercelList(VLIST)]).toEqual([
+      ['avi', 'S7M'],
+      ['nexprove', 'Iwk'],
+    ]);
   });
 
   it('switches gh, verifies with GitHub itself, and tells Avi', async () => {
@@ -339,7 +459,10 @@ describe('switch_account', () => {
       if (call.command === 'git') return { stdout: '309111286+getvettika-ui@users.noreply.github.com\n' };
       return new Error(`unexpected ${call.command}`);
     });
-    const result = await switchAccount({ ...req, tool: 'gh', account: 'getvettika-ui' }, { runner, home: '/h', notify: async (t, b) => void notes.push(`${t} | ${b}`) });
+    const result = await switchAccount(
+      { ...req, tool: 'gh', account: 'getvettika-ui' },
+      { runner, home: '/h', notify: async (t, b) => void notes.push(`${t} | ${b}`) },
+    );
     expect(result).toMatchObject({ from: 'AviOfLagos', to: 'getvettika-ui', switched: true, verified: true });
     expect(notes).toEqual(['Ava: claude-code switched gh | Now getvettika-ui. push the fix']);
     expect(runner.calls.find(c => c.command === 'gh-switch')?.options.env.PATH).toContain('/h/.local/bin');
@@ -347,8 +470,14 @@ describe('switch_account', () => {
   });
 
   it('only reads when no account is given, and refuses accounts that are not signed in', async () => {
-    const runner = fakeRunner(call => (call.command === 'gh' ? { stdout: GH('AviOfLagos') } : new Error('must not switch')));
-    expect(await switchAccount({ ...req, tool: 'gh' }, { runner, home: '/h' })).toMatchObject({ from: 'AviOfLagos', switched: false, verified: true });
+    const runner = fakeRunner(call =>
+      call.command === 'gh' ? { stdout: GH('AviOfLagos') } : new Error('must not switch'),
+    );
+    expect(await switchAccount({ ...req, tool: 'gh' }, { runner, home: '/h' })).toMatchObject({
+      from: 'AviOfLagos',
+      switched: false,
+      verified: true,
+    });
     const nope = await switchAccount({ ...req, tool: 'gh', account: 'someone' }, { runner, home: '/h' });
     expect(nope).toMatchObject({ switched: false, verified: false });
     expect(nope.message).toMatch(/gh auth login/);
@@ -363,10 +492,18 @@ describe('switch_account', () => {
       id = call.args[0] === 'avi' ? 'S7M' : id;
       return { stdout: '-> switched' };
     });
-    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({ from: 'nexprove', to: 'avi', switched: true, verified: true });
+    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({
+      from: 'nexprove',
+      to: 'avi',
+      switched: true,
+      verified: true,
+    });
     // already there: nothing is copied over the live login
     const calls = runner.calls.length;
-    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({ switched: false, verified: true });
+    expect(await switchAccount({ ...req, tool: 'vercel', account: 'avi' }, { runner, home: '/h' })).toMatchObject({
+      switched: false,
+      verified: true,
+    });
     expect(runner.calls.slice(calls).every(c => c.args.length === 0 || c.args[0] === '--list')).toBe(true);
   });
 
@@ -400,13 +537,20 @@ describe('switch_account', () => {
       return { stdout: '309111286+getvettika-ui@users.noreply.github.com\n' };
     });
     const result = await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' });
-    expect(result).toMatchObject({ to: 'getvettika-ui', switched: true, verified: false, vercel: { from: 'nexprove', to: 'avi' } });
+    expect(result).toMatchObject({
+      to: 'getvettika-ui',
+      switched: true,
+      verified: false,
+      vercel: { from: 'nexprove', to: 'avi' },
+    });
     expect(result.message).toMatch(/pins commits/);
     // without the pin it verifies
     active = 'AviOfLagos';
     vid = 'Iwk';
     pinned = '309111286+getvettika-ui@users.noreply.github.com';
-    expect(await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' })).toMatchObject({ verified: true });
+    expect(await switchAccount({ ...req, tool: 'gh', repo: '/repo' }, { runner, home: '/h' })).toMatchObject({
+      verified: true,
+    });
   });
 
   it('with a repo: refuses when gh-switch would overwrite an unsaved Vercel login', async () => {
@@ -426,8 +570,90 @@ describe('switch_account', () => {
 
   it('refuses odd account names and relative repos before running anything', async () => {
     const runner = fakeRunner(() => new Error('must not run'));
-    await expect(switchAccount({ ...req, tool: 'gh', account: '-x; rm' }, { runner, home: '/h' })).rejects.toThrow(/letters, digits/);
-    await expect(switchAccount({ ...req, tool: 'gh', account: '-' }, { runner, home: '/h' })).rejects.toThrow(/letters, digits/);
-    await expect(switchAccount({ ...req, tool: 'gh', repo: 'here' }, { runner, home: '/h' })).rejects.toThrow(/absolute/);
+    await expect(switchAccount({ ...req, tool: 'gh', account: '-x; rm' }, { runner, home: '/h' })).rejects.toThrow(
+      /letters, digits/,
+    );
+    await expect(switchAccount({ ...req, tool: 'gh', account: '-' }, { runner, home: '/h' })).rejects.toThrow(
+      /letters, digits/,
+    );
+    await expect(switchAccount({ ...req, tool: 'gh', repo: 'here' }, { runner, home: '/h' })).rejects.toThrow(
+      /absolute/,
+    );
+  });
+});
+
+describe('list_secrets and get_status (issue #54)', () => {
+  const dir = tempDir();
+  const packageDir = join(dir.path, 'pkg');
+  mkdirSync(join(packageDir, 'dist'), { recursive: true });
+  writeFileSync(join(packageDir, 'dist', 'ava-keys-mask.mjs'), '#!/usr/bin/env node\nconsole.log("mask")\n');
+  afterAll(() => dir.remove());
+
+  it('lists projects, envs and secret names from `offboard-vault list`, without a prompt', async () => {
+    const runner = fakeRunner(() => ({ stdout: LIST }));
+    expect(await listSecrets({ runner, home: dir.path })).toEqual({
+      projects: { 'go-solar-me': { local: ['AGENT_SECRET', 'DATABASE_URL'], prod: ['DATABASE_URL'] } },
+    });
+    // One keyless call: `list`, never `run`
+    expect(runner.calls.map(call => call.args)).toEqual([['list']]);
+  });
+
+  it('says why when the vault cannot be read, with no projects', async () => {
+    const runner = fakeRunner(() => ({ code: 1, stderr: 'vault: not installed' }));
+    const result = await listSecrets({ runner, home: dir.path });
+    expect(result.projects).toEqual({});
+    expect(result.message).toContain('not installed');
+  });
+
+  it('says whether the masker on disk is the current one, and never writes it', () => {
+    expect(maskerCurrent({ packageDir, nodePath: '/opt/node', home: dir.path })).toBe(false);
+    ensureMasker({ packageDir, nodePath: '/opt/node', home: dir.path });
+    expect(maskerCurrent({ packageDir, nodePath: '/opt/node', home: dir.path })).toBe(true);
+    expect(maskerCurrent({ packageDir, nodePath: '/opt/other', home: dir.path })).toBe(false);
+  });
+
+  it('reports booleans and names only, over MCP', async () => {
+    const runner = fakeRunner(call => (call.args[0] === 'list' ? { stdout: LIST } : { code: 0 }));
+    const server = createKeysServer({
+      runner,
+      packageDir,
+      nodePath: '/opt/node',
+      home: dir.path,
+      version: 'test',
+      brain: { host: '127.0.0.1', port: 1 },
+      statusProbe: async () => true,
+      vaultBin: '/nonexistent/offboard-vault',
+      claudePath: '/fake/claude',
+    });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await server.connect(a);
+    const client = new Client({ name: 'claude-code', version: '1' });
+    await client.connect(b);
+    const status = await client.callTool({ name: 'get_status', arguments: {} });
+    expect(JSON.parse((status.content as { text: string }[])[0].text)).toEqual({
+      brainUp: true,
+      vaultInstalled: false,
+      maskerCurrent: true,
+      agents: [{ name: 'claude-code', registered: true }],
+    });
+    const listed = await client.callTool({ name: 'list_secrets', arguments: {} });
+    const listedText = (listed.content as { text: string }[])[0].text;
+    expect(JSON.parse(listedText).projects['go-solar-me'].local).toEqual(['AGENT_SECRET', 'DATABASE_URL']);
+    await client.close();
+  });
+
+  it('says an agent is not registered, and Ava Brain is down, when they are not', async () => {
+    const runner = fakeRunner(() => ({ code: 1 }));
+    const status = await getStatus({
+      runner,
+      packageDir,
+      nodePath: '/opt/node',
+      home: dir.path,
+      brain: { host: '127.0.0.1', port: 1 },
+      probe: async () => false,
+      claudePath: '/fake/claude',
+    });
+    expect(status.brainUp).toBe(false);
+    expect(status.agents).toEqual([{ name: 'claude-code', registered: false }]);
   });
 });

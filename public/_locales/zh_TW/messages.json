@@ -2352,6 +2352,24 @@
       }
     }
   },
+  "settings_section_patience": {
+    "message": "耐心"
+  },
+  "settings_patience": {
+    "message": "Ava 等你說完的時間"
+  },
+  "settings_patience_hint": {
+    "message": "停頓多久之後 Ava 才會回答。「讓我想想」適合說話較慢、愛思考的人。適用於 Gemini 即時對話；裝置上的語音本來就會等句子說完。"
+  },
+  "settings_patience_quick": {
+    "message": "快"
+  },
+  "settings_patience_normal": {
+    "message": "一般"
+  },
+  "settings_patience_patient": {
+    "message": "讓我想想"
+  },
   "settings_wake_hint": {
     "message": "即使關閉面板也持續開啟。僅在本機聆聽；在您說「$PHRASE$」之前不會傳送任何內容。",
     "placeholders": {
@@ -5124,6 +5142,12 @@
   },
   "voice_engine_stt_gemini_hint": {
     "message": "節省模式絕不把音訊傳給 Gemini：會改用第一個已安裝的本機模型。"
+  },
+  "voice_engine_stt_englishOnly": {
+    "message": "這個辨識器只聽得懂英文。其他語言請選 Whisper，或在即時對話中使用 Gemini。"
+  },
+  "voice_engine_stt_whisperLanguages": {
+    "message": "Whisper base 聽得懂英文和其他語言，速度比 Moonshine 慢。"
   },
   "voice_engine_moonshine_label": {
     "message": "Moonshine 模型"
@@ -8874,6 +8898,12 @@
   "meetvoice_confirm_words": {
     "message": "要說的內容（逐字）"
   },
+  "meetvoice_rule_label": {
+    "message": "在 Google Meet 通話中發言"
+  },
+  "drive_rule_createDoc": {
+    "message": "在 $1 建立 Google 文件"
+  },
   "meetvoice_needsBrain": {
     "message": "$NAME$ 透過 Mac 上的輔助程式 Ava Brain 加入你的通話。設定一次後再回到這裡。",
     "placeholders": {
@@ -9930,6 +9960,9 @@
   "setup_problem_cal_error": {
     "message": "上次無法讀取行事曆。"
   },
+  "setup_problem_cal_denied": {
+    "message": "Ava Brain 失去了讀取行事曆的權限。Node 更新後，macOS 會再次詢問。"
+  },
   "setup_problem_obs_none": {
     "message": "尚未選擇 Obsidian 保險庫。"
   },
@@ -10028,6 +10061,9 @@
   },
   "setup_action_calendar": {
     "message": "連接行事曆"
+  },
+  "setup_action_calendarAllow": {
+    "message": "允許存取行事曆"
   },
   "setup_action_obsidian": {
     "message": "選擇保險庫"

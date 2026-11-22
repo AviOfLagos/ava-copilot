@@ -5,11 +5,15 @@ import {
   firewallStore,
   generalSettingsStore,
   getProviderTypeByProviderId,
+  isEmptyProfile,
   isLocalProvider,
   llmProviderStore,
+  productStore,
   threadStore,
 } from '@extension/storage';
-import type { ModelConfig, RoleTarget } from '@extension/storage';
+import type { ModelConfig, RoleTarget, ThreadRecord } from '@extension/storage';
+import { capabilitiesForOrigin } from '../tools/abilities';
+import type { ChannelFacts } from '../tools/channels';
 import { personalityForThread } from '../personalities/voices';
 import BrowserContext from '../browser/context';
 import { isHostName, siteHost } from '../agents/patterns';
@@ -148,10 +152,17 @@ export async function createBrowserContext(
   return browserContext;
 }
 
+/** What the chat's workspace has that a channel's tool list depends on: a product to act for. */
+async function channelFacts(workspaceId: string | null | undefined): Promise<ChannelFacts> {
+  const profile = await productStore.forWorkspace(workspaceId).catch(() => undefined);
+  return { hasProduct: Boolean(profile && !isEmptyProfile(profile)) };
+}
+
 /** What Ava can do now, for the planner; without it the chat still runs. */
-function abilitiesSection(): string {
+function abilitiesSection(origin: ThreadRecord['origin'], facts: ChannelFacts): string {
   try {
-    return buildAbilitiesSection(currentCapabilities(), COMING);
+    // Never list a tool this chat is not offered
+    return buildAbilitiesSection(capabilitiesForOrigin(currentCapabilities(), origin, facts), COMING);
   } catch {
     return '';
   }
@@ -174,6 +185,7 @@ export async function createExecutor(options: {
   // failure to read it keeps the default
   const thread = await threadStore.get(options.threadId).catch(() => undefined);
   const personality = await personalityForThread(thread).catch(() => null);
+  const toolFacts = await channelFacts(thread?.workspaceId);
   return new Executor(options.task, options.threadId, options.browserContext, options.models.navigator, {
     plannerLLM: options.models.planner,
     agentOptions: {
@@ -190,7 +202,8 @@ export async function createExecutor(options: {
     personality,
     identitySection: buildCoreSection(await loadIdentityContext(thread?.workspaceId)),
     channelSection: buildChannelSection(thread?.origin),
-    abilitiesSection: abilitiesSection(),
+    abilitiesSection: abilitiesSection(thread?.origin, toolFacts),
     channel: thread?.origin ?? 'user',
+    toolFacts,
   });
 }

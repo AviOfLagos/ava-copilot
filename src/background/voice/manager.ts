@@ -26,7 +26,7 @@ import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
 import { memoryScopeForThread } from '../kb/scope';
 import type { CalendarWatcher } from '../calendar/watcher';
-import { quoteTitle } from '../calendar/watcher';
+import { scheduleText } from '../calendar/schedule';
 import { allowedByClick } from './confirm';
 import { soundRecently } from './sound';
 import { TOOL_ACTIONS, UNGUARDED_TOOLS } from './guard';
@@ -288,6 +288,7 @@ export class VoiceManager {
                 : { apiKey: gemini?.[1].apiKey ?? '' }),
               model: settings.liveModel,
               speechConfig,
+              patience: settings.turnPatience,
             }),
         instructions: voiceSessionInstructions(
           this.assistantName,
@@ -507,25 +508,8 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         if (!this.brief) return 'The morning brief is not available.';
         // Built from invites, chats and pages: data, never instructions
         return wrapUntrustedContent(await this.brief.today());
-      case 'get_schedule': {
-        if (!this.calendar) return 'No calendar is connected.';
-        const events = await this.calendar.upcoming(Number(args.hours) > 0 ? Number(args.hours) : 24);
-        if (events.length === 0)
-          return 'Nothing on the calendar in that time, or no calendar is connected in settings.';
-        // Titles come from invites anyone could send: they are data, never instructions
-        return wrapUntrustedContent(
-          events
-            .map(event => {
-              const at = new Date(event.start).toLocaleString(undefined, {
-                weekday: 'short',
-                hour: 'numeric',
-                minute: '2-digit',
-              });
-              return `${at}: "${quoteTitle(event.title)}"${event.joinUrl ? ' (has a meeting link)' : ''}`;
-            })
-            .join('\n'),
-        );
-      }
+      case 'get_schedule':
+        return scheduleText(this.calendar, args.hours);
       case 'join_next_meeting': {
         const next = (await this.calendar?.upcoming(2))?.find(event => event.joinUrl);
         if (!next?.joinUrl) return 'No meeting with a link in the next two hours.';

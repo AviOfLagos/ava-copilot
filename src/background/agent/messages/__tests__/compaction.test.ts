@@ -65,3 +65,65 @@ describe('MessageManager compaction', () => {
     expect(manager.compactableMessages(4)).toBeNull();
   });
 });
+
+describe('MessageManager clearing old action results (issue #132)', () => {
+  const longResult = (i: number) => `Action result: Extracted from page ${i}: ${'lorem ipsum '.repeat(300)}`;
+
+  function longRun(steps: number): MessageManager {
+    const manager = managerWithSteps(0);
+    for (let i = 0; i < steps; i++) {
+      manager.addModelOutput({ current_state: { memory: `step ${i}` }, action: [{ extract: { index: i } }] });
+      manager.addMessageWithTokens(userMessage(longResult(i)));
+      manager.addMessageWithTokens(userMessage(`Action result: Clicked element ${i}`));
+    }
+    return manager;
+  }
+
+  it('shortens old long results to a line, and keeps the recent messages and the short results whole', () => {
+    const manager = longRun(20);
+    const before = manager.getMessages();
+    const cleared = manager.clearOldActionResults(12);
+    expect(cleared).toBeGreaterThan(4000);
+    const after = manager.getMessages();
+    expect(after).toHaveLength(before.length);
+    const text = (message: { content: unknown }) => String(message.content);
+    // An old long result is one line now
+    const old = after.find(m => text(m).startsWith('Action result: Extracted from page 2:'))!;
+    expect(text(old).length).toBeLessThan(400);
+    expect(text(old)).toContain('characters cleared');
+    // Short results stay whole, wherever they are
+    expect(after.filter(m => text(m) === 'Action result: Clicked element 3')).toHaveLength(1);
+    // The last 12 messages are untouched
+    expect(after.slice(-12)).toEqual(before.slice(-12));
+    // The task is untouched
+    expect(JSON.stringify(after)).toContain('Post the standup note');
+  });
+
+  it('keeps the token count true, and does nothing a second time', () => {
+    const manager = longRun(20);
+    const full = manager.totalTokens();
+    manager.clearOldActionResults(12);
+    const fresh = new MessageManager();
+    for (const message of manager.getMessages()) fresh.addMessageWithTokens(message);
+    expect(manager.totalTokens()).toBe(fresh.totalTokens());
+    expect(manager.totalTokens()).toBeLessThan(full * 0.5);
+    expect(manager.clearOldActionResults(12)).toBe(0);
+  });
+
+  it('waits until enough results are old to be worth it, so the prompt start does not change every step', () => {
+    const manager = longRun(4);
+    expect(manager.clearOldActionResults(12)).toBe(0);
+  });
+
+  it('shows the saving on a 60-step run: the history carried on the last step', () => {
+    const plain = longRun(60);
+    const cleared = longRun(60);
+    cleared.clearOldActionResults(12);
+    const saved = 1 - cleared.totalTokens() / plain.totalTokens();
+    // eslint-disable-next-line no-console
+    console.log(
+      `60-step run: ${plain.totalTokens()} → ${cleared.totalTokens()} history tokens (${Math.round(saved * 100)}% fewer)`,
+    );
+    expect(saved).toBeGreaterThan(0.7);
+  });
+});

@@ -45,6 +45,7 @@ export type SetupProblem =
   | 'wa_not_linked'
   | 'cal_none'
   | 'cal_error'
+  | 'cal_denied'
   | 'obs_none'
   | 'backup_never'
   | 'backup_failed';

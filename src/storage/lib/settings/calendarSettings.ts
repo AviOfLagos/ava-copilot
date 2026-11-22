@@ -70,6 +70,8 @@ export const upcomingEventsStore = createStorage<{
   source?: CalendarSourceName | null;
   // When the calendar was last read without an error: the events are as of then
   okAt?: number;
+  // The Mac refused because Ava Brain lost Calendar permission (cleared by the next read that works)
+  needsAccess?: boolean;
 }>(
   'calendar-upcoming',
   { events: [], readAt: 0, error: null, source: null },

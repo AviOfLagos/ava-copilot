@@ -8,8 +8,12 @@ import { SUMMARY_INSTRUCTIONS } from './memory';
 
 const logger = createLogger('Compaction');
 
-// Past this share of the model's input budget, older steps of a running task are summarized
-export const COMPACT_AT = 0.6;
+// Past this share of the model's input budget, older steps of a running task are summarized (was 0.6: a long run
+// carried up to 77,000 tokens of history on every step before anything was summarized, issue #132)
+export const COMPACT_AT = 0.35;
+// Not worth a model call to summarize less than this (about the size of a few extracted pages), so a run that sits
+// above the line because of its fixed prompt does not summarize on every step
+export const MIN_COMPACT_TOKENS = 1500;
 // Messages at the end of the history that always stay verbatim
 export const KEEP_RECENT_MESSAGES = 12;
 const MAX_PART_CHARS = 2000;
@@ -43,18 +47,20 @@ export function describeMessages(messages: ModelMessage[]): string {
 }
 
 /**
- * Summarizes the older steps of a running task once its history passes 60% of the input budget,
+ * Summarizes the older steps of a running task once its history passes 35% of the input budget,
  * so a long task never hits the limit. The full record of the task stays in the thread's messages.
  *
  * @returns true when the history was compacted
  */
 export async function compactIfNeeded(context: AgentContext, summarizer: ChatModel): Promise<boolean> {
   const manager = context.messageManager;
+  // First the cheap step, with no model call: old long action results shrink to a line each
+  manager.clearOldActionResults(KEEP_RECENT_MESSAGES);
   if (manager.totalTokens() <= manager.maxInputTokens() * COMPACT_AT) {
     return false;
   }
   const plan = manager.compactableMessages(KEEP_RECENT_MESSAGES);
-  if (!plan) {
+  if (!plan || describeMessages(plan.messages).length / 4 < MIN_COMPACT_TOKENS) {
     return false;
   }
 

@@ -1,5 +1,5 @@
 import { AppError } from '@extension/shared';
-import { db as defaultDb } from '@extension/storage';
+import { db as defaultDb, permissionRulesStore } from '@extension/storage';
 import type { AviCopilotDb, JobRecord, RunRecord, WorkflowRecord } from '@extension/storage';
 import { jobs as defaultJobs } from '../jobs/runner';
 import type { JobRunner } from '../jobs/runner';
@@ -11,6 +11,7 @@ import type { EngineHooks, StepExecutor } from './engine';
 import { executorFor } from './executors';
 import { APPROVAL_PREFIX, postToInbox, settleInboxItem, workflowSource } from './inbox';
 import { overDailyCap } from './models';
+import { allowingRule, offersRule, ruleFor } from './rules';
 import { checkSchedule, parseSpec, validateSpec } from './spec';
 import type { NodeType, WorkflowNode, WorkflowSpec } from './spec';
 import { createEngineStore, deleteWorkflow, newWorkflowRecord, pruneRuns, runsOf } from './store';
@@ -281,10 +282,21 @@ export class WorkflowService {
   }
 
   /** The Inbox's way in: an approval's request id, "workflow-step:<runId>:<nodeId>". */
-  async answerRequest(requestId: string, approved: boolean): Promise<boolean> {
+  async answerRequest(requestId: string, approved: boolean, options: { always?: boolean } = {}): Promise<boolean> {
     if (!requestId.startsWith(APPROVAL_PREFIX)) return false;
     const [runId, nodeId] = requestId.slice(APPROVAL_PREFIX.length).split(':');
-    return runId && nodeId ? this.answer(runId, nodeId, approved) : false;
+    if (!runId || !nodeId) return false;
+    if (approved && options.always) await this.keepRule(runId, nodeId);
+    return this.answer(runId, nodeId, approved);
+  }
+
+  /** "Allow every time" on a step's Inbox card: saved only for a step that offered it and still waits. */
+  private async keepRule(runId: string, nodeId: string): Promise<void> {
+    const run = await this.database.runs.get(runId);
+    const workflow = run?.workflowId ? await this.database.workflows.get(run.workflowId) : undefined;
+    const node = workflow ? parseSpec(workflow.spec)?.nodes.find(candidate => candidate.id === nodeId) : undefined;
+    if (!run || !workflow || !node || run.status !== 'waiting_user' || !offersRule(node, run.tainted)) return;
+    await permissionRulesStore.allow(await ruleFor(workflow.id, workflow.name, node)).catch(() => null);
   }
 
   /** Job handler: a workflow's schedule fired. One firing makes one run, even when the job runs twice. */
@@ -503,10 +515,19 @@ export class WorkflowService {
             title: `"${workflow.name}" wants to: ${node.label}`,
             body: `This step acts for you, so it waits for your click.${run.tainted ? ' This run read content from outside; check what it is about to do.' : ''}`,
             priority: 'high',
-            approval: { requestId: `${APPROVAL_PREFIX}${run.id}:${node.id}`, action: 'workflow_step_answer' },
+            approval: {
+              requestId: `${APPROVAL_PREFIX}${run.id}:${node.id}`,
+              action: 'workflow_step_answer',
+              ...(offersRule(node, run.tainted) ? { always: true } : {}),
+            },
           },
           database,
         );
+      },
+      allowedByRule: async (_run, _step, node, workflow) => {
+        const label = await allowingRule(workflow.id, node);
+        if (label) logger.info(`"${workflow.name}": "${node.label}" ran because of the rule "${label}"`);
+        return label !== null;
       },
       unknownOutcome: async (run, _step, node, workflow) => {
         await postToInbox(
