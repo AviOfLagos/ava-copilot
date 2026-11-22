@@ -1,4 +1,5 @@
 import { Dexie } from 'dexie';
+import type { CallTasksState } from './callTasks';
 import type { AgentProfile, BusMessage } from '../agents/types';
 import type { AmbientSession, AmbientUtterance } from '../ambient/types';
 import type { ArtifactRecord } from '../artifacts/types';
@@ -240,6 +241,8 @@ export interface MeetingRecord {
   roster?: string[];
   // When notes come from audio: who spoke when, from the call's captions, to name the audio's speakers
   speakerMarks?: SpeakerMark[];
+  // Tasks Avi said on the call ("Ava, note a task for Ada…", docs/pm-desk.md Part 6) and what he did about them
+  callTasks?: CallTasksState;
 }
 
 // Seconds from the start, and the caption's speaker

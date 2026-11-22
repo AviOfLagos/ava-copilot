@@ -9,6 +9,8 @@ import { enumerateAudioDevices } from './devices';
 import { measureMic, playTestTone } from './audio-check';
 import { localTts } from './tts-local/shared';
 import './tts-local/register';
+// The call's own microphone stream for spoken commands (docs/pm-desk.md, Part 6)
+import './call-mic';
 import type { LineTts } from './lines';
 import { AmbientListener } from './ambient/listener';
 import type { AmbientConfig } from './ambient/listener';
