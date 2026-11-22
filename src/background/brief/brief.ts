@@ -1,4 +1,4 @@
-import { byDueThenAge, stripTaskMarkers, taskLine } from '@extension/storage';
+import { byDueThenAge, MAKE_WORKSPACE_LINE, stripTaskMarkers, taskLine, undoMoveLine } from '@extension/storage';
 import type { GraphNode, InboxItem, Task, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
 import { sectionMarkdown } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
@@ -63,6 +63,8 @@ export interface BriefData {
   rollup?: string;
   // The user's current goals (identity/prompt.ts#goalLines), already "- " lines
   goals?: string[];
+  // Things a rule moved into a workspace since the last brief (docs/pm-desk.md, Part 3): told once, each with its Undo
+  moves?: { id: string; workspaceName: string; count: number }[];
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -284,6 +286,20 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
     : eventLines || 'Nothing on the calendar today.';
   sections.push(`**Today's calendar**\n${calendar}`);
 
+  // Sorted for you: each rule move said once, with an Undo the panel draws (src/storage/lib/workspaces/markers.ts)
+  const moves = (data.moves ?? []).filter(move => move.count > 0);
+  if (moves.length) {
+    taskSections.add(sections.length);
+    sections.push(
+      moves
+        .map(
+          move =>
+            `Moved ${move.count === 1 ? '1 thing' : `${move.count} things`} to ${plain(move.workspaceName, 60)}.\n${undoMoveLine(move.id)}`,
+        )
+        .join('\n\n'),
+    );
+  }
+
   const waiting = waitingItems(data).map(item => {
     const title = plain(item.title, 80);
     switch (item.kind) {
@@ -309,6 +325,8 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
   for (const group of briefGroups(data)) {
     // This section keeps its own markers, so everything else in it is cleared of them here
     const parts = [`**${stripTaskMarkers(plain(group.name, 60))}**`];
+    // The button that opens the sheet (Part 3): under the group of things that sit in no workspace
+    if (group.workspaceId === null) parts.push(MAKE_WORKSPACE_LINE);
     if (group.tasks.length) {
       const lines = group.tasks.map(task => taskLine(task, taskText(task)));
       if (group.more > 0) lines.push(`- …and ${group.more} more on the Tasks page`);

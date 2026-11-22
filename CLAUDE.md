@@ -51,6 +51,10 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Rounds and check-ins: `src/background/rounds` (`plan.ts` holds the clock rules and the "what changed"
   arithmetic; the tick does one round or one offer). Rounds only read; an offer starts nothing until the user
   approves it in the Inbox. The state is `roundsStore` (`storage.local`).
+- Workspaces made and sorted (`docs/pm-desk.md` Part 3): `src/background/workspaces` (`rules.ts` decides, `place.ts` moves and
+  undoes, `sort.ts` is the pass; plain code, a light model only suggests names and guesses) and `src/side-panel/workspaces`.
+  Every writer of a chat's, meeting's, knowledge item's or task's `workspaceId` also writes `workspaceSetBy`; anything `'avi'`
+  is never moved except by his own click. Moves and offers are kept in `storage.local` (`workspacePlacement`), not Dexie.
 - Nothing may send, post, submit, delete, publish, buy or change permissions without passing `reviewAction` in
   `src/background/gate/review.ts`. A new action that can do any of these must call it.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in

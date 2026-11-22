@@ -11533,5 +11533,166 @@
   },
   "people_from_avi": {
     "message": "you"
+  },
+  "workspaces_label": {
+    "message": "Workspaces"
+  },
+  "workspaces_make_button": {
+    "message": "Make a workspace for these"
+  },
+  "workspaces_sheet_title": {
+    "message": "Make a workspace"
+  },
+  "workspaces_sheet_loading": {
+    "message": "Looking at what is in No workspace…"
+  },
+  "workspaces_sheet_thinking": {
+    "message": "Thinking of a name…"
+  },
+  "workspaces_sheet_name": {
+    "message": "Name"
+  },
+  "workspaces_sheet_keywords": {
+    "message": "Keywords (separate with commas)"
+  },
+  "workspaces_sheet_keywordsExample": {
+    "message": "for example: launch, pricing"
+  },
+  "workspaces_sheet_moves": {
+    "message": "What moves in (all ticked)"
+  },
+  "workspaces_sheet_empty": {
+    "message": "Nothing is in No workspace right now. You can still make an empty workspace."
+  },
+  "workspaces_sheet_save": {
+    "message": "Make workspace (moves $COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_close": {
+    "message": "Close"
+  },
+  "workspaces_kind_task": {
+    "message": "Task"
+  },
+  "workspaces_kind_thread": {
+    "message": "Chat"
+  },
+  "workspaces_kind_meeting": {
+    "message": "Meeting"
+  },
+  "workspaces_kind_kb": {
+    "message": "Knowledge"
+  },
+  "workspaces_done_made": {
+    "message": "Made “$NAME$”. $COUNT$ moved in.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_done_skipped": {
+    "message": "$COUNT$ stayed where they are: they were placed or moved since.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_done_voice": {
+    "message": "Made the workspace “$NAME$”.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo": {
+    "message": "Undo"
+  },
+  "workspaces_undone": {
+    "message": "Undone."
+  },
+  "workspaces_undo_seconds": {
+    "message": "$SECONDS$ s left",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo_inbox": {
+    "message": "You can still undo this from the Inbox."
+  },
+  "workspaces_offer_looksLike": {
+    "message": "$COUNT$ in No workspace look like $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_wrong": {
+    "message": "$COUNT$ may belong in $NAME$ instead",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_move": {
+    "message": "Move $COUNT$ to $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_notNow": {
+    "message": "Not now"
+  },
+  "workspaces_offer_answered": {
+    "message": "Moved $COUNT$ to $NAME$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_moved": {
+    "message": "Moved to $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_offer_dismissed": {
+    "message": "Left where they are."
+  },
+  "workspaces_offer_nothing": {
+    "message": "Nothing was moved: they had changed since."
+  },
+  "workspaces_move_gone": {
+    "message": "That move is no longer on record."
   }
 }

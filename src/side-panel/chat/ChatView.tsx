@@ -148,7 +148,10 @@ function RunTrail({
                     {step.text}
                   </Shimmer>
                 ) : step.kind === 'plan' ? (
-                  <MessageResponse className="text-muted-foreground text-[13px]" taskIds={step.taskIds}>
+                  <MessageResponse
+                    className="text-muted-foreground text-[13px]"
+                    taskIds={step.taskIds}
+                    workspaceLines={step.workspaceLines}>
                     {step.text}
                   </MessageResponse>
                 ) : (
@@ -262,7 +265,9 @@ export default function ChatView({
               {turn.answer && (
                 <Message from="assistant">
                   <MessageContent>
-                    <MessageResponse taskIds={turn.answer.taskIds}>{turn.answer.content}</MessageResponse>
+                    <MessageResponse taskIds={turn.answer.taskIds} workspaceLines={turn.answer.workspaceLines}>
+                      {turn.answer.content}
+                    </MessageResponse>
                   </MessageContent>
                   <MessageActions className={speakingThis ? 'h-7 opacity-100' : undefined}>
                     <CopyButton text={stripTaskMarkers(turn.answer.content)} />

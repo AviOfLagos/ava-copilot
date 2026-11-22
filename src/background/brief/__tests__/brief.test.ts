@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseTaskLine } from '@extension/storage';
+import {
+  MAKE_WORKSPACE_LINE,
+  parseTaskLine,
+  splitWorkspaceLines,
+  stripTaskMarkers,
+  undoMoveLine,
+} from '@extension/storage';
 import type { GraphNode, Task, ThreadRecord, Workspace } from '@extension/storage';
 import { briefDue, briefGroups, briefMarkdown, briefTaskIds, priorityLines, todaysEvents } from '../brief';
 import type { BriefData } from '../brief';
@@ -189,5 +195,72 @@ describe("the brief's task lists", () => {
       [],
     );
     expect(text.split('\n').map(parseTaskLine).filter(Boolean)).toHaveLength(1);
+  });
+});
+
+describe("the brief's workspace lines (docs/pm-desk.md, Part 3)", () => {
+  const workspaces = [workspace('ws-a', 'Orchid Labs')];
+
+  it('puts the "Make a workspace" button under "No workspace", and nowhere else', () => {
+    const text = briefMarkdown(data({ workspaces, tasks: [task('Loose end', null), task('Orchid thing', 'ws-a')] }));
+    const parts = splitWorkspaceLines(text);
+    expect(parts.filter(part => part.kind === 'make')).toHaveLength(1);
+    const lines = text.split('\n');
+    const at = lines.indexOf(MAKE_WORKSPACE_LINE);
+    expect(lines[at - 2]).toBe('**No workspace**');
+    expect(text.indexOf('**Orchid Labs**')).toBeLessThan(text.indexOf('**No workspace**'));
+  });
+
+  it('has no button when nothing sits in no workspace', () => {
+    expect(briefMarkdown(data({ workspaces, tasks: [task('Orchid thing', 'ws-a')] }))).not.toContain('^ws_make');
+  });
+
+  it('says a rule move once, with its Undo, and says nothing when there is none', () => {
+    const id = 'wsm_abcdefghij';
+    const text = briefMarkdown(
+      data({
+        workspaces,
+        moves: [
+          { id, workspaceName: 'Tech Fest', count: 3 },
+          { id: 'wsm_zzzzzzzzzz', workspaceName: 'Harbor', count: 1 },
+        ],
+      }),
+    );
+    expect(text).toContain('Moved 3 things to Tech Fest.');
+    expect(text).toContain('Moved 1 thing to Harbor.');
+    expect(splitWorkspaceLines(text).filter(part => part.kind === 'undo')).toEqual([
+      { kind: 'undo', moveId: id },
+      { kind: 'undo', moveId: 'wsm_zzzzzzzzzz' },
+    ]);
+    expect(briefMarkdown(data({ workspaces, moves: [] }))).not.toContain('Moved');
+    expect(briefMarkdown(data({ workspaces, moves: [{ id, workspaceName: 'Tech Fest', count: 0 }] }))).not.toContain(
+      'Moved',
+    );
+  });
+
+  it('keeps the lines the code wrote and takes out ones a name or a model slipped in', () => {
+    const text = briefMarkdown(
+      data({
+        workspaces,
+        tasks: [task('Loose end', null)],
+        goals: [`- Grow\n${undoMoveLine('wsm_aaaaaaaaaa')}`],
+        rollup: `Orchid is busy\n${MAKE_WORKSPACE_LINE}`,
+      }),
+      [`Call Ada\n${MAKE_WORKSPACE_LINE}`],
+    );
+    // Only the group's own button and none of the ones in the goals, the roll-up or the priorities
+    expect(splitWorkspaceLines(text).filter(part => part.kind !== 'markdown')).toEqual([{ kind: 'make' }]);
+  });
+
+  it('never goes out as text: voice, WhatsApp and a model read it without the lines', () => {
+    const text = briefMarkdown(
+      data({
+        workspaces,
+        tasks: [task('Loose end', null)],
+        moves: [{ id: 'wsm_abcdefghij', workspaceName: 'Harbor', count: 2 }],
+      }),
+    );
+    expect(stripTaskMarkers(text)).not.toContain('^ws_');
+    expect(stripTaskMarkers(text)).toContain('Moved 2 things to Harbor.');
   });
 });

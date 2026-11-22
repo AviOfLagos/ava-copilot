@@ -11533,5 +11533,166 @@
   },
   "people_from_avi": {
     "message": "você"
+  },
+  "workspaces_label": {
+    "message": "Espaços de trabalho"
+  },
+  "workspaces_make_button": {
+    "message": "Criar um espaço de trabalho para estes"
+  },
+  "workspaces_sheet_title": {
+    "message": "Criar um espaço de trabalho"
+  },
+  "workspaces_sheet_loading": {
+    "message": "Vendo o que está em Sem espaço de trabalho…"
+  },
+  "workspaces_sheet_thinking": {
+    "message": "Pensando em um nome…"
+  },
+  "workspaces_sheet_name": {
+    "message": "Nome"
+  },
+  "workspaces_sheet_keywords": {
+    "message": "Palavras-chave (separe com vírgulas)"
+  },
+  "workspaces_sheet_keywordsExample": {
+    "message": "por exemplo: lançamento, preços"
+  },
+  "workspaces_sheet_moves": {
+    "message": "O que vai para lá (tudo marcado)"
+  },
+  "workspaces_sheet_empty": {
+    "message": "Não há nada em Sem espaço de trabalho agora. Você ainda pode criar um espaço vazio."
+  },
+  "workspaces_sheet_save": {
+    "message": "Criar espaço de trabalho (move $COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_close": {
+    "message": "Fechar"
+  },
+  "workspaces_kind_task": {
+    "message": "Tarefa"
+  },
+  "workspaces_kind_thread": {
+    "message": "Conversa"
+  },
+  "workspaces_kind_meeting": {
+    "message": "Reunião"
+  },
+  "workspaces_kind_kb": {
+    "message": "Conhecimento"
+  },
+  "workspaces_done_made": {
+    "message": "“$NAME$” criado. $COUNT$ movidos para lá.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_done_skipped": {
+    "message": "$COUNT$ ficaram onde estão: foram colocados ou movidos desde então.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_done_voice": {
+    "message": "Espaço de trabalho “$NAME$” criado.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo": {
+    "message": "Desfazer"
+  },
+  "workspaces_undone": {
+    "message": "Desfeito."
+  },
+  "workspaces_undo_seconds": {
+    "message": "$SECONDS$ s restantes",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo_inbox": {
+    "message": "Você ainda pode desfazer isso pela Caixa de entrada."
+  },
+  "workspaces_offer_looksLike": {
+    "message": "$COUNT$ em Sem espaço de trabalho parecem ser de $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_wrong": {
+    "message": "$COUNT$ talvez pertençam a $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_move": {
+    "message": "Mover $COUNT$ para $NAME$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_notNow": {
+    "message": "Agora não"
+  },
+  "workspaces_offer_answered": {
+    "message": "$COUNT$ movidos para $NAME$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_moved": {
+    "message": "Movidos para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_offer_dismissed": {
+    "message": "Deixados onde estão."
+  },
+  "workspaces_offer_nothing": {
+    "message": "Nada foi movido: eles mudaram desde então."
+  },
+  "workspaces_move_gone": {
+    "message": "Esse movimento não está mais registrado."
   }
 }

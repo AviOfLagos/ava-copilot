@@ -11533,5 +11533,166 @@
   },
   "people_from_avi": {
     "message": "你"
+  },
+  "workspaces_label": {
+    "message": "工作區"
+  },
+  "workspaces_make_button": {
+    "message": "為這些建立工作區"
+  },
+  "workspaces_sheet_title": {
+    "message": "建立工作區"
+  },
+  "workspaces_sheet_loading": {
+    "message": "正在查看「無工作區」中的項目…"
+  },
+  "workspaces_sheet_thinking": {
+    "message": "正在想名稱…"
+  },
+  "workspaces_sheet_name": {
+    "message": "名稱"
+  },
+  "workspaces_sheet_keywords": {
+    "message": "關鍵字（以逗號分隔）"
+  },
+  "workspaces_sheet_keywordsExample": {
+    "message": "例如：發表, 定價"
+  },
+  "workspaces_sheet_moves": {
+    "message": "要移入的項目（預設全選）"
+  },
+  "workspaces_sheet_empty": {
+    "message": "目前「無工作區」中沒有項目。你仍可建立一個空的工作區。"
+  },
+  "workspaces_sheet_save": {
+    "message": "建立工作區（移入 $COUNT$ 項）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_close": {
+    "message": "關閉"
+  },
+  "workspaces_kind_task": {
+    "message": "任務"
+  },
+  "workspaces_kind_thread": {
+    "message": "對話"
+  },
+  "workspaces_kind_meeting": {
+    "message": "會議"
+  },
+  "workspaces_kind_kb": {
+    "message": "知識"
+  },
+  "workspaces_done_made": {
+    "message": "已建立「$NAME$」。移入 $COUNT$ 項。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_done_skipped": {
+    "message": "有 $COUNT$ 項維持原位：之後已被放置或移動。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_done_voice": {
+    "message": "已建立工作區「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo": {
+    "message": "復原"
+  },
+  "workspaces_undone": {
+    "message": "已復原。"
+  },
+  "workspaces_undo_seconds": {
+    "message": "剩下 $SECONDS$ 秒",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_undo_inbox": {
+    "message": "你仍可從收件匣復原。"
+  },
+  "workspaces_offer_looksLike": {
+    "message": "「無工作區」中有 $COUNT$ 項看起來屬於「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_wrong": {
+    "message": "有 $COUNT$ 項可能應該放在「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_move": {
+    "message": "將 $COUNT$ 項移到「$NAME$」",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_notNow": {
+    "message": "現在不要"
+  },
+  "workspaces_offer_answered": {
+    "message": "已將 $COUNT$ 項移到「$NAME$」。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspaces_offer_moved": {
+    "message": "已移到「$NAME$」。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspaces_offer_dismissed": {
+    "message": "維持原位。"
+  },
+  "workspaces_offer_nothing": {
+    "message": "沒有移動任何項目：它們之後已有變動。"
+  },
+  "workspaces_move_gone": {
+    "message": "這次移動已不在記錄中。"
   }
 }

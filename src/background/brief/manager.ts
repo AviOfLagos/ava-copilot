@@ -7,6 +7,7 @@ import {
   stripTaskMarkers,
   taskStore,
   threadStore,
+  workspacePlacement,
   workspaceStore,
 } from '@extension/storage';
 import { wrapUntrustedContent } from '../agent/messages/utils';
@@ -35,6 +36,7 @@ import {
 import type { BriefData, BriefSource, SourceState, WaitingRun } from './brief';
 import type { InboxItem } from '@extension/storage';
 import { toneLine } from '../personalities/prompt';
+import { sortNow } from '../workspaces/run';
 import { loadIdentityContext } from '../identity/context';
 import { briefContext, goalLines } from '../identity/prompt';
 
@@ -127,6 +129,9 @@ export class MorningBrief {
 
   private async build(notify: boolean): Promise<string> {
     const now = Date.now();
+    // Things in no workspace that a rule can place are placed first, so this brief lists them where they are now and
+    // says so (docs/pm-desk.md, Part 3). No model is asked here: the periodic pass does the guessing
+    await sortNow({ guess: false });
     // Every source is read on its own, and one that cannot be read is named in the brief: a failed read never
     // turns into "nothing" (docs/growth-team.md, Part 5a)
     const sources: BriefSource[] = [];
@@ -176,6 +181,10 @@ export class MorningBrief {
     const tasks = await read(t('brief_source_tasks'), () => taskStore.list({ status: 'open' }), []);
     // Who the brief is for and what they are working towards (all workspaces: the brief covers every one)
     const identity = await loadIdentityContext(null);
+    const moves = await workspacePlacement
+      .unreportedRuleMoves()
+      .then(list => list.map(move => ({ id: move.id, workspaceName: move.workspaceName, count: move.items.length })))
+      .catch(() => []);
     const data: BriefData = {
       now,
       events: calendar.events,
@@ -211,6 +220,7 @@ export class MorningBrief {
         .then(entries => rollupMarkdown(entries, { actions: false }))
         .catch(() => ''),
       goals: goalLines(identity),
+      moves,
     };
 
     let priorities: string[] = [];
@@ -241,7 +251,9 @@ export class MorningBrief {
     const day = new Date(now).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     const thread = await threadStore.create({ title: t('brief_title', [day]), tags: ['brief'] });
     // The brief vouches for the task lines it wrote: only those get a live checkbox
-    await threadStore.addMessage(thread.id, 'planner', text, { taskIds: briefTaskIds(data) });
+    await threadStore.addMessage(thread.id, 'planner', text, { taskIds: briefTaskIds(data), workspaceLines: true });
+    // Each rule move is told once
+    await workspacePlacement.markReported(moves.map(move => move.id)).catch(() => undefined);
     await briefSettingsStore.updateSettings({ lastDay: localDate(now), lastThreadId: thread.id });
 
     if (notify) {
