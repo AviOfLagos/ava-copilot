@@ -7,14 +7,14 @@ This file is also the source of the [changelog page](https://ava.nexprove.com/ch
 built from it, so the two cannot drift. To add an entry, write it here. The format is fixed so the site can read it:
 
 - `## <dates> · <label>` starts a week or a release. A label that starts with `next release` marks work that is
-  merged but not in the download yet (everything after 0.2.3, released 25 October).
+  merged but not in the download yet (everything after 0.2.4, released 22 November).
 - `### <theme>` groups the lines.
 - `- <what changed for the user>. ([#123](https://github.com/AviOfLagos/ava-copilot/pull/123))` is one line.
   Keep it to one line, no nested lists.
 
-## 16–22 November 2026 · next release
+## 16–22 November 2026 · release 0.2.4
 
-Merged, and not in the downloadable build yet. The numbered version is chosen when the release is cut.
+In the download from 0.2.4, released 22 November.
 
 ### Your tasks
 
@@ -82,9 +82,38 @@ Merged, and not in the downloadable build yet. The numbered version is chosen wh
 
 - Ava's answers reach WhatsApp and the panel again: a bug that replaced every answer with “Session with ID … not found” is fixed, and messages that arrived while Ava's WhatsApp line was down are answered when it comes back (unless they are over 12 hours old, so a stale instruction is not acted on). ([#51](https://github.com/AviOfLagos/ava-copilot/pull/51))
 
-## 9–15 November 2026 · next release
+### Calls and follow-ups
 
-Merged, and not in the downloadable build yet.
+- Say “Ava, please note a task for <name>: <what>” during a call and it goes onto the task board for that person; after the call Ava lists the tasks, asks if anything is missing, and can send each person their tasks. [#150](https://github.com/AviOfLagos/ava-copilot/pull/150)
+- Follow-ups: for each person, what they did last, what they are on now and what is next. Ava tells you who to chase and drafts the message for you to copy; nothing is sent for you. [#151](https://github.com/AviOfLagos/ava-copilot/pull/151)
+
+### Ava knows her tools
+
+- One list of every tool Ava has, checked by a test, so she never claims a tool she does not have or forgets one she does. [#154](https://github.com/AviOfLagos/ava-copilot/pull/154)
+- Each place Ava works (WhatsApp, agents, routines, the panel) gets only the tools that work there, so “what can you do?” has a true answer everywhere. [#158](https://github.com/AviOfLagos/ava-copilot/pull/158)
+- Chats can now read your calendar, the brief, the Inbox and your workspaces, which only voice could do before. [#161](https://github.com/AviOfLagos/ava-copilot/pull/161)
+- Ava can look up facts she stored about you, not only the few that fit in the prompt. [#163](https://github.com/AviOfLagos/ava-copilot/pull/163)
+- Voice Ava no longer says she cannot reach your chats or memory: when a model refuses tools, she says so instead of answering blind. [#155](https://github.com/AviOfLagos/ava-copilot/pull/155)
+
+### Safety and control
+
+- Once a chat has read a web page, an email or someone else's message, no saved “Allow every time” rule answers in it: you always see the card. [#171](https://github.com/AviOfLagos/ava-copilot/pull/171)
+- “Allow every time” now also covers Drive, Meet voice, the Inbox and budget approvals. [#156](https://github.com/AviOfLagos/ava-copilot/pull/156)
+- A retry never does the same thing twice: handing work to an agent, running an agent or a routine, and speaking in a meeting each happen once. [#160](https://github.com/AviOfLagos/ava-copilot/pull/160)
+- Hosted tracing to Suture is a setting under Settings › Privacy, off by default, and message text is never sent unless you also switch that on. [#152](https://github.com/AviOfLagos/ava-copilot/pull/152)
+
+### Voice, brief and workspaces
+
+- Ava waits longer before answering, with a **Patience** setting, so she interrupts less. [#164](https://github.com/AviOfLagos/ava-copilot/pull/164)
+- Settings say which speech recogniser is listening, and that the local ones understand English only. [#167](https://github.com/AviOfLagos/ava-copilot/pull/167)
+- The morning brief names a calendar it cannot read, and Ava asks again for Mac Calendar access while it is missing; the setup checklist shows it too. [#153](https://github.com/AviOfLagos/ava-copilot/pull/153)
+- Every workspace chat starts with a short card about that workspace. [#162](https://github.com/AviOfLagos/ava-copilot/pull/162)
+- Long runs stay fast: old action results are cleared early and the chat is compacted sooner. [#159](https://github.com/AviOfLagos/ava-copilot/pull/159)
+- Ava Keys can list your keys by name and show their status, never the values. [#165](https://github.com/AviOfLagos/ava-copilot/pull/165)
+
+## 9–15 November 2026 · release 0.2.4
+
+In the download from 0.2.4, released 22 November.
 
 ### Licence and setup
 
@@ -95,9 +124,9 @@ Merged, and not in the downloadable build yet.
 - The setup step now says what it is: **Get a code to text Ava**, with no scan needed for it. ([#40](https://github.com/AviOfLagos/ava-copilot/pull/40))
 - **Relink** works after WhatsApp signs Ava out: the dead login is cleared, so pairing a fresh code is possible again without losing your phone chat or settings. ([#50](https://github.com/AviOfLagos/ava-copilot/pull/50))
 
-## 26 October – 1 November 2026 · next release
+## 26 October – 1 November 2026 · release 0.2.4
 
-Merged, and not in the downloadable build yet.
+In the download from 0.2.4, released 22 November.
 
 ### WhatsApp
 
