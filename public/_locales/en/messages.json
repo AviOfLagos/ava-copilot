@@ -12354,5 +12354,198 @@
   },
   "followups_report_saved": {
     "message": "Noted."
+  },
+  "calltasks_you": {
+    "message": "You"
+  },
+  "calltasks_wa_allTitle": {
+    "message": "Tasks from the call"
+  },
+  "calltasks_wa_recordings": {
+    "message": "Screen recordings:"
+  },
+  "calltasks_draft_notYet": {
+    "message": "Press \"Looks right\" first: nothing goes anywhere before that."
+  },
+  "calltasks_draft_nobody": {
+    "message": "That person is no longer on this call's list."
+  },
+  "calltasks_draft_noTab": {
+    "message": "Open WhatsApp Web in a tab and sign in, then press this again."
+  },
+  "calltasks_draft_loggedOut": {
+    "message": "WhatsApp Web is not signed in. Scan its code with your phone, then press this again."
+  },
+  "calltasks_draft_noChat": {
+    "message": "No WhatsApp chat named \"$NAME$\" was found. Rename the person on the People page to the name WhatsApp shows.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_wrongChat": {
+    "message": "WhatsApp opened \"$SHOWN$\", not \"$NAME$\", so nothing was typed.",
+    "placeholders": {
+      "shown": {
+        "content": "$1",
+        "example": "Ada Obi"
+      },
+      "name": {
+        "content": "$2",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_greeting": {
+    "message": "Hi $NAME$, from our call:",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_noBox": {
+    "message": "The message box of that chat was not found."
+  },
+  "calltasks_edit_words": {
+    "message": "What is to be done"
+  },
+  "calltasks_edit_owner": {
+    "message": "For whom"
+  },
+  "calltasks_save": {
+    "message": "Save"
+  },
+  "calltasks_cancel": {
+    "message": "Cancel"
+  },
+  "calltasks_edit": {
+    "message": "Edit"
+  },
+  "calltasks_edit_for": {
+    "message": "Edit \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_discard": {
+    "message": "Discard"
+  },
+  "calltasks_discard_for": {
+    "message": "Discard \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_status_captions": {
+    "message": "Spoken tasks are on: say \"Ava, note a task for Ada: …\". Heard from your own caption lines."
+  },
+  "calltasks_status_mic": {
+    "message": "Spoken tasks are on: say \"Ava, note a task for Ada: …\". Heard from your microphone, on this computer."
+  },
+  "calltasks_status_off_none": {
+    "message": "Spoken tasks are off for this call: there are no captions and no microphone of yours to listen to. Turn on captions in the call."
+  },
+  "calltasks_status_off_recogniser": {
+    "message": "Spoken tasks are off for this call: hearing your microphone needs a speech model on this computer (Settings, Voice). Or turn on captions in the call."
+  },
+  "calltasks_status_off_micDenied": {
+    "message": "Spoken tasks are off for this call: Chrome did not allow the microphone. Or turn on captions in the call."
+  },
+  "calltasks_status_off_mic": {
+    "message": "Spoken tasks are off for this call: notes are not using your microphone. Turn on captions in the call, or include your microphone in meeting notes."
+  },
+  "calltasks_status_off_marker": {
+    "message": "Spoken tasks are off for this call: the call's captions do not mark which lines are yours, so a guest's words could not be told from yours. Click the toolbar icon on the call's tab to record its sound with your microphone."
+  },
+  "calltasks_card_title": {
+    "message": "Task for $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_card_forYou": {
+    "message": "Task for you"
+  },
+  "calltasks_record_ask": {
+    "message": "Record the screen for this?"
+  },
+  "calltasks_yes": {
+    "message": "Yes"
+  },
+  "calltasks_no": {
+    "message": "No"
+  },
+  "calltasks_sent_sent": {
+    "message": "Sent to you on WhatsApp, ready to forward."
+  },
+  "calltasks_sent_queued": {
+    "message": "Waits for your quiet hours to end, then goes to you on WhatsApp."
+  },
+  "calltasks_sent_off": {
+    "message": "Not sent: task messages are off in WhatsApp settings."
+  },
+  "calltasks_sent_empty": {
+    "message": "Not sent: none of these tasks is open any more."
+  },
+  "calltasks_sent_done": {
+    "message": "Already sent to you on WhatsApp."
+  },
+  "calltasks_sent_failed": {
+    "message": "Not sent: WhatsApp could not be reached. It is not tried again on its own."
+  },
+  "calltasks_draft": {
+    "message": "Draft a message to $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_drafted": {
+    "message": "Typed into $NAME$'s chat in WhatsApp Web. Read it and press send there.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_list_title": {
+    "message": "Tasks from this call"
+  },
+  "calltasks_shareSkipped": {
+    "message": "Some recordings were not shared: $REASONS$",
+    "placeholders": {
+      "reasons": {
+        "content": "$1",
+        "example": "Not in Google Drive."
+      }
+    }
+  },
+  "calltasks_confirm_duringCall": {
+    "message": "The call is still being noted. Press this once it has ended."
+  },
+  "calltasks_confirmed": {
+    "message": "Passed on. Each recording in Drive now has a link anyone with it can open."
+  },
+  "calltasks_looksRight": {
+    "message": "Looks right"
+  },
+  "calltasks_looksRight_hint": {
+    "message": "Nothing is sent and no recording is shared until you press this."
   }
 }

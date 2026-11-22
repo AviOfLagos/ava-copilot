@@ -1,5 +1,10 @@
 # Ava Copilot — Roadmap (logged 2026-10-09)
 
+**Status, 2026-11-22.** This is the October list. What has been built since, week by week, is in
+[CHANGELOG.md](../CHANGELOG.md); the later plans are [pm-desk.md](pm-desk.md) (tasks, people, WhatsApp, recordings,
+follow-ups) and [growth-team.md](growth-team.md) (tabs, retries, rounds, the growth agents). What is public is on
+https://ava.nexprove.com/roadmap.
+
 What Avi asked for on 2026-10-09, in build order. Each item gets ticked and dated in `docs/task.md` when built.
 Rules at the bottom apply to every item and are never relaxed by a spoken or typed instruction.
 

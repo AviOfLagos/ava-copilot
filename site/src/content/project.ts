@@ -19,6 +19,7 @@ export const REPO = 'https://github.com/AviOfLagos/ava-copilot';
 export const projectLinks = {
   features: '/features',
   roadmap: '/roadmap',
+  changelog: '/changelog',
   contribute: '/contribute',
   donate: '/donate',
   repo: REPO,
@@ -35,8 +36,13 @@ export const projectLinks = {
 
 export interface Feature {
   name: string;
+  /** What it is. */
   body: string;
   status: Status;
+  /** What you do to use it. */
+  you?: string;
+  /** What tells you it is on. */
+  on?: string;
 }
 
 export interface FeatureGroup {
@@ -48,11 +54,11 @@ export interface FeatureGroup {
 
 export const features = {
   title: `Every feature of ${PRODUCT} — what ships today and what is next`,
-  description: `The full list of what ${PRODUCT} does: it works on real pages, talks, takes meeting notes, remembers, runs routines and agents, listens around you, and works with any model. Each feature is marked live, preview or planned.`,
+  description: `The full list of what ${PRODUCT} does: it works in your browser and tabs, keeps your tasks and the people in them, takes meeting notes, talks, answers on WhatsApp, runs a team of agents and works with any model. Each feature is marked live, preview or planned.`,
   ogAlt: `${PRODUCT}: every feature, marked live, preview or planned.`,
   breadcrumb: 'Features',
   heading: 'Everything it does.',
-  lede: `Each feature is marked as it really is today. ${ASSISTANT} is the assistant you talk to; ${PRODUCT} is the extension she lives in.`,
+  lede: `Each feature is marked as it really is in the code today. ${ASSISTANT} is the assistant you talk to; ${PRODUCT} is the extension she lives in. Some of what is below is merged but arrives with the next download: the changelog says which.`,
   legend: 'What the marks mean',
   legendItems: [
     { status: 'live' as Status, text: 'In the current build.' },
@@ -63,8 +69,8 @@ export const features = {
   groups: [
     {
       id: 'browser',
-      title: 'Works on real pages',
-      lede: 'Ask in plain words. It plans, clicks and types on the pages you already use, and shows every step.',
+      title: 'Your browser and tabs',
+      lede: 'Ask in plain words. It plans, clicks and types on the pages you already use, in the tabs you already have open, and shows every step.',
       items: [
         {
           name: 'Browser agent',
@@ -88,6 +94,27 @@ export const features = {
         },
         { name: 'Stop at any step', body: 'One button stops a chat; another stops them all.', status: 'live' },
         {
+          name: 'Knows every open tab',
+          body: 'It is told which sites you have open, in every window, and works in the right tab instead of opening a new one. A tab another task is using is never taken, and private windows are never listed.',
+          status: 'live',
+          you: 'Ask for something on a site you already have open, such as “Go to Facebook and reply to Jo”.',
+          on: 'The chat says “Using the facebook.com tab you already have open.”',
+        },
+        {
+          name: 'A closed tab comes back',
+          body: 'Close the tab a task is working in and it is opened again on the same page, and the task carries on. If it was closed in the middle of a form or a send, nothing is reopened: the task waits to try again and checks what already happened.',
+          status: 'live',
+          you: 'Nothing. Press Stop if you meant to end it.',
+          on: 'The next look at the page says the tab was closed and reopened.',
+        },
+        {
+          name: 'Tries again, then tells you',
+          body: 'A task that fails for a temporary reason (a page that would not load, the network, a busy model) is tried again after 1, 5 and 15 minutes; if it still fails, one Inbox item and one WhatsApp line say what is wrong. A failure that needs you (a model key) or cannot be done (a blocked site) is not retried: it gets one Inbox item saying why.',
+          status: 'live',
+          you: 'Nothing, unless it asks. Retry or Stop at any time.',
+          on: 'The chat says “Trying again in 1 min (try 1 of 3)”.',
+        },
+        {
           name: 'Hidden instructions ignored',
           body: 'Text on a page that tries to give it orders is treated as data, never as a request.',
           status: 'live',
@@ -102,7 +129,7 @@ export const features = {
     {
       id: 'gate',
       title: 'The gate',
-      lede: 'Nothing is sent, posted, bought, deleted or committed without your click. No setting turns that off.',
+      lede: 'Nothing is sent, posted, bought, deleted or committed without your click: on the card, or on a rule you saved with a click. Paying, deleting and giving access are never remembered.',
       items: [
         {
           name: 'Confirm before it commits',
@@ -120,6 +147,96 @@ export const features = {
           status: 'live',
         },
         { name: 'Drafts, not sends', body: 'Email and Slack replies are drafts you send yourself.', status: 'live' },
+        {
+          name: 'Allow once, or every time',
+          body: 'The confirm card has three buttons: Cancel, Allow once and Allow every time. “Every time” saves a rule for that kind of step on that site. Paying, deleting and giving access never get a rule.',
+          status: 'live',
+          you: 'Hold the button you want. Settings › Allowed every time lists each rule, how often it was used, and a Remove button.',
+          on: 'The chat shows “Allowed every time: …” whenever a rule is used, so it is never silent.',
+        },
+        {
+          name: 'Nothing runs twice',
+          body: 'Every step that sends, posts, submits, grants or creates is written down before it runs. After a retry or a restart, a step that already happened, or may have, is not run again unless you click to allow it.',
+          status: 'live',
+          you: 'Read the card and decide.',
+          on: 'The confirm card says the step may be a repeat, and why.',
+        },
+        {
+          name: 'Spreadsheets without a click per cell',
+          body: 'Typing into Google Sheets or any grid no longer stops for every cell, and a cell that says “Send” is not a send button. Excel Online still asks.',
+          status: 'live',
+        },
+      ],
+    },
+    {
+      id: 'tasks',
+      title: 'Your tasks and people',
+      lede: 'What was agreed lands on one board and stays ticked wherever you see it. Ava learns who is who, one workspace at a time, and asks when she is not sure.',
+      items: [
+        {
+          name: 'One board for every task',
+          body: 'Action items from your calls and tasks found in your chats go onto one board, each with an owner and a due date. A task said twice in nearly the same words is kept once. A web page never makes a task.',
+          status: 'live',
+          you: 'Nothing: they arrive. Add your own on the Tasks page.',
+          on: 'Tasks, in the menu after Inbox.',
+        },
+        {
+          name: 'Tick it anywhere',
+          body: 'Tick a box in the morning brief, a meeting note or a workspace summary and that one task is done everywhere. Only boxes Ava made herself are live. The brief shows one list per workspace: the five due first, then “…and N more on the Tasks page”.',
+          status: 'live',
+          you: 'Tick the box.',
+          on: 'It shows done on the Tasks page and in the note it came from; untick it there and the brief follows.',
+        },
+        {
+          name: 'The Tasks page',
+          body: 'Group by workspace or by person and filter by open, done or dropped. Add, edit, give to someone, move, merge or drop a task, or close everything older than two weeks (it is dropped, and can be reopened).',
+          status: 'live',
+        },
+        {
+          name: 'By voice or chat',
+          body: 'Add, finish, reopen, list, give and move tasks in your own words. When several tasks fit what you said, she lists them and asks which.',
+          status: 'live',
+          you: 'Say or type “Ava, mark the login task done”.',
+        },
+        {
+          name: 'Names from your tools',
+          body: 'Ava learns who is who from Google Meet (who is in the call), calendar invites, Gmail senders, Slack direct messages, WhatsApp chats and GitHub. A name never links an email address on its own, and nothing is shared between workspaces.',
+          status: 'live',
+        },
+        {
+          name: 'Who’s who cards',
+          body: 'After a call, and once a day at 17:30, a card asks short questions: is this the same person as another name you have seen? Each answer is kept for that workspace and the question does not come back.',
+          status: 'live',
+          you: 'Answer yes, same as another name, someone else, new person, or not a person.',
+          on: 'The card in the Inbox, and under the meeting’s note.',
+        },
+        {
+          name: 'The People page',
+          body: 'Every person by workspace, with a “To sort” tab for names she is unsure of. Edit, merge or remove them.',
+          status: 'live',
+        },
+        {
+          name: 'Tell her about a person',
+          body: 'A note about someone, said or typed in your own words, is kept with that person. A chat started by an agent, a routine or the brief cannot add one.',
+          status: 'live',
+        },
+        {
+          name: 'Screen recording for a task',
+          body: 'Record a tab, a window or the whole screen for a task. It is saved to Google Drive (when the Drive connector is connected) and kept private until you press Share, or to a folder on your Mac through Ava Brain, or to Downloads. Stop sharing takes the link away again. The recording stops if you close the panel.',
+          status: 'preview',
+          you: 'Press Record screen on the task. Choosing a window or a whole screen asks you to confirm first.',
+          on: 'A red mark, a timer and Stop in the panel while it records.',
+        },
+        {
+          name: 'Note a task on a call',
+          body: 'Say “Ava, note a task for Sam” in a call and it is on the board.',
+          status: 'planned',
+        },
+        {
+          name: 'Who to chase',
+          body: 'Ava tells you who is due a follow-up and drafts the message for you to send.',
+          status: 'planned',
+        },
       ],
     },
     {
@@ -143,6 +260,30 @@ export const features = {
           status: 'live',
         },
         { name: 'Dictation you can see', body: 'Speak into the chat box and watch the words arrive.', status: 'live' },
+        {
+          name: 'Words Ava mishears, written right',
+          body: 'Teach her the words she gets wrong and they are corrected in dictation, WhatsApp voice notes, meeting notes, voice conversations and listen mode. A real word is never changed on its own: a small chip asks first.',
+          status: 'live',
+          you: 'Say “when you hear Killon, write Quillon”, or add it in Settings › Voice › Vocabulary. Fix a word by hand after dictating and she offers to remember it.',
+          on: 'Changed words are underlined for a few seconds; click one to put it back.',
+        },
+        {
+          name: 'A typing box with room',
+          body: 'The box has a full-width row of its own and grows with what you write. An expand control opens it to most of the panel for long messages.',
+          status: 'live',
+          you: 'Press the expand control, or Escape to shrink it again.',
+        },
+        {
+          name: 'Voice settings per chat',
+          body: 'Each chat can set who hears, who speaks and the language. With a Gemini key, voice conversations, dictation and WhatsApp voice notes use Gemini by default and fall back to a recogniser on your computer; choose economy or a local recogniser to keep that audio on your computer.',
+          status: 'live',
+          you: 'The Voice control in the chat bar.',
+        },
+        {
+          name: 'Waits for the end of your sentence',
+          body: 'A thinking pause no longer ends your turn, and speech that is not meant for her, such as a radio across the room, is mostly ignored.',
+          status: 'live',
+        },
         {
           name: 'One conversation, typed or spoken',
           body: 'Switch between talking and typing in the same chat, with pictures and video.',
@@ -208,6 +349,17 @@ export const features = {
           status: 'live',
         },
         {
+          name: 'Who said what',
+          body: 'Reads who is in the call from Meet, and gives each stretch of audio its speaker by matching the captions by time. People you meet are offered to your People page.',
+          status: 'live',
+        },
+        {
+          name: 'Action items go to your board',
+          body: 'What was agreed becomes tasks with an owner and a due date, on the same board as everything else.',
+          status: 'live',
+          on: 'The note’s checkboxes tick the real task.',
+        },
+        {
           name: 'Call control',
           body: '“Leave the call” leaves quietly; “end the call” ends it for everyone, on your own words only.',
           status: 'live',
@@ -219,8 +371,50 @@ export const features = {
         },
         {
           name: 'Set up a call',
-          body: '“Set up a call with Tolu” creates it from the right workspace’s Google account.',
+          body: '“Set up a call with Sam” creates it from the right workspace’s Google account.',
           status: 'planned',
+        },
+      ],
+    },
+    {
+      id: 'whatsapp',
+      title: 'WhatsApp',
+      lede: 'Message Ava from your phone and she answers through your computer. Anything that sends, posts, buys or deletes still waits for your click.',
+      items: [
+        {
+          name: 'Message Ava',
+          body: 'She answers in your own “Message yourself” chat, or from a number of her own that only talks to you. It runs through Ava Brain on your Mac, so the Mac has to be on and your browser open. Every other chat is ignored.',
+          status: 'preview',
+          you: 'Pair Ava Brain, then Settings › WhatsApp › Link WhatsApp and scan the code. If Ava has a number of her own, text her the short code it shows.',
+          on: 'Settings › WhatsApp says when you last wrote and when she last answered. “Send a test message” checks it.',
+        },
+        {
+          name: 'Reads more than text',
+          body: 'Voice notes are written down on your computer, photos go to the model as pictures, and documents and links are read and saved to the workspace’s knowledge.',
+          status: 'preview',
+        },
+        {
+          name: 'Answers like a person',
+          body: 'A voice note back for a voice note, in the voice you chose. “typing…” while she works, 👍 when it takes a while and ✅ when the answer goes. Say “delete that” or “react 🔥 to that” and she does.',
+          status: 'preview',
+        },
+        {
+          name: 'Tasks on WhatsApp',
+          body: 'Send tasks and she sends your open ones as a numbered list. done 2 closes the second; undo 2 reopens it. tasks for a person or tasks in a workspace narrows the list, and task for a person: what adds one. A ✅ on a task message closes it.',
+          status: 'preview',
+          you: 'Type the command, or react.',
+          on: 'She confirms with the tasks struck through.',
+        },
+        {
+          name: 'Messages you first',
+          body: 'When a chat waits for your approval, meeting notes are ready, the brief is ready, a reminder or routine has a result, or a task list is ready (after a call, or your open tasks). Quiet hours hold all of these except approvals, and there is an hourly send limit.',
+          status: 'preview',
+          you: 'Choose what she may message you about, and the quiet hours, in Settings › WhatsApp.',
+        },
+        {
+          name: 'An unofficial client',
+          body: 'Ava uses an unofficial WhatsApp Web client on your Mac. WhatsApp can restrict a number that uses one, which is why it is a preview. If WhatsApp signs her out, Relink pairs a fresh code and keeps your settings.',
+          status: 'preview',
         },
       ],
     },
@@ -277,6 +471,26 @@ export const features = {
           status: 'live',
         },
         {
+          name: 'Make one in a click, or by voice',
+          body: 'Under “No workspace”, one button opens a sheet with a suggested name and keywords and a tick list of the chats, meetings, tasks and notes to move in. Or say “make a workspace called…”.',
+          status: 'live',
+          you: 'Press Make a workspace for these, check the list, confirm.',
+          on: 'A 30-second Undo in the sheet, and later in the Inbox.',
+        },
+        {
+          name: 'Sorted for you, by rule',
+          body: 'When two or more things in “No workspace” clearly belong to one workspace (its name, keywords, Google domain, or a person who belongs only there), they are moved. A guess is only offered in the Inbox, and anything you placed yourself is never moved except by your own click.',
+          status: 'live',
+          on: 'The next brief says “Moved 3 things to…” with an Undo.',
+        },
+        {
+          name: 'The product it sells',
+          body: 'A workspace can hold the facts of a product: who it is for, the problem, pricing, the repository, the budget and more. Agents may state only what is written there.',
+          status: 'live',
+          you: 'Workspaces › a workspace › Add the product this workspace sells.',
+          on: 'Anything nobody filled in reads “not set”, never a guess.',
+        },
+        {
           name: 'Created for you',
           body: 'A project that keeps coming up gets its own workspace; small things go to Misc until they grow.',
           status: 'planned',
@@ -290,8 +504,16 @@ export const features = {
       items: [
         {
           name: 'Morning brief',
-          body: 'Every morning: your calendar, open threads and what to do first, by workspace.',
+          body: 'Every morning: your calendar, open threads, one task list per workspace and what to do first. It says “not connected” for a source it could not read, instead of showing 0, and counts what is really waiting for you, each thing once.',
           status: 'live',
+          on: 'The brief ends with the sources it read and the ones it could not.',
+        },
+        {
+          name: 'Check-ups and offers',
+          body: 'With no instructions all day, Ava still does three read-only rounds (a product pulse, a mail check and stuck work) and leaves one short digest for each in the Inbox. After a quiet stretch she may make one offer, such as “Want me to sort your mail? 14 unread.” Nothing here sends, posts or grants anything.',
+          status: 'live',
+          you: 'Approve an offer, or decline it: she is quiet until tomorrow. Settings › General › Rounds and check-ins has the switch and each round’s times.',
+          on: 'Digests in the Inbox; at most two offers a day.',
         },
         {
           name: 'Routines',
@@ -312,6 +534,65 @@ export const features = {
           name: 'Skills',
           body: 'Playbooks for sites and tasks. After a task works, it offers to save the route as a skill.',
           status: 'live',
+        },
+      ],
+    },
+    {
+      id: 'team',
+      title: 'Your team of agents',
+      lede: 'Three agents that work for a product you sell. They plan the week, meet every morning and draft what needs saying. They draft; you decide. Nothing is posted or sent yet.',
+      items: [
+        {
+          name: 'Growth Lead',
+          body: 'Reads a product’s new customer feedback, ranks each item by a fixed rule, and leaves one issue per feedback in your Inbox. Nothing is filed on GitHub yet: an approved issue is held until the step that files it is built. Code refuses a summary that holds a customer’s email or phone number.',
+          status: 'preview',
+          you: 'Agents › Set up my team now › Growth team. Needs the product’s facts in a workspace.',
+          on: 'An issue such as “[P0] …” waits in the Inbox.',
+        },
+        {
+          name: 'Product Marketing Manager',
+          body: 'Ranks channels by the sign-ups each brought, suggests the cheapest ones not yet tested, and drafts outreach that waits for your tap. Code refuses addresses on the do-not-write list, personal mailboxes, more than 20 new people a day and a second follow-up.',
+          status: 'preview',
+          on: 'Every draft ends with who it is from and how to opt out; what nobody gave reads “not set”.',
+        },
+        {
+          name: 'Product Social Manager',
+          body: 'Plans the week’s posts and drafts posts and replies in a build-in-public voice. A number that neither the product’s facts nor its real numbers back up is refused, and so is any quote of four words or more.',
+          status: 'preview',
+        },
+        {
+          name: 'Weekly plan and daily standup',
+          body: 'Every Monday the Growth Lead sets one focus and up to three experiments. Every morning each agent writes a short note and the Lead sums them up, naming anything that drifted from the plan.',
+          status: 'preview',
+          you: 'Open “Growth standup” in the Inbox, or press Run today’s standup on the Growth Lead’s page.',
+          on: 'A team section in the morning brief, or “Standup did not run” and why.',
+        },
+        {
+          name: 'Approvals in one row',
+          body: 'An agent’s draft posts land in the Inbox as one row (“Approve all 3 drafts”). Spending, a new channel, a new account, a plan change, a new tool and anything that names a customer always ask you and can never become “every time”.',
+          status: 'live',
+        },
+        {
+          name: 'A budget kept by code',
+          body: 'The budget and the beta places are a ledger in code. A request past the budget is refused before it reaches you, and the sixth beta place in a week is refused even if you click yes on six at once.',
+          status: 'live',
+          on: 'The workspace shows what is spent and what is left.',
+        },
+        {
+          name: 'Real numbers, or “no reading”',
+          body: 'Ava reads a product’s sign-ups, waitlist, feedback and paying organisations from the product’s own API with plain code, every two hours. So far it is built against one product’s API. A number she could not read says “no reading” and why; it is never shown as 0.',
+          status: 'preview',
+          you: 'Paste the product’s API token in the workspace; it is kept in the vault.',
+        },
+        {
+          name: 'Three personalities',
+          body: 'Growth lead, Positioning and outreach, and Builder in public, in Settings › Personalities. They are inspired by public work and never speak as the person: a draft that names them is refused.',
+          status: 'live',
+        },
+        {
+          name: 'Sending and posting what you approve',
+          body: 'An approved draft is held. The step that posts or sends it is not built yet, and when it is, each one will still wait for your click.',
+          status: 'planned',
         },
       ],
     },
@@ -357,7 +638,17 @@ export const features = {
           body: 'Add one by its address, such as Buffer or Figma’s desktop server.',
           status: 'live',
         },
-        { name: 'WhatsApp', body: `Reads and drafts in WhatsApp Web, or through ${COMPANION}.`, status: 'preview' },
+        {
+          name: 'WhatsApp Web',
+          body: 'Reads which chats are unread in your open WhatsApp Web tab and drafts replies that wait for your click. To talk to Ava herself on WhatsApp, see the WhatsApp group.',
+          status: 'preview',
+        },
+        {
+          name: 'Google Drive for recordings',
+          body: 'Connect Google Drive and a task’s screen recordings are saved there, private until you press Share. Only tried so far against a stand-in for Google.',
+          status: 'preview',
+          you: 'Connectors › Google Drive.',
+        },
       ],
     },
     {
@@ -380,6 +671,25 @@ export const features = {
           body: 'Reaches the Mac’s Calendar and your Obsidian vault directly.',
           status: 'preview',
         },
+        {
+          name: 'Your WhatsApp line',
+          body: `Holds the link to WhatsApp and hands your messages to ${PRODUCT}. It answers only you.`,
+          status: 'preview',
+          you: 'Settings › WhatsApp, after pairing Ava Brain.',
+        },
+        {
+          name: 'Ava Keys',
+          body: 'A coding agent that speaks MCP (set up for Claude Code today) can ask Ava to run a command with your secrets. You approve each use with Touch ID, and the agent gets the output with every secret replaced by its name. Read the command before you approve it: it can still do anything with the secrets it is given.',
+          status: 'preview',
+          you: 'Needs a separate secrets vault on the Mac, set up by hand. Approve or deny each request when it appears.',
+          on: 'A Touch ID prompt that shows who is asking, why, and the exact command.',
+        },
+        {
+          name: 'Account switching for agents',
+          body: 'An agent can ask Ava which GitHub or Vercel account it is working as, and to switch to the right one. It uses the gh-switch and vercel-switch helper scripts, which are not part of Ava and must already be on the Mac. You get a notification on every change.',
+          status: 'preview',
+          on: 'A notification each time the account changes.',
+        },
         { name: 'Public installer', body: 'One command, like the extension’s.', status: 'planned' },
       ],
     },
@@ -391,6 +701,11 @@ export const features = {
         {
           name: 'No analytics',
           body: 'Nothing is measured or reported. Words go only to the model you chose.',
+          status: 'live',
+        },
+        {
+          name: 'Your work stays in your browser',
+          body: 'Tasks, people, vocabulary and workspaces are kept in your browser, one workspace at a time: a name or a task never carries over to another. Screen recordings go where you choose and are kept out of backups.',
           status: 'live',
         },
         {
@@ -418,8 +733,9 @@ export const features = {
   ] satisfies FeatureGroup[],
   principlesTitle: 'Rules that never bend',
   principles: [
-    'Nothing is sent, posted, bought, deleted or committed without your click.',
-    'Workspaces never mix: knowledge, accounts and drafts stay where the request was routed.',
+    'Nothing is sent, posted, bought, deleted or committed without your click. “Allow every time” is a click you made once, and it never covers paying, deleting or giving access.',
+    'Workspaces never mix: knowledge, accounts, people, tasks and drafts stay where the request was routed.',
+    'Agents draft; you decide. Spending, new accounts and anything that names a customer always ask.',
     'Code it writes runs in a sandbox until you approve it.',
     'No audio leaves your computer before the wake word, and ambient listening stays on it.',
     'Words go only to the model you chose. No analytics, ever.',
@@ -435,7 +751,7 @@ export interface RoadmapItem {
 
 export const roadmap = {
   title: `${PRODUCT} roadmap — what we are building next`,
-  description: `What is being built in ${PRODUCT} now, next and later: ambient listening that knows when to speak, posting through the gate, a Windows installer, a store listing and a desktop app.`,
+  description: `What is being built in ${PRODUCT} now, next and later: tasks noted on a call, follow-ups, ambient listening that knows when to speak, agents that send and post through the gate, a Windows installer, a store listing and a desktop app.`,
   ogAlt: `${PRODUCT} roadmap: now, next and later.`,
   breadcrumb: 'Roadmap',
   heading: 'What comes next.',
@@ -445,6 +761,14 @@ export const roadmap = {
       id: 'now',
       title: 'Now',
       items: [
+        {
+          name: 'Tasks noted on a call',
+          body: `Say “${ASSISTANT}, note a task for Sam” in a call and it is on your board.`,
+        },
+        {
+          name: 'Who to chase',
+          body: 'Ava tells you who is due a follow-up and drafts the message; you send it.',
+        },
         { name: 'Voiceprints', body: `${ASSISTANT} tells your voice from guests and from media, on your computer.` },
         {
           name: 'Windows installer, verified',
@@ -467,6 +791,10 @@ export const roadmap = {
         {
           name: 'Posting through the gate',
           body: 'Scheduled posts on X, LinkedIn, Instagram and YouTube, each waiting for your click.',
+        },
+        {
+          name: 'Agents that send what you approve',
+          body: 'Today the growth agents only draft: an approved draft is held. Next, the step that posts or sends it, with the right account checked first and your click on each.',
         },
         { name: 'Set up calls', body: 'Meetings created from the right workspace’s account.' },
         { name: `${COMPANION} installer`, body: 'One command for the Mac companion.' },
@@ -499,14 +827,47 @@ export const roadmap = {
     ] as { name: string; state: 'done' | 'now' | 'next' }[],
     stateLabel: { done: 'Shipped', now: 'Building now', next: 'Next' },
   },
-  doneTitle: 'Recently shipped',
+  doneTitle: 'Recently built',
   done: [
+    {
+      date: '2026-11-22',
+      text: 'Screen recording for a task, saved to Drive; tasks on WhatsApp; workspaces in one click and sorted for you.',
+    },
+    {
+      date: '2026-11-21',
+      text: 'Tasks that tick anywhere, the Tasks page, and people learned from your tools; a typing box with room; words Ava mishears corrected everywhere.',
+    },
+    {
+      date: '2026-11-21',
+      text: 'A growth team of three agents with approvals, a budget kept by code, a weekly plan and a daily standup in the brief; check-ups and offers; real product numbers.',
+    },
+    {
+      date: '2026-11-20',
+      text: 'Ava knows every open tab; closed tabs come back and failed tasks retry; Allow once or every time; nothing runs twice; Ava Keys.',
+    },
     { date: '2026-10-25', text: 'Ambient listening: Listen mode, off the record, forget, always visible.' },
     { date: '2026-10-22', text: 'Update notices in the panel; setup checklist with a toolbar count.' },
     { date: '2026-10-21', text: 'Memory and settings survive an uninstall.' },
     { date: '2026-10-20', text: `${ASSISTANT} speaks in Google Meet as her own participant.` },
     { date: '2026-10-19', text: 'A local model takes over when the cloud fails; private and team memory for agents.' },
   ],
+};
+
+// ─── Changelog ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The page's own words. The entries come from the repository's CHANGELOG.md (src/lib/changelog.ts). */
+export const changelogPage = {
+  title: `${PRODUCT} changelog — what changed, week by week`,
+  description: `What changed in ${PRODUCT}, newest first, in plain words: each line says what is different for you and links the change on GitHub.`,
+  ogAlt: `${PRODUCT} changelog: what changed, week by week.`,
+  breadcrumb: 'Changelog',
+  heading: 'What changed.',
+  lede: (version: string, hasNext: boolean) =>
+    `Newest first, in plain words, each line linked to the change on GitHub.${
+      hasNext
+        ? ` The download on the install page is version ${version}; entries marked next release are merged and arrive with the next one.`
+        : ''
+    }`,
 };
 
 // ─── Contribute ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -587,7 +948,7 @@ export const contribute = {
   rules: [
     {
       title: 'The gate stays',
-      text: 'Anything that sends, posts, submits, deletes, publishes, buys or changes permissions goes through the review gate. No exceptions, no settings to skip it.',
+      text: 'Anything that sends, posts, submits, deletes, publishes, buys or changes permissions goes through the review gate. No exceptions: the only way past a card is a click on it, or a rule the user saved with a click.',
     },
     {
       title: 'Outside text is data',
@@ -702,21 +1063,50 @@ export const donate = {
 
 /** Each group's line in the nav and on the hub, and the widget its page shows. */
 export const groupMeta: Record<string, { short: string; widget: string }> = {
-  browser: { short: 'Plans, clicks and types on real pages', widget: 'trail' },
+  browser: { short: 'Plans, clicks and types, in the tabs you have', widget: 'trail' },
   gate: { short: 'Nothing commits without your click', widget: 'gate' },
+  tasks: { short: 'One board, ticked anywhere, and who is who', widget: '' },
   voice: { short: '“Hey Ava”, on your computer', widget: 'voice' },
   ambient: { short: 'Listens, notes, speaks when it’s worth it', widget: 'ambient' },
   meetings: { short: 'Notes for Google Meet from the first minute', widget: 'meeting' },
+  whatsapp: { short: 'Message Ava from your phone', widget: '' },
   memory: { short: 'Answers with the source', widget: 'graph' },
   workspaces: { short: 'One per project, never mixed', widget: 'workspaces' },
   automation: { short: 'Routines, agents and an Inbox', widget: 'routine' },
+  team: { short: 'Agents that draft; you decide', widget: '' },
   models: { short: 'Your key, or fully local', widget: 'models' },
   integrations: { short: 'GitHub, Slack, Drive and any MCP', widget: 'integrations' },
-  brain: { short: 'A Mac companion with a sandbox', widget: 'brain' },
+  brain: { short: 'A Mac companion: sandbox, WhatsApp, keys', widget: 'brain' },
   trust: { short: 'No analytics, and update notices', widget: 'trust' },
 };
 
 export const featureHref = (id: string) => `/features/${id}`;
+
+/** The features hub's way in by what a person wants to do: each line names the groups that answer it. */
+export const featurePaths = {
+  title: 'Find it by what you want to do',
+  items: [
+    { title: 'Work in my browser', body: 'Tabs, forms, retries.', ids: ['browser', 'workspaces'] },
+    {
+      title: 'Keep track of tasks and people',
+      body: 'The board, the Tasks page, who is who.',
+      ids: ['tasks', 'memory'],
+    },
+    {
+      title: 'Take a call, talk to Ava',
+      body: 'Meeting notes, voice, listening.',
+      ids: ['meetings', 'voice', 'ambient'],
+    },
+    { title: 'Use Ava from my phone', body: 'Message her, ask for tasks.', ids: ['whatsapp'] },
+    { title: 'Have a team work for me', body: 'Routines, the Inbox, growth agents.', ids: ['automation', 'team'] },
+    { title: 'Stay in control', body: 'The click, rules, privacy.', ids: ['gate', 'trust'] },
+    {
+      title: 'Connect and set up',
+      body: 'Models, tools, the Mac companion.',
+      ids: ['models', 'integrations', 'brain'],
+    },
+  ],
+};
 
 export interface MenuLink {
   href: string;
@@ -732,6 +1122,10 @@ export interface Menu {
   featured: { title: string; body: string; href: string; action: string; widget: 'gate' | 'install' | 'community' };
   columns: { title: string; links: MenuLink[] }[];
 }
+
+const MENU_WORK = ['browser', 'tasks', 'workspaces', 'memory', 'meetings', 'voice', 'ambient', 'whatsapp'];
+const MENU_SETUP = ['gate', 'automation', 'team', 'models', 'integrations', 'brain', 'trust'];
+const groupsIn = (ids: string[]) => ids.flatMap(id => features.groups.filter(group => group.id === id));
 
 const linkFor = (group: FeatureGroup): MenuLink => ({
   href: featureHref(group.id),
@@ -753,8 +1147,8 @@ export const menus: Menu[] = [
       widget: 'gate',
     },
     columns: [
-      { title: 'Does the work', links: features.groups.slice(0, 6).map(linkFor) },
-      { title: 'Runs your setup', links: features.groups.slice(6).map(linkFor) },
+      { title: 'Does the work', links: groupsIn(MENU_WORK).map(linkFor) },
+      { title: 'Runs your setup', links: groupsIn(MENU_SETUP).map(linkFor) },
     ],
   },
   {
@@ -779,6 +1173,7 @@ export const menus: Menu[] = [
             note: 'How you hear about new versions',
             icon: 'bell',
           },
+          { href: '/install#connect', label: 'Connect', note: 'WhatsApp, Drive and Ava Brain', icon: 'blocks' },
           { href: '/install#brain', label: COMPANION, note: 'The optional Mac companion', icon: 'brain' },
         ],
       },
@@ -787,6 +1182,7 @@ export const menus: Menu[] = [
         links: [
           { href: projectLinks.features, label: 'All features', note: 'Live, preview and planned', icon: 'grid' },
           { href: projectLinks.roadmap, label: 'Roadmap', note: 'What comes next', icon: 'map' },
+          { href: projectLinks.changelog, label: 'Changelog', note: 'What changed, week by week', icon: 'history' },
           { href: '/privacy', label: 'Privacy', note: 'What leaves your computer', icon: 'shield' },
           { href: projectLinks.releasesFeed, label: 'Release feed', note: 'RSS for every version', icon: 'rss' },
         ],
@@ -863,10 +1259,10 @@ export const widgetCopy = {
     replay: 'Play again',
     local: 'Transcribed by the recogniser on this Mac. Nothing leaves it.',
     lines: [
-      { at: '14:02', text: 'So the Ellum launch moves to Friday?' },
+      { at: '14:02', text: 'So the launch moves to Friday?' },
       { at: '14:02', text: 'Friday, yes. The page is ready, only the photos are left.' },
-      { at: '14:03', text: 'I’ll send Tolu the brief tonight.' },
-      { at: '14:04', text: 'And we still need a date for the Tech Ember venue.' },
+      { at: '14:03', text: 'I’ll send Sam the brief tonight.' },
+      { at: '14:04', text: 'And we still need a date for the venue.' },
       { at: '14:05', text: 'Let’s look at the venue list after lunch.' },
     ],
   },
@@ -877,9 +1273,9 @@ export const widgetCopy = {
     noteLabel: 'Note',
     replay: 'Play again',
     captions: [
-      { who: 'Tolu', text: 'Can we ship the landing page this week?' },
+      { who: 'Sam', text: 'Can we ship the landing page this week?' },
       { who: 'You', text: 'Yes, if the copy is final by Wednesday.' },
-      { who: 'Ada', text: 'I’ll have the copy done Tuesday.' },
+      { who: 'Jo', text: 'I’ll have the copy done Tuesday.' },
       { who: 'You', text: 'Great, then we launch Thursday morning.' },
     ],
     summary: 'The landing page launches Thursday morning, once the copy is final.',
@@ -887,7 +1283,7 @@ export const widgetCopy = {
     decisions: ['Launch Thursday morning'],
     actionsLabel: 'Action items',
     actions: [
-      { who: 'Ada', text: 'Final copy by Tuesday' },
+      { who: 'Jo', text: 'Final copy by Tuesday' },
       { who: 'You', text: 'Schedule the launch post' },
     ],
   },
@@ -898,21 +1294,21 @@ export const widgetCopy = {
     note: 'Switching never carries knowledge, accounts or drafts across.',
     items: [
       {
-        id: 'nexprove',
-        name: 'Nexprove',
-        accounts: ['Google · work', 'Slack · Nexprove', 'X · @nexprove'],
+        id: 'studio',
+        name: 'Studio',
+        accounts: ['Google · work', 'Slack · Studio', 'X · @studio'],
         knowledge: ['Pricing decision · Oct 12', 'Client call notes · Oct 20', 'Q4 hiring plan'],
       },
       {
-        id: 'ember',
-        name: 'Tech Ember Fest',
-        accounts: ['Google · festival', 'Instagram · @techember', 'LinkedIn · Tech Ember'],
+        id: 'meetup',
+        name: 'City meetup',
+        accounts: ['Google · meetup', 'Instagram · @citymeetup', 'LinkedIn · City meetup'],
         knowledge: ['Venue shortlist', 'Speaker emails · Oct 18', 'Sponsor deck v3'],
       },
       {
-        id: 'ellum',
-        name: 'Ellum',
-        accounts: ['Google · foundation', 'X · @ellum'],
+        id: 'charity',
+        name: 'Charity',
+        accounts: ['Google · charity', 'X · @charity'],
         knowledge: ['Launch page copy', 'Grant application notes', 'Board meeting · Oct 9'],
       },
     ],
@@ -943,6 +1339,7 @@ export const widgetCopy = {
 export const ogCards: Record<string, { kicker: string; title: [string, string]; group?: string }> = {
   features: { kicker: 'Features', title: ['Everything it does,', 'marked as it really is.'] },
   roadmap: { kicker: 'Roadmap', title: ['What comes next.', 'Listen first, speak last.'] },
+  changelog: { kicker: 'Changelog', title: ['What changed,', 'week by week.'] },
   contribute: { kicker: 'Contribute', title: ['Build it with us.', 'Code, tests, skills and words.'] },
   donate: { kicker: 'Donate', title: ['Keep it free.', 'No ads, no analytics, ever.'] },
   ...Object.fromEntries(

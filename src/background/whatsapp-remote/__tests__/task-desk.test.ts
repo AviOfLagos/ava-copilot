@@ -465,6 +465,22 @@ describe('reactions', () => {
     expect((await s.tasks.get(task.id))?.status).toBe('open');
   });
 
+  it('puts Google Drive recording links under a list, one per line, and no other link', async () => {
+    const s = setup({ quiet: false });
+    const task = await s.add('Send the deck');
+    await s.desk.sendTaskList({
+      key: 'after-call:links',
+      title: 'Tasks for Ada',
+      taskIds: [task.id],
+      note: 'Screen recordings: https://evil.example/x',
+      links: ['https://drive.google.com/file/d/abc/view', 'https://evil.example/y', 'javascript:alert(1)'],
+    });
+    const text = s.sent.at(-1)!.text;
+    expect(text).toContain('Screen recordings:\nhttps://drive.google.com/file/d/abc/view');
+    expect(text).not.toContain('evil.example');
+    expect(text).not.toContain('javascript:');
+  });
+
   it('changes nothing on a list of several, on a message that is not a list, or with another emoji', async () => {
     const s = setup({ quiet: false });
     const one = await s.add('One task');

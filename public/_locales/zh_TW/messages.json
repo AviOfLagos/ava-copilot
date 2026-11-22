@@ -12354,5 +12354,198 @@
   },
   "followups_report_saved": {
     "message": "已記下。"
+  },
+  "calltasks_you": {
+    "message": "你"
+  },
+  "calltasks_wa_allTitle": {
+    "message": "通話中的任務"
+  },
+  "calltasks_wa_recordings": {
+    "message": "螢幕錄影："
+  },
+  "calltasks_draft_notYet": {
+    "message": "請先按「沒問題」：在那之前什麼都不會送出。"
+  },
+  "calltasks_draft_nobody": {
+    "message": "這個人已不在這次通話的清單上。"
+  },
+  "calltasks_draft_noTab": {
+    "message": "請在分頁中開啟 WhatsApp Web 並登入，然後再按一次。"
+  },
+  "calltasks_draft_loggedOut": {
+    "message": "WhatsApp Web 尚未登入。請用手機掃描條碼後再按一次。"
+  },
+  "calltasks_draft_noChat": {
+    "message": "找不到名為「$NAME$」的 WhatsApp 聊天。請在「人員」頁把這個人改成 WhatsApp 顯示的名字。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_wrongChat": {
+    "message": "WhatsApp 開啟的是「$SHOWN$」而不是「$NAME$」，所以沒有輸入任何內容。",
+    "placeholders": {
+      "shown": {
+        "content": "$1",
+        "example": "Ada Obi"
+      },
+      "name": {
+        "content": "$2",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_greeting": {
+    "message": "嗨 $NAME$，我們通話中提到的：",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_noBox": {
+    "message": "找不到那個聊天的訊息框。"
+  },
+  "calltasks_edit_words": {
+    "message": "要做的事"
+  },
+  "calltasks_edit_owner": {
+    "message": "給誰"
+  },
+  "calltasks_save": {
+    "message": "儲存"
+  },
+  "calltasks_cancel": {
+    "message": "取消"
+  },
+  "calltasks_edit": {
+    "message": "編輯"
+  },
+  "calltasks_edit_for": {
+    "message": "編輯「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_discard": {
+    "message": "捨棄"
+  },
+  "calltasks_discard_for": {
+    "message": "捨棄「$TITLE$」",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_status_captions": {
+    "message": "口說任務已開啟：說「Ava, note a task for Ada: …」。從你自己的字幕行聽取。"
+  },
+  "calltasks_status_mic": {
+    "message": "口說任務已開啟：說「Ava, note a task for Ada: …」。在這台電腦上從你的麥克風聽取。"
+  },
+  "calltasks_status_off_none": {
+    "message": "這次通話的口說任務已關閉：沒有字幕，也沒有你的麥克風可聽。請在通話中開啟字幕。"
+  },
+  "calltasks_status_off_recogniser": {
+    "message": "這次通話的口說任務已關閉：聽你的麥克風需要這台電腦上的語音模型（設定、語音）。或在通話中開啟字幕。"
+  },
+  "calltasks_status_off_micDenied": {
+    "message": "這次通話的口說任務已關閉：Chrome 不允許使用麥克風。或在通話中開啟字幕。"
+  },
+  "calltasks_status_off_mic": {
+    "message": "這次通話的口說任務已關閉：筆記沒有使用你的麥克風。請開啟字幕，或在會議筆記中加入麥克風。"
+  },
+  "calltasks_status_off_marker": {
+    "message": "這次通話的口說任務已關閉：通話字幕沒有標出哪些是你的話，無法分辨來賓和你。請在通話分頁上按工具列圖示，用你的麥克風錄下聲音。"
+  },
+  "calltasks_card_title": {
+    "message": "給 $NAME$ 的任務",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_card_forYou": {
+    "message": "給你的任務"
+  },
+  "calltasks_record_ask": {
+    "message": "要為這件事錄製螢幕嗎？"
+  },
+  "calltasks_yes": {
+    "message": "是"
+  },
+  "calltasks_no": {
+    "message": "否"
+  },
+  "calltasks_sent_sent": {
+    "message": "已在 WhatsApp 傳給你，可直接轉傳。"
+  },
+  "calltasks_sent_queued": {
+    "message": "等你的安靜時段結束後，再在 WhatsApp 傳給你。"
+  },
+  "calltasks_sent_off": {
+    "message": "未傳送：WhatsApp 設定中的任務訊息已關閉。"
+  },
+  "calltasks_sent_empty": {
+    "message": "未傳送：這些任務都已不再開放。"
+  },
+  "calltasks_sent_done": {
+    "message": "已在 WhatsApp 傳給你。"
+  },
+  "calltasks_sent_failed": {
+    "message": "未傳送：無法連到 WhatsApp。不會自動重試。"
+  },
+  "calltasks_draft": {
+    "message": "草擬給 $NAME$ 的訊息",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_drafted": {
+    "message": "已輸入到 WhatsApp Web 中 $NAME$ 的聊天。請確認後在那裡按傳送。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_list_title": {
+    "message": "這次通話的任務"
+  },
+  "calltasks_shareSkipped": {
+    "message": "有些錄影沒有分享：$REASONS$",
+    "placeholders": {
+      "reasons": {
+        "content": "$1",
+        "example": "Not in Google Drive."
+      }
+    }
+  },
+  "calltasks_confirm_duringCall": {
+    "message": "通話仍在記錄中。通話結束後再按這個。"
+  },
+  "calltasks_confirmed": {
+    "message": "已轉交。Drive 中的每段錄影現在都有連結，任何拿到連結的人都能開啟。"
+  },
+  "calltasks_looksRight": {
+    "message": "沒問題"
+  },
+  "calltasks_looksRight_hint": {
+    "message": "在你按下之前，不會傳送任何內容，也不會分享任何錄影。"
   }
 }

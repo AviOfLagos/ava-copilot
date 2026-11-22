@@ -2940,6 +2940,32 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   Brain routes; E2E `recording.e2e.mjs` records a tab with the mic while meeting notes run (file checked with
   ffprobe), and uploads to a fake Drive through CDP on the service worker, with one dropped piece.
 
+### Tasks said on a call (2026-11-22, #108, docs/pm-desk.md Part 6)
+
+- Hearing (`src/background/call-tasks/match.ts`, plain code, no model): "(hey) Ava, (please) note/add/log/create (a)
+  task for <name>: <words>", with the recognisers' spellings of "Ava" from `offscreen/stt/addressed.ts`. The name and
+  words go through the vocabulary; the owner comes from `people.resolve`, an unknown name is kept as said and goes to
+  Who's who (`people.observe`, source `spoken`).
+- Whose voice (`signal.ts`), never decided by a name:
+  - notes from captions: only lines the page marks as the user's own (`CALL_DOM.selfLineSelectors`,
+    `[data-self-name]`) and labels "You". A "You" line without the mark (before any marked line), or the mark on a
+    line with another name, turns commands off for the call, and the panel says so. Not yet seen on a live Meet.
+  - notes from the tab's audio with the mic: a separate echo-cancelled mic stream (`src/offscreen/call-mic.ts`) and the
+    local recogniser; a match is refused when the same words were in another speaker's caption within 3 s.
+  - neither: commands off, and the status line says why.
+- Timing and drafting (`engine.ts`): a caption line counts once it stood unchanged for 1.5 s; the task is stored by
+  `recordTask` at once; it stays open two minutes for "also / and / add to that / Ava, …" lines, and closes four
+  seconds after any other sentence or at the next command. Meet's rewrites of a line change the same task.
+- State: `MeetingRecord.callTasks` (`CallTasksState`, no Dexie step). Panel: `CallTaskCards` during the call (Edit,
+  Discard, "Record the screen for this?"), and the turn addon "Tasks from this call" after it.
+- After the call (`after.ts`): nothing is sent or shared before "Looks right". The click shares the recordings
+  (`shareRecordingsFor`), sends one WhatsApp message per person to the user (one message for more than five; quiet
+  hours hold), and offers "Draft a message to Ada", which types into Ada's WhatsApp Web chat and never sends.
+- Seams for #111: `addCallListRows(meetingId, rows)`, `onCallListRowAction(kind, handler)` and
+  `onCallTasksConfirmed(listener)` in `call-tasks/register.ts`.
+- Tests: replayed caption and mic fixtures (another speaker, a guest named "You", a guest named "Avi", a line
+  rewritten three times, follow-ons, two commands); E2E `call-tasks.e2e.mjs` on a fake Meet page.
+
 ### Follow-ups: who is doing what, and who to chase (2026-11-22, #111, docs/pm-desk.md Part 9)
 
 - Person updates (`background/followups/note.ts`, `updates.ts`): the meeting note gains `personUpdates` (did, doing,

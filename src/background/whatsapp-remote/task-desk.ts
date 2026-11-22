@@ -51,14 +51,22 @@ const THUMBS = '👍';
 const DAY = 24 * 60 * 60 * 1000;
 
 /** A task list waiting for quiet hours to end. Ids and the list's title only; the words are drawn when it goes. */
+const MAX_LINKS = 20;
+const isDriveLink = (link: string) => /^https:\/\/(drive|docs)\.google\.com\/[^\s]{1,300}$/.test(link);
+
 export interface PendingTaskMessage {
   key: string;
   title: string;
   taskIds: string[];
-  // A line under the list (a recording link, from #108), already plain
+  // A line under the list, already plain (links in it are removed)
   note?: string;
+  // Screen-recording links shared on "Looks right" (#108), one per line under the note. Only Google Drive links
+  // are kept: nothing else in a message can be a link
+  links?: string[];
   // The reply hint ("Reply done 2…"); off for a list meant to be forwarded
   hint?: boolean;
+  // Each task's owner after it: the one list for everyone after a call with more than five people (#108)
+  owner?: boolean;
   at: number;
 }
 
@@ -612,10 +620,13 @@ export class TaskDesk {
     if (!tasks.length) return 'empty';
     const { text, taskIds } = taskListText(item.title, tasks, {
       now: this.deps.now(),
-      owner: false,
+      owner: item.owner === true,
       hint: item.hint ?? false,
     });
-    const body = item.note ? `${text}\n\n${plainOutside(item.note, 300)}` : text;
+    const links = (item.links ?? []).filter(isDriveLink).slice(0, MAX_LINKS);
+    const note = item.note ? plainOutside(item.note, 300) : '';
+    const under = [note, ...links].filter(Boolean).join('\n');
+    const body = under ? `${text}\n\n${under}` : text;
     // A list with no "done 2" hint is meant to be forwarded (one person's after a call): a bare number never reads
     // it, so three of them going out after the brief cannot take his "done 2" away from the brief
     const numbered = item.hint === true;

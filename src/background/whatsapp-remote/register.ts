@@ -115,12 +115,19 @@ export const taskDesk = new TaskDesk({
  * HOOK (#108): one person's tasks after a call, as a numbered message he can forward. Waits out quiet hours and goes
  * once per key; returns what happened (see TaskDesk.sendTaskList).
  */
-export function sendPersonTaskList(input: { key: string; name: string; taskIds: string[]; note?: string }) {
+export function sendPersonTaskList(input: {
+  key: string;
+  name: string;
+  taskIds: string[];
+  note?: string;
+  links?: string[];
+}) {
   return taskDesk.sendTaskList({
     key: input.key,
     title: t('wava_tasks_listTitleFor', [input.name]),
     taskIds: input.taskIds,
     ...(input.note ? { note: input.note } : {}),
+    ...(input.links?.length ? { links: input.links } : {}),
     hint: false,
   } satisfies Omit<PendingTaskMessage, 'at'>);
 }

@@ -24,6 +24,8 @@ import './ambient/register';
 import './feedback/register';
 import './rounds/register';
 import './tasks/register';
+// Before People: the call's task list shows above its Who's who card
+import './call-tasks/register';
 import './people/register';
 import './recordings/register';
 import './followups/register';
