@@ -8,6 +8,7 @@ import {
   ttsSettingsStore,
   VOICE_MODEL_SIZES_MB,
   voiceEngineSettingsStore,
+  voiceHealthStore,
   voiceIdentityStore,
   voiceTtsEngine,
 } from '@extension/storage';
@@ -22,6 +23,7 @@ import { isOverDailyBudget } from '../../usage/budget';
 import { END_CONVERSATION, runEconomyTurn } from './economy';
 import { isVoiceActivity, shouldEndIdle } from './idle';
 import { localSpeaking, speakLocally } from './localTts';
+import { checkRunning, checkThisComputer, recordSpoken } from './health';
 import { forgetInstalledVoiceModels, installedVoiceModels } from './models';
 import { askVoiceOffscreen, toVoiceOffscreen } from './offscreen';
 import { chooseEconomyEngines, modelsNeeded } from './options';
@@ -65,6 +67,8 @@ registerVoiceTool({
 
 // Keeps the offscreen document open while a local voice speaks (read-aloud or the settings test)
 registerOffscreenBusy('voice-engines', () => localSpeaking());
+// ...and while Settings › Check this computer times the voices
+registerOffscreenBusy('voice-check', async () => checkRunning());
 
 // ── Settings › Voice engines ─────────────────────────────────────────────────────────────────────
 
@@ -72,15 +76,16 @@ const requestOnly = (type: string) => z.object({ type: z.literal(type), requestI
 
 registerCommand('voice_engine_status', requestOnly('voice_engine_status'), async (_input, context) => {
   forgetInstalledVoiceModels();
-  const [settings, tts, installed, runtime] = await Promise.all([
+  const [settings, tts, installed, runtime, health] = await Promise.all([
     voiceEngineSettingsStore.getSettings(),
     ttsSettingsStore.getSettings(),
     installedVoiceModels(),
     askVoiceOffscreen<VoiceEngineRuntimeStatus>({ type: 'voice_engine_runtime' }),
+    voiceHealthStore.getHealth(),
   ]);
   // The language a conversation hears in: Whisper takes over an untouched Moonshine, so the line must say so
   const { language } = await voiceIdentityStore.getSettings();
-  const economy = chooseEconomyEngines(settings, tts, installed, { language });
+  const economy = chooseEconomyEngines(settings, tts, installed, { language }, health);
   context.reply({
     type: 'voice_engine_status',
     requestId: context.requestId,
@@ -157,6 +162,24 @@ registerCommand(
     context.reply({ type: 'voice_models_needed', requestId: context.requestId, ...needed });
   },
 );
+
+// Settings › Voice engines › Check this computer: each installed voice makes a fixed line, timed, and the recogniser
+// writes down what was said
+registerCommand('voice_engine_check', requestOnly('voice_engine_check'), async (_input, context) => {
+  try {
+    const result = await checkThisComputer();
+    context.reply({ type: 'voice_engine_check_ok', requestId: context.requestId, ...result });
+  } catch (error) {
+    context.reply({ type: 'error', requestId: context.requestId, error: toAppError(error).message });
+  }
+});
+
+// The offscreen document says what each local answer came to: sizes and times go to the trace (Settings › Voice engines)
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (sender.id !== chrome.runtime.id || sender.tab || message?.type !== 'voice_trace_tts') return;
+  void recordSpoken(message.report).catch(error => logger.warning('Could not record a spoken answer', error));
+  return;
+});
 
 // A download finished or a model was removed in a page: what is installed is read again
 registerCommand('voice_models_changed', requestOnly('voice_models_changed'), async (_input, context) => {

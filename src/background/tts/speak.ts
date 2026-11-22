@@ -6,6 +6,7 @@ import {
   threadTts,
   ttsSettingsStore,
   ttsSpeakingStore,
+  voiceHealthStore,
 } from '@extension/storage';
 import { agentSpeaker, personalityForThread, spokenLine } from '../personalities/voices';
 import type { Speaker } from '../personalities/voices';
@@ -15,6 +16,7 @@ import * as geminiEngine from './geminiEngine';
 import { missingVoiceFiles } from './missing';
 import { toSpeakableText } from './markdown';
 import type { SpeakOptions, TtsEngine } from './types';
+import { noteSlowFallback, slowVoice } from '../voice/engines/health';
 import { localTtsEngine, stopLocalSpeech } from '../voice/engines/localTts';
 import { installedVoiceModels } from '../voice/engines/models';
 
@@ -66,6 +68,15 @@ export async function speak(
   const said = toSpeakableText(text);
   await stopSpeaking();
   if (!said) return;
+
+  // A voice on this computer that makes speech slower than it plays leaves a pause after every sentence: the computer's
+  // own voice speaks instead, and the Inbox says so (voice/engines/health.ts)
+  const slow = slowVoice(settings.engine, await voiceHealthStore.getHealth(), said.length);
+  if (slow) {
+    settings.engine = 'system';
+    settings.voice = '';
+    void noteSlowFallback(slow);
+  }
 
   // The chat's personality (an agent's chat: the agent's) may ask for its own voice and pace
   const personality = await personalityForThread(thread).catch(() => null);

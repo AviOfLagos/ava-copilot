@@ -60,6 +60,14 @@ upstream's guidance and still describe the code accurately. Where they conflict 
 - Appearance (theme, text size, density): one record in `src/storage/lib/settings/appearanceSettings.ts`, applied to a page by
   `useAppearance` (`src/side-panel/layout/theme.ts`) as root `zoom` plus `--density`/`--ui-zoom`. New pages call `useTheme()`; add
   fields to the record, not panel-only CSS. It is meant to carry over to the desktop app (`docs/appearance.md`).
+- Voice speed and health: `src/storage/lib/settings/voiceHealth.ts` (measured speeds, the content-free trace),
+  `voicePresets.ts` (presets, what each needs, which is recommended) and `voiceDiagnose.ts` (findings from the trace,
+  by code, no model); `src/background/voice/engines/health.ts` records each spoken answer, runs "Check this computer"
+  and decides the fallback. A local voice measured slower than speech (`TTS_TOO_SLOW_SPEED`) gives way to the system
+  voice for answers over one short line, and the Inbox says so; a reading goes stale after 20 minutes (a busy spell
+  passes), a check after 3 days. `LocalTts` holds the first sentences back (`headStartSeconds`) so a slow voice speaks
+  through instead of stopping at each full stop. Never put words said or heard in the trace. Settings commands must start
+  with a prefix in `background/settings/port.ts`.
 - Wave 2 (`docs/wave2-plan.md`; rules for changing code in `.claude/skills/avi-conventions/SKILL.md`): features plug in
   through `src/background/registry` and `src/side-panel/registry.ts` from their own `register.ts`, imported in
   `src/background/registers.ts` and `src/side-panel/registers.ts`. Long work is a job (`src/background/jobs/runner.ts`).

@@ -1,6 +1,7 @@
 import { OFFSCREEN_VOICE_TARGET } from '../../background/voice/engines/wire';
 import type { EconomyEngines, VoiceEngineRuntimeStatus } from '../../background/voice/engines/wire';
 import { heardLately, listenOnce } from '../stt/listen';
+import { hasWebGpu } from '../stt/runtime';
 import { sttStatus, unloadStt } from '../stt/pool';
 import { transcribeRecording } from '../stt/transcribe';
 import type { LocalVoiceEngine } from './protocol';
@@ -27,6 +28,97 @@ function runtimeStatus(): VoiceEngineRuntimeStatus {
     lastHeard: heardLately(),
     lastLine: lastSpokenLine(),
   };
+}
+
+// A fixed line with a comma and a full stop, about four seconds of speech: the same for every computer, so the speeds
+// can be compared
+const BENCHMARK_TEXT = 'The quick brown fox jumps over the lazy dog, then rests.';
+
+interface BenchmarkRequest {
+  engines: { engine: LocalVoiceEngine; voice: string }[];
+  stt?: EconomyEngines['stt'];
+}
+
+// A voice or recogniser that has not answered by then is reported as stuck, so one that hangs does not stall the check
+const TTS_CHECK_LIMIT_MS = 90_000;
+const STT_CHECK_LIMIT_MS = 45_000;
+
+function within<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not answer in ${Math.round(ms / 1000)} s`)), ms);
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
+const words = (text: string) => text.toLowerCase().match(/[a-z']+/g) ?? [];
+
+/** The share of the spoken words a recogniser got back, in order. */
+function wordsRight(said: string, heard: string): number {
+  const want = words(said);
+  const got = words(heard);
+  if (!want.length) return 0;
+  return want.filter((word, index) => got[index] === word).length / want.length;
+}
+
+/**
+ * Times the local voices on this computer: each installed voice makes a fixed line (a short warm-up first, so
+ * the runtime's start-up is not counted), then the recogniser writes down what a voice said. Nothing is played.
+ */
+async function benchmark(request: BenchmarkRequest) {
+  const machine = {
+    cores: navigator.hardwareConcurrency || 1,
+    memoryGb: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
+    webgpu: await hasWebGpu(),
+    threads: Boolean(globalThis.crossOriginIsolated),
+  };
+  const tts: Record<string, { ok: boolean; speed?: number; loadMs?: number; audioSeconds?: number; error?: string }> =
+    {};
+  let heardSample: { samples: Float32Array; sampleRate: number } | null = null;
+  for (const { engine, voice } of request.engines) {
+    try {
+      const loadStarted = performance.now();
+      await within(localTts().warm(engine), TTS_CHECK_LIMIT_MS, 'The voice');
+      const loadMs = Math.round(performance.now() - loadStarted);
+      await within(
+        localTts().render({ engine, text: 'Hello there.', voice, rate: 1 }),
+        TTS_CHECK_LIMIT_MS,
+        'The voice',
+      );
+      const started = performance.now();
+      const speech = await within(
+        localTts().render({ engine, text: BENCHMARK_TEXT, voice, rate: 1 }),
+        TTS_CHECK_LIMIT_MS,
+        'The voice',
+      );
+      const workMs = performance.now() - started;
+      const audioSeconds = speech.samples.length / speech.sampleRate;
+      tts[engine] = { ok: audioSeconds > 0, speed: +(audioSeconds / (workMs / 1000)).toFixed(2), loadMs, audioSeconds };
+      heardSample ??= speech;
+    } catch (error) {
+      tts[engine] = { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  let stt: { ok: boolean; speed?: number; right?: number; error?: string } | undefined;
+  if (request.stt && heardSample) {
+    try {
+      const wav = toBase64(encodeWav(heardSample.samples, heardSample.sampleRate));
+      // The first run loads the recogniser; the second is timed
+      await within(transcribeRecording(request.stt, wav), STT_CHECK_LIMIT_MS, 'The recogniser');
+      const started = performance.now();
+      const text = await within(transcribeRecording(request.stt, wav), STT_CHECK_LIMIT_MS, 'The recogniser');
+      const ms = performance.now() - started;
+      const seconds = heardSample.samples.length / heardSample.sampleRate;
+      stt = {
+        ok: true,
+        speed: +(seconds / (ms / 1000)).toFixed(2),
+        right: +wordsRight(BENCHMARK_TEXT, text).toFixed(2),
+      };
+    } catch (error) {
+      stt = { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  return { ok: true, machine, tts, stt };
 }
 
 async function handle(message: Message): Promise<unknown> {
@@ -94,6 +186,12 @@ async function handle(message: Message): Promise<unknown> {
       return { running: localTts().speaking };
     case 'voice_engine_runtime':
       return runtimeStatus();
+    case 'voice_benchmark':
+      try {
+        return await benchmark(message as unknown as BenchmarkRequest);
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
     case 'voice_engine_unload':
       localTts().unload();
       unloadStt();
@@ -124,6 +222,11 @@ async function handle(message: Message): Promise<unknown> {
       return { ok: false, error: `Unknown command ${String(message.type)}` };
   }
 }
+
+// Each answer's sizes and times go to the background's voice trace (the offscreen document keeps no storage of its own)
+localTts().onSpoken = report => {
+  void chrome.runtime.sendMessage({ type: 'voice_trace_tts', report }).catch(() => {});
+};
 
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   if (message?.target !== OFFSCREEN_VOICE_TARGET || sender.id !== chrome.runtime.id) return;

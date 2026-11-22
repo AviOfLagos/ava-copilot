@@ -106,6 +106,14 @@ function ensureLoaded(engine: LocalVoiceEngine): Promise<Loaded> {
   return model;
 }
 
+interface Made {
+  samples: Float32Array;
+  // Where the time went: turning text into phonemes, and the model making the waveform from them
+  phonemeMs: number;
+  modelMs: number;
+  tokens: number;
+}
+
 /** One sentence to speech. */
 async function synthesize(
   engine: LocalVoiceEngine,
@@ -113,9 +121,11 @@ async function synthesize(
   sentence: string,
   voice: string,
   speed: number,
-): Promise<Float32Array> {
+): Promise<Made> {
   const text = preprocessor.process(engine === 'kitten' ? ensurePunctuation(sentence) : sentence);
+  const phonemeStarted = performance.now();
   const raw = await phonemize(text);
+  const phonemeMs = performance.now() - phonemeStarted;
   let ids: number[];
   let style: Float32Array;
   let rate = speed;
@@ -134,14 +144,21 @@ async function synthesize(
       Math.min(Math.max(ids.length - 2, 0), 509),
     );
   }
+  const modelStarted = performance.now();
   const outputs = await model.model({
     input_ids: new Tensor('int64', BigInt64Array.from(ids, BigInt), [1, ids.length]),
     style: new Tensor('float32', style, [1, style.length]),
     speed: new Tensor('float32', new Float32Array([rate]), [1]),
   });
   const waveform = (outputs.waveform ?? Object.values(outputs)[0]) as Tensor;
+  const modelMs = performance.now() - modelStarted;
   const samples = new Float32Array(waveform.data as Float32Array);
-  return trimSilence(engine === 'kitten' ? trimTail(samples) : samples, SAMPLE_RATE);
+  return {
+    samples: trimSilence(engine === 'kitten' ? trimTail(samples) : samples, SAMPLE_RATE),
+    phonemeMs,
+    modelMs,
+    tokens: ids.length,
+  };
 }
 
 async function speak(request: Extract<ToTtsWorker, { type: 'speak' }>): Promise<void> {
@@ -149,11 +166,23 @@ async function speak(request: Extract<ToTtsWorker, { type: 'speak' }>): Promise<
   for (const sentence of splitSentences(request.text)) {
     if (cancelled.has(request.id)) break;
     const started = performance.now();
-    const samples = await synthesize(request.engine, model, sentence, request.voice, request.speed);
+    const made = await synthesize(request.engine, model, sentence, request.voice, request.speed);
     if (cancelled.has(request.id)) break;
-    post({ type: 'audio', id: request.id, samples, sampleRate: SAMPLE_RATE, ms: performance.now() - started }, [
-      samples.buffer,
-    ]);
+    const { samples } = made;
+    post(
+      {
+        type: 'audio',
+        id: request.id,
+        samples,
+        sampleRate: SAMPLE_RATE,
+        ms: performance.now() - started,
+        phonemeMs: made.phonemeMs,
+        modelMs: made.modelMs,
+        tokens: made.tokens,
+        chars: sentence.length,
+      },
+      [samples.buffer],
+    );
   }
   cancelled.delete(request.id);
   post({ type: 'done', id: request.id });

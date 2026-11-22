@@ -12692,5 +12692,327 @@
   },
   "settings_autoDefault_hint": {
     "message": "As novas tarefas que você digitar começam no modo automático. Pagamentos, exclusões, mudanças de acesso e senhas ainda perguntam."
+  },
+  "voice_preset_title": {
+    "message": "Predefinições de voz"
+  },
+  "voice_preset_hint": {
+    "message": "Uma escolha define quem ouve e quem fala. Escolha a que combina com este computador."
+  },
+  "voice_preset_instant_name": {
+    "message": "Instantânea"
+  },
+  "voice_preset_instant_desc": {
+    "message": "Ouve neste computador e fala com a voz do próprio sistema. Começa na hora e nunca faz pausas entre as frases. Funciona em qualquer computador."
+  },
+  "voice_preset_light_name": {
+    "message": "Leve"
+  },
+  "voice_preset_light_desc": {
+    "message": "Ouve neste computador e fala com o KittenTTS, uma voz pequena e natural. Precisa de um computador que gere a fala mais rápido do que ela toca."
+  },
+  "voice_preset_natural_name": {
+    "message": "Natural"
+  },
+  "voice_preset_natural_desc": {
+    "message": "Ouve com o Moonshine base e fala com o Kokoro, a melhor voz que fica neste computador. Precisa de um computador rápido."
+  },
+  "voice_preset_cloud_name": {
+    "message": "Nuvem"
+  },
+  "voice_preset_cloud_desc": {
+    "message": "O Gemini ouve e fala: rápido em qualquer computador e bom com sotaques. Sua voz é enviada ao Google."
+  },
+  "voice_preset_recommended": {
+    "message": "Recomendada para este computador"
+  },
+  "voice_preset_unchecked": {
+    "message": "Um começo seguro. Verifique este computador para ver se uma voz mais bonita acompanha."
+  },
+  "voice_preset_inUse": {
+    "message": "Em uso"
+  },
+  "voice_preset_use": {
+    "message": "Usar esta"
+  },
+  "voice_preset_download": {
+    "message": "Baixar ($MB$ MB)",
+    "placeholders": {
+      "mb": {
+        "content": "$1",
+        "example": "97"
+      }
+    }
+  },
+  "voice_preset_needs": {
+    "message": "Baixe primeiro: $FILES$ (cerca de $MB$ MB)",
+    "placeholders": {
+      "files": {
+        "content": "$1",
+        "example": "KittenTTS nano"
+      },
+      "mb": {
+        "content": "$2",
+        "example": "60"
+      }
+    }
+  },
+  "voice_preset_needsKey": {
+    "message": "Precisa de uma chave do Gemini: adicione em Configurações › Modelos."
+  },
+  "voice_preset_tooSlow": {
+    "message": "Lenta demais aqui: esta voz gera fala a $SPEED$× o tempo real, então respostas longas usam a voz do computador.",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_preset_keepsUp": {
+    "message": "Acompanha aqui: $SPEED$× o tempo real.",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "2.4"
+      }
+    }
+  },
+  "voice_preset_applied": {
+    "message": "Usando a predefinição $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Instant"
+      }
+    }
+  },
+  "voice_check_title": {
+    "message": "Este computador"
+  },
+  "voice_check_button": {
+    "message": "Verificar este computador"
+  },
+  "voice_check_running": {
+    "message": "Verificando: cada voz baixada fala uma frase curta, cronometrada. Leva menos de um minuto."
+  },
+  "voice_check_never": {
+    "message": "Ainda não verificado. A verificação cronometra cada voz baixada neste computador."
+  },
+  "voice_check_none": {
+    "message": "Nenhuma voz foi baixada ainda. Baixe uma abaixo e verifique."
+  },
+  "voice_check_machine": {
+    "message": "$CORES$ núcleos de processador, $MEMORY$, WebGPU: $GPU$.",
+    "placeholders": {
+      "cores": {
+        "content": "$1",
+        "example": "8"
+      },
+      "memory": {
+        "content": "$2",
+        "example": "8 GB of memory"
+      },
+      "gpu": {
+        "content": "$3",
+        "example": "yes"
+      }
+    }
+  },
+  "voice_check_memory": {
+    "message": "$GB$ GB de memória",
+    "placeholders": {
+      "gb": {
+        "content": "$1",
+        "example": "8"
+      }
+    }
+  },
+  "voice_check_memoryUnknown": {
+    "message": "memória não informada"
+  },
+  "voice_check_yes": {
+    "message": "sim"
+  },
+  "voice_check_no": {
+    "message": "não"
+  },
+  "voice_check_speed": {
+    "message": "$ENGINE$ fala a $SPEED$× o tempo real. $VERDICT$",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      },
+      "verdict": {
+        "content": "$3",
+        "example": "Too slow here."
+      }
+    }
+  },
+  "voice_check_hearing": {
+    "message": "$ENGINE$ ouve a $SPEED$× o tempo real.",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "5.1"
+      }
+    }
+  },
+  "voice_check_heard": {
+    "message": "transcreveu $PERCENT$% da frase de teste",
+    "placeholders": {
+      "percent": {
+        "content": "$1",
+        "example": "100"
+      }
+    }
+  },
+  "voice_verdict_fast": {
+    "message": "Bem rápida."
+  },
+  "voice_verdict_steady": {
+    "message": "Acompanha."
+  },
+  "voice_verdict_borderline": {
+    "message": "Mal acompanha."
+  },
+  "voice_verdict_tooSlow": {
+    "message": "Lenta demais aqui."
+  },
+  "voice_health_title": {
+    "message": "O que percebi"
+  },
+  "voice_health_empty": {
+    "message": "Nenhuma resposta falada foi registrada ainda."
+  },
+  "voice_health_ok": {
+    "message": "Nada de errado nas últimas respostas."
+  },
+  "voice_health_useInstant": {
+    "message": "Usar a voz do próprio computador"
+  },
+  "voice_health_fixed": {
+    "message": "Agora usando a predefinição Instantânea."
+  },
+  "voice_health_checking": {
+    "message": "Verificando este computador…"
+  },
+  "voice_health_copy": {
+    "message": "Copiar relatório"
+  },
+  "voice_health_copied": {
+    "message": "Copiado."
+  },
+  "voice_health_issue": {
+    "message": "Abrir uma issue"
+  },
+  "voice_health_clear": {
+    "message": "Limpar"
+  },
+  "voice_health_privacy": {
+    "message": "O relatório tem apenas tamanhos e tempos: nunca uma palavra dita ou ouvida. Nada é enviado a menos que você abra a issue e envie por conta própria."
+  },
+  "voice_health_check_failed": {
+    "message": "A verificação não pôde rodar. Tente de novo em instantes."
+  },
+  "voice_health_fallback_title": {
+    "message": "A Ava usou a voz deste computador"
+  },
+  "voice_health_fallback_body": {
+    "message": "$ENGINE$ gera fala a $SPEED$× o tempo real aqui, mais devagar do que toca, o que deixa uma pausa após cada frase. Configurações › Voz › Predefinições de voz tem opções mais rápidas.",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_finding_slower_title": {
+    "message": "$ENGINE$ gera fala mais devagar do que ela toca ($SPEED$×).",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "KittenTTS"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.7"
+      }
+    }
+  },
+  "voice_finding_slower_detail": {
+    "message": "Isso deixa uma pausa depois das frases. Respostas longas usam a voz do próprio computador até ficar mais rápido."
+  },
+  "voice_finding_pauses_title": {
+    "message": "A fala parou entre frases em $COUNT$ das últimas respostas, até $SECONDS$ s.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "2.4"
+      }
+    }
+  },
+  "voice_finding_pauses_detail": {
+    "message": "A voz não conseguiu gerar a próxima frase antes de a anterior terminar."
+  },
+  "voice_finding_slowStart_title": {
+    "message": "O primeiro som demora cerca de $SECONDS$ s para começar.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "6.3"
+      }
+    }
+  },
+  "voice_finding_failing_title": {
+    "message": "A voz falhou em $COUNT$ das últimas respostas.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "voice_finding_sttSlow_title": {
+    "message": "$ENGINE$ ouve mais devagar do que as pessoas falam ($SPEED$×).",
+    "placeholders": {
+      "engine": {
+        "content": "$1",
+        "example": "Moonshine"
+      },
+      "speed": {
+        "content": "$2",
+        "example": "0.8"
+      }
+    }
+  },
+  "voice_finding_fallback_title": {
+    "message": "A voz do computador substituiu uma voz lenta $COUNT$ vezes recentemente.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "voice_finding_unchecked_title": {
+    "message": "Este computador ainda não foi verificado."
   }
 }

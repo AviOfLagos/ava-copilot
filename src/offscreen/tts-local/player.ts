@@ -19,6 +19,13 @@ export class PcmPlayer {
   peakRms = 0;
   // Seconds of speech played since the last reset
   playedSeconds = 0;
+  // Times the speech ran dry between two clips (the next one was not made yet), and for how long in all: the
+  // pauses a listener hears after a full stop
+  gapCount = 0;
+  gapMs = 0;
+  longestGapMs = 0;
+  // A clip has been queued since the last reset, so a later one arriving late is a gap and the first is not
+  private started = false;
 
   constructor(private readonly sampleRate = 24_000) {}
 
@@ -41,6 +48,13 @@ export class PcmPlayer {
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(this.analyser!);
+    if (this.started && this.playAt < context.currentTime - 0.05) {
+      const gap = (context.currentTime - this.playAt) * 1000;
+      this.gapCount++;
+      this.gapMs += gap;
+      this.longestGapMs = Math.max(this.longestGapMs, gap);
+    }
+    this.started = true;
     this.playAt = Math.max(this.playAt, context.currentTime + 0.02);
     source.start(this.playAt);
     this.playAt += buffer.duration;
@@ -78,6 +92,15 @@ export class PcmPlayer {
   resetStats(): void {
     this.peakRms = 0;
     this.playedSeconds = 0;
+    this.gapCount = 0;
+    this.gapMs = 0;
+    this.longestGapMs = 0;
+    this.started = false;
+  }
+
+  /** Seconds of speech queued but not yet heard: how far ahead of the listener the voice is. */
+  get bufferedSeconds(): number {
+    return this.context ? Math.max(0, this.playAt - this.context.currentTime) : 0;
   }
 
   close(): void {

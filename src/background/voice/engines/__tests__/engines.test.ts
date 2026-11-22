@@ -18,6 +18,50 @@ const settings = (changes: Partial<typeof DEFAULT_VOICE_ENGINE_SETTINGS> = {}) =
 });
 const tts = { engine: 'system', voice: 'Samantha', rate: 1.1 };
 
+describe('chooseEconomyEngines on a computer where the local voice is too slow', () => {
+  const installed = { 'moonshine-tiny': { bytes: 1 }, kitten: { bytes: 1 } };
+  const slow = { tts: { kitten: { speed: 0.73, at: Date.now(), source: 'benchmark' as const } } };
+
+  it("uses the computer's own voice, and says which local voice it set aside", () => {
+    const choice = chooseEconomyEngines(
+      settings(),
+      { ...tts, engine: 'kitten', voice: '' },
+      installed,
+      undefined,
+      slow,
+    );
+    expect(choice).toMatchObject({
+      engines: { tts: { engine: 'system', voice: '' } },
+      slow: { engine: 'kitten', speed: 0.73 },
+    });
+  });
+
+  it('keeps the local voice when it keeps up, or when nothing was measured', () => {
+    const fast = { tts: { kitten: { speed: 2.4, at: Date.now(), source: 'benchmark' as const } } };
+    for (const health of [fast, { tts: {} }, undefined]) {
+      const choice = chooseEconomyEngines(settings(), { ...tts, engine: 'kitten' }, installed, undefined, health);
+      expect(choice).toMatchObject({ engines: { tts: { engine: 'kitten', voice: 'Bella' } } });
+      expect(choice).not.toHaveProperty('slow');
+    }
+  });
+
+  it('does not carry the system voice name over to a voice that was chosen as local', () => {
+    const choice = chooseEconomyEngines(
+      settings(),
+      { ...tts, engine: 'kitten', voice: 'Leo' },
+      installed,
+      undefined,
+      slow,
+    );
+    expect(choice).toMatchObject({ engines: { tts: { engine: 'system', voice: '' } } });
+  });
+
+  it('keeps the system voice name when the system voices were chosen', () => {
+    const choice = chooseEconomyEngines(settings(), { ...tts, engineChosen: true }, installed, undefined, slow);
+    expect(choice).toMatchObject({ engines: { tts: { engine: 'system', voice: 'Samantha' } } });
+  });
+});
+
 describe('chooseEconomyEngines', () => {
   it('says plainly, with where to look, when no speech model is there (no developer command)', () => {
     const choice = chooseEconomyEngines(settings(), tts, { kitten: { bytes: 1 } });

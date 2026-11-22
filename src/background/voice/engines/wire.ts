@@ -36,3 +36,20 @@ export interface VoiceEngineRuntimeStatus {
   // The last line said in another voice in a conversation (an agent's answer), and the voice it used
   lastLine?: { text: string; engine: string; voice: string; at: number } | null;
 }
+
+/** What one spoken answer came to: sizes and times, never the words. Sent by the offscreen document to the trace. */
+export interface SpokenReport {
+  engine: 'kitten' | 'kokoro';
+  ok: boolean;
+  chars: number;
+  audioSeconds: number;
+  workMs: number;
+  // Speech made per second of work
+  speed: number | null;
+  firstAudioMs: number | null;
+  // The wait for the model to load before this answer, when it had to
+  loadMs: number | null;
+  // Pauses the listener heard where the speech ran dry between sentences
+  gaps: { count: number; totalMs: number; longestMs: number };
+  note?: string;
+}

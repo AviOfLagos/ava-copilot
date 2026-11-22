@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IDLE_UNLOAD_MS, LocalTts } from '../local-tts';
+import { headStartSeconds, IDLE_UNLOAD_MS, LocalTts, MAX_HEAD_START_SECONDS } from '../local-tts';
 import type { PcmPlayer } from '../player';
 import type { FromTtsWorker, ToTtsWorker } from '../protocol';
 
@@ -25,6 +25,9 @@ class FakePlayer {
   playing = false;
   peakRms = 0.3;
   playedSeconds = 0;
+  gapCount = 0;
+  gapMs = 0;
+  longestGapMs = 0;
   private drained: (() => void)[] = [];
   enqueue(samples: Float32Array) {
     this.clips.push(samples);
@@ -174,5 +177,84 @@ describe('LocalTts', () => {
     await flush();
     tts.stop();
     await expect(rendered).rejects.toThrow('Stopped');
+  });
+
+  describe('a voice slower than it plays', () => {
+    // 24 000 samples is a second of speech
+    const clip = (seconds: number) => new Float32Array(Math.round(seconds * 24_000));
+
+    async function start(text: string, onSpoken?: (report: unknown) => void) {
+      const ctx = setup();
+      if (onSpoken) ctx.tts.onSpoken = onSpoken;
+      const spoken = ctx.tts.speak({ engine: 'kitten', text, voice: 'Leo' });
+      ctx.worker().emit({ type: 'loaded', engine: 'kitten', ms: 1 });
+      await flush();
+      const speak = ctx.worker().sent[1] as Extract<ToTtsWorker, { type: 'speak' }>;
+      return { ...ctx, spoken, speak };
+    }
+
+    it('holds the first sentences back until the head start covers the rest, then plays them together', async () => {
+      const { player, worker, speak } = await start(
+        'The first sentence is here. The second one follows it. A third one comes after. And the last one ends it.',
+      );
+      // 4 s of speech made in 6 s of work: 0.67× real time, so the rest (about 12 s) needs a long head start
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(4), sampleRate: 24_000, ms: 6000, chars: 27 });
+      expect(player.clips).toHaveLength(0);
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(4), sampleRate: 24_000, ms: 6000, chars: 27 });
+      expect(player.clips).toHaveLength(2);
+      // From here on each sentence plays as it arrives
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(4), sampleRate: 24_000, ms: 6000, chars: 27 });
+      expect(player.clips).toHaveLength(3);
+    });
+
+    it('plays at once when the voice keeps up', async () => {
+      const { player, worker, speak } = await start('One sentence here. Another sentence there.');
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(2), sampleRate: 24_000, ms: 500, chars: 18 });
+      expect(player.clips).toHaveLength(1);
+    });
+
+    it('plays what was held when the request is done, even a single short sentence', async () => {
+      const { player, worker, speak } = await start('A slow short line.');
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(2), sampleRate: 24_000, ms: 6000, chars: 18 });
+      worker().emit({ type: 'done', id: speak.id });
+      expect(player.clips).toHaveLength(1);
+    });
+
+    it('reports the answer with sizes and times only, once it has been heard', async () => {
+      const reports: unknown[] = [];
+      const { player, worker, speak, spoken } = await start('Hello there. How are you today?', r => reports.push(r));
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(1), sampleRate: 24_000, ms: 400, chars: 12 });
+      worker().emit({ type: 'audio', id: speak.id, samples: clip(2), sampleRate: 24_000, ms: 800, chars: 18 });
+      worker().emit({ type: 'done', id: speak.id });
+      await flush();
+      player.finishPlaying();
+      await spoken;
+      expect(reports).toHaveLength(1);
+      expect(reports[0]).toMatchObject({ engine: 'kitten', ok: true, chars: 30, speed: 2.5, audioSeconds: 3 });
+      // No words in it
+      expect(JSON.stringify(reports[0])).not.toMatch(/Hello|today/);
+    });
+
+    it('reports a failure as one', async () => {
+      const reports: { ok: boolean; note?: string }[] = [];
+      const { worker, speak, spoken } = await start('Hello there.', r => reports.push(r as never));
+      worker().emit({ type: 'error', id: speak.id, message: 'the model fell over' });
+      await expect(spoken).rejects.toThrow('the model fell over');
+      expect(reports).toEqual([expect.objectContaining({ ok: false, note: 'failed' })]);
+    });
+  });
+});
+
+describe('headStartSeconds', () => {
+  it('needs none from a voice that keeps up, or when nothing is left to make', () => {
+    expect(headStartSeconds(1.5, 20)).toBe(0);
+    expect(headStartSeconds(1.12, 20)).toBe(0);
+    expect(headStartSeconds(0.5, 0)).toBe(0);
+  });
+
+  it('covers what the voice falls behind, with a margin, and never more than the cap', () => {
+    // 0.7× counted as 0.63×: 10 s still to make falls behind by 10 * 0.37 / 0.63 ≈ 5.9 s
+    expect(headStartSeconds(0.7, 10)).toBeCloseTo(5.87, 1);
+    expect(headStartSeconds(0.2, 30)).toBe(MAX_HEAD_START_SECONDS);
   });
 });
