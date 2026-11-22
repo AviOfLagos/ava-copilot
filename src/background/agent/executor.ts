@@ -2,6 +2,8 @@ import { flushHostedTracing } from '@src/background/telemetry/suture';
 import type { ChatModel } from '@src/background/llm/types';
 import { type ActionResult, AgentContext, type AgentOptions, type AgentOutput } from './types';
 import { t } from '@extension/i18n';
+import { actionsForChannel, channelOfOrigin } from '../tools/channels';
+import type { ChannelFacts } from '../tools/channels';
 import { NavigatorAgent, NavigatorActionRegistry } from './agents/navigator';
 import { PlannerAgent, type PlannerOutput } from './agents/planner';
 import { NavigatorPrompt } from './prompts/navigator';
@@ -53,6 +55,8 @@ export interface ExecutorExtraArgs {
   abilitiesSection?: string;
   // Where the chat is (the thread's origin: whatsapp, user, voice…), for the turn's trace
   channel?: string;
+  // What the chat's workspace has, so a channel's tool list can leave out what has nothing to act on (tools/channels.ts)
+  toolFacts?: ChannelFacts;
 }
 
 /** What an error's type says about why the task failed. */
@@ -126,7 +130,9 @@ export class Executor {
     );
 
     const actionBuilder = new ActionBuilder(context, extractorLLM);
-    const navigatorActionRegistry = new NavigatorActionRegistry(actionBuilder.buildDefaultActions());
+    const navigatorActionRegistry = new NavigatorActionRegistry(
+      actionsForChannel(actionBuilder.buildDefaultActions(), channelOfOrigin(extraArgs?.channel), extraArgs?.toolFacts),
+    );
 
     // Initialize agents with their respective prompts
     this.navigator = new NavigatorAgent(navigatorActionRegistry, {

@@ -83,6 +83,14 @@ describe.skipIf(!MODEL)(
       expect(named.filter(word => text.toLowerCase().includes(word)).length).toBeGreaterThanOrEqual(3);
       expect(text).not.toMatch(SAYS_TEXT_ONLY);
       expect(text.length).toBeLessThan(1200);
+      // Any tool name in the reply is a real one that a WhatsApp chat is offered (docs/tools.md)
+      const { toolInventory } = await import('@src/background/tools/inventory');
+      const { chatActionAllowed } = await import('@src/background/tools/channels');
+      const real = new Set(toolInventory().map(row => row.name));
+      for (const word of text.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? []) {
+        expect(real.has(word), `${word} is a real tool`).toBe(true);
+        expect(chatActionAllowed(word, 'whatsapp', { hasProduct: true }), `${word} works on WhatsApp`).toBe(true);
+      }
     });
 
     it('"can you reply with voicenote?" says yes (voice replies shipped in #27)', async () => {

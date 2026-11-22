@@ -94,7 +94,9 @@ export function renderToolTable(rows: ToolRow[]): string {
     'registered. Do not edit by hand: change a tool, then run',
     '`UPDATE_TOOLS_TABLE=1 pnpm exec vitest run src/background/tools`. The test fails when this file is out of date,',
     'when a tool has no row, or when a tool has no group in `TOOL_GROUPS`. Which channels carry a tool is decided in',
-    '`src/background/tools/channels.ts`.',
+    '`src/background/tools/channels.ts`: WhatsApp, agents and routines are not offered what needs the user at the screen,',
+    "and are offered the growth team's tools only when the chat's workspace has a product (the channels below show the",
+    'case with a product).',
     '',
     `${rows.length} tools. Per channel: ${(['panel', 'voice', 'whatsapp', 'agent', 'routine'] as ToolChannel[])
       .map(channel => `${channel} ${count(channel)}`)
