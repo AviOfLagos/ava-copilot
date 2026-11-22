@@ -318,9 +318,12 @@ export class ActionBuilder {
         await page.hoverElementNode(elementNode);
         // Read the page again so the controls the hover revealed are named in the result
         const after = await page.getState();
-        let msg = t('act_hover_ok', [input.index.toString(), elementNode.getAllTextTillNextClickableElement(2)]);
+        let msg = t('act_hover_ok', [
+          input.index.toString(),
+          wrapUntrustedContent(elementNode.getAllTextTillNextClickableElement(2)),
+        ]);
         if (after.hoverHints) {
-          msg += `\n${after.hoverHints}`;
+          msg += `\n${wrapUntrustedContent(after.hoverHints)}`;
         }
         msg += '\nIf something new appeared, it has an index in the next page state: click it.';
         this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, msg);

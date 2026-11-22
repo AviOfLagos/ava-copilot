@@ -67,8 +67,9 @@ export const findHiddenControls = (): HiddenControl[] => {
   const candidates = document.querySelectorAll(
     'button, a[href], [role="button"], [role="menuitem"], [role="link"], [tabindex="0"]',
   );
+  let scanned = 0;
   for (const el of Array.from(candidates)) {
-    if (found.length >= 60) break;
+    if (found.length >= 60 || ++scanned > 400) break;
     const rect = el.getBoundingClientRect();
     if (rect.width < 8 || rect.height < 8) continue;
     // Only what is on screen now: something off screen is for scrolling, not hovering

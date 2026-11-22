@@ -472,7 +472,12 @@ export default class Page {
       if (controls.length === 0) return '';
       const indexByXpath = new Map<string, number>();
       for (const [index, node] of selectorMap) {
-        if (node.xpath) indexByXpath.set(node.xpath, index);
+        // Only the main document: xpaths inside an iframe or shadow root start over and could collide
+        let inner = false;
+        for (let p = node.parent; p; p = p.parent ?? null) {
+          if (p.tagName === 'iframe' || p.shadowRoot) inner = true;
+        }
+        if (node.xpath && !inner) indexByXpath.set(node.xpath, index);
       }
       return formatHoverHints(matchHoverHosts(controls, indexByXpath));
     } catch (error) {
