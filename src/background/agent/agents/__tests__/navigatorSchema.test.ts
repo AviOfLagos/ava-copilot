@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ActionResult } from '../../types';
 import { Action } from '../../actions/builder';
 import { clickElementActionSchema, doneActionSchema, goBackActionSchema } from '../../actions/schemas';
-import { buildNavigatorJsonSchema, NavigatorActionRegistry } from '../navigator';
+import { buildNavigatorJsonSchema, describeActionsForText, NavigatorActionRegistry } from '../navigator';
 import { validateNavigatorOutput } from '../navigatorOutput';
 import { generateStructured, jsonSchema } from '@src/background/llm/generate';
 import { userMessage } from '@src/background/llm/messages';
@@ -68,5 +68,26 @@ describe('buildNavigatorJsonSchema', () => {
       name: 'navigator_output',
     });
     expect(output).toEqual(reply);
+  });
+});
+
+describe('describeActionsForText', () => {
+  it('lists every action with its parameters for a model in text mode', () => {
+    const schema = buildNavigatorJsonSchema(buildRegistry().setupModelOutputSchema());
+    const text = describeActionsForText(schema)!;
+    const lines = text.split('\n');
+    expect(lines[0]).toMatch(/exactly one of these keys/);
+    const done = lines.find(l => l.startsWith('- done:'))!;
+    const click = lines.find(l => l.startsWith('- click_element:'))!;
+    expect(done).toBeDefined();
+    expect(click).toBeDefined();
+    const clickObject = (actionProperties(schema as Schema).click_element.anyOf as Schema[]).find(
+      b => b.type === 'object',
+    )!;
+    for (const key of Object.keys(clickObject.properties as Schema)) expect(click).toContain(key);
+  });
+
+  it('returns undefined for a schema without actions', () => {
+    expect(describeActionsForText({ type: 'object', properties: {} })).toBeUndefined();
   });
 });

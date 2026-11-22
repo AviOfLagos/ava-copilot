@@ -265,6 +265,15 @@ describe('generateStructured', () => {
       }
     });
 
+    it('adds the text-mode hint to the instructions only in text mode', async () => {
+      for (const mode of ['text', 'native'] as const) {
+        const { chatModel, model } = mockChatModel(textResult('{"answer":"ok"}'), mode);
+        await generateStructured({ chatModel, messages: history, schema, name: 'x', textModeHint: 'ACTIONS-HINT' });
+        const sent = JSON.stringify(model.doGenerateCalls[0].prompt);
+        expect(sent.includes('ACTIONS-HINT')).toBe(mode === 'text');
+      }
+    });
+
     it('does not fall back on other API errors', async () => {
       const model = new MockLanguageModelV4({
         doGenerate: async () => {

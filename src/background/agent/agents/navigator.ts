@@ -79,6 +79,51 @@ export function buildNavigatorJsonSchema(schema: z.ZodType): JSONSchema7 {
   return addTitlesToProperties(zodSchema(schema).jsonSchema as Record<string, unknown>) as JSONSchema7;
 }
 
+type Node = Record<string, unknown>;
+const asNode = (v: unknown): Node | undefined =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Node) : undefined;
+
+/** The object branch of a nullable action (`anyOf: [{type: object…}, {type: null}]`), or the node itself */
+function objectBranch(node: Node): Node | undefined {
+  if (node.type === 'object' || node.properties) return node;
+  for (const key of ['anyOf', 'oneOf']) {
+    const list = node[key];
+    if (Array.isArray(list)) {
+      const found = list.map(asNode).find(n => n && (n.type === 'object' || n.properties));
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * A compact list of the navigator's actions for a model in text mode: one line per action with its parameters
+ * (`?` marks optional ones) and the first sentence of its description. Undefined when the schema has no actions.
+ */
+export function describeActionsForText(schema: JSONSchema7): string | undefined {
+  const actionProp = asNode(asNode(asNode(schema)?.properties)?.action);
+  const items = asNode(actionProp?.items);
+  const actions = asNode(items?.properties);
+  if (!actions) return undefined;
+  const lines: string[] = [];
+  for (const [name, raw] of Object.entries(actions)) {
+    const node = asNode(raw);
+    if (!node) continue;
+    const params = objectBranch(node);
+    const required = new Set(Array.isArray(params?.required) ? (params.required as string[]) : []);
+    const keys = Object.keys(asNode(params?.properties) ?? {}).map(k => (required.has(k) ? k : `${k}?`));
+    const description = String(node.description ?? params?.description ?? '')
+      .split(/(?<=\.)\s/)[0]
+      .slice(0, 140);
+    lines.push(`- ${name}: {${keys.join(', ')}}${description ? ` ${description}` : ''}`);
+  }
+  if (!lines.length) return undefined;
+  return [
+    'Available actions. Each item of "action" is an object with exactly one of these keys, whose value is an object with the listed parameters (? = optional). Use no other action names.',
+    ...lines,
+  ].join('\n');
+}
+
 export interface NavigatorResult {
   done: boolean;
 }
@@ -108,6 +153,11 @@ export class NavigatorAgent extends BaseAgent<z.ZodType<NavigatorOutput>, Naviga
    */
   protected getOutputSchema(): FlexibleSchema<this['ModelOutput']> {
     return jsonSchema<this['ModelOutput']>(this.jsonSchema, { validate: validateNavigatorOutput });
+  }
+
+  /** In text mode the schema isn't sent, so list every action with its parameters in the instructions */
+  protected textModeHint(): string | undefined {
+    return describeActionsForText(this.jsonSchema);
   }
 
   async execute(): Promise<AgentOutput<NavigatorResult>> {

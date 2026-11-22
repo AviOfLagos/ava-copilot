@@ -55,6 +55,11 @@ export abstract class BaseAgent<T extends z.ZodType, M = unknown> {
     return this.modelOutputSchema;
   }
 
+  /** What a model in text mode needs to know that the schema would otherwise tell it; none by default */
+  protected textModeHint(): string | undefined {
+    return undefined;
+  }
+
   async invoke(inputMessages: ModelMessage[]): Promise<this['ModelOutput']> {
     // Suture: one span per agent call, named for the feature (ava-planner, ava-navigator)
     const { output } = await tracedCall(
@@ -68,6 +73,7 @@ export abstract class BaseAgent<T extends z.ZodType, M = unknown> {
           toolName: this.structuredToolName,
           abortSignal: this.context.controller.signal,
           telemetry: telemetryFor(this.context.taskId, this.id),
+          textModeHint: this.textModeHint(),
         });
         return { ...r, text: r.rawText || JSON.stringify(r.output), model: this.chatLLM.modelName };
       },

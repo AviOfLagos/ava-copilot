@@ -156,7 +156,7 @@ export function isSchemaTooComplexError(error: unknown): boolean {
   const cause = RetryError.isInstance(error) ? error.lastError : error;
   if (!APICallError.isInstance(cause)) return false;
   const text = `${cause.message} ${cause.responseBody ?? ''}`;
-  return /too many states|schema (?:is )?too (?:complex|large|big)|schema[^.]{0,40}exceeds|too many (?:enum values|properties|union)/i.test(
+  return /too many states|schema (?:is )?too (?:complex|large|big)|schema[^.]{0,200}exceed|total number of (?:enum values|object properties)|too many (?:enum values|properties|union)/i.test(
     text,
   );
 }
@@ -217,6 +217,11 @@ export interface GenerateStructuredArgs<T> {
   abortSignal?: AbortSignal;
   /** The turn's trace recorder (telemetry/traces.ts#telemetryFor) */
   telemetry?: TelemetryOptions;
+  /**
+   * Text sent with the instructions in text mode only, where no schema reaches the model: e.g. the navigator's list
+   * of actions and their parameters, which native and tool mode carry in the schema itself.
+   */
+  textModeHint?: string;
 }
 
 /**
@@ -337,7 +342,11 @@ async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise
     }
 
     case 'text': {
-      const callArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
+      const baseArgs = buildCallArgs(chatModel, messages, abortSignal, telemetry);
+      const hint = args.textModeHint?.trim();
+      const callArgs = hint
+        ? { ...baseArgs, instructions: baseArgs.instructions ? `${baseArgs.instructions}\n\n${hint}` : hint }
+        : baseArgs;
       let text: string;
       let finishReason: FinishReason | undefined;
       let rawFinishReason: string | undefined;
