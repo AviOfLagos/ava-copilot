@@ -27,7 +27,7 @@ export interface SetupReadings {
   // Ava Brain's last answer about Ava's meeting browser (null: none yet)
   ava: MeetStatus | null;
   whatsapp: WhatsAppState | null;
-  calendar: { source: 'mac' | 'ics' | null; error: string | null; configured: boolean };
+  calendar: { source: 'mac' | 'ics' | null; error: string | null; configured: boolean; needsAccess?: boolean };
   obsidian: { name: string | null };
   backup: { lastBackupAt: number | null; lastError: string | null };
 }
@@ -80,7 +80,14 @@ export function evaluateSetup(readings: SetupReadings): SetupItemState[] {
       : item('whatsapp', 'needs_brain'),
     calendar.source && !calendar.error
       ? item('calendar', null, calendar.source)
-      : item('calendar', calendar.configured && calendar.error ? 'cal_error' : 'cal_none'),
+      : item(
+          'calendar',
+          calendar.configured && calendar.needsAccess
+            ? 'cal_denied'
+            : calendar.configured && calendar.error
+              ? 'cal_error'
+              : 'cal_none',
+        ),
     item('obsidian', readings.obsidian.name ? null : 'obs_none', readings.obsidian.name),
     backup.lastBackupAt
       ? item('backup', null, String(backup.lastBackupAt))
