@@ -36,6 +36,26 @@ import { finishTurn, startTurn } from '../telemetry/traces';
 
 const logger = createLogger('Executor');
 
+const FAILURE_NOTE_PREFIX = 'Previous attempt failed:';
+
+/** Exponential backoff between failed steps: 1 s, 2 s, 4 s, then 8 s at most */
+export function failureBackoffMs(consecutiveFailures: number): number {
+  return Math.min(1000 * 2 ** Math.max(0, consecutiveFailures - 1), 8000);
+}
+
+function waitUnlessStopped(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
+  return new Promise(resolve => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    }
+    signal.addEventListener('abort', done, { once: true });
+  });
+}
+
 export interface ExecutorExtraArgs {
   plannerLLM?: ChatModel;
   extractorLLM?: ChatModel;
@@ -383,6 +403,7 @@ export class Executor {
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));
       }
+      await this.recoverFromFailure('planning', this.lastStepError);
       return null;
     }
   }
@@ -431,8 +452,25 @@ export class Executor {
       if (context.consecutiveFailures >= context.options.maxFailures) {
         throw new MaxFailuresReachedError(t('exec_errors_maxFailuresReached'));
       }
+      await this.recoverFromFailure('step', this.lastStepError);
     }
     return false;
+  }
+
+  /**
+   * After a failed step that will be tried again: tell the model what failed, so the next step can work out why
+   * instead of repeating it, and wait 1 s, 2 s, 4 s... (at most 8 s) so a flaky model or page gets time to settle.
+   * Only the newest failure note is kept. The wait ends early when the task is stopped.
+   */
+  private async recoverFromFailure(kind: 'step' | 'planning', message: string): Promise<void> {
+    const context = this.context;
+    const detail = message.replace(/\s+/g, ' ').trim().slice(0, 300);
+    context.notes = context.notes.filter(note => !note.startsWith(FAILURE_NOTE_PREFIX));
+    context.notes.push(
+      `${FAILURE_NOTE_PREFIX} the ${kind} failed (failure ${context.consecutiveFailures} of ${context.options.maxFailures} allowed in a row): ${detail}. ` +
+        'Before acting, work out why from the page state and your last actions, then take a different, simpler next step.',
+    );
+    await waitUnlessStopped(failureBackoffMs(context.consecutiveFailures), context.controller.signal);
   }
 
   private async shouldStop(): Promise<boolean> {

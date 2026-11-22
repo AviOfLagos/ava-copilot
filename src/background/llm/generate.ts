@@ -21,6 +21,7 @@ import {
   removeThinkTags,
 } from '@src/background/agent/messages/utils';
 import { fallbackReason } from './errors';
+import { userMessage } from './messages';
 import type { ChatModel } from './types';
 
 export { jsonSchema, zodSchema } from 'ai';
@@ -229,7 +230,49 @@ export interface GenerateStructuredArgs<T> {
  * model fails (`callWithFallback`). Throws `ResponseParseError` when no valid output can be recovered.
  */
 export async function generateStructured<T>(args: GenerateStructuredArgs<T>): Promise<{ output: T; rawText?: string }> {
-  return callWithFallback(args.chatModel, args.abortSignal, chatModel => generateStructuredOn({ ...args, chatModel }));
+  return callWithFallback(args.chatModel, args.abortSignal, chatModel =>
+    generateStructuredWithRepair({ ...args, chatModel }),
+  );
+}
+
+/**
+ * The note that asks the model to answer again after a reply that couldn't be used, naming what was wrong with it,
+ * e.g. Gemini's MALFORMED_FUNCTION_CALL when it tries to call an action as a function in text mode.
+ */
+export function repairNote(error: ResponseParseError): string {
+  const reason = error.message.replace(/^Could not parse response from [^:]+:?\s*/, '').trim() || 'no valid JSON';
+  const lines = [
+    `Your previous reply could not be used (${reason}).`,
+    'Reply again with only the JSON object described in the instructions, written as plain text: do not call any function or tool, no code fences, nothing before or after the JSON.',
+  ];
+  if (/truncated/i.test(reason)) lines.push('Keep it short: fewer actions, shorter text fields.');
+  return lines.join(' ');
+}
+
+/**
+ * One self-repair round: a reply that couldn't be parsed is answered once more with a note saying what was wrong,
+ * instead of failing the whole step. Costs one extra call, and only when a reply was already unusable.
+ */
+async function generateStructuredWithRepair<T>(
+  args: GenerateStructuredArgs<T>,
+): Promise<{ output: T; rawText?: string }> {
+  try {
+    return await generateStructuredOn(args);
+  } catch (error) {
+    if (!(error instanceof ResponseParseError) || args.abortSignal?.aborted) throw error;
+    const label = `${args.chatModel.provider}/${args.chatModel.modelName}`;
+    logger.warning(`[${label}] unusable reply, asking once more`, error.message);
+    try {
+      return await generateStructuredOn({ ...args, messages: [...args.messages, userMessage(repairNote(error))] });
+    } catch (repairError) {
+      // The first failure says what went wrong; the repair's own error is logged only
+      if (repairError instanceof ResponseParseError) {
+        logger.warning(`[${label}] the repair reply was unusable too`, repairError.message);
+        throw error;
+      }
+      throw repairError;
+    }
+  }
 }
 
 async function generateStructuredOn<T>(args: GenerateStructuredArgs<T>): Promise<{ output: T; rawText?: string }> {
