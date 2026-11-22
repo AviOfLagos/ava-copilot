@@ -36,9 +36,9 @@ export function findChrome() {
 /**
  * Starts a browser with the built extension loaded and its model pointed at the mock. The first-run
  * setup is marked done unless `{ onboarding: true }` asks to see it; `{ model: false }` starts with no model at all,
- * as a fresh install does.
+ * as a fresh install does. `{ args }` adds browser flags.
  */
-export async function launchExtension(mock, { onboarding = false, model = true } = {}) {
+export async function launchExtension(mock, { onboarding = false, model = true, args = [] } = {}) {
   if (!fs.existsSync(path.join(dist, 'manifest.json'))) {
     throw new Error('dist/ is missing. Run `pnpm build` first.');
   }
@@ -71,6 +71,8 @@ export async function launchExtension(mock, { onboarding = false, model = true }
             '--disable-features=AudioServiceSandbox',
           ]
         : []),
+      // A test's own flags (the screen picker's auto-select, for one)
+      ...args,
     ],
   });
 

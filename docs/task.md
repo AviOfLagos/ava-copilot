@@ -2916,6 +2916,30 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
 - Tests: store, sources, cards, note, meet and calendar unit tests; E2E `people-pages.e2e.mjs` (Meet, Gmail and
   Slack readers on saved pages) and `people.e2e.mjs` (answer a card in the Inbox, see the name on the People page).
 
+### Screen recordings for a task (2026-11-22, #109, docs/pm-desk.md Part 7)
+
+- Panel (`side-panel/recordings`): "Record screen" on an open task's row and in its menu. `getDisplayMedia` is the
+  first call in the click (tabs first, `selfBrowserSurface: 'exclude'`); without a user activation nothing starts.
+  A window or a whole screen asks "Record anyway" first. Mic is added when allowed; tab sound when a tab is picked.
+  The bar shows a red mark, a timer and Stop. It also stops when the call ends, after 2 minutes of silence, at the
+  limit (Settings → Meetings, default 10 minutes), or when the shared tab closes.
+- Storage: chunks of one second go to a separate IndexedDB, `ava-recordings` (`storage/lib/recordings`), which
+  backups never read (they snapshot only the main database). The panel writes chunks; the background owns every
+  other write. A port (`screen-recording`) tells the background the panel closed: the recording stops there and
+  what was captured is saved. Recovery closes a recording with no chunk for 30 s.
+- Saving (`background/recordings`, job `recording_save`): Google Drive when the `google_drive` connector is
+  connected with the `drive.file` scope, to "Ava recordings / <workspace> / <date> <title>.webm", resumable in 8 MiB
+  pieces with the session URL saved so a retry continues the same file. The file starts private. Otherwise Ava
+  Brain saves it to `~/Movies/Ava recordings/<workspace>/`, otherwise the panel downloads it, and one Inbox item
+  offers to connect Drive. Do-once keys guard the upload and each share.
+- Share (`share.ts`): only the Share click makes the file "anyone with the link can comment" and adds the link to
+  the task; Stop sharing removes the permission and the link. `shareRecordingsFor(taskIds)` for other features.
+- Limits: MediaRecorder WebM has no duration index, so some players cannot seek until it has played through. No
+  manifest permission was added.
+- Tests: Drive client against a fake that drops connections, save and share, backup exclusion, store, recorder,
+  Brain routes; E2E `recording.e2e.mjs` records a tab with the mic while meeting notes run (file checked with
+  ffprobe), and uploads to a fake Drive through CDP on the service worker, with one dropped piece.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

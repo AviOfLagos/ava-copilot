@@ -25,3 +25,4 @@ import './feedback/register';
 import './rounds/register';
 import './tasks/register';
 import './people/register';
+import './recordings/register';

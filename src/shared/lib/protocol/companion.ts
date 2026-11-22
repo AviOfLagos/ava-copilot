@@ -1473,3 +1473,44 @@ export function meetingLinkIn(text: string): string | null {
 export function isErrorReply(value: unknown): value is ErrorReply {
   return errorReplySchema.safeParse(value).success;
 }
+
+// ── Screen recordings: a task's video, saved on the Mac when Google Drive is not connected ──────────
+// The extension sends the WebM in chunks; Ava Brain writes it to "~/Movies/Ava recordings/<workspace>/<file>".
+// A recording that was already saved answers with its path again, so a retried save never makes a second file.
+
+export const RECORDING_ROUTES = {
+  begin: '/v1/recordings/uploads',
+  // PUT
+  chunk: '/v1/recordings/uploads/:uploadId/chunks/:index',
+  commit: '/v1/recordings/uploads/:uploadId/commit',
+} as const;
+
+export const RECORDING_CHUNK_BYTES = BACKUP_CHUNK_BYTES;
+export const RECORDING_CHUNK_BODY_BYTES = BACKUP_CHUNK_BODY_BYTES;
+// An hour of screen and voice fits well within this
+export const RECORDING_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+
+export const recordingIdSchema = z.string().regex(/^rec_[a-z2-7]{10}$/);
+// A plain name: no slashes, no leading dot, nothing a Mac refuses
+const recordingNameSchema = z
+  .string()
+  .min(1)
+  .max(120)
+  // eslint-disable-next-line no-control-regex -- control characters are what it refuses
+  .regex(/^[^/\\:*?"<>|\u0000-\u001f\u007f.][^/\\:*?"<>|\u0000-\u001f\u007f]*$/);
+
+export const recordingBeginRequestSchema = z.object({
+  requestId: requestIdSchema,
+  recordingId: recordingIdSchema,
+  folder: recordingNameSchema,
+  fileName: recordingNameSchema.refine(name => name.endsWith('.webm'), 'A recording is a .webm file.'),
+  bytes: z.number().int().positive().max(RECORDING_MAX_BYTES),
+});
+export type RecordingBeginRequest = z.infer<typeof recordingBeginRequestSchema>;
+export const recordingBeginReplySchema = z.union([
+  z.object({ ok: z.literal(true), uploadId: backupUploadIdSchema, chunkBytes: z.number().int().positive() }),
+  // Saved before: nothing more to send
+  z.object({ ok: z.literal(true), path: z.string().min(1).max(1000) }),
+]);
+export const recordingChunkRequestSchema = z.object({ data: base64Schema.min(1).max(RECORDING_CHUNK_BODY_BYTES) });
+export const recordingCommitReplySchema = z.object({ ok: z.literal(true), path: z.string().min(1).max(1000) });

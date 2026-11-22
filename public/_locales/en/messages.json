@@ -11924,5 +11924,155 @@
   },
   "workspaces_move_gone": {
     "message": "That move is no longer on record."
+  },
+  "recording_record": {
+    "message": "Record screen"
+  },
+  "recording_record_for": {
+    "message": "Record screen for $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_picking": {
+    "message": "Choose a tab to record. Tabs come first."
+  },
+  "recording_wholeWarning": {
+    "message": "You picked a whole window or screen: everything visible on it will be in the recording."
+  },
+  "recording_recordAnyway": {
+    "message": "Record anyway"
+  },
+  "recording_cancel": {
+    "message": "Cancel"
+  },
+  "recording_live": {
+    "message": "Recording"
+  },
+  "recording_stop": {
+    "message": "Stop"
+  },
+  "recording_stop_label": {
+    "message": "Stop recording"
+  },
+  "recording_noMic": {
+    "message": "No microphone: only the screen and its sound."
+  },
+  "recording_saving": {
+    "message": "Saving…"
+  },
+  "recording_saving_pct": {
+    "message": "Saving to Drive, $PCT$%",
+    "placeholders": {
+      "pct": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "recording_inDrive": {
+    "message": "In Drive, private · $FOLDER$",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Ava recordings / Nexprove"
+      }
+    }
+  },
+  "recording_shared": {
+    "message": "Shared: anyone with the link can comment"
+  },
+  "recording_onMac": {
+    "message": "On your Mac: $PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1",
+        "example": "~/Movies/Ava recordings/Nexprove/2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_downloaded": {
+    "message": "Downloaded to your Downloads folder as $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_waiting": {
+    "message": "Not saved yet: Google Drive is not connected."
+  },
+  "recording_failed": {
+    "message": "Not saved: $WHY$",
+    "placeholders": {
+      "why": {
+        "content": "$1",
+        "example": "Google Drive is full."
+      }
+    }
+  },
+  "recording_open": {
+    "message": "Open in Drive"
+  },
+  "recording_share": {
+    "message": "Share"
+  },
+  "recording_share_hint": {
+    "message": "Anyone with the link can comment"
+  },
+  "recording_unshare": {
+    "message": "Stop sharing"
+  },
+  "recording_copy": {
+    "message": "Copy link"
+  },
+  "recording_copied": {
+    "message": "Copied"
+  },
+  "recording_download": {
+    "message": "Download"
+  },
+  "recording_retry": {
+    "message": "Try again"
+  },
+  "recording_play": {
+    "message": "Play"
+  },
+  "recording_hide": {
+    "message": "Hide"
+  },
+  "recording_now": {
+    "message": "Recording now"
+  },
+  "recording_list": {
+    "message": "Recordings for $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_inbox_drive_title": {
+    "message": "Connect Google Drive to share recordings"
+  },
+  "recording_inbox_drive_body": {
+    "message": "Screen recordings are saved on this computer for now. Connect Google Drive in Connectors and new ones go to Drive, where Share makes a link."
+  },
+  "recording_inbox_drive_link": {
+    "message": "Open Connectors"
+  },
+  "recording_settings_title": {
+    "message": "Screen recordings"
+  },
+  "recording_settings_max": {
+    "message": "Stop a screen recording after (minutes)"
+  },
+  "recording_settings_max_hint": {
+    "message": "It also stops after two minutes of silence and when the call ends."
   }
 }

@@ -6,6 +6,7 @@ import type { Task, TaskStatus, Workspace } from '@extension/storage';
 import { Button } from '../components/ui/button';
 import { RowMenu, RowMenuContent, RowMenuItem, RowMenuSeparator, RowMenuTrigger } from '../components/ui/row-menu';
 import { useLive } from '../hooks/useLive';
+import { RecordButton, recordTask, TaskRecordings } from '../recordings/TaskRecordings';
 import type { PanelApi } from '../registry';
 import { useWorkspaces } from '../workspaces/WorkspacePicker';
 import { MakeWorkspaceButton } from '../workspaces/MakeWorkspaceButton';
@@ -197,6 +198,7 @@ function TaskRow({
         <div className="min-w-0 flex-1 text-[13px]">
           <TaskCheckbox taskId={task.id} fallback={task.title} meta={false} />
         </div>
+        {task.status === 'open' && <RecordButton task={task} />}
         <RowMenu>
           <RowMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={t('tasks_menu', [task.title])}>
@@ -204,6 +206,10 @@ function TaskRow({
             </Button>
           </RowMenuTrigger>
           <RowMenuContent>
+            {task.status === 'open' && (
+              // Inside the click: the browser's picker opens from here, with nothing awaited before it
+              <RowMenuItem onSelect={() => recordTask(task)}>{t('recording_record')}</RowMenuItem>
+            )}
             <RowMenuItem onSelect={() => setEditing('edit')}>{t('tasks_edit')}</RowMenuItem>
             <RowMenuItem onSelect={() => setEditing('owner')}>{t('tasks_give')}</RowMenuItem>
             {others.length > 0 && <RowMenuItem onSelect={() => setEditing('merge')}>{t('tasks_merge')}</RowMenuItem>}
@@ -249,6 +255,7 @@ function TaskRow({
         )}
         {task.seenIn.length > 1 && <span>{t('tasks_seenIn', [String(task.seenIn.length)])}</span>}
       </div>
+      <TaskRecordings task={task} />
 
       {editing === 'edit' && (
         <form

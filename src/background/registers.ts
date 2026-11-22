@@ -39,3 +39,4 @@ import './voice/vocabulary/register';
 import './tasks/register';
 import './people/register';
 import './workspaces/register';
+import './recordings/register';
