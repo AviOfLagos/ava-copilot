@@ -26,3 +26,4 @@ import './rounds/register';
 import './tasks/register';
 import './people/register';
 import './recordings/register';
+import './followups/register';

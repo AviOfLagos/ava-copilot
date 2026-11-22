@@ -24,6 +24,9 @@ import { HHMM, whatsappRemoteSettingsStore, whatsappRemoteStateStore } from './s
 import { TaskDesk } from './task-desk';
 import type { PendingTaskMessage } from './task-desk';
 import { voiceNoteOf } from './voice-note';
+import { reportAnswer } from '../followups/answers';
+import { recordReport } from '../followups/report';
+import { followUpsToday } from '../followups/today';
 
 const logger = createLogger('WhatsAppRemote');
 
@@ -91,8 +94,19 @@ export const taskDesk = new TaskDesk({
       await whatsappRemoteStateStore.update({ taskOutbox: items });
     },
   },
-  // HOOK (#111): the follow-ups part fills this in; until then "who's next" says nothing is due
-  followUpsToday: async () => [],
+  // Today's follow-ups (#111, docs/pm-desk.md Part 9.2): the same five the brief and the Inbox show
+  followUpsToday: async () => (await followUpsToday()).map(item => item.task),
+  // "ada says the deck is with design, ready thursday": her update, and the follow-up clock restarted (#111)
+  report: async input =>
+    reportAnswer(
+      await recordReport({
+        personId: input.personId,
+        words: input.words,
+        source: { kind: 'whatsapp', id: input.messageId },
+        at: input.at,
+      }),
+      Date.now(),
+    ),
   now: Date.now,
   warn: (message, error) => logger.warning(message, toAppError(error).kind),
 });

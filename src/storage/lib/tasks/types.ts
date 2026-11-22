@@ -44,7 +44,8 @@ export interface Task {
   seenIn: string[];
   // A recording, a doc
   links: { label: string; url: string }[];
-  followUp?: { askedAt?: number; nextAt?: number; count: number };
+  // Follow-ups (docs/pm-desk.md, Part 9): when Avi last asked, when to chase next and why, how often he asked
+  followUp?: { askedAt?: number; nextAt?: number; count: number; nextBy?: 'asked' | 'snooze' | 'update' };
   // For Sheets/Notion/Linear later
   externalRefs: { system: string; id: string }[];
   // The ids of tasks merged into this one: a marker written with one of them still finds this task

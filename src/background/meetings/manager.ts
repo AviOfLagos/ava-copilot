@@ -73,6 +73,7 @@ import {
 import { withMeetingTasks } from '../tasks/sources';
 import { isKnownMeetingPlatform, placeSegments, platformOf, stitchOverlap, transcriptText } from './segments';
 import { learnFromMeeting } from '../people/meet';
+import { recordMeetingUpdates } from '../followups/updates';
 
 const logger = createLogger('Meetings');
 
@@ -1007,6 +1008,10 @@ export class MeetingManager {
         await this.threads.addMessage(meeting.threadId, 'planner', summaryOnly, { taskIds: taskIdsOf(note) });
         await this.threads.rename(meeting.threadId, `${t('meeting_threadPrefix')} ${note.title}`);
       }
+      // What each person said they did and will do: kept per person, with "Mark done?" offers (Part 9)
+      await recordMeetingUpdates(meeting, note, segments).catch(error =>
+        logger.warning('Could not keep the updates from a call', toAppError(error).kind),
+      );
       // Who was there and who was named: learned for the meeting's workspace, and asked about on one card
       void learnFromMeeting(meetingId).catch(error => logger.warning('Could not learn the names of a call', error));
     } catch (error) {

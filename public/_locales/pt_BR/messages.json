@@ -9220,7 +9220,7 @@
     "message": "Acompanhar hoje"
   },
   "wava_tasks_followUpsNone": {
-    "message": "Nada para acompanhar ainda."
+    "message": "Ninguém para cobrar hoje."
   },
   "wava_tasks_overdue": {
     "message": "atrasada"
@@ -12074,5 +12074,285 @@
   },
   "recording_settings_max_hint": {
     "message": "Ela também para após dois minutos de silêncio e quando a chamada termina."
+  },
+  "followups_wa_which": {
+    "message": "Qual $NAME$ você quer dizer: $LIST$? Escreva o nome completo.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "list": {
+        "content": "$2",
+        "example": "Ada Obi, Ada Lee"
+      }
+    }
+  },
+  "followups_wa_notSaved": {
+    "message": "Não consegui guardar isso. Diga assim: Ada says o deck está com o design, pronto quinta."
+  },
+  "followups_wa_saved": {
+    "message": "Anotado para $NAME$.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_by": {
+    "message": "Pronto até $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 26 Nov"
+      }
+    }
+  },
+  "followups_wa_nextFollowUp": {
+    "message": "Vou lembrar você de cobrar em $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 27 Nov"
+      }
+    }
+  },
+  "followups_wa_didTitle": {
+    "message": "$NAME$ terminou estas?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_wa_didHint": {
+    "message": "Responda done 1 para fechar uma. Nada é fechado sem você dizer."
+  },
+  "followups_error": {
+    "message": "Algo deu errado. Tente de novo."
+  },
+  "followups_card_a11y": {
+    "message": "Acompanhamento com $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_gone": {
+    "message": "Essa tarefa não está mais no quadro."
+  },
+  "followups_card_closed": {
+    "message": "Concluída"
+  },
+  "followups_card_why_overdue": {
+    "message": "Prazo era $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Fri 20 Nov"
+      }
+    }
+  },
+  "followups_card_why_asked": {
+    "message": "Perguntou em $DAY$, sem resposta ainda",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_card_why_snoozed": {
+    "message": "Adiada até hoje"
+  },
+  "followups_card_why_update": {
+    "message": "Chegou o dia que a pessoa deu"
+  },
+  "followups_card_why_quiet": {
+    "message": "Sem notícias há três dias úteis"
+  },
+  "followups_card_draft_a11y": {
+    "message": "Mensagem para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_drafting": {
+    "message": "Escrevendo uma mensagem…"
+  },
+  "followups_card_copy": {
+    "message": "Copiar"
+  },
+  "followups_card_copied": {
+    "message": "Copiado"
+  },
+  "followups_card_copy_fail": {
+    "message": "Não foi possível copiar. Selecione o texto e copie você mesmo."
+  },
+  "followups_card_whatsapp": {
+    "message": "Rascunho no WhatsApp"
+  },
+  "followups_card_whatsapp_done": {
+    "message": "Escrito na conversa com $CHAT$. Confira e envie você mesmo.",
+    "placeholders": {
+      "chat": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_card_asked": {
+    "message": "Perguntei"
+  },
+  "followups_card_done": {
+    "message": "Concluída"
+  },
+  "followups_card_snooze_1": {
+    "message": "Adiar 1 dia"
+  },
+  "followups_card_snooze_3": {
+    "message": "Adiar 3 dias"
+  },
+  "followups_card_snooze_7": {
+    "message": "Adiar 7 dias"
+  },
+  "followups_card_state_asked": {
+    "message": "Perguntado · próximo acompanhamento $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_card_state_snoozed": {
+    "message": "Adiada até $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 30 Nov"
+      }
+    }
+  },
+  "followups_inbox_other": {
+    "message": "Esta lista era de $DAY$.",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Mon 23 Nov"
+      }
+    }
+  },
+  "followups_ps_summary": {
+    "message": "Fazendo: $TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "finishing the login"
+      }
+    }
+  },
+  "followups_ps_latest": {
+    "message": "Última atualização $WHEN$ · $FROM$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "Tue 17 Nov"
+      },
+      "from": {
+        "content": "$2",
+        "example": "a call"
+      }
+    }
+  },
+  "followups_ps_from_meeting": {
+    "message": "de uma reunião"
+  },
+  "followups_ps_from_whatsapp": {
+    "message": "do WhatsApp"
+  },
+  "followups_ps_from_manual": {
+    "message": "anotada por você"
+  },
+  "followups_ps_did": {
+    "message": "Fez"
+  },
+  "followups_ps_doing": {
+    "message": "Fazendo agora"
+  },
+  "followups_ps_next": {
+    "message": "Próximo"
+  },
+  "followups_ps_by": {
+    "message": "até $DAY$",
+    "placeholders": {
+      "day": {
+        "content": "$1",
+        "example": "Thu 27 Nov"
+      }
+    }
+  },
+  "followups_ps_blocked": {
+    "message": "Bloqueado"
+  },
+  "followups_ps_open": {
+    "message": "Tarefas abertas"
+  },
+  "followups_ps_none": {
+    "message": "Nenhuma atualização ainda."
+  },
+  "followups_md_title": {
+    "message": "Marcar como concluída?"
+  },
+  "followups_md_ask": {
+    "message": "$NAME$ disse: $SAID$. Marcar '$TASK$' como concluída?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      },
+      "said": {
+        "content": "$2",
+        "example": "sent the login"
+      },
+      "task": {
+        "content": "$3",
+        "example": "Send the login"
+      }
+    }
+  },
+  "followups_md_yes": {
+    "message": "Marcar concluída"
+  },
+  "followups_md_no": {
+    "message": "Ainda não"
+  },
+  "followups_md_answered_done": {
+    "message": "Marcada como concluída"
+  },
+  "followups_md_answered_no": {
+    "message": "Deixada aberta"
+  },
+  "followups_report_label": {
+    "message": "O que $NAME$ disse?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "followups_report_save": {
+    "message": "Salvar"
+  },
+  "followups_report_saved": {
+    "message": "Anotado."
   }
 }

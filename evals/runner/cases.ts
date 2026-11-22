@@ -266,7 +266,43 @@ export type VoiceCase = z.infer<typeof voiceCase>;
 export type DraftCase = z.infer<typeof draftCase>;
 export type TeamCase = z.infer<typeof teamCase>;
 export type StandupCase = z.infer<typeof standupCase>;
-export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | TeamCase | StandupCase;
+/**
+ * A meeting note's per-person updates (docs/pm-desk.md, Part 9.1): the call's transcript, the note the model wrote
+ * (recorded, or asked of the live model), and what code keeps from it: one update per person who gave one, nobody
+ * who was only talked about, dates worked out from the call's day, "Mark done?" offers and no task closed.
+ */
+export const noteUpdatesCase = z.object({
+  kind: z.literal('note_updates'),
+  name: z.string(),
+  // When the call started, local ("2026-11-23T10:00")
+  started: z.string(),
+  // The transcript as captions give it: every line with its speaker's name
+  transcript: z.array(z.object({ speaker: z.string(), text: z.string() })).min(1),
+  // The people Ava knows, and their open tasks
+  people: z.array(z.object({ name: z.string(), tasks: z.array(z.string()).default([]) })).default([]),
+  // The note the model wrote: its JSON (only `personUpdates` matters here)
+  replay: z.object({ note: z.string() }).optional(),
+  expect: z.object({
+    // The people kept as giving an update, in any order
+    updates: z.array(
+      z.object({
+        name: z.string(),
+        did: z.array(z.string()).optional(),
+        doing_matches: z.array(z.string()).optional(),
+        next_matches: z.array(z.string()).optional(),
+        by: z.string().optional(),
+        // Titles of their tasks offered as "Mark done?"
+        offers: z.array(z.string()).optional(),
+      }),
+    ),
+    // Patterns the note's instructions must match: what the model is told
+    prompt_matches: z.array(z.string()).optional(),
+  }),
+  source: z.unknown().optional(),
+});
+export type NoteUpdatesCase = z.infer<typeof noteUpdatesCase>;
+
+export type EvalCase = PlannerCase | SkillsCase | VoiceCase | DraftCase | TeamCase | StandupCase | NoteUpdatesCase;
 export type VoiceStep = z.infer<typeof voiceStep>;
 
 const CHANNELS = new Set(plannerCase.shape.channel.unwrap().options as readonly string[]);
@@ -294,6 +330,7 @@ function parseCase(raw: unknown): EvalCase {
   if (kind === 'draft') return draftCase.parse(raw);
   if (kind === 'lead' || kind === 'marketing' || kind === 'social') return teamCase.parse(raw);
   if (kind === 'standup') return standupCase.parse(raw);
+  if (kind === 'note_updates') return noteUpdatesCase.parse(raw);
   return fromSuture(sutureCase.parse(raw));
 }
 

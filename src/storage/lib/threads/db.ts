@@ -23,6 +23,7 @@ import type {
 import type { RunRecord, RunStep, WorkflowRecord } from '../workflows/types';
 import type { TaskListRecord } from '../tasks/lists';
 import type { Task } from '../tasks/types';
+import type { PersonUpdate } from '../followups/types';
 import type { Table } from 'dexie';
 import type { ModelConfig } from '../settings/agentModels';
 import type { ThreadVoice } from '../settings/voiceEngineSettings';
@@ -190,6 +191,18 @@ export interface MeetingNote {
   actionItems: ActionItem[];
   openQuestions: string[];
   participants: string[];
+  // What each person who gave an update said (docs/pm-desk.md, Part 9.1); absent in notes written before it
+  personUpdates?: NoteUpdate[];
+}
+
+/** One person's update as the note's model read it from the call; `by` is the date words as said. */
+export interface NoteUpdate {
+  name: string;
+  did: string[];
+  doing: string[];
+  next: string[];
+  by: string | null;
+  blockers: string[];
 }
 
 export interface MeetingRecord {
@@ -430,6 +443,8 @@ export class AviCopilotDb extends Dexie {
   // People (../people, docs/pm-desk.md Part 5): who is who, and the names not settled yet
   people!: Table<Person, string>;
   peopleNames!: Table<NameCandidate, string>;
+  // What each person said they did, are doing and will do next (../followups, docs/pm-desk.md Part 9)
+  personUpdates!: Table<PersonUpdate, string>;
 
   constructor(name = 'avi-copilot') {
     super(name);
@@ -521,6 +536,11 @@ export class AviCopilotDb extends Dexie {
     // whoever merges second takes the next free number
     this.version(15).stores({
       taskLists: 'messageId, sentAt',
+    });
+    // v16: what each person said on a call or Avi reported back (docs/pm-desk.md, Part 9). Additive. Part 6 may add a
+    // step too: whoever merges second takes the next free number
+    this.version(16).stores({
+      personUpdates: 'id, personId, at, source.id',
     });
   }
 }

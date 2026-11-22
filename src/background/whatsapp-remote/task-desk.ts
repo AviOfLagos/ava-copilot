@@ -101,6 +101,14 @@ export interface TaskDeskDeps {
   // HOOK (#111, docs/pm-desk.md Part 9): who is due a follow-up today, most overdue first. Returns none until the
   // follow-ups part exists; "who's next" and the brief's "Follow up today" read it.
   followUpsToday: () => Promise<Task[]>;
+  // What Avi reports a person said (#111, Part 9.3): kept as their update, the follow-up clock restarted. Returns the
+  // answer to send and, when the update's "did" matches open tasks of theirs, those tasks to number ("done 1")
+  report?: (input: {
+    personId: string;
+    words: string;
+    messageId: string;
+    at: number;
+  }) => Promise<{ text: string; taskIds: string[] }>;
   now: () => number;
   warn: (message: string, error?: unknown) => void;
 }
@@ -204,6 +212,12 @@ export class TaskDesk {
     // "tasks are piling up" names no one: it is chat, not a command (only reading, so before the do-once key)
     if (command.kind === 'list' && command.word && !command.as && !(await this.names(command.word).catch(() => true)))
       return false;
+    // "the client says hi" names no one he knows: chat too. Only a person's name makes it a report
+    if (
+      command.kind === 'says' &&
+      (!this.deps.report || !(await this.peopleCalled(command.name).catch(() => [])).length)
+    )
+      return false;
     const key = `whatsapp.tasks.reply:${message.id}`;
     if (!(await this.deps.once.begin(key))) return true;
     let answer: Answer;
@@ -259,6 +273,7 @@ export class TaskDesk {
     }
     if (command.kind === 'list') return this.listFor(command.word, command.as);
     if (command.kind === 'add') return this.add(command.owner, command.words, message.id, words);
+    if (command.kind === 'says') return this.says(command.name, command.words, message);
     return this.next();
   }
 
@@ -466,6 +481,24 @@ export class TaskDesk {
       // A ✅ on this answer closes the task; it is not a numbered list
       list: { taskIds: [task.id], numbered: false },
     };
+  }
+
+  // ── ada says the deck is with design, ready thursday ──
+
+  private async says(name: string, said: string, message: Pick<WhatsAppMessage, 'id' | 'at'>): Promise<Answer> {
+    const found = await this.peopleCalled(name);
+    if (found.length > 1) {
+      return { text: t('followups_wa_which', [nameText(name), found.map(person => nameText(person.name)).join(', ')]) };
+    }
+    const at = message.at > 0 ? message.at : this.deps.now();
+    const { text, taskIds } = await this.deps.report!({
+      personId: found[0].id,
+      words: said,
+      messageId: message.id,
+      at,
+    });
+    // Her "did" lines that match open tasks of theirs: numbered, so "done 1" closes one (only his answer does)
+    return taskIds.length ? { text, list: { taskIds, numbered: true } } : { text };
   }
 
   // ── who's next ──

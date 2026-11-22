@@ -1,4 +1,11 @@
-import { byDueThenAge, MAKE_WORKSPACE_LINE, stripTaskMarkers, taskLine, undoMoveLine } from '@extension/storage';
+import {
+  byDueThenAge,
+  followUpLine,
+  MAKE_WORKSPACE_LINE,
+  stripTaskMarkers,
+  taskLine,
+  undoMoveLine,
+} from '@extension/storage';
 import type { GraphNode, InboxItem, Task, ThreadRecord, UpcomingEvent, Workspace } from '@extension/storage';
 import { sectionMarkdown } from '../workflows/brief';
 import type { WorkflowBriefSection } from '../workflows/brief';
@@ -65,6 +72,12 @@ export interface BriefData {
   goals?: string[];
   // Things a rule moved into a workspace since the last brief (docs/pm-desk.md, Part 3): told once, each with its Undo
   moves?: { id: string; workspaceName: string; count: number }[];
+  // Today's follow-ups (docs/pm-desk.md, Part 9.2), already plain: who, what, why today
+  followUps?: { taskId: string; name: string; title: string; why: string }[];
+  // Draw each follow-up as its card (the panel's brief); without it they are plain lines (the model's copy)
+  followUpCards?: boolean;
+  // True when Avi's profile has no name, so his own tasks cannot be told from others' and nobody is chased
+  followUpsNeedName?: boolean;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -316,6 +329,20 @@ export function briefMarkdown(data: BriefData, priorities: string[] = []): strin
     }
   });
   if (waiting.length) sections.push(`**Waiting on you (${waiting.length})**\n${waiting.join('\n')}`);
+
+  // Who to chase today (Part 9): in the panel each is a card with its draft and buttons (a ^fu_ line)
+  const follow = data.followUps ?? [];
+  if (follow.length) {
+    if (data.followUpCards) taskSections.add(sections.length);
+    const lines = data.followUpCards
+      ? follow.map(item => followUpLine(item.taskId))
+      : follow.map(item => `- ${plain(item.name, 60)}: ${plain(item.title, 160)} (${plain(item.why, 80)})`);
+    sections.push(`**Follow up today**\n${lines.join('\n')}`);
+  } else if (data.followUpsNeedName) {
+    sections.push(
+      "**Follow up today**\nSet your name in Settings, under General, so Ava can tell your tasks from other people's and suggest who to chase.",
+    );
+  }
 
   // What the user's workflows gathered for the brief, e.g. the morning's tech news
   for (const section of data.sections ?? []) sections.push(sectionMarkdown(section));
