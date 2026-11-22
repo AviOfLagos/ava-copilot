@@ -133,6 +133,22 @@ export function createTaskStore(db: AviCopilotDb = defaultDb, options: { now?: (
       });
     },
 
+    /** Adds a link (a recording, a doc) unless the task already has that address. In one transaction. */
+    addLink(id: string, link: { label: string; url: string }): Promise<Task | null> {
+      return change(id, task =>
+        task.links.some(item => item.url === link.url) ? null : { ...task, links: [...task.links, link] },
+      );
+    },
+
+    /** Takes a link off a task (a recording no longer shared). */
+    removeLink(id: string, url: string): Promise<Task | null> {
+      return change(id, task =>
+        task.links.some(item => item.url === url)
+          ? { ...task, links: task.links.filter(item => item.url !== url) }
+          : null,
+      );
+    },
+
     /** Closes, drops or reopens a task. Reopening clears who closed it and when. */
     setStatus(id: string, status: TaskStatus, by: 'avi' | 'ava'): Promise<Task | null> {
       return change(id, task => {

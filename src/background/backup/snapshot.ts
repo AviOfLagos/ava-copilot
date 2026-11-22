@@ -19,6 +19,8 @@ import { redactSecrets } from './trust';
  *   browser permissions (FileSystemDirectoryHandle), which cannot be carried; they are picked again.
  * - The secrets vault ("avi-secrets"): its key cannot leave the browser; its values travel through the
  *   Keychain instead, and the Ava Brain pairing token never does (pairing again proves the user is at the Mac).
+ * - The "ava-recordings" database: screen recordings for tasks (src/storage/lib/recordings). A video is large and
+ *   is not memory; it is in Drive or on the Mac, and the task keeps the link.
  * - The search index: it is in memory and rebuilt from the knowledge tables on start. Embeddings are stored in
  *   `kbChunks` and are kept, since making them again costs model calls.
  */

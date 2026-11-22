@@ -11924,5 +11924,155 @@
   },
   "workspaces_move_gone": {
     "message": "這次移動已不在記錄中。"
+  },
+  "recording_record": {
+    "message": "錄製畫面"
+  },
+  "recording_record_for": {
+    "message": "為 $TITLE$ 錄製畫面",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_picking": {
+    "message": "選擇要錄製的分頁。分頁會先列出。"
+  },
+  "recording_wholeWarning": {
+    "message": "你選了整個視窗或螢幕：上面看得到的一切都會被錄進去。"
+  },
+  "recording_recordAnyway": {
+    "message": "仍要錄製"
+  },
+  "recording_cancel": {
+    "message": "取消"
+  },
+  "recording_live": {
+    "message": "錄製中"
+  },
+  "recording_stop": {
+    "message": "停止"
+  },
+  "recording_stop_label": {
+    "message": "停止錄製"
+  },
+  "recording_noMic": {
+    "message": "沒有麥克風：只錄畫面和它的聲音。"
+  },
+  "recording_saving": {
+    "message": "儲存中…"
+  },
+  "recording_saving_pct": {
+    "message": "正在存到 Drive，$PCT$%",
+    "placeholders": {
+      "pct": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "recording_inDrive": {
+    "message": "在 Drive，私人 · $FOLDER$",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Ava recordings / Nexprove"
+      }
+    }
+  },
+  "recording_shared": {
+    "message": "已分享：任何有連結的人都能留言"
+  },
+  "recording_onMac": {
+    "message": "在你的 Mac：$PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1",
+        "example": "~/Movies/Ava recordings/Nexprove/2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_downloaded": {
+    "message": "已下載到「下載項目」資料夾，檔名 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "2026-11-22 Fix the login page.webm"
+      }
+    }
+  },
+  "recording_waiting": {
+    "message": "尚未儲存：Google Drive 未連線。"
+  },
+  "recording_failed": {
+    "message": "未儲存：$WHY$",
+    "placeholders": {
+      "why": {
+        "content": "$1",
+        "example": "Google Drive is full."
+      }
+    }
+  },
+  "recording_open": {
+    "message": "在 Drive 開啟"
+  },
+  "recording_share": {
+    "message": "分享"
+  },
+  "recording_share_hint": {
+    "message": "任何有連結的人都能留言"
+  },
+  "recording_unshare": {
+    "message": "停止分享"
+  },
+  "recording_copy": {
+    "message": "複製連結"
+  },
+  "recording_copied": {
+    "message": "已複製"
+  },
+  "recording_download": {
+    "message": "下載"
+  },
+  "recording_retry": {
+    "message": "再試一次"
+  },
+  "recording_play": {
+    "message": "播放"
+  },
+  "recording_hide": {
+    "message": "隱藏"
+  },
+  "recording_now": {
+    "message": "正在錄製"
+  },
+  "recording_list": {
+    "message": "$TITLE$ 的錄影",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Fix the login page"
+      }
+    }
+  },
+  "recording_inbox_drive_title": {
+    "message": "連線 Google Drive 才能分享錄影"
+  },
+  "recording_inbox_drive_body": {
+    "message": "目前螢幕錄影存在這台電腦。到「連接器」連線 Google Drive，之後的錄影就會存到 Drive，按「分享」即可產生連結。"
+  },
+  "recording_inbox_drive_link": {
+    "message": "開啟連接器"
+  },
+  "recording_settings_title": {
+    "message": "螢幕錄影"
+  },
+  "recording_settings_max": {
+    "message": "螢幕錄影在幾分鐘後停止"
+  },
+  "recording_settings_max_hint": {
+    "message": "兩分鐘沒有聲音或通話結束時也會停止。"
   }
 }

@@ -60,6 +60,7 @@ import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
 import UpdateBanner from './update/UpdateBanner';
 import { PendingWorkspaceOffers } from './workspaces/MakeWorkspaceButton';
+import RecordingBar from './recordings/RecordingBar';
 import WhatsNewCard from './update/WhatsNewCard';
 
 // A thread tag: the user answered "Save as skill?" for this chat
@@ -925,6 +926,8 @@ const SidePanel = () => {
         onPersonalities={() => void openSettingsPage('#personalities')}
       />
 
+      {/* A screen recording's red mark, timer and Stop, on every page of the panel */}
+      <RecordingBar />
       {(view === 'home' || view === 'chat') && <WhatsNewCard api={panelApi} />}
       {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
       {/* A workspace made by voice: its Undo, and the sheet for what looks like it (docs/pm-desk.md, Part 3) */}

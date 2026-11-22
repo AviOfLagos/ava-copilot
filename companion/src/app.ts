@@ -8,6 +8,8 @@ import { calendarRoutes } from './calendar/routes';
 import { BackupSecrets, securityKeychain } from './backup/secrets';
 import type { KeychainAdapter } from './backup/secrets';
 import { BackupStore } from './backup/store';
+import { recordingRoutes } from './recordings/routes';
+import { RecordingFiles } from './recordings/store';
 import { createGhRunner } from './cli/gh';
 import { privateDir } from './config';
 import type { BrainConfig } from './config';
@@ -145,6 +147,16 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   };
   const startedAt = now();
   server.add(...backupRoutes({ backups, secrets: backupSecrets }));
+  server.add(
+    ...recordingRoutes({
+      recordings: new RecordingFiles({
+        dataDir: config.dataDir,
+        home: deps.home,
+        log: log.child({ part: 'recordings' }),
+        now,
+      }),
+    }),
+  );
   server.add(...obsidianRoutes({ vaults }));
   server.add(...calendarRoutes({ calendar }));
   const traces = new TraceStore({

@@ -7,6 +7,9 @@ import {
   artifactListReplySchema,
   artifactOpenReplySchema,
   BACKUP_ROUTES,
+  RECORDING_ROUTES,
+  recordingBeginReplySchema,
+  recordingCommitReplySchema,
   CALENDAR_ROUTES,
   TRACES_ROUTES,
   DOCKER_ROUTES,
@@ -56,6 +59,7 @@ import {
 import type {
   ArtifactCreateRequest,
   BackupBeginRequest,
+  RecordingBeginRequest,
   GhRequest,
   HealthReply,
   SandboxRunRequest,
@@ -866,6 +870,42 @@ export class CompanionClient {
       idempotent: true,
       bypassBreaker: true,
       timeoutMs: 15_000,
+    });
+  }
+
+  // ── Screen recordings saved on the Mac (docs/pm-desk.md, Part 7) ──
+
+  /** Ava Brain answers a recording it already saved with its path, so a retried save makes no second file. */
+  recordingBegin(request: RecordingBeginRequest) {
+    return this.call({
+      method: 'POST',
+      path: RECORDING_ROUTES.begin,
+      body: request,
+      schema: recordingBeginReplySchema,
+      idempotent: true,
+      timeoutMs: 15_000,
+    });
+  }
+
+  /** Ava Brain accepts the last part again, so a part whose answer was lost may be sent twice. */
+  recordingChunk(uploadId: string, index: number, data: string) {
+    return this.call({
+      method: 'PUT',
+      path: backupPath(RECORDING_ROUTES.chunk, { uploadId, index }),
+      body: { data },
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 60_000,
+    });
+  }
+
+  recordingCommit(uploadId: string) {
+    return this.call({
+      method: 'POST',
+      path: backupPath(RECORDING_ROUTES.commit, { uploadId }),
+      body: {},
+      schema: recordingCommitReplySchema,
+      timeoutMs: 60_000,
     });
   }
 
