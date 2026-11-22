@@ -1,6 +1,8 @@
 import type { ConfirmRequest, MessageActor } from '@extension/storage';
 import { Actors, ExecutionState } from '../agent/event/types';
 import type { AgentEvent } from '../agent/event/types';
+import { decodeRetryStatus } from '../retry/status';
+import type { RetryStatus } from '../retry/status';
 
 /**
  * What one agent event means for the thread: a message to keep, a change of activity, or a request
@@ -12,6 +14,8 @@ export interface EventEffect {
   // The new activity line; '' clears it
   activity?: string;
   request?: ConfirmRequest;
+  // The wait before an automatic retry; null clears it
+  retrying?: RetryStatus | null;
 }
 
 export const ACTIVITY_PLANNING = 'planning';
@@ -27,11 +31,13 @@ export function effectOf(event: AgentEvent): EventEffect {
       switch (event.state) {
         case ExecutionState.TASK_FAIL:
         case ExecutionState.TASK_CANCEL:
-          return { ...keep('system', content), activity: '' };
+          return { ...keep('system', content), activity: '', retrying: null };
         case ExecutionState.TASK_OK:
-          return { activity: '' };
+          return { activity: '', retrying: null };
         case ExecutionState.ACT_NOTICE:
           return keep('system', content);
+        case ExecutionState.ACT_RETRY:
+          return { retrying: decodeRetryStatus(content) };
         default:
           return {};
       }

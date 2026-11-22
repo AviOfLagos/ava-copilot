@@ -3280,6 +3280,36 @@
   "retry_banner": {
     "message": "Trying again at $1 (try $2 of $3)"
   },
+  "retry_wait_step": {
+    "message": "Step failed — retrying in $1 ($2 of $3)"
+  },
+  "retry_wait_planning": {
+    "message": "Planning failed — retrying in $1 ($2 of $3)"
+  },
+  "retry_wait_model": {
+    "message": "Model is busy — retrying in $1 ($2 of $3)"
+  },
+  "retry_now": {
+    "message": "Retrying now…"
+  },
+  "retry_repair": {
+    "message": "Model reply was broken — asking again"
+  },
+  "retry_fallback": {
+    "message": "Model not answering — switching to the local one"
+  },
+  "retry_bannerIn": {
+    "message": "Trying again at $1, in $2 (try $3 of $4)"
+  },
+  "retry_dur_s": {
+    "message": "$1s"
+  },
+  "retry_dur_ms": {
+    "message": "$1 min $2s"
+  },
+  "retry_dur_hm": {
+    "message": "$1 h $2 min"
+  },
   "retry_stopTrying": {
     "message": "Stop trying"
   },

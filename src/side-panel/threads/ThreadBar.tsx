@@ -8,6 +8,8 @@ import { Button } from '../components/ui/button';
 import WorkspacePicker from '../workspaces/WorkspacePicker';
 import type { PanelApi } from '../registry';
 import { MAX_AUTO_TRIES } from '@src/background/retry/classify';
+import { formatWait } from './countdown';
+import { RetryCountdown, useNow } from './RetryCountdown';
 import ThreadVoicePicker from './ThreadVoicePicker';
 
 /** When the next try is due: the time, with the day when it is not today (an agent out of money waits a day). */
@@ -53,6 +55,7 @@ export default function ThreadBar({
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [models, setModels] = useState<{ value: string; label: string }[]>([]);
   const idle = thread.status === 'idle' || thread.status === 'error';
+  const now = useNow(!!thread.failure?.retryAt);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +158,7 @@ export default function ThreadBar({
           </button>
         )}
       </div>
+      {thread.status === 'running' && <RetryCountdown status={thread.retrying} />}
       {thread.status === 'error' && thread.error && (
         <div
           role="status"
@@ -163,8 +167,9 @@ export default function ThreadBar({
             {thread.error.message}
             {thread.failure?.retryAt && (
               <span className="text-muted-foreground block">
-                {t('retry_banner', [
+                {t('retry_bannerIn', [
                   retryTime(thread.failure.retryAt),
+                  formatWait(thread.failure.retryAt - now, t),
                   String(thread.autoTries ?? 1),
                   String(MAX_AUTO_TRIES),
                 ])}

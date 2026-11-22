@@ -24,6 +24,8 @@ export type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]['pr
 export type StructuredMode = 'native' | 'tool' | 'text';
 
 /** Call settings. Temperature and top P are never sent, so sampling is left to each model's defaults */
+import type { RetryReporter } from '../retry/status';
+
 export interface ChatModelSettings {
   maxOutputTokens?: number;
   /** The AI SDK's provider-independent reasoning effort; unset leaves the model's default reasoning */
@@ -49,6 +51,8 @@ export interface ChatModel {
   autoToolChoice?: boolean;
   /** For a cloud model: the local model a failed call is tried again on (see `callWithFallback`) */
   fallback?: ModelFallback;
+  /** Shows the user that a call is waiting to be tried again (set by `meterModel` from the chat's scope) */
+  status?: RetryReporter;
 }
 
 /** Why a cloud call was given to a local model; the kinds of `AppError` that allow it. */

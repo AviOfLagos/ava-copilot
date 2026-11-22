@@ -51,6 +51,8 @@ export enum ExecutionState {
   ACT_VERIFY = 'act.verify',
   // Something the user should know that is neither a result nor a failure
   ACT_NOTICE = 'act.notice',
+  // Ava is waiting to try again; details hold a RetryStatus as JSON, or are empty once the wait is over
+  ACT_RETRY = 'act.retry',
 }
 
 export interface EventData {
