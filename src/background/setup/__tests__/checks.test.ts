@@ -87,6 +87,9 @@ describe('setup checks', () => {
     expect(problems({ ...base, calendar: { source: null, error: 'bad', configured: true } }).calendar).toBe(
       'cal_error',
     );
+    expect(
+      problems({ ...base, calendar: { source: null, error: 'no', configured: true, needsAccess: true } }).calendar,
+    ).toBe('cal_denied');
     expect(problems({ ...base, obsidian: { name: null } }).obsidian).toBe('obs_none');
     expect(problems({ ...base, backup: { lastBackupAt: null, lastError: null } }).backup).toBe('backup_never');
     expect(problems({ ...base, backup: { lastBackupAt: null, lastError: 'x' } }).backup).toBe('backup_failed');

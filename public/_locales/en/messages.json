@@ -9930,6 +9930,9 @@
   "setup_problem_cal_error": {
     "message": "The calendar could not be read last time."
   },
+  "setup_problem_cal_denied": {
+    "message": "Ava Brain lost its permission to read your Calendar. macOS asks again after a Node update."
+  },
   "setup_problem_obs_none": {
     "message": "No Obsidian vault is chosen."
   },
@@ -10028,6 +10031,9 @@
   },
   "setup_action_calendar": {
     "message": "Connect a calendar"
+  },
+  "setup_action_calendarAllow": {
+    "message": "Allow Calendar access"
   },
   "setup_action_obsidian": {
     "message": "Choose a vault"

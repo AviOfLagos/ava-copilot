@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const notified = vi.hoisted(() => [] as string[]);
 const data = vi.hoisted(() => {
   const data: Record<string, unknown> = {};
   vi.stubGlobal('chrome', {
@@ -18,7 +19,13 @@ const data = vi.hoisted(() => {
       },
       session: { get: async () => ({}), set: async () => undefined },
     },
-    notifications: { create: async () => '', clear: async () => true },
+    notifications: {
+      create: async (id: string) => {
+        notified.push(id);
+        return '';
+      },
+      clear: async () => true,
+    },
     runtime: { getURL: (path: string) => path },
     i18n: { getMessage: (key: string) => key },
   });
@@ -30,6 +37,7 @@ const calendar = vi.hoisted(() => ({
   connected: true,
   kind: 'ics' as 'ics' | 'mac',
   fail: null as string | null,
+  denied: false,
   events: [] as {
     id: string;
     title: string;
@@ -46,7 +54,7 @@ vi.mock('../sources', () => ({
   macSource: () => ({ name: 'mac' }),
   readFromSources: async () =>
     calendar.fail
-      ? { events: [], source: null, error: calendar.fail }
+      ? { events: [], source: null, error: calendar.fail, macNeedsAccess: calendar.denied }
       : { events: calendar.events, source: 'ics', error: null },
 }));
 vi.mock('../../companion/client', () => ({ companionClient: {} }));
@@ -71,6 +79,8 @@ beforeEach(async () => {
   calendar.connected = true;
   calendar.kind = 'ics';
   calendar.fail = null;
+  calendar.denied = false;
+  notified.length = 0;
   calendar.events = [standup()];
   await upcomingEventsStore.set({ events: [], readAt: 0, error: null, source: null });
 });
@@ -145,5 +155,34 @@ describe('a calendar that is not connected', () => {
     const reading = await new CalendarWatcher().reading(24);
     expect(reading.state).toBe('read');
     expect(reading.events).toEqual([]);
+  });
+});
+
+describe('Calendar permission lost on the Mac', () => {
+  it('is asked for again every hour while it stays lost, and marked for the setup checklist', async () => {
+    calendar.fail = 'Ava Brain may not read the Calendar';
+    calendar.denied = true;
+    const watcher = new CalendarWatcher();
+    await watcher.refresh();
+    expect(notified).toEqual(['calendar-access']);
+    expect((await upcomingEventsStore.get()).needsAccess).toBe(true);
+    // Within the hour: no second notice
+    await watcher.refresh();
+    expect(notified).toHaveLength(1);
+    // An hour later it asks again
+    data['calendar-access-noticed'] = Date.now() - 61 * 60_000;
+    await watcher.refresh();
+    expect(notified).toHaveLength(2);
+  });
+
+  it('clears the mark once a read works again', async () => {
+    calendar.fail = 'x';
+    calendar.denied = true;
+    const watcher = new CalendarWatcher();
+    await watcher.refresh();
+    calendar.fail = null;
+    calendar.denied = false;
+    await watcher.refresh();
+    expect((await upcomingEventsStore.get()).needsAccess).toBe(false);
   });
 });

@@ -50,6 +50,7 @@ const PROBLEMS: Record<SetupProblem, MessageKey> = {
   wa_not_linked: 'setup_problem_wa_not_linked',
   cal_none: 'setup_problem_cal_none',
   cal_error: 'setup_problem_cal_error',
+  cal_denied: 'setup_problem_cal_denied',
   obs_none: 'setup_problem_obs_none',
   backup_never: 'setup_problem_backup_never',
   backup_failed: 'setup_problem_backup_failed',

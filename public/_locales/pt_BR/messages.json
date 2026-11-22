@@ -9930,6 +9930,9 @@
   "setup_problem_cal_error": {
     "message": "A agenda não pôde ser lida da última vez."
   },
+  "setup_problem_cal_denied": {
+    "message": "O Ava Brain perdeu a permissão para ler sua Agenda. O macOS pede de novo após uma atualização do Node."
+  },
   "setup_problem_obs_none": {
     "message": "Nenhum cofre do Obsidian escolhido."
   },
@@ -10028,6 +10031,9 @@
   },
   "setup_action_calendar": {
     "message": "Conectar uma agenda"
+  },
+  "setup_action_calendarAllow": {
+    "message": "Permitir acesso à Agenda"
   },
   "setup_action_obsidian": {
     "message": "Escolher um cofre"
