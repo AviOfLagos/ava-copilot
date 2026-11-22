@@ -3280,6 +3280,36 @@
   "retry_banner": {
     "message": "Tentando de novo às $1 (tentativa $2 de $3)"
   },
+  "retry_wait_step": {
+    "message": "O passo falhou — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_wait_planning": {
+    "message": "O planejamento falhou — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_wait_model": {
+    "message": "O modelo está ocupado — tentando de novo em $1 ($2 de $3)"
+  },
+  "retry_now": {
+    "message": "Tentando de novo agora…"
+  },
+  "retry_repair": {
+    "message": "A resposta do modelo veio quebrada — perguntando de novo"
+  },
+  "retry_fallback": {
+    "message": "O modelo não responde — passando para o local"
+  },
+  "retry_bannerIn": {
+    "message": "Tentando de novo às $1, em $2 (tentativa $3 de $4)"
+  },
+  "retry_dur_s": {
+    "message": "$1s"
+  },
+  "retry_dur_ms": {
+    "message": "$1 min $2s"
+  },
+  "retry_dur_hm": {
+    "message": "$1 h $2 min"
+  },
   "retry_stopTrying": {
     "message": "Parar de tentar"
   },

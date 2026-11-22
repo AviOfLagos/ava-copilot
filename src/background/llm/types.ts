@@ -9,6 +9,7 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
 } from 'ai';
+import type { RetryReporter } from '../retry/status';
 
 /** Provider-specific options keyed by provider name, as accepted by `generateText` */
 export type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]['providerOptions']>;
@@ -49,6 +50,8 @@ export interface ChatModel {
   autoToolChoice?: boolean;
   /** For a cloud model: the local model a failed call is tried again on (see `callWithFallback`) */
   fallback?: ModelFallback;
+  /** Shows the user that a call is waiting to be tried again (set by `meterModel` from the chat's scope) */
+  status?: RetryReporter;
 }
 
 /** Why a cloud call was given to a local model; the kinds of `AppError` that allow it. */

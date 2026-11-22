@@ -24,6 +24,22 @@ describe('self-repair of unusable replies', () => {
     expect(JSON.stringify(last)).toContain('do not call any function');
   });
 
+  it('shows "asking again" while the repair call runs, and clears it after', async () => {
+    const { chatModel } = mockChatModel([malformed(), textResult('{"answer":"ok"}')], 'text');
+    const seen: unknown[] = [];
+    chatModel.status = status => seen.push(status);
+    await generateStructured({ chatModel, messages, schema, name: 'x' });
+    expect(seen).toEqual([{ kind: 'repair' }, null]);
+  });
+
+  it('shows nothing for a good first reply', async () => {
+    const { chatModel } = mockChatModel([textResult('{"answer":"ok"}')], 'text');
+    const seen: unknown[] = [];
+    chatModel.status = status => seen.push(status);
+    await generateStructured({ chatModel, messages, schema, name: 'x' });
+    expect(seen).toEqual([]);
+  });
+
   it('repairs a reply without JSON', async () => {
     const { chatModel, model } = mockChatModel(
       [textResult('Sure, I will click it.'), textResult('{"answer":"ok"}')],

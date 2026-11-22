@@ -79,6 +79,13 @@ export interface ThreadRecord {
   retryRound?: number;
   // What the agent is doing right now, e.g. "Planning", while it runs
   activity: string;
+  // While Ava waits to try a step or a model call again: what and until when (RetryStatus in background/retry)
+  retrying?: {
+    kind: 'step' | 'planning' | 'model' | 'repair' | 'fallback';
+    until?: number;
+    attempt?: number;
+    max?: number;
+  } | null;
   // The task of the current or interrupted run, kept so it can be resumed
   activeTask: string | null;
   // The id of that task: the same when it is resumed or retried, new for every new request. Do-once keys start

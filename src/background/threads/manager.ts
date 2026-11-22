@@ -418,7 +418,7 @@ export class ThreadManager {
       ) {
         await this.store.update(
           threadId,
-          { status: 'idle', activity: '', pendingRequest: null, runStartedAt: null, activeTask: null },
+          { status: 'idle', activity: '', retrying: null, pendingRequest: null, runStartedAt: null, activeTask: null },
           true,
         );
       }
@@ -770,6 +770,7 @@ export class ThreadManager {
         failure: ending?.failure ?? null,
         ...(ending ? { autoTries: ending.autoTries } : {}),
         activity: '',
+        retrying: null,
         pendingRequest: null,
       });
     }
@@ -896,6 +897,7 @@ export class ThreadManager {
       browserContext = await createBrowserContext(binding, { onlyDomains: agent?.domains });
       executor = await createExecutor({ threadId, task, browserContext, models, messageContext, media });
       scope.notify = message => executor.notify(message);
+      scope.status = status => executor.reportRetry(status);
     }
 
     const groupId = await groupTabs(binding, thread.title || task);
@@ -906,6 +908,7 @@ export class ThreadManager {
         status: 'running',
         error: null,
         activity: '',
+        retrying: null,
         activeTask: task,
         failure: null,
         runStartedAt: Date.now(),
@@ -1000,6 +1003,7 @@ export class ThreadManager {
             failure: ending?.failure ?? null,
             ...(ending ? { autoTries: ending.autoTries } : {}),
             activity: '',
+            retrying: null,
             activeTask: error ? runner.executor.currentTask : null,
             runStartedAt: null,
             pendingRequest: null,
@@ -1056,7 +1060,7 @@ export class ThreadManager {
       }
       // After the run ended, or once it is told to stop, nothing may make the thread look busy again
       if (runner.ended || this.running.get(runner.threadId) !== runner) return;
-      if (runner.cancelled && (effect.request || effect.activity)) return;
+      if (runner.cancelled && (effect.request || effect.activity || effect.retrying)) return;
       if (effect.request) {
         await this.store.addMessage(
           runner.threadId,
@@ -1070,6 +1074,9 @@ export class ThreadManager {
       }
       if (effect.activity !== undefined) {
         await this.store.update(runner.threadId, { activity: effect.activity });
+      }
+      if (effect.retrying !== undefined) {
+        await this.store.update(runner.threadId, { retrying: effect.retrying });
       }
     } catch (error) {
       // A lost record must not stop the run
