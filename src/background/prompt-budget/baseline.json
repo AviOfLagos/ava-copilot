@@ -1,0 +1,64 @@
+{
+  "panel navigator": {
+    "chars": 80990,
+    "parts": {
+      "tool definitions": 53197,
+      "rules": 9330,
+      "gate, reader and knowledge rules": 2813,
+      "registered action rules": 11786,
+      "identity": 144,
+      "channel": 448,
+      "capability list": 3272
+    }
+  },
+  "panel navigator, in a workspace": {
+    "chars": 85763,
+    "parts": {
+      "tool definitions": 53197,
+      "rules": 9330,
+      "gate, reader and knowledge rules": 2813,
+      "registered action rules": 11786,
+      "identity": 144,
+      "channel": 448,
+      "capability list": 3272,
+      "workspace": 4773
+    }
+  },
+  "whatsapp navigator": {
+    "chars": 81606,
+    "parts": {
+      "tool definitions": 53197,
+      "rules": 9330,
+      "gate, reader and knowledge rules": 2813,
+      "registered action rules": 11786,
+      "identity": 144,
+      "channel": 1064,
+      "capability list": 3272
+    }
+  },
+  "agent and routine chats": {
+    "chars": 81071,
+    "parts": {
+      "tool definitions": 53197,
+      "rules": 9330,
+      "gate, reader and knowledge rules": 2813,
+      "registered action rules": 11786,
+      "identity": 144,
+      "channel": 529,
+      "capability list": 3272
+    }
+  },
+  "panel planner": {
+    "chars": 12132,
+    "parts": {
+      "system prompt": 12132
+    }
+  },
+  "voice": {
+    "chars": 28424,
+    "parts": {
+      "tool definitions": 22321,
+      "rules": 6103
+    }
+  }
+}

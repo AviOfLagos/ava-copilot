@@ -103,3 +103,21 @@ Not recommended: Anthropic's memory tool as a store. It is Anthropic-only, lets 
 - Anthropic docs (undated, read 2026-11-22): [memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool), [context editing](https://platform.claude.com/docs/en/build-with-claude/context-editing)
 - Anthropic, [Code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp), 2025-11-04
 - The Ava code at commit `4bdb8c1`, paths as cited above.
+
+---
+
+## Measured fixed prompt sizes (issue #130)
+
+Note: these numbers come from the test in `src/background/prompt-budget` and replace estimates made from source text elsewhere in this file.
+
+
+Real sizes from `src/background/prompt-budget` (run `pnpm test -t "size of what each channel sends"`; the test fails when a channel or a part grows by more than 10% against `baseline.json`, and `UPDATE_PROMPT_BUDGET=1` rewrites it). Tokens are characters divided by four. These replace the estimates above; page state and the conversation are not counted. Tool definitions are the JSON Schema of every action; the workspace row uses the longest "about" the app keeps (4,000 characters).
+
+| Channel | Tool definitions | Rules, identity, channel, capability list | Workspace block | Total fixed |
+|---|---:|---:|---:|---:|
+| panel navigator | 53,197 ch (~13,300 tok) | 27,793 ch (~6,949 tok) | - | **80,990 ch (~20,248 tok)** |
+| panel navigator, in a workspace | 53,197 ch (~13,300 tok) | 27,793 ch (~6,949 tok) | 4,773 ch (~1,194 tok) | **85,763 ch (~21,441 tok)** |
+| whatsapp navigator | 53,197 ch (~13,300 tok) | 28,409 ch (~7,103 tok) | - | **81,606 ch (~20,402 tok)** |
+| agent and routine chats | 53,197 ch (~13,300 tok) | 27,874 ch (~6,969 tok) | - | **81,071 ch (~20,268 tok)** |
+| panel planner | 0 | 12,132 ch (~3,033 tok) | - | **12,132 ch (~3,033 tok)** |
+| voice | 22,321 ch (~5,581 tok) | 6,103 ch (~1,526 tok) | - | **28,424 ch (~7,106 tok)** |
