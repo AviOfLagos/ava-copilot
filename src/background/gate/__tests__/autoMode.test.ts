@@ -195,3 +195,19 @@ describe('who can turn Auto mode on', () => {
     await gateSettingsStore.setAutoModeDefault(false);
   });
 });
+
+describe('Auto mode and keys sent blind', () => {
+  it('still asks for Enter when the focus cannot be read', async () => {
+    const id = await chat({ autoMode: true });
+    const { context, requests } = fakeContext(id);
+    const page = {
+      ...fakePage(),
+      evaluateInPage: async (fn: unknown) => {
+        if (fn === readFocus) return { where: 'frame', element: null };
+        return { fields: [], context: '' };
+      },
+    } as unknown as Page;
+    await reviewAction(context, page, { action: 'send_keys', args: { keys: 'Enter', intent: 'Submit' } });
+    expect(requests).toHaveLength(1);
+  });
+});

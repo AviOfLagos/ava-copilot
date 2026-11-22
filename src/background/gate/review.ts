@@ -281,6 +281,8 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   // The kind is a worst-case guess, not what the page shows: no "Allow every time" rule may cover it
   let guessed = false;
   let needsUser: NeedsUserKind | null = null;
+  // Keys sent where the focus could not be read (an iframe, maybe a payment frame): Auto mode still asks
+  let blindKeys = false;
   let control: string;
 
   if (gated.action === 'send_keys') {
@@ -291,6 +293,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
     const unreadable = focus === null || focus.where === 'frame';
     kind = classifyKeys(keys, unreadable ? null : target);
     guessed = unreadable;
+    blindKeys = unreadable;
     if (kind !== null && target.formHasPassword) {
       needsUser = 'login';
     }
@@ -343,7 +346,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   const mayKeepNamed = gated.rule ? await ruleMayAnswer(context, gated.rule.kind) : false;
   const needsCard = settings.confirm[kind] || unattended || !!repeat;
   // Auto mode: the user told this task not to ask. A repeat of a step still asks.
-  const auto = needsCard && !repeat && (await autoModeAllows(context.taskId, kind));
+  const auto = needsCard && !repeat && !blindKeys && (await autoModeAllows(context.taskId, kind));
   if (auto) {
     let host = '';
     try {
