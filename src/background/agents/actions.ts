@@ -11,6 +11,7 @@ import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
 import { generateStructured } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
+import { didNotHappen, guardOnce } from '../once/guard';
 import { registerAgentAction } from '../registry';
 import { workflowModel } from '../workflows/models';
 import { authoredAgentSchema, authorAgent } from './authoring';
@@ -215,6 +216,23 @@ export function registerAgentActions(service: AgentService): void {
         if ('refused' in allowed) return fail(context, allowed.refused);
         const agent = findAgent(await visibleAgents(allowed.thread?.workspaceId ?? null), input.id);
         if (!agent) return fail(context, `There is no agent "${input.id}". Use list_agents to see them.`);
+        // Do once: a task that was retried does not start the same run again without the user's click
+        const guard = await guardOnce(
+          context,
+          {
+            what: 'agent.run',
+            scope: `agent:${agent.id}`,
+            label: `run the agent "${agent.name}"`,
+            parts: [agent.id, input.task ?? ''],
+          },
+          {
+            kind: 'submit',
+            intent: `Run the agent "${agent.name}" again`,
+            target: agent.name,
+            fields: input.task?.trim() ? [{ label: 'Task', value: input.task.trim().slice(0, 300) }] : [],
+          },
+        );
+        if ('result' in guard) return guard.result;
         try {
           const run = await service.requestRun(agent.id, {
             trigger: { type: 'chat', detail: context.taskId },
@@ -224,12 +242,16 @@ export function registerAgentActions(service: AgentService): void {
             tainted: Boolean(input.task?.trim()),
             task: input.task,
           });
+          await guard.start.done('the run started');
           return new ActionResult({
             extractedContent: `Ran "${agent.name}" in its own window. ${await agentRunResult(run.id, RUN_WAIT_MS)}`,
             includeInMemory: true,
           });
         } catch (error) {
-          return fail(context, toAppError(error).message);
+          const problem = toAppError(error);
+          // Refused before it began: nothing started, so it may be tried again. Anything else stays at "started".
+          if (didNotHappen(problem.kind)) await guard.start.failed(problem.kind);
+          return fail(context, problem.message);
         }
       }, runAgentSchema),
   });

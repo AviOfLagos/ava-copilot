@@ -28,6 +28,7 @@ import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { answerOneOff, registerAgentAction, registerCommand, registerRecovery, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
+import { sayOnce } from './once';
 import { askOrAllowed } from '../gate/allowRule';
 import { defaultRenderDeps, renderForCall } from './render';
 import { askedToSpeak, REFUSALS, sayInMeeting, wordsFromCall } from './say';
@@ -355,7 +356,8 @@ function sayDeps(context: AgentContext): SayDeps {
     },
     assistantName,
     userName,
-    confirm: async ({ spoken, meeting }) => {
+    once: words => sayOnce(context, words),
+    confirm: async ({ spoken, meeting, repeat }) => {
       const name = await assistantName();
       const request: ConfirmRequest = {
         id: crypto.randomUUID(),
@@ -368,6 +370,7 @@ function sayDeps(context: AgentContext): SayDeps {
         pageUrl: meeting.url,
         fields: [{ label: t('meetvoice_confirm_words'), value: spoken }],
         context: '',
+        ...(repeat ? { repeat } : {}),
       };
       // "Allow every time" is the user's own choice here: speaking in a call is `send`, kept per kind of step
       // (every Meet call), never per meeting or per words

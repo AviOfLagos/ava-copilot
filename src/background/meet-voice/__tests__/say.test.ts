@@ -8,13 +8,14 @@ await vi.hoisted(async () => {
 
 vi.mock('webextension-polyfill', () => ({ default: {} }));
 
+import { AppError } from '@extension/shared';
 import type { MeetStatus } from '@src/shared/lib/protocol/companion';
 import { CompanionClient } from '../../companion/client';
 import type { CompanionClientDeps } from '../../companion/client';
 import { engineOrder, geminiCallPrompt, NO_VOICE_MESSAGE, renderForCall } from '../render';
 import type { RenderDeps } from '../render';
 import { askedToSpeak, introduction, REFUSALS, sayInMeeting, wordsFromCall } from '../say';
-import type { SayDeps } from '../say';
+import type { SayDeps, SayOnce } from '../say';
 
 const inCall = (code = 'abc-defg-hij', speaking = false): MeetStatus => ({
   state: 'in_call',
@@ -57,6 +58,96 @@ function harness(overrides: Partial<SayDeps> = {}) {
   };
   return { deps, introduced, confirmed, sent };
 }
+
+describe('do once', () => {
+  function onceOf(told: string | null = null, send = false) {
+    const log: string[] = [];
+    const once = async (): Promise<SayOnce> => {
+      if (told) return { told };
+      return {
+        begin: async () => {
+          log.push('begin');
+          return null;
+        },
+        done: async () => void log.push('done'),
+        failed: async reason => void log.push(`failed:${reason}`),
+      };
+    };
+    return { once, log, send };
+  }
+
+  it('writes started before the words go out, and done once they were played', async () => {
+    const { once, log } = onceOf();
+    const { deps, sent } = harness({ once });
+    const original = deps.send;
+    deps.send = async request => {
+      log.push('send');
+      return original(request);
+    };
+    expect(await sayInMeeting(deps, 'The launch moves to Friday.')).toMatchObject({ ok: true });
+    expect(log).toEqual(['begin', 'send', 'done']);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('says nothing, and shows no card, when the same words were already said in this task', async () => {
+    const { once } = onceOf('Already done in this task.');
+    const { deps, confirmed, sent } = harness({ once });
+    expect(await sayInMeeting(deps, 'The launch moves to Friday.')).toEqual({
+      ok: false,
+      reason: 'Already done in this task.',
+    });
+    expect(confirmed).toHaveLength(0);
+    expect(sent).toHaveLength(0);
+  });
+
+  it('puts the repeat note on the card when only the user may say it again', async () => {
+    const seen: unknown[] = [];
+    const repeat = { status: 'started' as const, at: 1, label: 'say words' };
+    const { deps } = harness({
+      once: async () => ({ repeat, begin: async () => null, done: async () => {}, failed: async () => {} }),
+      confirm: async request => {
+        seen.push(request.repeat);
+        return 'declined';
+      },
+    });
+    await sayInMeeting(deps, 'The launch moves to Friday.');
+    expect(seen).toEqual([repeat]);
+  });
+
+  it('a send cut off stays started (it may have been heard); one refused outright may be tried again', async () => {
+    const cutOff = onceOf();
+    const a = harness({
+      once: cutOff.once,
+      send: async () => {
+        throw new AppError('timeout', 'no answer');
+      },
+    });
+    await expect(sayInMeeting(a.deps, 'The launch moves to Friday.')).rejects.toThrow();
+    expect(cutOff.log).toEqual(['begin']);
+
+    const refused = onceOf();
+    const b = harness({
+      once: refused.once,
+      send: async () => {
+        throw new AppError('forbidden', 'not allowed');
+      },
+    });
+    await expect(sayInMeeting(b.deps, 'The launch moves to Friday.')).rejects.toThrow();
+    expect(refused.log).toEqual(['begin', 'failed:forbidden']);
+  });
+
+  it('a render that fails played nothing, so a retry is not a repeat', async () => {
+    const run = onceOf();
+    const { deps } = harness({
+      once: run.once,
+      render: async () => {
+        throw new Error('no voice');
+      },
+    });
+    await expect(sayInMeeting(deps, 'The launch moves to Friday.')).rejects.toThrow();
+    expect(run.log[1]).toMatch(/^failed:/);
+  });
+});
 
 describe('sayInMeeting', () => {
   it('refuses chats nobody is watching: agents, routines, the brief, and WhatsApp (the user is away)', async () => {

@@ -13,6 +13,7 @@ import { toolCatalogueSectionFor } from '../integrations/section';
 import { connectorService } from '../integrations/instance';
 import { generateStructured } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
+import { didNotHappen, guardOnce } from '../once/guard';
 import { registerAgentAction } from '../registry';
 import { authoredSpecSchema, authorSpec } from './authoring';
 import type { AuthoredSpec } from './authoring';
@@ -240,17 +241,38 @@ export function registerWorkflowActions(service: WorkflowService): void {
         if ('refused' in allowed) return fail(context, allowed.refused);
         const workflow = findWorkflow(await visibleWorkflows(allowed.thread), input.id);
         if (!workflow) return fail(context, `There is no workflow "${input.id}". Use list_workflows to see them.`);
+        // Do once: a task that was retried does not start the same routine again without the user's click
+        const guard = await guardOnce(
+          context,
+          {
+            what: 'workflow.run',
+            scope: `workflow:${workflow.id}`,
+            label: `run the routine "${workflow.name}"`,
+            parts: [workflow.id],
+          },
+          {
+            kind: 'submit',
+            intent: `Run the routine "${workflow.name}" again`,
+            target: workflow.name,
+            fields: [],
+          },
+        );
+        if ('result' in guard) return guard.result;
         try {
           const run = await service.start(workflow.id, {
             trigger: { type: 'chat', detail: context.taskId },
             attended: true,
           });
+          await guard.start.done('the run started');
           return new ActionResult({
             extractedContent: `Ran "${workflow.name}". ${await runResult(run.id, RUN_WAIT_MS)}`,
             includeInMemory: true,
           });
         } catch (error) {
-          return fail(context, toAppError(error).message);
+          const problem = toAppError(error);
+          // Refused before it began (a draft, already running): nothing started, so it may be tried again
+          if (didNotHappen(problem.kind)) await guard.start.failed(problem.kind);
+          return fail(context, problem.message);
         }
       }, runWorkflowSchema),
   });
