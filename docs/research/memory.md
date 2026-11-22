@@ -65,7 +65,7 @@ Caps and paths verified in the code at commit `4bdb8c1`.
 | b. Clear old action results first | Like Anthropic's context editing: after about 5 steps, replace a step's full action result with one line ("extracted 2,300 characters from X") before summarising anything | Biggest effect for long page runs; no model call needed (code only) | A later step may need an old result; keep the last N and anything marked `includeInMemory`; clear in batches to avoid changing the start of the prompt often |
 | c. Give the summary model a smaller job | Summarise only what is older than 12 messages (already so) | none | |
 
-**Recommendation: (b) then (a).** Both are code in `threads/compaction.ts` and `agent/messages/service.ts`. Build on the existing `includeInMemory` flag on action results.
+**Recommendation: (b) then (a).** Built in issue #132: old long action results shrink to a line (`MessageManager.clearOldActionResults`, in batches, last 12 messages and short results kept) and compaction starts at 35% (`COMPACT_AT`), only when at least about 1,500 tokens would be summarised. Both are code in `threads/compaction.ts` and `agent/messages/service.ts`. Build on the existing `includeInMemory` flag on action results.
 
 ### 4.2 One front door, one recall
 
