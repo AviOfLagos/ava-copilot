@@ -12598,5 +12598,26 @@
   },
   "settings_tracing_content_hint": {
     "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
+  },
+  "gate_autoApproved": {
+    "message": "Aprovado automaticamente: $1 em $2"
+  },
+  "auto_chip_on": {
+    "message": "Modo automático ligado"
+  },
+  "auto_toggle_label": {
+    "message": "Automático: não me pergunte nesta tarefa"
+  },
+  "auto_asks_title": {
+    "message": "Ainda pergunta, mesmo no modo automático:"
+  },
+  "auto_asks_list": {
+    "message": "pagamentos e compras, apagar, mudar quem tem acesso, e senhas ou códigos"
+  },
+  "settings_autoDefault_label": {
+    "message": "Iniciar novas tarefas no modo automático"
+  },
+  "settings_autoDefault_hint": {
+    "message": "As novas tarefas que você digitar começam no modo automático. Pagamentos, exclusões, mudanças de acesso e senhas ainda perguntam."
   }
 }

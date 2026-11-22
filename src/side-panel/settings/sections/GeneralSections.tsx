@@ -183,6 +183,13 @@ export function ConfirmSection() {
         ))}
       </div>
       <p className="text-muted-foreground px-3 pb-3 text-[11.5px]">{t('settings_gate_hint')}</p>
+      <Row title={t('settings_autoDefault_label')} hint={t('settings_autoDefault_hint')}>
+        <Switch
+          label={t('settings_autoDefault_label')}
+          checked={settings.autoModeDefault}
+          onChange={value => void gateSettingsStore.setAutoModeDefault(value)}
+        />
+      </Row>
     </>
   );
 }

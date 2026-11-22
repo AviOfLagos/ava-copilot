@@ -1086,6 +1086,7 @@ const SidePanel = () => {
             }
             onOpenMeeting={thread.meetingId ? () => openMeeting(thread.meetingId!) : undefined}
             onWorkspace={workspaceId => post({ type: 'thread_workspace', threadId: thread.id, workspaceId })}
+            onAutoMode={on => post({ type: 'thread_auto_mode', threadId: thread.id, on })}
             onRetry={async () => post({ type: 'thread_retry', threadId: thread.id, windowId: await currentWindowId() })}
             onStopRetry={() => post({ type: 'thread_cancel', threadId: thread.id })}
             isDarkMode={isDarkMode}

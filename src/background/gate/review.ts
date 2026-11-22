@@ -18,6 +18,7 @@ import { createLogger } from '../log';
 import { beginOnce, checkOnce, stepFor } from '../once';
 import type { OnceInput } from '../once';
 import { alwaysAsks } from './origins';
+import { autoModeAllows } from './autoMode';
 import { classifyClick, classifyKeys, classifyLabel, classifyNeedsUser, EMPTY_TARGET } from './classify';
 import type { GateTarget } from './classify';
 import { readCommitContent, readCommitEffect, readFocus, readLiveLabel } from './probes';
@@ -341,6 +342,21 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   const mayKeep = await ruleMayAnswer(context, kind);
   const mayKeepNamed = gated.rule ? await ruleMayAnswer(context, gated.rule.kind) : false;
   const needsCard = settings.confirm[kind] || unattended || !!repeat;
+  // Auto mode: the user told this task not to ask. A repeat of a step still asks.
+  const auto = needsCard && !repeat && (await autoModeAllows(context.taskId, kind));
+  if (auto) {
+    let host = '';
+    try {
+      host = new URL(page.url()).host;
+    } catch {
+      // A page with no proper address is named by its control alone
+    }
+    await context.emitEvent(
+      Actors.NAVIGATOR,
+      ExecutionState.ACT_START,
+      t('gate_autoApproved', [control || t(KIND_TEXT[kind]), host || '-']),
+    );
+  }
   const named =
     mayKeepNamed && gated.rule && !ALWAYS_ASK_KINDS.includes(kind) && canAllowAlways(gated.rule.kind, gated.rule.scope)
       ? gated.rule
@@ -348,7 +364,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   const scope = named ? named.scope : guessed ? '' : pageScope(page.url());
   const ruleKind = named ? named.kind : kind;
   const rule =
-    (named ? mayKeepNamed : mayKeep) && needsCard && !repeat && scope
+    !auto && (named ? mayKeepNamed : mayKeep) && needsCard && !repeat && scope
       ? await permissionRulesStore.find(ruleKind, scope).catch(() => null)
       : null;
   if (rule) {
@@ -357,7 +373,7 @@ export async function reviewAction(context: AgentContext, page: Page, gated: Gat
   }
 
   // Running a step again is the user's call, whatever the settings say
-  if (!rule && needsCard) {
+  if (!rule && !auto && needsCard) {
     const request = await buildRequest(context, page, 'commit', kind, intent, control, content);
     if (repeat) request.repeat = repeat;
     else if (named) request.always = named;

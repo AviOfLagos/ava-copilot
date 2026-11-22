@@ -12598,5 +12598,26 @@
   },
   "settings_tracing_content_hint": {
     "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
+  },
+  "gate_autoApproved": {
+    "message": "Auto-approved: $1 on $2"
+  },
+  "auto_chip_on": {
+    "message": "Auto mode on"
+  },
+  "auto_toggle_label": {
+    "message": "Auto: don't ask me for this task"
+  },
+  "auto_asks_title": {
+    "message": "Still asks, even in Auto mode:"
+  },
+  "auto_asks_list": {
+    "message": "payments and purchases, deleting, changing who has access, and passwords or codes"
+  },
+  "settings_autoDefault_label": {
+    "message": "Start new tasks in Auto mode"
+  },
+  "settings_autoDefault_hint": {
+    "message": "New tasks you type start with Auto mode on. Payments, deleting, access changes and passwords still ask."
   }
 }

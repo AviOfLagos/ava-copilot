@@ -3,6 +3,7 @@ import {
   agentModelStore,
   AgentNameEnum,
   db,
+  gateSettingsStore,
   generalSettingsStore,
   routeWorkspace,
   threadStore,
@@ -17,6 +18,7 @@ import type { AgentEvent } from '../agent/event/types';
 import { generatePlainText } from '../llm/generate';
 import { systemMessage, userMessage } from '../llm/messages';
 import type { ChatModel } from '../llm/types';
+import { alwaysAsks } from '../gate/origins';
 import { createLogger } from '../log';
 import { onceNote } from '../once';
 import type { FailureCode } from '../retry/classify';
@@ -212,6 +214,10 @@ export class ThreadManager {
         origin: request.origin ?? 'user',
         agentId: request.agentId ?? null,
         ...request.fields,
+        // The user's own setting makes his new typed chats start in Auto mode; nothing else sets it
+        ...((request.origin ?? 'user') === 'user' && (await gateSettingsStore.getSettings()).autoModeDefault
+          ? { autoMode: true }
+          : {}),
       }));
     await this.windDown(thread.id);
     if (this.running.has(thread.id)) {
@@ -496,6 +502,16 @@ export class ThreadManager {
     }
     this.parked.delete(threadId);
     await this.store.remove(threadId);
+  }
+
+  /**
+   * Turns Auto mode on or off for a task. Called only for the side panel's `thread_auto_mode` command, i.e. the
+   * user's own click (see gate/autoMode.ts). A chat nobody watches never gets it.
+   */
+  async setAutoMode(threadId: string, on: boolean): Promise<boolean> {
+    const thread = await this.store.get(threadId);
+    if (!thread || alwaysAsks(thread)) return false;
+    return this.store.update(threadId, { autoMode: on });
   }
 
   /**
