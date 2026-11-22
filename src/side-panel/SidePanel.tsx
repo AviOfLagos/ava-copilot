@@ -60,6 +60,7 @@ import { useSpeechInput } from './hooks/useSpeechInput';
 import { PendingSends } from './chat/pendingSends';
 import UpdateBanner from './update/UpdateBanner';
 import { PendingWorkspaceOffers } from './workspaces/MakeWorkspaceButton';
+import { CallTaskCards } from './call-tasks/CallTaskCards';
 import RecordingBar from './recordings/RecordingBar';
 import WhatsNewCard from './update/WhatsNewCard';
 
@@ -932,6 +933,8 @@ const SidePanel = () => {
       {(view === 'home' || view === 'chat') && <UpdateBanner api={panelApi} />}
       {/* A workspace made by voice: its Undo, and the sheet for what looks like it (docs/pm-desk.md, Part 3) */}
       <PendingWorkspaceOffers />
+      {/* On a call: whether a spoken task is heard, and a card per task just said (docs/pm-desk.md Part 6) */}
+      <CallTaskCards />
 
       {elsewhere?.pendingRequest && (
         <div className="px-2.5 pt-2">

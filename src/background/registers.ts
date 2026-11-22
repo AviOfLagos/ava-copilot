@@ -40,3 +40,4 @@ import './tasks/register';
 import './people/register';
 import './workspaces/register';
 import './recordings/register';
+import './call-tasks/register';

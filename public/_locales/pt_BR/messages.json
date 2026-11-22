@@ -12074,5 +12074,198 @@
   },
   "recording_settings_max_hint": {
     "message": "Ela também para após dois minutos de silêncio e quando a chamada termina."
+  },
+  "calltasks_you": {
+    "message": "Você"
+  },
+  "calltasks_wa_allTitle": {
+    "message": "Tarefas da chamada"
+  },
+  "calltasks_wa_recordings": {
+    "message": "Gravações de tela:"
+  },
+  "calltasks_draft_notYet": {
+    "message": "Pressione \"Está certo\" primeiro: nada sai antes disso."
+  },
+  "calltasks_draft_nobody": {
+    "message": "Essa pessoa não está mais na lista desta chamada."
+  },
+  "calltasks_draft_noTab": {
+    "message": "Abra o WhatsApp Web em uma aba e entre, depois pressione de novo."
+  },
+  "calltasks_draft_loggedOut": {
+    "message": "O WhatsApp Web não está conectado. Leia o código com o celular e pressione de novo."
+  },
+  "calltasks_draft_noChat": {
+    "message": "Nenhuma conversa do WhatsApp chamada \"$NAME$\" foi encontrada. Renomeie a pessoa na página Pessoas para o nome que o WhatsApp mostra.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_wrongChat": {
+    "message": "O WhatsApp abriu \"$SHOWN$\", não \"$NAME$\", então nada foi digitado.",
+    "placeholders": {
+      "shown": {
+        "content": "$1",
+        "example": "Ada Obi"
+      },
+      "name": {
+        "content": "$2",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_greeting": {
+    "message": "Oi $NAME$, da nossa chamada:",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_draft_noBox": {
+    "message": "A caixa de mensagem dessa conversa não foi encontrada."
+  },
+  "calltasks_edit_words": {
+    "message": "O que deve ser feito"
+  },
+  "calltasks_edit_owner": {
+    "message": "Para quem"
+  },
+  "calltasks_save": {
+    "message": "Salvar"
+  },
+  "calltasks_cancel": {
+    "message": "Cancelar"
+  },
+  "calltasks_edit": {
+    "message": "Editar"
+  },
+  "calltasks_edit_for": {
+    "message": "Editar \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_discard": {
+    "message": "Descartar"
+  },
+  "calltasks_discard_for": {
+    "message": "Descartar \"$TITLE$\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Send the deck"
+      }
+    }
+  },
+  "calltasks_status_captions": {
+    "message": "Tarefas faladas ativadas: diga \"Ava, note a task for Ada: …\". Ouvidas nas suas próprias legendas."
+  },
+  "calltasks_status_mic": {
+    "message": "Tarefas faladas ativadas: diga \"Ava, note a task for Ada: …\". Ouvidas no seu microfone, neste computador."
+  },
+  "calltasks_status_off_none": {
+    "message": "Tarefas faladas desativadas nesta chamada: não há legendas nem microfone seu para ouvir. Ative as legendas na chamada."
+  },
+  "calltasks_status_off_recogniser": {
+    "message": "Tarefas faladas desativadas nesta chamada: ouvir seu microfone exige um modelo de fala neste computador (Configurações, Voz). Ou ative as legendas."
+  },
+  "calltasks_status_off_micDenied": {
+    "message": "Tarefas faladas desativadas nesta chamada: o Chrome não permitiu o microfone. Ou ative as legendas."
+  },
+  "calltasks_status_off_mic": {
+    "message": "Tarefas faladas desativadas nesta chamada: as notas não usam seu microfone. Ative as legendas, ou inclua o microfone nas notas."
+  },
+  "calltasks_status_off_marker": {
+    "message": "Tarefas faladas desativadas nesta chamada: as legendas não marcam quais linhas são suas, então as palavras de um convidado não podem ser distinguidas das suas. Clique no ícone da barra na aba da chamada para gravar o som com seu microfone."
+  },
+  "calltasks_card_title": {
+    "message": "Tarefa para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_card_forYou": {
+    "message": "Tarefa para você"
+  },
+  "calltasks_record_ask": {
+    "message": "Gravar a tela para isto?"
+  },
+  "calltasks_yes": {
+    "message": "Sim"
+  },
+  "calltasks_no": {
+    "message": "Não"
+  },
+  "calltasks_sent_sent": {
+    "message": "Enviado a você no WhatsApp, pronto para encaminhar."
+  },
+  "calltasks_sent_queued": {
+    "message": "Aguarda o fim do horário de silêncio e então vai para você no WhatsApp."
+  },
+  "calltasks_sent_off": {
+    "message": "Não enviado: mensagens de tarefas estão desativadas nas configurações do WhatsApp."
+  },
+  "calltasks_sent_empty": {
+    "message": "Não enviado: nenhuma destas tarefas está mais aberta."
+  },
+  "calltasks_sent_done": {
+    "message": "Já enviado a você no WhatsApp."
+  },
+  "calltasks_sent_failed": {
+    "message": "Não enviado: não foi possível alcançar o WhatsApp. Não será tentado de novo sozinho."
+  },
+  "calltasks_draft": {
+    "message": "Rascunhar mensagem para $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_drafted": {
+    "message": "Digitado na conversa de $NAME$ no WhatsApp Web. Leia e pressione enviar lá.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Ada"
+      }
+    }
+  },
+  "calltasks_list_title": {
+    "message": "Tarefas desta chamada"
+  },
+  "calltasks_shareSkipped": {
+    "message": "Algumas gravações não foram compartilhadas: $REASONS$",
+    "placeholders": {
+      "reasons": {
+        "content": "$1",
+        "example": "Not in Google Drive."
+      }
+    }
+  },
+  "calltasks_confirm_duringCall": {
+    "message": "A chamada ainda está sendo anotada. Pressione isto quando ela terminar."
+  },
+  "calltasks_confirmed": {
+    "message": "Repassado. Cada gravação no Drive agora tem um link que qualquer pessoa com ele pode abrir."
+  },
+  "calltasks_looksRight": {
+    "message": "Está certo"
+  },
+  "calltasks_looksRight_hint": {
+    "message": "Nada é enviado e nenhuma gravação é compartilhada até você pressionar isto."
   }
 }
