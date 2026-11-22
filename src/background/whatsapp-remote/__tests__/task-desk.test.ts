@@ -40,6 +40,8 @@ function setup(options: { quiet?: boolean; people?: Person[]; workspaces?: Works
   const lists = createTaskListStore(db, { now: () => now });
   const sent: { text: string; kind: string; replyTo?: string; requestId: string; id: string }[] = [];
   let failSends = 0;
+  // Runs inside the next send, as something else would while a message is going out
+  let duringSend: (() => Promise<void>) | null = null;
   const once = new Map<string, 'started' | 'done' | 'failed'>();
   let outbox: PendingTaskMessage[] = [];
   const observed: ObserveInput[] = [];
@@ -72,6 +74,9 @@ function setup(options: { quiet?: boolean; people?: Person[]; workspaces?: Works
     },
     workspaces: async () => options.workspaces ?? [],
     send: async request => {
+      const during = duringSend;
+      duringSend = null;
+      await during?.();
       if (failSends > 0) {
         failSends--;
         throw Object.assign(new Error('Ava has sent 20 WhatsApp messages in the last hour.'), { kind: 'rate_limit' });
@@ -131,6 +136,8 @@ function setup(options: { quiet?: boolean; people?: Person[]; workspaces?: Works
     add,
     outbox: () => outbox,
     failNextSends: (count: number) => (failSends = count),
+    duringNextSend: (run: () => Promise<void>) => (duringSend = run),
+    setOutbox: (items: PendingTaskMessage[]) => (outbox = items),
     at: (time: number) => (now = time),
     advance: (ms: number) => (now += ms),
     now: () => now,
@@ -270,7 +277,12 @@ describe('numbered lists and the numbers he answers with', () => {
     // A new list goes out after his message came in, but is kept before it is read
     s.advance(1000);
     await s.add('Brand new task');
-    await s.desk.sendTaskList({ key: 'k-1', title: 'Tasks for Ada', taskIds: [(await s.add('Ada thing')).id] });
+    await s.desk.sendTaskList({
+      key: 'k-1',
+      title: 'Tasks for Ada',
+      taskIds: [(await s.add('Ada thing')).id],
+      hint: true,
+    });
     await s.desk.handle({ id: 'late', quotedId: null, at: wroteAt }, 'done 1');
     expect((await s.tasks.get(first.id))?.status).toBe('done');
     // "Added: …" carries one task but is no numbered list
@@ -347,12 +359,20 @@ describe('tasks for a person or a workspace', () => {
     expect((await s.say('tasks in nova')).answer).toContain('Open tasks in Nova');
   });
 
-  it('two people of one name are asked about, never one picked; an unknown word is said so', async () => {
+  it('two people of one name are asked about, never one picked; an unknown name after "for" is said so', async () => {
     const s = setup({ people: [person('per_1', 'Ada Obi'), person('per_2', 'Ada Lin')] });
     expect((await s.say('tasks ada')).answer).toBe(
       '2 people go by "ada": Ada Obi, Ada Lin. Send "tasks for" and their full name.',
     );
-    expect((await s.say('tasks zed')).answer).toBe('No person or workspace is called "zed".');
+    expect((await s.say('tasks for zed')).answer).toBe('I don\'t know anyone called "zed".');
+  });
+
+  it('"tasks are piling up" names no one: it goes to the chat, unanswered here and with no do-once key', async () => {
+    const s = setup({ people: [ada], workspaces: [ember] });
+    expect((await s.say('tasks are piling up')).handled).toBe(false);
+    expect((await s.say('tasks zed')).handled).toBe(false);
+    expect(s.sent).toEqual([]);
+    expect(s.once.size).toBe(0);
   });
 });
 
@@ -361,10 +381,10 @@ describe('"task for ada: …"', () => {
     const ada = person('per_ada', 'Ada Obi', ['ws-ember']);
     const s = setup({ people: [ada], workspaces: [workspace('ws-ember', 'Tech Ember')] });
     const { answer } = await s.say('task for ada: send the deck by friday');
-    expect(answer).toBe('Added: send the deck (Ada Obi, Fri)');
+    expect(answer).toBe('Added: Send the deck (Ada Obi, Fri)');
     const [task] = await s.tasks.list({ status: 'open' });
     expect(task).toMatchObject({
-      title: 'send the deck',
+      title: 'Send the deck',
       ownerId: 'per_ada',
       ownerName: 'Ada Obi',
       due: '2026-11-20',
@@ -383,7 +403,7 @@ describe('"task for ada: …"', () => {
     const s = setup();
     await s.say('task for Kunle: call the venue tomorrow');
     const [task] = await s.tasks.list({ status: 'open' });
-    expect(task).toMatchObject({ title: 'call the venue', ownerName: 'Kunle', ownerId: null, due: '2026-11-19' });
+    expect(task).toMatchObject({ title: 'Call the venue', ownerName: 'Kunle', ownerId: null, due: '2026-11-19' });
     expect(s.observed).toEqual([
       expect.objectContaining({ text: 'Kunle', source: 'whatsapp', taskId: task.id, ref: 'whatsapp|his-1' }),
     ]);
@@ -392,7 +412,7 @@ describe('"task for ada: …"', () => {
   it('the same task twice is one task', async () => {
     const s = setup();
     await s.say('task for Kunle: call the venue');
-    expect((await s.say('task for Kunle: call the venue')).answer).toBe('Already on the board: call the venue (Kunle)');
+    expect((await s.say('task for Kunle: call the venue')).answer).toBe('Already on the board: Call the venue (Kunle)');
     expect(await s.tasks.list({ status: 'open' })).toHaveLength(1);
   });
 
@@ -404,6 +424,11 @@ describe('"task for ada: …"', () => {
     ['add slides in the deck', 'add slides in the deck', undefined],
     ['send deck 2', 'send deck 2', undefined],
     ['call friday morning about it', 'call friday morning about it', '2026-11-20'],
+    // A short day name alone is a word; after "by" or "on" it is a day
+    ['buy cream for the sun', 'buy cream for the sun', undefined],
+    ['wed the deck and the notes', 'wed the deck and the notes', undefined],
+    ['call ada by fri', 'call ada', '2026-11-20'],
+    ['pay the venue on the 3rd of december', 'pay the venue', '2026-12-03'],
   ])('"%s" is "%s", due %s', (words, title, due) => {
     expect(splitDue(words, WED)).toEqual(due ? expect.objectContaining({ title, due }) : { title });
   });
@@ -452,6 +477,20 @@ describe('reactions', () => {
     for (const task of [one, two]) expect((await s.tasks.get(task.id))?.status).toBe('open');
   });
 
+  it('a 👍 on her answer or on the brief is "ok" and closes nothing; a ✅ there does', async () => {
+    const s = setup({ quiet: false });
+    await s.say('task for Kunle: send the deck by friday');
+    const added = s.sent.at(-1)!.id;
+    const [task] = await s.tasks.list({ status: 'open' });
+    await s.desk.reaction({ targetId: added, emoji: '👍' });
+    expect((await s.tasks.get(task.id))?.status).toBe('open');
+    await s.desk.sendBrief('*Brief*', 'brief:t-ok');
+    await s.desk.reaction({ targetId: s.sent.at(-1)!.id, emoji: '👍🏾' });
+    expect((await s.tasks.get(task.id))?.status).toBe('open');
+    await s.desk.reaction({ targetId: added, emoji: '✅' });
+    expect((await s.tasks.get(task.id))?.status).toBe('done');
+  });
+
   it('taking back a reaction never reopens a task it did not close', async () => {
     const s = setup({ quiet: false });
     const task = await s.add('Send the deck');
@@ -482,7 +521,7 @@ describe('lists Ava sends first: quiet hours, the toggle, do-once keys', () => {
     expect(s.sent).toHaveLength(1);
     expect(s.sent[0]).toMatchObject({ kind: 'tasks', text: '*Tasks for Ada*\n1. Send the deck' });
     expect(s.outbox()).toEqual([]);
-    // Kept, so "done 1" and a ✅ work on it
+    // Kept, so a quoted "done 1" and a ✅ work on it
     expect((await s.lists.get(s.sent[0].id))?.taskIds).toEqual([task.id]);
   });
 
@@ -513,6 +552,66 @@ describe('lists Ava sends first: quiet hours, the toggle, do-once keys', () => {
     await s.desk.flush();
     expect(s.sent).toHaveLength(1);
     expect(s.sent[0].requestId).toBe('req-whatsapp.tasks:k-retry');
+  });
+
+  it('a list that fails outside quiet hours waits in the outbox and goes on the next poll', async () => {
+    const s = setup({ quiet: false });
+    const task = await s.add('Send the deck');
+    s.failNextSends(1);
+    expect(await s.desk.sendTaskList({ key: 'k-fail', title: 'Tasks for Ada', taskIds: [task.id] })).toBe('queued');
+    expect(s.outbox()).toHaveLength(1);
+    s.advance(60_000);
+    await s.desk.flush();
+    expect(s.sent).toHaveLength(1);
+    expect(s.outbox()).toEqual([]);
+  });
+
+  it('a list queued again while the outbox is being sent is kept for the next poll', async () => {
+    const s = setup({ quiet: false });
+    const task = await s.add('Send the deck');
+    const item = { key: 'k-again', title: 'Tasks for Ada', taskIds: [task.id] };
+    s.setOutbox([{ ...item, at: s.now() }]);
+    s.advance(1000);
+    // While the first goes out, the same key is queued again (a newer list for the same call)
+    s.duringNextSend(async () => {
+      s.setOutbox([...s.outbox(), { ...item, title: 'Tasks for Ada (updated)', at: s.now() }]);
+    });
+    await s.desk.flush();
+    expect(s.outbox()).toEqual([expect.objectContaining({ key: 'k-again', title: 'Tasks for Ada (updated)' })]);
+  });
+
+  it('a sent list is kept before its do-once key is closed', async () => {
+    const s = setup({ quiet: false });
+    const task = await s.add('Send the deck');
+    const states: (string | undefined)[] = [];
+    const save = s.lists.save.bind(s.lists);
+    vi.spyOn(s.lists, 'save').mockImplementation(async record => {
+      states.push(s.once.get('whatsapp.tasks:k-order'));
+      return save(record);
+    });
+    await s.desk.sendTaskList({ key: 'k-order', title: 'Tasks for Ada', taskIds: [task.id] });
+    expect(states).toEqual(['started']);
+    expect(s.once.get('whatsapp.tasks:k-order')).toBe('done');
+  });
+
+  it('lists for forwarding after the brief never take his bare "done 2" from the brief', async () => {
+    const s = setup({ quiet: false });
+    const first = await s.add('Brief one');
+    const second = await s.add('Brief two');
+    await s.desk.sendBrief('*Brief*', 'brief:t-burst');
+    s.advance(1000);
+    for (const name of ['Ada', 'Kunle', 'Bisi']) {
+      const own = await s.add(`${name} thing one`);
+      const other = await s.add(`${name} thing two`);
+      await s.desk.sendTaskList({ key: `after-call:${name}`, title: `Tasks for ${name}`, taskIds: [own.id, other.id] });
+    }
+    await s.say('done 2');
+    expect((await s.tasks.get(second.id))?.status).toBe('done');
+    expect((await s.tasks.get(first.id))?.status).toBe('open');
+    // Quoting one of them still works
+    const kunle = s.sent.find(message => message.text.startsWith('*Tasks for Kunle*'))!;
+    await s.say('done 1', kunle.id);
+    expect(s.sent.at(-1)!.text).toBe('Done: ~Kunle thing one~');
   });
 
   it('a list he switched off is not sent or kept; one whose tasks are all closed is not sent', async () => {

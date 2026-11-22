@@ -40,16 +40,37 @@ const VERB = Object.keys(VERBS).join('|');
 const NUMBER = '#?\\d{1,3}';
 const NUMBERS = `${NUMBER}(?:\\s*(?:,|&|and|\\s)\\s*${NUMBER})*`;
 const POLITE = '(?:(?:ava|hey ava|ok|okay)[,\\s]+)?';
-const END = '[\\s.!]*';
+const END = '[\\s.!?]*';
+// A person or workspace he names: one to three words, so "tasks are piling up on notion" is not one
+const NAME = "[\\p{L}\\p{N}][\\p{L}\\p{N}'’.&-]*(?: [\\p{L}\\p{N}][\\p{L}\\p{N}'’.&-]*){0,2}";
+// Numbers as a voice note writes them ("done two")
+const NUMBER_WORDS: Record<string, string> = {
+  one: '1',
+  two: '2',
+  three: '3',
+  four: '4',
+  five: '5',
+  six: '6',
+  seven: '7',
+  eight: '8',
+  nine: '9',
+  ten: '10',
+  eleven: '11',
+  twelve: '12',
+  thirteen: '13',
+  fourteen: '14',
+  fifteen: '15',
+};
+const NUMBER_WORD = new RegExp(`\\b(?:${Object.keys(NUMBER_WORDS).join('|')})\\b`, 'giu');
 
-const SET_FIRST = new RegExp(`^${POLITE}(${VERB})\\s*[:-]?\\s*(${NUMBERS})${END}$`, 'iu');
-const SET_LAST = new RegExp(`^${POLITE}(${NUMBERS})\\s+(?:is\\s+|are\\s+)?(${VERB})${END}$`, 'iu');
+const SET_FIRST = new RegExp(`^${POLITE}(${VERB})\\s*[:,-]?\\s*(${NUMBERS})${END}$`, 'iu');
+const SET_LAST = new RegExp(`^${POLITE}(${NUMBERS})[\\s,]+(?:is\\s+|are\\s+)?(${VERB})${END}$`, 'iu');
 const LIST = new RegExp(`^${POLITE}(?:my\\s+|open\\s+)?(?:tasks|task list|todos)${END}$`, 'iu');
-const LIST_FOR = new RegExp(`^${POLITE}(?:open\\s+)?tasks\\s+(for|of|in)\\s+([^:\\n]{1,60}?)\\s*[?.!]*$`, 'iu');
-const LIST_WORD = new RegExp(`^${POLITE}(?:open\\s+)?tasks\\s+([^:\\n]{1,60}?)\\s*[?.!]*$`, 'iu');
-// "task for ada: …" or "task for ada - …"; a hyphen inside a name ("Mary-Jane") is no separator
+const LIST_FOR = new RegExp(`^${POLITE}(?:open\\s+)?tasks\\s+(for|of|in)\\s+(${NAME})${END}$`, 'iu');
+const LIST_WORD = new RegExp(`^${POLITE}(?:open\\s+)?tasks\\s+(${NAME})${END}$`, 'iu');
+// "task for ada: …", "task for ada - …" or "task for ada, …"; a hyphen inside a name ("Mary-Jane") is no separator
 const ADD = new RegExp(
-  `^${POLITE}(?:new\\s+|add\\s+(?:a\\s+)?)?task\\s+for\\s+([^:\\n]{1,60}?)(?:\\s*:|\\s+[-–—])\\s*([\\s\\S]+)$`,
+  `^${POLITE}(?:new\\s+|add\\s+(?:a\\s+)?)?task\\s+for\\s+([^:,\\n]{1,60}?)(?:\\s*[:,]|\\s+[-–—])\\s*([\\s\\S]+)$`,
   'iu',
 );
 const NEXT = new RegExp(`^${POLITE}(?:who[’']?s|who is)\\s+next\\s*[?.!]*$`, 'iu');
@@ -61,12 +82,17 @@ function numbersOf(text: string): number[] | null {
   return numbers.every(number => number >= 1 && number <= NUMBER_MAX) ? numbers : null;
 }
 
+/** "Ada." and "Tech Ember!" as the name: the stop and the like after it are not part of it. */
+const bareName = (text: string) => text.trim().replace(/[.'’&-]+$/u, '');
+
 /** The task command a whole message is, or null when it is anything else. */
 export function taskCommandOf(text: string): TaskCommand | null {
   const words = text.trim().replace(/\s+/g, ' ');
   if (!words || words.length > 600) return null;
-  const first = SET_FIRST.exec(words);
-  const last = first ? null : SET_LAST.exec(words);
+  // "done two" from a voice note reads as "done 2"; only the numbers commands see the swap
+  const spoken = words.replace(NUMBER_WORD, word => NUMBER_WORDS[word.toLowerCase()]);
+  const first = SET_FIRST.exec(spoken);
+  const last = first ? null : SET_LAST.exec(spoken);
   if (first || last) {
     const verb = (first ? first[1] : last![2]).toLowerCase();
     const numbers = numbersOf(first ? first[2] : last![1]);
@@ -83,12 +109,12 @@ export function taskCommandOf(text: string): TaskCommand | null {
   }
   const scoped = LIST_FOR.exec(words);
   if (scoped) {
-    const word = scoped[2].trim();
+    const word = bareName(scoped[2]);
     return word ? { kind: 'list', word, as: scoped[1].toLowerCase() === 'in' ? 'workspace' : 'person' } : null;
   }
   const list = LIST_WORD.exec(words);
   if (list) {
-    const word = list[1].trim();
+    const word = bareName(list[1]);
     return word ? { kind: 'list', word, as: null } : null;
   }
   return null;

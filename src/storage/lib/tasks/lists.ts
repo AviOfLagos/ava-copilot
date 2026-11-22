@@ -12,7 +12,11 @@ export interface TaskListRecord {
   taskIds: string[];
   sentAt: number;
   // A numbered list a bare "done 2" is read against; false for a message that only confirms one task ("Added: …")
+  // and for a list meant to be forwarded (one person's after a call): those take numbers only in a quoted reply
   numbered: boolean;
+  // What the message was: an answer to his command, the morning brief, or a list Ava sent first. On a one-task
+  // message a ✅ always closes it, a 👍 only on a list Ava sent first (on her answers and the brief it means "ok")
+  kind?: 'answer' | 'brief' | 'list';
   // A ✅ or 👍 on this one-task message closed its task: taking the reaction back reopens it
   closedByReaction?: boolean;
 }
@@ -33,6 +37,7 @@ export function createTaskListStore(db: AviCopilotDb = defaultDb, options: { now
         taskIds: record.taskIds.slice(0, TASKS_MAX),
         sentAt: record.sentAt ?? now(),
         numbered: record.numbered,
+        ...(record.kind ? { kind: record.kind } : {}),
         ...(record.closedByReaction ? { closedByReaction: true } : {}),
       };
       await db.taskLists.put(saved);

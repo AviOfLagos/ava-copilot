@@ -45,8 +45,9 @@ export const BRIEF_MAX = 10;
 // A message held for quiet hours that still cannot go a day later is let go
 const OUTBOX_MAX_MS = 24 * 60 * 60_000;
 const OUTBOX_MAX = 30;
-// A ✅ or 👍 closes a one-task message; skin tones and the emoji presentation mark do not matter
-const DONE_REACTIONS = new Set(['✅', '👍']);
+// The reactions that close a one-task message; skin tones and the emoji presentation mark do not matter
+const CHECK = '✅';
+const THUMBS = '👍';
 const DAY = 24 * 60 * 60 * 1000;
 
 /** A task list waiting for quiet hours to end. Ids and the list's title only; the words are drawn when it goes. */
@@ -157,15 +158,18 @@ const localId = () => `local:${crypto.randomUUID()}`;
 
 const errorText = (error: unknown) => plainOutside(error instanceof Error ? error.message : String(error), 200);
 
-const WEEKDAY =
-  '(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)';
+// A short day name ("sun", "wed", "sat") counts only after "by", "on", "next" and the like: alone it is a word
+const WEEKDAY = '(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)';
+const SHORT_DAY = '(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)';
 const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
 const DATE_WORDS =
-  `(?:(?:by|on|before|due|until|till|for)\\s+)?(?:today|tonight|tomorrow|tmrw|eod|eow|end of (?:the )?(?:day|week|month)` +
-  `|(?:next|this)\\s+${WEEKDAY}|${WEEKDAY}|in (?:\\d{1,3}|a|one|two|three) (?:days?|weeks?)` +
-  `|${MONTH}\\s+\\d{1,2}(?:st|nd|rd|th)?|\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+${MONTH}|\\d{4}-\\d{2}-\\d{2})`;
-// The task's words, then a date and nothing after it
+  `(?:(?:by|on|before|due|until|till)\\s+(?:next\\s+|this\\s+)?${SHORT_DAY}\\b` +
+  `|(?:(?:by|on|before|due|until|till|for)\\s+(?:the\\s+)?)?(?:today|tonight|tomorrow|tmrw|eod|eow|end of (?:the )?(?:day|week|month)` +
+  `|(?:next|this)\\s+(?:${WEEKDAY}|${SHORT_DAY}\\b)|${WEEKDAY}|in (?:\\d{1,3}|a|one|two|three) (?:days?|weeks?)` +
+  `|${MONTH}\\s+\\d{1,2}(?:st|nd|rd|th)?|\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+${MONTH}|\\d{4}-\\d{2}-\\d{2}))`;
+// The task's words, then a date and nothing after it; a date anywhere in them
 const ENDS_WITH_DATE = new RegExp(`^(.*?)[\\s,;:–—-]+(${DATE_WORDS})[\\s.!]*$`, 'iu');
+const DATE_INSIDE = new RegExp(`(?:^|[\\s,;:–—-])(${DATE_WORDS})(?=$|[\\s.,;:!?])`, 'iu');
 
 /**
  * Splits "send the deck by friday" into the task and its due date, when the words end with one; otherwise the words
@@ -176,7 +180,9 @@ export function splitDue(words: string, now: number): { title: string; due?: str
   const match = ENDS_WITH_DATE.exec(text);
   const due = match ? dueFromText(match[2], now) : undefined;
   if (match && due && match[1].trim().length >= 2) return { title: match[1].trim(), due, dueText: match[2] };
-  const inside = dueFromText(text, now);
+  // A date inside the words ("friday morning") is still read, the words left whole
+  const found = DATE_INSIDE.exec(text);
+  const inside = found ? dueFromText(found[1], now) : undefined;
   return inside ? { title: text, due: inside } : { title: text };
 }
 
@@ -195,6 +201,9 @@ export class TaskDesk {
   async handle(message: Pick<WhatsAppMessage, 'id' | 'quotedId' | 'at'>, words: string): Promise<boolean> {
     const command = taskCommandOf(words);
     if (!command) return false;
+    // "tasks are piling up" names no one: it is chat, not a command (only reading, so before the do-once key)
+    if (command.kind === 'list' && command.word && !command.as && !(await this.names(command.word).catch(() => true)))
+      return false;
     const key = `whatsapp.tasks.reply:${message.id}`;
     if (!(await this.deps.once.begin(key))) return true;
     let answer: Answer;
@@ -212,7 +221,7 @@ export class TaskDesk {
         replyTo: message.id,
       });
       if (answer.list?.taskIds.length)
-        await this.deps.lists.save({ messageId: messageId ?? localId(), ...answer.list });
+        await this.deps.lists.save({ messageId: messageId ?? localId(), ...answer.list, kind: 'answer' });
     } catch (error) {
       // Not linked, the hourly cap, Ava Brain closed: what he asked for is done, its answer is lost
       this.deps.warn('A WhatsApp task answer was not sent', error);
@@ -222,13 +231,17 @@ export class TaskDesk {
     return true;
   }
 
-  /** His ✅ or 👍 on a message that carries one task closes it; taking it back (or changing it) reopens it. */
+  /**
+   * His ✅ on a message that carries one task closes it, and so does a 👍 on one Ava sent first; taking it back (or
+   * changing it) reopens it. A 👍 on her answer ("Added: …") or on the brief is him saying "ok", and changes nothing.
+   */
   async reaction(reaction: Pick<WhatsAppReaction, 'targetId' | 'emoji'>): Promise<void> {
     const record = await this.deps.lists.get(reaction.targetId);
     if (!record || record.taskIds.length !== 1) return;
     const task = await this.deps.tasks.get(record.taskIds[0]);
     if (!task) return;
-    if (DONE_REACTIONS.has(bareEmoji(reaction.emoji))) {
+    const emoji = bareEmoji(reaction.emoji);
+    if (emoji === CHECK || (emoji === THUMBS && record.kind === 'list')) {
       if (task.status !== 'open') return;
       await this.deps.tasks.setStatus(task.id, 'done', 'avi');
       await this.deps.lists.setClosedByReaction(record.messageId, true);
@@ -368,6 +381,12 @@ export class TaskDesk {
     return [...found.values()];
   }
 
+  /** Whether a word names any person or workspace at all. */
+  private async names(word: string): Promise<boolean> {
+    if (this.workspacesCalled(word, await this.deps.workspaces()).length) return true;
+    return (await this.peopleCalled(word)).length > 0;
+  }
+
   /** The workspaces a word names: by name or a keyword exactly, else the one whose name or keyword it mentions. */
   private workspacesCalled(word: string, workspaces: Workspace[]): Workspace[] {
     const wanted = normaliseTitle(word);
@@ -404,7 +423,10 @@ export class TaskDesk {
 
   private async add(owner: string, words: string, messageId: string, said: string): Promise<Answer> {
     const now = this.deps.now();
-    const { title, due, dueText } = splitDue(words, now);
+    const split = splitDue(words, now);
+    const { due, dueText } = split;
+    // "send the deck" is kept as "Send the deck", like the tasks he adds in the panel
+    const title = split.title.charAt(0).toUpperCase() + split.title.slice(1);
     if (title.length < 2) return { text: t('wava_tasks_addEmpty') };
     const people = await this.peopleCalled(owner);
     const person = people.length === 1 ? people[0] : null;
@@ -485,7 +507,7 @@ export class TaskDesk {
     }
     if (taskIds.length) sections.push(`_${t('wava_tasks_hint')}_`);
     const body = [text, ...sections].join('\n\n');
-    return this.deliver(`whatsapp.brief:${key}`, body, 'brief', taskIds);
+    return this.deliver(`whatsapp.brief:${key}`, body, 'brief', { taskIds, numbered: true });
   }
 
   /**
@@ -497,12 +519,20 @@ export class TaskDesk {
   async sendTaskList(input: Omit<PendingTaskMessage, 'at'>): Promise<'sent' | 'queued' | 'off' | 'empty' | 'done'> {
     const settings = await this.deps.settings();
     if (!settings.notify.tasks) return 'off';
-    if (inQuietHours(new Date(this.deps.now()), settings.quietStart, settings.quietEnd)) {
-      const items = (await this.deps.outbox.get()).filter(item => item.key !== input.key);
-      await this.deps.outbox.set([...items, { ...input, at: this.deps.now() }].slice(-OUTBOX_MAX));
-      return 'queued';
+    if (inQuietHours(new Date(this.deps.now()), settings.quietStart, settings.quietEnd)) return this.queue(input);
+    try {
+      return await this.sendPending(input);
+    } catch (error) {
+      // Not linked, the hourly cap: it waits in the outbox and is tried again on each poll, for a day
+      this.deps.warn('A WhatsApp task list was not sent', error);
+      return this.queue(input);
     }
-    return this.sendPending(input);
+  }
+
+  private async queue(input: Omit<PendingTaskMessage, 'at'>): Promise<'queued'> {
+    const items = (await this.deps.outbox.get()).filter(item => item.key !== input.key);
+    await this.deps.outbox.set([...items, { ...input, at: this.deps.now() }].slice(-OUTBOX_MAX));
+    return 'queued';
   }
 
   /** Sends what waited for quiet hours to end, once each. Run on every poll; nothing happens in quiet hours. */
@@ -532,10 +562,13 @@ export class TaskDesk {
         this.deps.warn('A WhatsApp task list was not sent', error);
       }
     }
-    // Lists queued while this ran stay too
+    // Lists queued while this ran stay too, a key queued again among them (it is a new item, not one this sent)
     const now = await this.deps.outbox.get();
-    const left = new Set(items.map(item => item.key));
-    await this.deps.outbox.set([...kept, ...now.filter(item => !left.has(item.key))]);
+    const itemKey = (item: PendingTaskMessage) => `${item.key}|${item.at}`;
+    const handled = new Set(items.map(itemKey));
+    const added = now.filter(item => !handled.has(itemKey(item)));
+    const replaced = new Set(added.map(item => item.key));
+    await this.deps.outbox.set([...kept.filter(item => !replaced.has(item.key)), ...added]);
   }
 
   private async sendPending(item: Omit<PendingTaskMessage, 'at'>): Promise<'sent' | 'empty' | 'done'> {
@@ -550,14 +583,22 @@ export class TaskDesk {
       hint: item.hint ?? false,
     });
     const body = item.note ? `${text}\n\n${plainOutside(item.note, 300)}` : text;
-    return (await this.deliver(`whatsapp.tasks:${item.key}`, body, 'tasks', taskIds)) ? 'sent' : 'done';
+    // A list with no "done 2" hint is meant to be forwarded (one person's after a call): a bare number never reads
+    // it, so three of them going out after the brief cannot take his "done 2" away from the brief
+    const numbered = item.hint === true;
+    return (await this.deliver(`whatsapp.tasks:${item.key}`, body, 'tasks', { taskIds, numbered })) ? 'sent' : 'done';
   }
 
   /**
    * One message under a do-once key, its tasks kept by the id it went out with. False when the key was used
    * already. Throws when it did not go (the key may then be tried again, with the same request id).
    */
-  private async deliver(key: string, text: string, kind: WhatsAppNoticeKind, taskIds: string[]): Promise<boolean> {
+  private async deliver(
+    key: string,
+    text: string,
+    kind: WhatsAppNoticeKind,
+    list: { taskIds: string[]; numbered: boolean },
+  ): Promise<boolean> {
     if (!(await this.deps.once.begin(key))) return false;
     let messageId: string | null;
     try {
@@ -566,12 +607,14 @@ export class TaskDesk {
       await this.deps.once.fail(key);
       throw error;
     }
-    await this.deps.once.finish(key);
-    if (taskIds.length) {
+    // Kept before the key is closed, so a message that went out always has its numbers (a cut-off between the two
+    // leaves the key open, and it is never sent again: the record blocks only itself)
+    if (list.taskIds.length) {
       await this.deps.lists
-        .save({ messageId: messageId ?? localId(), taskIds, numbered: true })
+        .save({ messageId: messageId ?? localId(), ...list, kind: kind === 'brief' ? 'brief' : 'list' })
         .catch(error => this.deps.warn('A WhatsApp task list could not be kept', error));
     }
+    await this.deps.once.finish(key);
     return true;
   }
 }
