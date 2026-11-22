@@ -100,6 +100,8 @@ export interface PageState extends DOMState {
   scrollY: number;
   scrollHeight: number;
   visualViewportHeight: number;
+  // Controls in the DOM that only show on hover (see browser/hover.ts); empty when none
+  hoverHints?: string;
 }
 
 export interface TabInfo {

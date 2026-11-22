@@ -91,6 +91,8 @@ Common action sequences:
 - Prefer to use the previous_page, next_page, scroll_to_top and scroll_to_bottom action.
 - Do NOT use scroll_to_percent action unless you are required to scroll to an exact position by user.
 
+- Some controls only appear when the pointer is over their item (a pin's Save, a card's menu). If the page state lists [Hidden until hover], or a button you need is missing, use hover_element on that item's index, then click what appears.
+
 10. Extraction:
 
 - Extraction process for research tasks or searching for information:

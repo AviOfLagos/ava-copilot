@@ -12,6 +12,7 @@ import {
   type ActionSchema,
   sendKeysActionSchema,
   scrollToTextActionSchema,
+  hoverElementActionSchema,
   cacheContentActionSchema,
   selectDropdownOptionActionSchema,
   getDropdownOptionsActionSchema,
@@ -301,6 +302,39 @@ export class ActionBuilder {
       true,
     );
     actions.push(clickElement);
+
+    const hoverElement = new Action(async (input: z.infer<typeof hoverElementActionSchema.schema>) => {
+      const intent = input.intent || t('act_hover_start', [input.index.toString()]);
+      this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, intent);
+
+      const page = await this.context.browserContext.getCurrentPage();
+      const state = await page.getState();
+      const elementNode = state?.selectorMap.get(input.index);
+      if (!elementNode) {
+        throw new Error(t('act_errors_elementNotExist', [input.index.toString()]));
+      }
+
+      try {
+        await page.hoverElementNode(elementNode);
+        // Read the page again so the controls the hover revealed are named in the result
+        const after = await page.getState();
+        let msg = t('act_hover_ok', [
+          input.index.toString(),
+          wrapUntrustedContent(elementNode.getAllTextTillNextClickableElement(2)),
+        ]);
+        if (after.hoverHints) {
+          msg += `\n${wrapUntrustedContent(after.hoverHints)}`;
+        }
+        msg += '\nIf something new appeared, it has an index in the next page state: click it.';
+        this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, msg);
+        return new ActionResult({ extractedContent: msg, includeInMemory: true });
+      } catch (error) {
+        const msg = t('act_errors_elementNoLongerAvailable', [input.index.toString()]);
+        this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, msg);
+        return new ActionResult({ error: error instanceof Error ? error.message : String(error) });
+      }
+    }, hoverElementActionSchema);
+    actions.push(hoverElement);
 
     const inputText = new Action(
       async (input: z.infer<typeof inputTextActionSchema.schema>) => {

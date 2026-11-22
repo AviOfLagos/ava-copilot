@@ -49,6 +49,9 @@ abstract class BasePrompt {
       await markPageRead(context.taskId, context);
       const elementsText = wrapUntrustedContent(rawElementsText);
       formattedElementsText = `${scrollInfo}[Start of page]\n${elementsText}\n[End of page]\n`;
+      if (browserState.hoverHints) {
+        formattedElementsText += `${wrapUntrustedContent(browserState.hoverHints)}\n`;
+      }
     } else {
       formattedElementsText = 'empty page';
     }

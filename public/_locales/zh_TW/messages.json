@@ -2159,27 +2159,6 @@
   "settings_look_system": {
     "message": "System"
   },
-  "settings_look_textSize": {
-    "message": "文字大小"
-  },
-  "settings_look_textSmaller": {
-    "message": "縮小文字"
-  },
-  "settings_look_textLarger": {
-    "message": "放大文字"
-  },
-  "settings_look_density": {
-    "message": "間距"
-  },
-  "settings_look_density_compact": {
-    "message": "緊湊"
-  },
-  "settings_look_density_comfortable": {
-    "message": "標準"
-  },
-  "settings_look_density_roomy": {
-    "message": "寬鬆"
-  },
   "settings_full": {
     "message": "Full settings: models, blocked sites, skills"
   },
@@ -3300,36 +3279,6 @@
   },
   "retry_banner": {
     "message": "將於 $1 再試（第 $2 次，共 $3 次）"
-  },
-  "retry_wait_step": {
-    "message": "步驟失敗 — $1 後重試（第 $2 次，共 $3 次）"
-  },
-  "retry_wait_planning": {
-    "message": "規劃失敗 — $1 後重試（第 $2 次，共 $3 次）"
-  },
-  "retry_wait_model": {
-    "message": "模型忙碌中 — $1 後重試（第 $2 次，共 $3 次）"
-  },
-  "retry_now": {
-    "message": "正在重試…"
-  },
-  "retry_repair": {
-    "message": "模型的回覆有誤 — 正在重新詢問"
-  },
-  "retry_fallback": {
-    "message": "模型沒有回應 — 改用本機模型"
-  },
-  "retry_bannerIn": {
-    "message": "將於 $1 再試，$2 後（第 $3 次，共 $4 次）"
-  },
-  "retry_dur_s": {
-    "message": "$1 秒"
-  },
-  "retry_dur_ms": {
-    "message": "$1 分 $2 秒"
-  },
-  "retry_dur_hm": {
-    "message": "$1 小時 $2 分"
   },
   "retry_stopTrying": {
     "message": "不要再試"
@@ -12649,6 +12598,79 @@
   },
   "settings_tracing_content_hint": {
     "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
+  },
+  "act_hover_start": {
+    "message": "將滑鼠移到索引為 $INDEX$ 的元素上",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_hover_ok": {
+    "message": "已將滑鼠移到元素 $INDEX$：$TEXT$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      },
+      "text": {
+        "content": "$2",
+        "example": "Save"
+      }
+    }
+  },
+  "settings_look_textSize": {
+    "message": "文字大小"
+  },
+  "settings_look_textSmaller": {
+    "message": "縮小文字"
+  },
+  "settings_look_textLarger": {
+    "message": "放大文字"
+  },
+  "settings_look_density": {
+    "message": "間距"
+  },
+  "settings_look_density_compact": {
+    "message": "緊湊"
+  },
+  "settings_look_density_comfortable": {
+    "message": "標準"
+  },
+  "settings_look_density_roomy": {
+    "message": "寬鬆"
+  },
+  "retry_wait_step": {
+    "message": "步驟失敗 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_wait_planning": {
+    "message": "規劃失敗 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_wait_model": {
+    "message": "模型忙碌中 — $1 後重試（第 $2 次，共 $3 次）"
+  },
+  "retry_now": {
+    "message": "正在重試…"
+  },
+  "retry_repair": {
+    "message": "模型的回覆有誤 — 正在重新詢問"
+  },
+  "retry_fallback": {
+    "message": "模型沒有回應 — 改用本機模型"
+  },
+  "retry_bannerIn": {
+    "message": "將於 $1 再試，$2 後（第 $3 次，共 $4 次）"
+  },
+  "retry_dur_s": {
+    "message": "$1 秒"
+  },
+  "retry_dur_ms": {
+    "message": "$1 分 $2 秒"
+  },
+  "retry_dur_hm": {
+    "message": "$1 小時 $2 分"
   },
   "gate_autoApproved": {
     "message": "已自動核准：$2 上的「$1」"

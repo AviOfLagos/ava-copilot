@@ -21,6 +21,7 @@ import { type BrowserContextConfig, DEFAULT_BROWSER_CONTEXT_CONFIG, type PageSta
 import { createLogger } from '@src/background/log';
 import { ClickableElementProcessor } from './dom/clickable/service';
 import { isUrlAllowed } from './util';
+import { findHiddenControls, formatHoverHints, matchHoverHosts } from './hover';
 
 const logger = createLogger('Page');
 
@@ -454,12 +455,56 @@ export default class Page {
       this._state.scrollY = scrollY;
       this._state.visualViewportHeight = visualViewportHeight;
       this._state.scrollHeight = scrollHeight;
+      this._state.hoverHints = await this.readHoverHints(content.selectorMap);
       return this._state;
     } catch (error) {
       logger.error('Failed to update state:', error);
       // Return last known good state if available
       return this._state;
     }
+  }
+
+  /** Controls in the DOM that only show on hover, as one short block; empty when none or on any failure. */
+  private async readHoverHints(selectorMap: Map<number, DOMElementNode>): Promise<string> {
+    if (!this._puppeteerPage) return '';
+    try {
+      const controls = await this._puppeteerPage.evaluate(findHiddenControls);
+      if (controls.length === 0) return '';
+      const indexByXpath = new Map<string, number>();
+      for (const [index, node] of selectorMap) {
+        // Only the main document: xpaths inside an iframe or shadow root start over and could collide
+        let inner = false;
+        for (let p = node.parent; p; p = p.parent ?? null) {
+          if (p.tagName === 'iframe' || p.shadowRoot) inner = true;
+        }
+        if (node.xpath && !inner) indexByXpath.set(node.xpath, index);
+      }
+      return formatHoverHints(matchHoverHosts(controls, indexByXpath));
+    } catch (error) {
+      logger.debug('Could not read hover-only controls', error);
+      return '';
+    }
+  }
+
+  /**
+   * Moves the pointer onto an element with real mouse events (CDP Input.dispatchMouseEvent), after scrolling it
+   * into view, so controls that only show on hover appear. Nothing is clicked.
+   */
+  async hoverElementNode(elementNode: DOMElementNode): Promise<void> {
+    if (!this._puppeteerPage) {
+      throw new Error('Puppeteer is not connected');
+    }
+    const element = await this.locateElement(elementNode);
+    if (!element) {
+      throw new Error(`Element: ${elementNode} not found`);
+    }
+    await this._scrollIntoViewIfNeeded(element);
+    await Promise.race([
+      element.hover(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Hover timeout')), 2000)),
+    ]);
+    // Let the page's own hover handlers and transitions run before the state is read again
+    await new Promise(resolve => setTimeout(resolve, 400));
   }
 
   async takeScreenshot(fullPage = false): Promise<string | null> {

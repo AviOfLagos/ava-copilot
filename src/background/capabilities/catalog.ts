@@ -153,6 +153,7 @@ export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   get_dropdown_options: 'screen',
   go_back: 'screen',
   go_to_url: 'screen',
+  hover_element: 'screen',
   input_text: 'screen',
   next_page: 'screen',
   previous_page: 'screen',

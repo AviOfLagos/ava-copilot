@@ -2159,27 +2159,6 @@
   "settings_look_system": {
     "message": "System"
   },
-  "settings_look_textSize": {
-    "message": "Text size"
-  },
-  "settings_look_textSmaller": {
-    "message": "Smaller text"
-  },
-  "settings_look_textLarger": {
-    "message": "Larger text"
-  },
-  "settings_look_density": {
-    "message": "Spacing"
-  },
-  "settings_look_density_compact": {
-    "message": "Compact"
-  },
-  "settings_look_density_comfortable": {
-    "message": "Comfortable"
-  },
-  "settings_look_density_roomy": {
-    "message": "Roomy"
-  },
   "settings_full": {
     "message": "Full settings: models, blocked sites, skills"
   },
@@ -3300,36 +3279,6 @@
   },
   "retry_banner": {
     "message": "Trying again at $1 (try $2 of $3)"
-  },
-  "retry_wait_step": {
-    "message": "Step failed — retrying in $1 ($2 of $3)"
-  },
-  "retry_wait_planning": {
-    "message": "Planning failed — retrying in $1 ($2 of $3)"
-  },
-  "retry_wait_model": {
-    "message": "Model is busy — retrying in $1 ($2 of $3)"
-  },
-  "retry_now": {
-    "message": "Retrying now…"
-  },
-  "retry_repair": {
-    "message": "Model reply was broken — asking again"
-  },
-  "retry_fallback": {
-    "message": "Model not answering — switching to the local one"
-  },
-  "retry_bannerIn": {
-    "message": "Trying again at $1, in $2 (try $3 of $4)"
-  },
-  "retry_dur_s": {
-    "message": "$1s"
-  },
-  "retry_dur_ms": {
-    "message": "$1 min $2s"
-  },
-  "retry_dur_hm": {
-    "message": "$1 h $2 min"
   },
   "retry_stopTrying": {
     "message": "Stop trying"
@@ -12649,6 +12598,79 @@
   },
   "settings_tracing_content_hint": {
     "message": "Off by default. Chats can contain what other people send you on WhatsApp, so keep this off unless you accept that text leaving this computer."
+  },
+  "act_hover_start": {
+    "message": "Hover over element with index $INDEX$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_hover_ok": {
+    "message": "Hovered over element $INDEX$: $TEXT$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      },
+      "text": {
+        "content": "$2",
+        "example": "Save"
+      }
+    }
+  },
+  "settings_look_textSize": {
+    "message": "Text size"
+  },
+  "settings_look_textSmaller": {
+    "message": "Smaller text"
+  },
+  "settings_look_textLarger": {
+    "message": "Larger text"
+  },
+  "settings_look_density": {
+    "message": "Spacing"
+  },
+  "settings_look_density_compact": {
+    "message": "Compact"
+  },
+  "settings_look_density_comfortable": {
+    "message": "Comfortable"
+  },
+  "settings_look_density_roomy": {
+    "message": "Roomy"
+  },
+  "retry_wait_step": {
+    "message": "Step failed — retrying in $1 ($2 of $3)"
+  },
+  "retry_wait_planning": {
+    "message": "Planning failed — retrying in $1 ($2 of $3)"
+  },
+  "retry_wait_model": {
+    "message": "Model is busy — retrying in $1 ($2 of $3)"
+  },
+  "retry_now": {
+    "message": "Retrying now…"
+  },
+  "retry_repair": {
+    "message": "Model reply was broken — asking again"
+  },
+  "retry_fallback": {
+    "message": "Model not answering — switching to the local one"
+  },
+  "retry_bannerIn": {
+    "message": "Trying again at $1, in $2 (try $3 of $4)"
+  },
+  "retry_dur_s": {
+    "message": "$1s"
+  },
+  "retry_dur_ms": {
+    "message": "$1 min $2s"
+  },
+  "retry_dur_hm": {
+    "message": "$1 h $2 min"
   },
   "gate_autoApproved": {
     "message": "Auto-approved: $1 on $2"

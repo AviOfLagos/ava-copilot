@@ -57,6 +57,16 @@ export const clickElementActionSchema = {
   }),
 } satisfies ActionSchema;
 
+export const hoverElementActionSchema = {
+  name: 'hover_element',
+  description:
+    'Move the pointer onto an element by index, so controls that only appear on hover show up (listed under [Hidden until hover])',
+  schema: z.object({
+    intent: z.string().default('').describe('purpose of this action'),
+    index: z.number().int().describe('index of the element'),
+  }),
+} satisfies ActionSchema;
+
 export const inputTextActionSchema = {
   name: 'input_text',
   description: 'Input text into an interactive input element',
