@@ -2,6 +2,7 @@ import { generateText, hasToolCall, stepCountIs } from 'ai';
 import type { ModelMessage, ToolSet } from 'ai';
 import { toAppError } from '@extension/shared';
 import type { ChatModel } from '../../llm/types';
+import { createLogger } from '../../log';
 import { toSpeakableText } from '../../tts/markdown';
 import type { EconomyTurnReply, EconomyTurnRequest } from './protocol';
 import { voiceToolSet } from './tools';
@@ -11,6 +12,8 @@ import { voiceToolSet } from './tools';
  * role: the quick model, or one running on this Mac) with the same voice tools as the Live session, and its answer
  * comes back as plain sentences for the local voice. Audio never reaches a model; a local model costs nothing.
  */
+
+const logger = createLogger('VoiceEconomy');
 
 export const END_CONVERSATION = 'end_conversation';
 // Model calls in one turn: a tool or two, then the answer
@@ -69,6 +72,14 @@ export function turnMessages(request: EconomyTurnRequest): ModelMessage[] {
   return messages;
 }
 
+/**
+ * Said when the model refuses tools. Answering without them would make it claim, truthfully for itself, that it
+ * cannot reach the user's chats, memory or notes (issue #34): so the reason is said, never a quiet retry with none.
+ */
+export const TOOLS_REFUSED_SENTENCE =
+  "The voice model you're using can't use my tools, so I can't look in your chats, memory or notes right now. " +
+  'Pick a different voice model in Models and usage, and ask me again.';
+
 const CANNOT_SEE =
   '(The user attached pictures, but this voice model cannot look at pictures. Say so in one short sentence.)';
 
@@ -114,11 +125,13 @@ export async function runEconomyTurn(request: EconomyTurnRequest, deps: EconomyB
         result = await call(true);
       }
     } catch (error) {
-      // A model that cannot use tools still answers; it just cannot act. Never after a tool ran: no answer
-      // without its result
+      // A model that cannot use tools is not asked again without them: it would then say it has no access to the
+      // user's chats, memory or notes. The reason is said instead. Never after a tool ran: no answer without it
       if (!toolsRefused(error) || toolRuns > 0) throw error;
-      result = await call(false);
+      logger.warning(`The voice model ${chatModel.provider}/${chatModel.modelName} refused the voice tools`);
+      return { said: TOOLS_REFUSED_SENTENCE };
     }
+    logger.debug(`Voice turn answered by ${chatModel.provider}/${chatModel.modelName}`);
     if (ended) return { said: '', ended: true };
     return { said: toSpeakableText(result.text ?? '').slice(0, MAX_SAID) };
   } catch (error) {
