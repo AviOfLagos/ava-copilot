@@ -119,7 +119,9 @@ registerJobHandler('inbox_unsnooze', async job => {
   if (itemId) await wakeSnoozed(itemId);
 });
 
-registerApprovalHandler(APPROVAL_PREFIX, (requestId, approved) => workflowService.answerRequest(requestId, approved));
+registerApprovalHandler(APPROVAL_PREFIX, (requestId, approved, options) =>
+  workflowService.answerRequest(requestId, approved, options),
+);
 registerInboxVoiceTools();
 
 registerRecovery('inbox', async () => {

@@ -28,6 +28,7 @@ import { jobs, registerJobHandler } from '../jobs/runner';
 import { createLogger } from '../log';
 import { answerOneOff, registerAgentAction, registerCommand, registerRecovery, registerVoiceTool } from '../registry';
 import { services } from '../registry/services';
+import { askOrAllowed } from '../gate/allowRule';
 import { defaultRenderDeps, renderForCall } from './render';
 import { askedToSpeak, REFUSALS, sayInMeeting, wordsFromCall } from './say';
 import type { SayDeps, UserMeeting } from './say';
@@ -40,6 +41,9 @@ export const WATCH_JOB = 'meet_voice_watch';
 const WATCH_KEY = 'meet-voice:watch';
 // While she is in a call: a backstop for leaving when the notes end (the call page's own signal is immediate)
 const WATCH_CRON = '* * * * *';
+
+// The place an "Allow every time" rule for speaking covers: any Meet call
+const SPEAK_SCOPE = 'meet:speak';
 
 // ── State ─────────────────────────────────────────────────────────────────────────────────────────
 
@@ -365,11 +369,9 @@ function sayDeps(context: AgentContext): SayDeps {
         fields: [{ label: t('meetvoice_confirm_words'), value: spoken }],
         context: '',
       };
-      return context.confirmGate.ask(
-        request,
-        shown => context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_CONFIRM, JSON.stringify(shown)),
-        context.controller.signal,
-      );
+      // "Allow every time" is the user's own choice here: speaking in a call is `send`, kept per kind of step
+      // (every Meet call), never per meeting or per words
+      return askOrAllowed(context, request, { kind: 'send', scope: SPEAK_SCOPE, label: t('meetvoice_rule_label') });
     },
     render: async spoken => renderForCall(spoken, defaultRenderDeps((await threadStore.get(context.taskId)) ?? null)),
     send: ({ meetingCode, audio }) =>

@@ -99,6 +99,8 @@ export interface EngineStore {
 export interface EngineHooks {
   // A step that acts for the user waits for their click: ask where they will see it
   approvalNeeded(run: RunRecord, step: RunStep, node: WorkflowNode, workflow: WorkflowRecord): Promise<void>;
+  // The user allowed this kind of step every time: it runs without waiting (never on a run that read outside content)
+  allowedByRule?(run: RunRecord, step: RunStep, node: WorkflowNode, workflow: WorkflowRecord): Promise<boolean>;
   // A step that acts for the user was cut off: they check what happened
   unknownOutcome(run: RunRecord, step: RunStep, node: WorkflowNode, workflow: WorkflowRecord): Promise<void>;
   // Wake the run again at this time
@@ -354,6 +356,10 @@ export class WorkflowEngine {
           if (step.approval === 'declined') {
             await this.patchStep(step, { status: 'cancelled', endedAt: this.clock.now() });
             return await this.finish(run, 'cancelled', { kind: 'cancelled', message: `You declined "${node.label}".` });
+          }
+          if (step.approval !== 'approved' && !run.tainted && this.hooks.allowedByRule) {
+            const allowed = await this.hooks.allowedByRule(run, step, node, workflow).catch(() => false);
+            if (allowed) step = await this.patchStep(step, { approval: 'approved' });
           }
           if (step.approval !== 'approved') {
             step = await this.patchStep(step, { status: 'waiting_user', approval: 'pending' });

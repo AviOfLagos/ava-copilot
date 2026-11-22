@@ -8874,6 +8874,12 @@
   "meetvoice_confirm_words": {
     "message": "要說的內容（逐字）"
   },
+  "meetvoice_rule_label": {
+    "message": "在 Google Meet 通話中發言"
+  },
+  "drive_rule_createDoc": {
+    "message": "在 $1 建立 Google 文件"
+  },
   "meetvoice_needsBrain": {
     "message": "$NAME$ 透過 Mac 上的輔助程式 Ava Brain 加入你的通話。設定一次後再回到這裡。",
     "placeholders": {

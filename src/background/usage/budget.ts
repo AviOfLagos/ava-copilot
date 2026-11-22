@@ -69,6 +69,8 @@ export async function ensureBudget(context: AgentContext): Promise<boolean> {
       return true;
     }
 
+    // Always asked, on purpose (issue #93): raising a spending cap is money, so this card never offers
+    // "Allow every time" and `canAllowAlways` has no kind for it
     const answer = await context.confirmGate.ask(
       {
         id: crypto.randomUUID(),

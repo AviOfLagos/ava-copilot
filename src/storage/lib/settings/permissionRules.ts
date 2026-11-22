@@ -15,7 +15,8 @@ import type { TeamAction } from '../growth-team/types';
 export const ALWAYS_ASK_KINDS: readonly CommitKind[] = ['purchase', 'delete', 'permission'];
 
 // 'team': a kind of work a growth agent does for a product (../growth-team), e.g. filing an issue from feedback
-export type RuleKind = CommitKind | 'tool' | 'team';
+// 'workflow': a step of a saved routine that starts an agent, asked in the Inbox (see workflowScope)
+export type RuleKind = CommitKind | 'tool' | 'team' | 'workflow';
 
 /**
  * The growth team's kinds of work that may get a rule: only these two, and each still runs inside a hard limit
@@ -34,6 +35,18 @@ export function teamActionOf(scope: string): string | null {
   const match = /^team:[^/]+\/[^/]+\/([a-z_]+)$/.exec(scope);
   return match ? match[1]! : null;
 }
+
+/**
+ * A routine step the user may allow every time: only one that starts an agent. The agent's own chat still asks
+ * before it commits anything (a chat a routine started always asks), so the rule lets the run begin and nothing
+ * else. Steps that call a connector tool, run code or join a meeting are asked each time: what they do is not
+ * known here, and a tool may delete or pay.
+ */
+export const WORKFLOW_RULE_NODE_TYPES: readonly string[] = ['step.agent'];
+
+/** The place a routine rule covers: that routine, that step, and the step as it is now (a hash of its settings). */
+export const workflowScope = (workflowId: string, nodeId: string, hash: string): string =>
+  `workflow:${workflowId}/${nodeId}@${hash.slice(0, 16)}`;
 
 export interface PermissionRule {
   id: string;
@@ -76,7 +89,9 @@ export type PermissionRulesStorage = BaseStorage<PermissionRulesState> & {
 export const canAllowAlways = (kind: string, scope = ''): kind is RuleKind =>
   kind === 'team'
     ? (TEAM_RULE_ACTIONS as readonly string[]).includes(teamActionOf(scope) ?? '')
-    : kind === 'tool' || (['send', 'publish', 'submit'] as string[]).includes(kind);
+    : kind === 'workflow'
+      ? scope.startsWith('workflow:')
+      : kind === 'tool' || (['send', 'publish', 'submit'] as string[]).includes(kind);
 
 // Hosts that serve other people's documents under one name: a rule there covers one document or account
 // ("docs.google.com/forms/d/<id>", "mail.google.com/mail/u/0"), never every form anyone made

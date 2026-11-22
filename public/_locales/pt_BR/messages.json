@@ -8874,6 +8874,12 @@
   "meetvoice_confirm_words": {
     "message": "Palavras, exatamente como ditas"
   },
+  "meetvoice_rule_label": {
+    "message": "Falar em chamadas do Google Meet"
+  },
+  "drive_rule_createDoc": {
+    "message": "Criar Google Docs em $1"
+  },
   "meetvoice_needsBrain": {
     "message": "$NAME$ entra na sua chamada pelo Ava Brain, o app auxiliar no seu Mac. Configure-o uma vez e volte aqui.",
     "placeholders": {

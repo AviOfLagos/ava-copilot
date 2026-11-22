@@ -440,4 +440,33 @@ describe('allow every time on a page', () => {
     expect(run.requests[0].always).toBeUndefined();
     expect(await permissionRulesStore.list()).toHaveLength(1);
   });
+  it('keeps a rule the caller names (a Drive folder), instead of one for the page it happens to be on', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    const named = { kind: 'submit' as const, scope: 'drive:folder-1', label: 'Create Google Docs in folder-1' };
+    const first = answering(await runningThread(), true);
+    await act(first.context, page, state, { ...pressEnter, rule: named });
+    expect(first.requests[0].always).toMatchObject({ scope: 'drive:folder-1' });
+    expect(await permissionRulesStore.find('submit', 'drive:folder-1')).not.toBeNull();
+    expect(await permissionRulesStore.find('send', 'mail.example/compose')).toBeNull();
+
+    const next = answering(await runningThread(), false);
+    await act(next.context, page, state, { ...pressEnter, rule: named });
+    expect(next.requests).toHaveLength(0);
+
+    // Another folder is another place
+    const other = answering(await runningThread(), false);
+    await act(other.context, page, state, { ...pressEnter, rule: { ...named, scope: 'drive:folder-2' } });
+    expect(other.requests).toHaveLength(1);
+  });
+
+  it('ignores a named rule of a kind that is always asked, and falls back to the page', async () => {
+    const { permissionRulesStore } = await import('@extension/storage');
+    const run = answering(await runningThread(), true);
+    await act(run.context, page, state, {
+      ...pressEnter,
+      rule: { kind: 'delete' as never, scope: 'drive:folder-1', label: 'x' },
+    });
+    expect(run.requests[0].always).toMatchObject({ kind: 'send', scope: 'mail.example/compose' });
+    expect(await permissionRulesStore.find('delete' as never, 'drive:folder-1')).toBeNull();
+  });
 });
