@@ -26,7 +26,6 @@ import type { MeetingManager } from '../meetings/manager';
 import type { KnowledgeBase } from '../kb/manager';
 import { memoryScopeForThread } from '../kb/scope';
 import type { CalendarWatcher } from '../calendar/watcher';
-import { quoteTitle } from '../calendar/watcher';
 import { scheduleText } from '../calendar/schedule';
 import { allowedByClick } from './confirm';
 import { soundRecently } from './sound';
