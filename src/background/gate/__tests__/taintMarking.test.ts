@@ -91,7 +91,8 @@ describe('taint picked up while a chat runs', () => {
     expect((await threadStore.get(agent.id))?.tainted).toBe(true);
     expect((await threadStore.get(user.id))?.tainted).toBe(true);
     expect(await ruleMayAnswer({ taskId: user.id }, 'send')).toBe(false);
-    expect(await ruleMayAnswer({ taskId: user.id }, 'submit')).toBe(true);
+    expect(await ruleMayAnswer({ taskId: user.id }, 'submit')).toBe(false);
+    expect(await ruleMayAnswer({ taskId: user.id }, 'click')).toBe(false);
     expect(await ruleMayAnswer({ taskId: agent.id }, 'submit')).toBe(false);
   });
 

@@ -30,27 +30,21 @@ export function alwaysAsks(chat: Chat): boolean {
 const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
 
 /**
- * The rule kinds that may still answer in the user's own chat (typed or spoken, at the computer) after it read outside
- * content. Everything that reaches other people (send, publish: posts, replies, shares, invites, speaking in a call;
- * a connector's tool; a growth item; a routine step) never does. A form submit is the user's own page work, so it may.
- * A kind not listed here is treated as reaching people.
- */
-export const KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT: ReadonlySet<string> = new Set(['submit']);
-
-/**
  * Whether a saved "Allow every time" rule of `kind` may answer for a chat, and whether its card may offer one. The one
- * policy every gate uses. Fails closed.
+ * policy every gate uses. Fails closed, because classifying an action by its label always misses some (a "Reply",
+ * an RSVP, a contact form's Submit can all come out as another kind).
  *
  * - A chat that cannot be read: no.
  * - An agent's, routine's, brief's or WhatsApp chat: only when its starter said it is clean (`tainted: false`).
- * - The user's own chat (user, voice): yes while clean; once it read outside content only for a kind in
- *   KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT (and never when the kind is not given).
+ * - The user's own chat (user, voice): only while it has not read outside content (a web page, an email, a message
+ *   from someone else); after that, no rule of any kind. `kind` is kept so a narrower policy (rules by recipient,
+ *   epic #169) can come back later.
  */
 export function rulesMayAnswer(chat: Pick<ThreadRecord, 'origin' | 'tainted'> | undefined, kind?: string): boolean {
   if (!chat) return false;
   if (chat.origin && MAY_READ_OUTSIDE.has(chat.origin)) return chat.tainted === false;
-  if (chat.tainted !== true) return true;
-  return kind !== undefined && KINDS_ALLOWED_AFTER_OUTSIDE_CONTENT.has(kind);
+  void kind;
+  return chat.tainted !== true;
 }
 
 /** The user started it from somewhere away from the computer (WhatsApp). */

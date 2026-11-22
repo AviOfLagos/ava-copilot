@@ -2,17 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { rulesMayAnswer } from '../origins';
 
 type Origin = 'user' | 'voice' | 'agent' | 'workflow' | 'brief' | 'whatsapp';
-const KINDS = ['send', 'publish', 'submit', 'tool', 'team', 'workflow', 'delete', 'purchase', 'permission'] as const;
+const KINDS = [
+  'click',
+  'fill',
+  'send',
+  'publish',
+  'submit',
+  'tool',
+  'team',
+  'workflow',
+  'delete',
+  'purchase',
+  'permission',
+] as const;
 
 describe('rulesMayAnswer', () => {
-  // Own chats at the computer: clean, any kind; tainted, only a form submit
+  // Own chats at the computer: any kind while clean; once tainted, no kind at all
   it.each(['user', 'voice'] as Origin[])(
-    '%s chat: a rule answers while clean, and after outside content only for submit',
+    '%s chat: a rule answers while clean, and never after outside content',
     origin => {
       for (const kind of KINDS) {
         expect(rulesMayAnswer({ origin }, kind)).toBe(true);
         expect(rulesMayAnswer({ origin, tainted: false }, kind)).toBe(true);
-        expect(rulesMayAnswer({ origin, tainted: true }, kind)).toBe(kind === 'submit');
+        expect(rulesMayAnswer({ origin, tainted: true }, kind)).toBe(false);
       }
       // No kind given, tainted: closed
       expect(rulesMayAnswer({ origin, tainted: true })).toBe(false);

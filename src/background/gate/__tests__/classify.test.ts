@@ -17,6 +17,10 @@ describe('classifyLabel', () => {
     ['Send', 'send'],
     ['Send message', 'send'],
     ['Comment', 'send'],
+    ['Reply', 'send'],
+    ['RSVP', 'send'],
+    ['Accept invitation', 'send'],
+    ['Request access', 'send'],
     ['Post', 'publish'],
     ['Publish changes', 'publish'],
     ['Merge pull request', 'publish'],
@@ -139,6 +143,9 @@ describe('classifyKeys', () => {
 
   it('lets Enter in a search box through', () => {
     expect(classifyKeys('Enter', target({ tagName: 'input', inputType: 'search', searchLike: true }))).toBeNull();
+    expect(classifyKeys('Enter', target({ tagName: 'input', inputType: 'text', label: 'Type a message' }))).toBe(
+      'send',
+    );
   });
 
   it('holds Enter and Space on a focused commit button', () => {
