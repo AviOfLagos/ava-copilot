@@ -280,12 +280,7 @@ test('"Make a workspace for these" from the brief: one click, one confirm, thing
       [...document.querySelectorAll('form[aria-label="Make a workspace"] input[type="checkbox"]')].every(box => box.checked),
     );
     assert.equal(ticked, true, 'all ticked to start with');
-    // The name is suggested (by the model or, failing that, from the words they share); wait until it has settled
-    await waitFor(
-      () => panel.evaluate(() => !document.querySelector('form[aria-label="Make a workspace"] input[placeholder^="Thinking"]')),
-      'the suggestion to settle',
-      20000,
-    );
+    // The sheet is usable while the model thinks of a name: Avi can type his own
     await sleep(900);
 
     // Avi types the name and unticks the printer paper

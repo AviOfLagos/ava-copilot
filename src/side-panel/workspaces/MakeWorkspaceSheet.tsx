@@ -250,7 +250,7 @@ export function MakeWorkspaceSheet({ onClose }: { onClose: () => void }) {
         </p>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
-        <Button size="sm" type="submit" disabled={busy || !name.trim()}>
+        <Button size="sm" type="submit" disabled={busy || rows === null || !name.trim()}>
           <Check className="size-3.5" aria-hidden />
           {t('workspaces_sheet_save', [String(ticked.size)])}
         </Button>
