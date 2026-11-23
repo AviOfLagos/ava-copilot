@@ -245,6 +245,8 @@ export class ThreadManager {
     context?: string;
     // The tab whose panel sent it: the chat lives on that tab
     tabId?: number;
+    // Said out loud in a voice conversation: Auto mode does not cover this task
+    spoken?: boolean;
   }): Promise<string> {
     const attachments = request.attachments ?? [];
     // Pictures alone are a question about them
@@ -287,6 +289,7 @@ export class ThreadManager {
     await this.endings?.cancel(thread.id);
     await this.store.update(thread.id, {
       taskRunId: message.id,
+      spokenTaskRunId: request.spoken ? message.id : null,
       autoTries: 0,
       retryRound: 0,
       failure: null,

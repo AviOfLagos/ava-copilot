@@ -1,3 +1,4 @@
+import { tabPanels } from '../threads/tabPanels';
 import {
   assistantNameOf,
   chooseWakePhrase,
@@ -100,8 +101,16 @@ export class WakeWord {
   private async heard(): Promise<void> {
     const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
     // Sound from a tab (a video, a call) can say "Hey Ava" too: then each action needs a click
+    // In the chat of the tab in front, or a new chat on that tab
+    const [tab] = window?.id !== undefined ? await chrome.tabs.query({ active: true, windowId: window.id }) : [];
+    const tabId = tab?.id;
     const result = await this.voice
-      .start(window?.id, { wake: true, guarded: await soundRecently() })
+      .start(window?.id, {
+        wake: true,
+        guarded: await soundRecently(),
+        tabId,
+        threadId: tabId !== undefined ? (tabPanels.entryOf(tabId)?.threadId ?? null) : null,
+      })
       .catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
     if (!result.ok) {
       logger.warning('Hey Ava was heard but the conversation did not start', result.error);

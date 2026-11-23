@@ -130,6 +130,8 @@ export interface ThreadRecord {
   openedTabIds?: number[];
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
+  // The task run (`taskRunId`) that was said out loud in this chat: Auto mode never covers it (gate/autoMode.ts)
+  spokenTaskRunId?: string | null;
   // How this chat hears and speaks, over Settings
   voice?: ThreadVoice | null;
 }

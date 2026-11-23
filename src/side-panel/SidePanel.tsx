@@ -26,6 +26,7 @@ import { LiveOrb } from './components/ui/live-orb';
 import { ThinkingOrb } from './components/ui/thinking-orb';
 import ChatView from './chat/ChatView';
 import Header from './layout/Header';
+import type { VoiceStatus } from './layout/Header';
 import Sidebar from './layout/Sidebar';
 import type { Place } from './layout/Sidebar';
 import type { Crumb } from './layout/Breadcrumbs';
@@ -91,7 +92,7 @@ type PanelMessage =
       cancelled?: boolean;
       threadId?: string;
     }
-  | { type: 'voice_state'; status: 'off' | 'connecting' | 'listening' | 'speaking'; threadId: string | null }
+  | { type: 'voice_state'; status: VoiceStatus; threadId: string | null }
   | { type: 'voice_text_sent'; clientId: string }
   | { type: 'error'; error: string; clientId?: string; threadId?: string | null }
   | {
@@ -138,9 +139,13 @@ const SidePanel = () => {
   const [meetingFocusT, setMeetingFocusT] = useState<number | null>(null);
   const [consent, setConsent] = useState<{ includeMic: boolean } | null>(null);
   // The spoken conversation, as the offscreen document reports it
-  const [voiceStatus, setVoiceStatus] = useState<'off' | 'connecting' | 'listening' | 'speaking'>('off');
-  // The chat the conversation is kept in: the Keyboard button opens it, and typing there goes to the conversation
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('off');
+  // The chat the conversation is kept in (one at a time, in any tab): it shows here only when it is this panel's chat
   const [voiceThreadId, setVoiceThreadId] = useState<string | null>(null);
+  const voiceThreadRef = useRef<string | null>(null);
+  voiceThreadRef.current = voiceThreadId;
+  // This panel pressed the mic and waits to hear which chat the conversation is in
+  const [voiceStarting, setVoiceStarting] = useState(false);
   // A problem to show above the input that belongs to no message, e.g. a send that was refused
   const [banner, setBanner] = useState<string | null>(null);
   // A short good-news line, e.g. a page saved
@@ -321,12 +326,17 @@ const SidePanel = () => {
             setBanner(message.error || t('errors_unknown'));
           } else if (message.threadId) {
             setVoiceThreadId(message.threadId);
+            // A new chat for the conversation lives on this tab: show it behind the voice screen
+            showThread(message.threadId);
           }
+          setVoiceStarting(false);
           break;
         case 'voice_state':
           // The panel opened while a conversation was on
           if (message.threadId) setVoiceThreadId(message.threadId);
+          // "Off" too when this panel still shows it paused: the background restarted and the pause is gone
           if (message.status !== 'off') setVoiceStatus(message.status);
+          else setVoiceStatus(current => (current === 'paused' ? 'off' : current));
           break;
         case 'voice_text_sent':
           unconfirmedRef.current.confirm(message.clientId);
@@ -487,8 +497,12 @@ const SidePanel = () => {
 
   const currentWindowId = async () => (await chrome.windows.getCurrent()).id;
 
+  // The conversation belongs to this panel: its chat is on screen, or this panel is starting it
+  const voiceHere = voiceStatus !== 'off' && (voiceStarting || (!!threadId && threadId === voiceThreadId));
+  // What this panel shows of it: another tab's conversation is not shown here (its mic starts one here instead)
+  const hereStatus: VoiceStatus = voiceHere ? voiceStatus : 'off';
   // The chat on screen holds the conversation that is on: what is typed there goes to it
-  const voiceLiveHere = voiceStatus !== 'off' && !!threadId && threadId === voiceThreadId;
+  const voiceLiveHere = voiceStatus !== 'off' && voiceStatus !== 'paused' && !!threadId && threadId === voiceThreadId;
 
   const handleSend = async (text: string, attachments: OutgoingAttachment[] = []) => {
     const trimmed = text.trim();
@@ -585,6 +599,15 @@ const SidePanel = () => {
       threadId?: string | null;
     }) => {
       if (message?.type !== 'voice_status' || !message.status) return;
+      // The end of a conversation that already moved to another chat says nothing about the one now on
+      if (
+        message.status === 'off' &&
+        message.threadId &&
+        voiceThreadRef.current &&
+        message.threadId !== voiceThreadRef.current
+      ) {
+        return;
+      }
       // Right after the user ended the conversation, a late "listening" must not bring the screen back
       if (message.status !== 'off' && Date.now() - endedAtRef.current < 4000) return;
       setVoiceStatus(message.status);
@@ -597,8 +620,10 @@ const SidePanel = () => {
 
   const toggleVoice = async () => {
     setBanner(null);
-    if (voiceStatus !== 'off') {
+    // A paused conversation is started again from here (it resumes, or moves here), not ended
+    if (hereStatus !== 'off' && hereStatus !== 'paused') {
       endedAtRef.current = Date.now();
+      setVoiceStarting(false);
       setVoiceStatus('off');
       post({ type: 'voice_stop' });
       return;
@@ -608,7 +633,14 @@ const SidePanel = () => {
     if (!(await ensureVoiceModels('talk', panelApi.request))) return;
     setVoiceHidden(false);
     setVoiceStatus('connecting');
-    post({ type: 'voice_start', windowId: await currentWindowId() });
+    setVoiceStarting(true);
+    // Talks in the chat on screen; on an empty or new chat, a new one on this tab that knows the recent ones
+    post({
+      type: 'voice_start',
+      windowId: await currentWindowId(),
+      threadId: thread && threadMessages.length > 0 ? thread.id : null,
+      tabId: PANEL_TAB ?? undefined,
+    });
   };
 
   // Sends a knowledge base request and waits for its reply
@@ -973,9 +1005,9 @@ const SidePanel = () => {
         reopenAt={setupAt}
         hideResume={view === 'welcome'}
       />
-      {voiceStatus !== 'off' && !voiceHidden && (
+      {hereStatus !== 'off' && hereStatus !== 'paused' && !voiceHidden && (
         <VoiceView
-          status={voiceStatus}
+          status={hereStatus}
           onEnd={() => void toggleVoice()}
           onHide={() => {
             // The keyboard opens the conversation's own chat, not whatever was on screen; the voice stays on
@@ -1000,13 +1032,15 @@ const SidePanel = () => {
         crumbs={crumbs}
         menuOpen={drawerOpen}
         onMenu={() => setDrawerOpen(!drawerOpen)}
-        busy={activeCount > 0 || voiceStatus !== 'off'}
+        busy={activeCount > 0 || hereStatus !== 'off'}
         recordingLabel={recording ? clock(recordingFor) : null}
         recordingIdle={recordingWords === 0}
         onNotes={() => void handleTakeNotes()}
-        voiceStatus={voiceStatus}
+        voiceStatus={hereStatus}
         // A hidden conversation comes back to the front; otherwise the button starts or ends it
-        onVoice={() => (voiceStatus !== 'off' && voiceHidden ? setVoiceHidden(false) : void toggleVoice())}
+        onVoice={() =>
+          hereStatus !== 'off' && hereStatus !== 'paused' && voiceHidden ? setVoiceHidden(false) : void toggleVoice()
+        }
         onNewThread={handleNewThread}
         activeCount={activeCount}
         onStopAll={() => post({ type: 'thread_cancel_all' })}
@@ -1179,7 +1213,7 @@ const SidePanel = () => {
             isDarkMode={isDarkMode}
             api={panelApi}
           />
-          {thread.tags.includes('voice') && (
+          {(thread.tags.includes('voice') || voiceLiveHere) && (
             <VoiceThreadBar
               threadId={thread.id}
               live={voiceLiveHere}

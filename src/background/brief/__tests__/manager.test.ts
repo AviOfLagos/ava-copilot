@@ -79,6 +79,9 @@ describe('the morning brief', () => {
   });
 
   it('says so when the calendar could not be read, and still shows what it last knew', async () => {
+    // Midday, so "three hours ago" and "in an hour" are both today whenever the tests run
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 24, 12));
     reading = {
       state: 'failed',
       events: [
@@ -98,6 +101,7 @@ describe('the morning brief', () => {
     const { said, line } = await make();
     expect(said).toMatch(/brief_calendar_failedAsOf\|[^\n]+\n- [^\n]*Standup/);
     expect(line.startsWith('brief_source_failed|brief_source_calendar')).toBe(true);
+    vi.useRealTimers();
   });
 
   it('says which day the calendar was last read when that was not today', async () => {

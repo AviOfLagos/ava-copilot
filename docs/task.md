@@ -3001,6 +3001,19 @@ Left for A2: voiceprints (every utterance is `speaker: 'unknown'`).
   nobody); E2E `followups.e2e.mjs` runs a captions call with two speakers and moves the background clock to a
   Tuesday for the brief card, Asked and Done.
 
+### Voice per chat: one Ava, typed or spoken (2026-11-23)
+
+- Design: `docs/voice-per-chat.md`. The mic talks in the chat on screen (`VoiceManager.start({ threadId, tabId })`);
+  its turns are that chat's messages and `run_browser_task` / `do_task` run there (a linked chat only while it is busy).
+  The mic on an empty chat (and "Hey Ava") starts a new chat on that tab with the last five chats summarised
+  (`voice/presence.ts` `recentChatsSection`); the 12-hour "continue the voice chat" rule is gone.
+- Leaving the chat's tab pauses (session closed, state `paused`, broadcast as `voice_status`); coming back resumes with
+  "Voice is back" in the chat and a spoken pick-up; 10 minutes away or the tab closing ends it. Rules in
+  `presence.ts` `onTabMove` (the chat's own tabs, tabs voice opened, and extension pages never pause).
+- One conversation at a time: starting in another chat moves it, and the chat it left says "Voice moved to …". A
+  panel shows the voice screen and pill only for its own chat.
+- Tests: `voice/__tests__/presence.test.ts`, `voice-per-chat.test.ts`; E2E `voice-per-chat.e2e.mjs`.
+
 ## 5. Risks, in order
 
 1. **The gate misses a commit action.** This is the only risk that can do real damage (a sent email, a deleted record). Mitigation is layer 2 in section 3 and the M1 fixtures.

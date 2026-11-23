@@ -10,7 +10,7 @@ import { Shimmer } from '../components/ai/shimmer';
 import type { VoiceStatus } from '../layout/Header';
 
 interface VoiceViewProps {
-  status: Exclude<VoiceStatus, 'off'>;
+  status: Exclude<VoiceStatus, 'off' | 'paused'>;
   onEnd: () => void;
   onHide: () => void;
 }

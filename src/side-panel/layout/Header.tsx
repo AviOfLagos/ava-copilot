@@ -12,12 +12,13 @@ import PersonalityPicker from '../personalities/PersonalityPicker';
 import SetupIndicator from '../setup/SetupIndicator';
 import AmbientIndicator from '../ambient/AmbientIndicator';
 
-export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking';
+export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'speaking' | 'paused';
 
 const VOICE_LABELS = {
   connecting: 'voice_status_connecting',
   listening: 'voice_status_listening',
   speaking: 'voice_status_speaking',
+  paused: 'voice_status_paused',
 } as const;
 
 interface HeaderProps {
@@ -141,7 +142,9 @@ export default function Header(props: HeaderProps) {
               'flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium',
               props.voiceStatus === 'speaking' ? 'border-call/50 bg-call/20' : 'border-primary/50 bg-primary/15',
             )}>
-            <span className="size-1.5 animate-pulse rounded-full bg-current" />
+            <span
+              className={cn('size-1.5 rounded-full bg-current', props.voiceStatus !== 'paused' && 'animate-pulse')}
+            />
             {t(VOICE_LABELS[props.voiceStatus as keyof typeof VOICE_LABELS])}
           </button>
         ) : (

@@ -121,6 +121,16 @@ describe('Auto mode on the confirm gate', () => {
     expect(review.proceed).toBe(true);
   });
 
+  it('still asks for a task said out loud, even in a chat with it on; a typed task after it is covered again', async () => {
+    const id = await chat({ autoMode: true });
+    await threadStore.update(id, { spokenTaskRunId: `run-${id}` });
+    const { context, requests } = fakeContext(id);
+    await reviewAction(context, fakePage(), click('Post'));
+    expect(requests).toHaveLength(1);
+    await threadStore.update(id, { taskRunId: 'run-typed' });
+    expect(await autoModeAllows(id, 'send')).toBe(true);
+  });
+
   it('still asks for a payment, a purchase, deleting and access, even when it is on', async () => {
     const id = await chat({ autoMode: true });
     for (const label of ['Pay now', 'Buy now', 'Delete account', 'Grant access']) {
