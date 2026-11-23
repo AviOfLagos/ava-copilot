@@ -214,8 +214,15 @@ before(async () => {
         },
       },
     },
-    // Economy mode asks for the quick model; here it is the scripted one
+    // Economy mode answers with the model the chats use (the Navigator's), and 'fast' when picked: here both are
+    // the scripted one
     'model-settings': { roles: { fast: { providerId: 'voicetext', model: 'voice-script' } } },
+    'agent-models': {
+      agents: {
+        navigator: { provider: 'voicetext', modelName: 'voice-script' },
+        planner: { provider: 'voicetext', modelName: 'voice-script' },
+      },
+    },
     'meeting-settings': { autoNotes: false },
   });
   session = await openSession(extension, mock);
@@ -331,6 +338,12 @@ test(
       .flatMap(request => request.messages.filter(message => message.role === 'user').map(message => message.content))
       .join(' ');
     assert.match(heard, /calendar|ava/i, 'the recognised words reached the model');
+    // It knows itself: the model the chats use answers, and the instructions say so, with how it hears
+    assert.equal(first.model, 'voice-script', 'the voice answers with the chat model');
+    const system = JSON.stringify(first.messages.filter(message => message.role === 'system'));
+    assert.match(system, /About you right now/);
+    assert.match(system, /Model answering: voice-script/);
+    assert.match(system, /Speech recogniser: Moonshine/);
     // get_status ran in the background and its result went back to the model
     const toolReply = textModel.requests[1].messages.find(message => message.role === 'tool');
     assert.match(JSON.stringify(toolReply), /running/i);

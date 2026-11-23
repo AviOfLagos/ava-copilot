@@ -11,6 +11,7 @@ import { isRequest, speechLevel, UtteranceCollector } from './utterances';
 import { Addressee, callWords, soundsUnfinished, UNFINISHED_WAIT_MS } from './addressed';
 import type { HeardFragment, SpeakerLabel } from './addressed';
 import { level } from '../vad';
+import { HEARING_NOTICE, HearingWatch } from '../hearing';
 import { SpokenLines } from '../lines';
 import type { LineTts } from '../lines';
 
@@ -125,6 +126,11 @@ export class EconomySession {
   private readonly lines: SpokenLines;
   // The voice the line playing now uses, so talking over it stops the right engine
   private lineTts: LineTts | null = null;
+  // Says once when the mic stays silent or recognised turns keep coming back empty or garbled
+  private readonly hearing = new HearingWatch(trouble => {
+    this.say(HEARING_NOTICE);
+    this.events.onHearing?.(trouble);
+  });
 
   constructor(
     private readonly options: EconomyOptions,
@@ -235,6 +241,8 @@ export class EconomySession {
   private fromMic(samples: Float32Array): void {
     if (!this.ready || this.stopped || this.micHeld) return;
     const playing = this.audible();
+    // Only while it waits for the user: not while it answers, thinks or writes words down
+    this.hearing.level(level(samples), performance.now(), !playing && !this.thinking && !this.transcribing);
     const { speechStarted, utterance } = this.collector.push(samples, { playing });
     if (speechStarted) {
       this.overPlayback = this.speaking;
@@ -287,8 +295,13 @@ export class EconomySession {
     this.transcribeStartedAt = performance.now();
     try {
       const started = performance.now();
-      const [said, speaker] = await Promise.all([this.stt.transcribe(audio, this.options.economy.stt.language), this.whoSpoke(audio)]);
+      const [said, speaker] = await Promise.all([
+        this.stt.transcribe(audio, this.options.economy.stt.language),
+        this.whoSpoke(audio),
+      ]);
       const text = said.trim();
+      // Noise turned into "you" counts as unclear too: something was said, and nothing usable came of it
+      if (!this.stopped) this.hearing.recognised(isRequest(text) ? text : '');
       // Noise the recogniser turned into "you" or "thank you" is not a question: answering it would make the
       // copilot talk on its own and keep the conversation from ever going idle
       if (!this.stopped && isRequest(text)) {

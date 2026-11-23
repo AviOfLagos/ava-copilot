@@ -45,6 +45,15 @@ export async function recordSpoken(report: SpokenReport): Promise<void> {
   }
 }
 
+/**
+ * A conversation that was not hearing the user well ('mic-silent' or 'unclear-turns'): a line in the trace with
+ * the recogniser in use, so Settings › Voice engines and check_audio can see it happened. A code, never words.
+ */
+export async function recordHearingTrouble(trouble: unknown, engine: string): Promise<void> {
+  if (trouble !== 'mic-silent' && trouble !== 'unclear-turns') return;
+  await voiceTraceStore.append({ at: Date.now(), kind: 'stt', engine, ok: false, note: trouble });
+}
+
 /** The local voice that was meant to speak but is too slow here, with its speed, or null when it can speak. */
 export function slowVoice(
   engine: string,

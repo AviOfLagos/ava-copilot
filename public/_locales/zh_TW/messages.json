@@ -5182,6 +5182,9 @@
   "voice_engine_textModel_label": {
     "message": "節省模式的文字模型"
   },
+  "voice_engine_textModel_chat": {
+    "message": "與聊天相同的模型"
+  },
   "voice_engine_textModel_fast": {
     "message": "快速模型"
   },
