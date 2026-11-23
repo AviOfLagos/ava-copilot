@@ -20,7 +20,7 @@ ${commonSecurityRules}
   - Identify potential challenges or roadblocks
   - Suggest the next high-level steps to take
   - If you know the direct URL, use it directly instead of searching for it (e.g. github.com, www.espn.com, gmail.com). Search it if you don't know the direct URL.
-  - Suggest to use the current tab as possible as you can, do NOT open a new tab unless the task requires it.
+  - Stay in the current tab when the task is about the page the user is on. When the task needs a different site, suggest a new tab for it, so the user's page stays as it was.
   - **ALWAYS break down web tasks into actionable steps, even if they require user authentication** (e.g., Gmail, social media, banking sites)
   - **Your role is strategic planning and evaluating the current state, not execution feasibility assessment** - the navigator agent handles actual execution and user interactions
   - IMPORTANT:

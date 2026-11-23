@@ -5,6 +5,7 @@ import type { ThreadStore } from '@extension/storage';
 import { Actors, AgentEvent, ExecutionState } from '../../agent/event/types';
 import type { EventCallback } from '../../agent/event/types';
 import type * as StorageModule from '@extension/storage';
+import type { TabBinding } from '../binding';
 
 // --- fakes -------------------------------------------------------------------------------------
 
@@ -1318,5 +1319,170 @@ describe('failed tasks retry, then report (#66)', () => {
     expect((await store.get(old.id))?.failure).toEqual({ cls: 'needs_user', retryAt: null, reported: true });
     expect(queue.has(retryJobKey(old.id, 1))).toBe(false);
     expect([...inbox.values()].map(item => item.title)).toEqual(['retry_stuck_title:Send the report']);
+  });
+});
+
+const { TabPanels } = await import('../tabPanels');
+
+describe('tab-scoped chats', () => {
+  let panels: InstanceType<typeof TabPanels>;
+
+  beforeEach(() => {
+    panels = new TabPanels({
+      read: async () => ({}),
+      write: async () => {},
+      enable: async () => {},
+      disable: async () => {},
+    });
+    manager = new ThreadManager(store, null, panels);
+  });
+
+  // The binding a run works with now: a follow-up hands the kept browser context a new one
+  const bindingOf = (executor: FakeExecutor) => {
+    const context = contextOf(executor) as unknown as {
+      binding: TabBinding;
+      setBinding: { mock: { calls: [TabBinding][] } };
+    };
+    return context.setBinding.mock.calls.at(-1)?.[0] ?? context.binding;
+  };
+  const finish = async () => {
+    const executor = lastExecutor();
+    await executor.complete();
+    await runEnded(executor);
+  };
+
+  it('opens a past chat on another tab and binds it there: its next task starts on that tab', async () => {
+    const first = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Summarise this page', windowId: 1 });
+    await panels.open(first, threadId);
+    await finish();
+
+    const second = browser.open('https://shop.example/cart');
+    expect(await manager.openOnTab(threadId, second)).toEqual({ state: 'ok' });
+    const thread = await store.get(threadId);
+    expect(thread?.boundTabIds).toEqual([second]);
+    expect(thread?.boundUrl).toBe('https://shop.example/cart');
+    expect(panels.homeOf(threadId)).toBe(second);
+    expect(panels.entryOf(first)).toBeNull();
+
+    browser.activate(first);
+    await manager.send({ threadId, text: 'What is in the cart?', windowId: 1 });
+    expect(bindingOf(lastExecutor()).tabIds).toEqual([second]);
+  });
+
+  it('says plainly when another chat is working in the tab', async () => {
+    const tab = browser.open('https://news.example/today');
+    await manager.send({ text: 'Read the news', windowId: 1 });
+    const other = await store.create({ title: 'Plan the trip' });
+    expect(await manager.openOnTab(other.id, tab)).toEqual({ state: 'tab_busy', holderTitle: 'Read the news' });
+    // ...and it cannot act there until then
+    await expect(manager.send({ threadId: other.id, text: 'Go on', windowId: 1 })).rejects.toThrow('threads_tabInUse');
+  });
+
+  it('does not take a tab from the chat working in it, even when it is that chat’s home', async () => {
+    const tab = browser.open('https://news.example/today');
+    const running = await manager.send({ text: 'Read the news', windowId: 1, tabId: tab });
+    expect(panels.homeOf(running)).toBe(tab);
+    const other = await store.create({ title: 'Plan the trip' });
+    expect(await manager.openOnTab(other.id, tab)).toEqual({ state: 'tab_busy', holderTitle: 'Read the news' });
+    expect(panels.entryOf(tab)).toEqual({ threadId: running, role: 'home' });
+  });
+
+  it('moves a chat opened elsewhere while it ran to that tab once it is idle', async () => {
+    const first = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1, tabId: first });
+    const second = browser.open('https://shop.example/');
+    expect(await manager.openOnTab(threadId, second)).toEqual({ state: 'running_elsewhere' });
+    await finish();
+    browser.activate(first);
+    await manager.send({ threadId, text: 'And the sport?', windowId: 1, tabId: second });
+    expect(bindingOf(lastExecutor()).tabIds).toEqual([second]);
+  });
+
+  it('leaves a chat that is still running on its own tab, and says so', async () => {
+    const tab = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
+    const elsewhere = browser.open('https://shop.example/');
+    expect(await manager.openOnTab(threadId, elsewhere)).toEqual({ state: 'running_elsewhere' });
+    expect((await store.get(threadId))?.boundTabIds).toEqual([tab]);
+  });
+
+  it('never drives another chat’s tab, even while that chat is idle', async () => {
+    const theirs = browser.open('https://mail.example/');
+    const idle = await store.create({ title: 'Mail' });
+    await panels.open(theirs, idle.id);
+    const free = browser.open('https://wiki.example/', 1, false);
+    browser.open('https://news.example/today');
+    await manager.send({ text: 'Read the news', windowId: 1 });
+    const binding = bindingOf(lastExecutor());
+    expect(binding.canAdopt?.(theirs)).toBe(false);
+    expect(binding.canAdopt?.(free)).toBe(true);
+  });
+
+  it('does not go back to a tab that became another chat’s since', async () => {
+    const first = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
+    await finish();
+    await panels.open(first, 'someone-else');
+    const front = browser.open('https://blog.example/');
+    await manager.send({ threadId, text: 'And the sport?', windowId: 1 });
+    expect(bindingOf(lastExecutor()).tabIds).toEqual([front]);
+  });
+
+  it('marks the user’s own page, so another site opens in a new tab; tabs the run opens are its own', async () => {
+    const tab = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Find the launch thread on Reddit', windowId: 1 });
+    const binding = bindingOf(lastExecutor());
+    expect([...binding.userTabs]).toEqual([tab]);
+
+    const opened = browser.open('https://www.reddit.com/', 1, false);
+    binding.add(opened);
+    await settle();
+    await settle();
+    expect(binding.userTabs.has(opened)).toBe(false);
+    expect((await store.get(threadId))?.openedTabIds).toEqual([opened]);
+    await finish();
+
+    // The next task in the chat: the tab it opened is still its own, the user's page still the user's
+    await manager.send({ threadId, text: 'Open the top comment', windowId: 1 });
+    expect([...bindingOf(lastExecutor()).userTabs]).toEqual([tab]);
+  });
+
+  it('lets the agent take the tab anywhere once the user said to use the current tab', async () => {
+    browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
+    await finish();
+    await manager.rebind(threadId, 1);
+    expect((await store.get(threadId))?.stayInTab).toBe(true);
+    await manager.send({ threadId, text: 'Now go to reddit', windowId: 1 });
+    expect(bindingOf(lastExecutor()).userTabs.size).toBe(0);
+    // ...for that task only: the next one keeps the user's page again
+    await finish();
+    await manager.send({ threadId, text: 'Now find the sport', windowId: 1 });
+    expect(bindingOf(lastExecutor()).userTabs.size).toBe(1);
+  });
+
+  it('stays in the tab when the task itself says so', async () => {
+    browser.open('https://news.example/today');
+    await manager.send({ text: 'Open reddit in this tab', windowId: 1 });
+    expect(bindingOf(lastExecutor()).userTabs.size).toBe(0);
+  });
+
+  it('shows the chat on the tabs its run opens, when the chat lives on a tab', async () => {
+    const tab = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Find it on Reddit', windowId: 1 });
+    await panels.open(tab, threadId);
+    const opened = browser.open('https://www.reddit.com/', 1, false);
+    bindingOf(lastExecutor()).add(opened);
+    for (let i = 0; i < 5; i++) await settle();
+    expect(panels.entryOf(opened)).toEqual({ threadId, role: 'work' });
+  });
+
+  it('lets go of its tabs when the chat is deleted', async () => {
+    const tab = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
+    await panels.open(tab, threadId);
+    await manager.remove(threadId);
+    expect(panels.entryOf(tab)).toBeNull();
   });
 });

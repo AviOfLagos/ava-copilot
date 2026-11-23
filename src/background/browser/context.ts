@@ -54,7 +54,7 @@ export default class BrowserContext {
     }
     // A free tab the user has open may be taken over; one another thread is using may not
     if ((await this._adoptable(tab)) && this._binding.canAdopt?.(tabId)) {
-      this._binding.add(tabId);
+      this._binding.add(tabId, false);
       return;
     }
     throw new TabNotBoundError(tabId);
@@ -313,9 +313,25 @@ export default class BrowserContext {
     return page;
   }
 
-  public async navigateTo(url: string): Promise<void> {
+  /**
+   * Goes to `url` in the tab this context works in, unless that tab is one of the user's own pages and `url` is on
+   * another site: then it opens in a new tab and the user's page stays as it was (TabBinding.keepsPage).
+   *
+   * @returns 'new_tab' when the page opened in a new tab to keep the user's page
+   */
+  public async navigateTo(url: string): Promise<'new_tab' | void> {
     if (!isUrlAllowed(url, this._config.allowedUrls, this._config.deniedUrls)) {
       throw new URLNotAllowedError(`URL: ${url} is not allowed`);
+    }
+
+    // The user's own page is never taken to another site: that work gets a tab of its own
+    if (this._binding?.userTabs.size && this._currentTabId !== null) {
+      const here = await chrome.tabs.get(this._currentTabId).catch(() => undefined);
+      if (this._binding.keepsPage(this._currentTabId, here?.url, url)) {
+        logger.info('navigateTo: keeping the user page, opening a new tab for', url);
+        await this.openTab(url);
+        return 'new_tab';
+      }
     }
 
     const page = await this.getCurrentPage();

@@ -59,6 +59,7 @@ Common action sequences:
 - If stuck, try alternative approaches - like going back to a previous page, new search, new tab etc.
 - Handle popups/cookies by accepting or closing them
 - Use scroll to find elements you are looking for
+- The tab the user asked from is theirs. When the task is about the page they are on, stay in that tab. When it needs a different site, use open_tab for that site and work there; never go_to_url away from the user's page to another site (a step that tries opens a new tab anyway). Only when the user says to use this tab may you take it to another site
 - If you want to research something, open a new tab instead of using the current tab
 - If captcha pops up, try to solve it if a screenshot image is provided - else try a different approach
 - If the page is not fully loaded, use wait action

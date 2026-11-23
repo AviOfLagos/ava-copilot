@@ -4,6 +4,7 @@ import RouteBoundary from '../components/RouteBoundary';
 import { useTheme } from '../layout/theme';
 import type { PanelApi } from '../registry';
 import { WorkflowsView } from './WorkflowsPlace';
+import { openPanelInWindow } from '@src/background/threads/tabPanels';
 
 /**
  * The full-tab workflow editor (workflows.html): the same views as the panel's Workflows place, with room
@@ -23,7 +24,7 @@ function messageApi(): PanelApi {
     // A chat opens in the side panel, which shows the one asked for when it opens
     openThread: threadId => {
       void chrome.storage.session.set({ 'open-thread': threadId }).catch(() => {});
-      if (windowId !== undefined) void chrome.sidePanel.open({ windowId }).catch(() => {});
+      if (windowId !== undefined) void openPanelInWindow(windowId).catch(() => {});
     },
     // "New workflow" asks on this page instead (WorkflowsView with `wide`)
     startThread: () => {},

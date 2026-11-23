@@ -13,12 +13,27 @@ export class TabBinding {
   // thread holds it". Unset, only bound tabs and tabs they open are allowed.
   canAdopt: ((tabId: number) => boolean) | null = null;
   // Told when a tab joins the binding mid-run (one the task opened, or a free one it took over)
-  onAdd: ((tabId: number) => void) | null = null;
+  onAdd: ((tabId: number, opened: boolean) => void) | null = null;
   // Whether a free tab may be taken from any ordinary window. Off, only from the windows the binding already
   // works in: an agent's run stays in the agents' window and never takes a tab the user has open elsewhere.
   anyWindow = false;
   // The site of the already-open tab this run started on, when the task named one (see tabsToBind)
   reusedSite: string | null = null;
+  // The user's own pages this run started on. A step that would take one of them to another site opens a new tab
+  // for it instead (see `keepsPage`), so the page the user asked from is never navigated away. Empty when the user
+  // said to use the current tab.
+  readonly userTabs = new Set<number>();
+
+  /**
+   * Whether going to `url` from `tabId` must happen in a new tab: the tab is one of the user's own pages, on a web
+   * page, and `url` is on another site. A blank tab, a page of the same site, and tabs the run opened itself are
+   * navigated as asked.
+   */
+  keepsPage(tabId: number | null, currentUrl: string | undefined, url: string): boolean {
+    if (tabId === null || !this.userTabs.has(tabId)) return false;
+    const here = siteOf(hostOf(currentUrl));
+    return here !== '' && here !== siteOf(hostOf(url));
+  }
 
   constructor(
     tabIds: number[],
@@ -31,14 +46,20 @@ export class TabBinding {
     return this.tabs.has(tabId);
   }
 
-  add(tabId: number): void {
+  /**
+   * @param opened - The run opened this tab itself (a new tab, a link that opened one, a closed tab reopened);
+   *   false for a free tab of the user's it took over, which stays one of the user's pages
+   */
+  add(tabId: number, opened = true): void {
     const joined = !this.tabs.has(tabId);
     this.tabs.add(tabId);
-    if (joined) this.onAdd?.(tabId);
+    if (!opened && joined) this.userTabs.add(tabId);
+    if (joined) this.onAdd?.(tabId, opened);
   }
 
   remove(tabId: number): void {
     this.tabs.delete(tabId);
+    this.userTabs.delete(tabId);
   }
 
   get tabIds(): number[] {
@@ -48,6 +69,27 @@ export class TabBinding {
   get size(): number {
     return this.tabs.size;
   }
+}
+
+// Second-level labels under a country code that are not a site of their own: "co.uk", "com.ng", "gov.au"
+const SHARED_SECOND_LEVEL = new Set(['co', 'com', 'org', 'net', 'gov', 'ac', 'edu', 'ne', 'or', 'go']);
+
+/**
+ * The site a host belongs to, for "is this the same site": its registrable part ("mail.google.com" → "google.com",
+ * "shop.example.co.uk" → "example.co.uk"). An address with no host is ''. Approximate, without the public suffix
+ * list: good enough to tell another site from a subdomain of the same one.
+ */
+export function siteOf(host: string): string {
+  if (!host) return '';
+  if (/^\d+(\.\d+){3}$/.test(host) || !host.includes('.')) return host;
+  const labels = host.split('.');
+  const keep = labels.length > 2 && labels.at(-1)!.length === 2 && SHARED_SECOND_LEVEL.has(labels.at(-2)!) ? 3 : 2;
+  return labels.slice(-keep).join('.');
+}
+
+/** Whether the task's words ask to stay in this tab ("in this tab", "use the current tab", "same tab"). */
+export function asksForThisTab(task: string): boolean {
+  return /\b(?:in|use|using|stay in|keep it in)\s+(?:this|the current|my current|the same|same)\s+tab\b/i.test(task);
 }
 
 export class TabNotBoundError extends Error {

@@ -4,6 +4,7 @@ import { createLogger } from '../log';
 import { services } from '../registry/services';
 import { addInboxItem, inboxItemId, markDone } from '../inbox/store';
 import type { MeetingEvent, NothingReason } from './join-flow';
+import { openPanelInWindow, openPanelOnTab } from '../threads/tabPanels';
 
 const logger = createLogger('MeetingAlerts');
 
@@ -147,13 +148,13 @@ export async function onMeetingNotificationClicked(notificationId: string): Prom
   if (id.startsWith('notes:')) {
     // The call is over: the panel opens in the window the user is in, where its card offers Try again
     const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
-    if (window?.id !== undefined) await chrome.sidePanel.open({ windowId: window.id }).catch(() => {});
+    if (window?.id !== undefined) await openPanelInWindow(window.id).catch(() => {});
     return;
   }
   if (tabId === null || !Number.isFinite(tabId)) return;
   const tab = await chrome.tabs.update(tabId, { active: true }).catch(() => undefined);
   if (tab?.windowId === undefined) return;
-  // The click is the user's gesture: open the panel first, while it still counts
-  await chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
+  // The click is the user's gesture: open the panel first, while it still counts. The call's tab gets its own panel
+  await openPanelOnTab(tabId).catch(() => {});
   await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
 }

@@ -41,6 +41,7 @@ import { loadIdentityContext } from '../identity/context';
 import { briefContext, goalLines } from '../identity/prompt';
 import { ownerKnown, ownerNames } from '../followups/owner';
 import { followUpItems, postFollowUpInbox } from '../followups/surfaces';
+import { openPanelInWindow } from '../threads/tabPanels';
 
 const logger = createLogger('MorningBrief');
 
@@ -292,7 +293,7 @@ export class MorningBrief {
     if (!lastThreadId) return;
     await chrome.storage.session.set({ [OPEN_THREAD_KEY]: lastThreadId });
     const window = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
-    if (window?.id !== undefined) await chrome.sidePanel.open({ windowId: window.id }).catch(() => {});
+    if (window?.id !== undefined) await openPanelInWindow(window.id).catch(() => {});
   }
 
   private async overCap(): Promise<boolean> {

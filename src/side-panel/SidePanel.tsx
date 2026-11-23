@@ -63,6 +63,8 @@ import { PendingWorkspaceOffers } from './workspaces/MakeWorkspaceButton';
 import { CallTaskCards } from './call-tasks/CallTaskCards';
 import RecordingBar from './recordings/RecordingBar';
 import WhatsNewCard from './update/WhatsNewCard';
+import TabStart from './threads/TabStart';
+import { loadUi, panelTabId, saveUi, useTabThread } from './threads/tabPanel';
 
 // A thread tag: the user answered "Save as skill?" for this chat
 const SKILL_OFFERED_TAG = 'skill:offered';
@@ -71,6 +73,8 @@ const HEARTBEAT_MS = 25_000;
 
 // A popped-out panel opens on the thread named in its address
 const threadFromUrl = () => new URLSearchParams(location.search).get('thread');
+// The tab this panel belongs to: each tab has its own panel, with its own chat, draft and scroll (threads/tabPanel.ts)
+const PANEL_TAB = panelTabId();
 
 type PanelMessage =
   | { type: 'thread_started'; clientId: string; threadId: string }
@@ -521,6 +525,8 @@ const SidePanel = () => {
         text: trimmed,
         attachments,
         windowId: await currentWindowId(),
+        // The tab this panel belongs to: a new chat lives there
+        tabId: PANEL_TAB ?? undefined,
         // A new chat goes to the workspace picked on Home; otherwise its words choose one
         workspaceId: threadId ? null : nextWorkspace,
       });
@@ -651,6 +657,8 @@ const SidePanel = () => {
   const handleNewThread = () => {
     go('chat');
     setThreadId(null);
+    // This tab lets go of its chat: opening Ava here again starts fresh
+    if (PANEL_TAB !== null) post({ type: 'tab_panel_clear', tabId: PANEL_TAB });
   };
 
   /** A new chat, with `prompt` placed in the composer once it mounts (see the effect below `view`). */
@@ -659,10 +667,37 @@ const SidePanel = () => {
     handleNewThread();
   };
 
-  const handleSelect = (id: string) => {
+  const showThread = (id: string) => {
     go('chat');
     setThreadId(id);
   };
+
+  /** Opens a chat in this panel. A tab's panel makes it the tab's chat, and says when it cannot act here yet. */
+  const handleSelect = (id: string) => {
+    showThread(id);
+    if (PANEL_TAB === null) return;
+    void panelApi
+      .request<{ state: 'ok' | 'running_elsewhere' | 'tab_busy'; holderTitle?: string }>({
+        type: 'tab_panel_open',
+        tabId: PANEL_TAB,
+        threadId: id,
+      })
+      .then(reply => {
+        if (reply.state === 'tab_busy') setBanner(t('tabPanel_busyHere', [reply.holderTitle ?? '']));
+        else if (reply.state === 'running_elsewhere') setBanner(t('tabPanel_runningElsewhere'));
+      })
+      .catch(error => setBanner(error instanceof Error ? error.message : String(error)));
+  };
+
+  // The chat of this tab: shown on opening, and followed when it moves to another tab or is deleted
+  useTabThread(PANEL_TAB, threadId, change => {
+    if (change.kind === 'show') {
+      showThread(change.threadId);
+      return;
+    }
+    setThreadId(null);
+    if (change.kind === 'moved') setBanner(t('tabPanel_moved'));
+  });
 
   const handleDelete = (id: string) => {
     post({ type: 'thread_delete', threadId: id });
@@ -698,7 +733,7 @@ const SidePanel = () => {
   const handleBranch = async (seq: number) => {
     if (!threadId) return;
     const fork = await threadStore.fork(threadId, seq);
-    setThreadId(fork.id);
+    handleSelect(fork.id);
   };
 
   const handlePopOut = async () => {
@@ -759,6 +794,56 @@ const SidePanel = () => {
     pendingPromptRef.current = null;
     setInputTextRef.current?.(prompt);
   }, [view]);
+
+  // What this tab's panel was showing: the draft in the box and where the chat was scrolled to, kept so coming back
+  // to the tab finds it as it was, even when Chrome made the panel anew
+  const draftRef = useRef('');
+  const uiRef = useRef<{ draft: string; scroll: number | null }>({ draft: '', scroll: null });
+  const uiTimer = useRef<number | undefined>(undefined);
+  const saveUiSoon = useCallback(() => {
+    if (PANEL_TAB === null) return;
+    window.clearTimeout(uiTimer.current);
+    uiTimer.current = window.setTimeout(() => void saveUi(PANEL_TAB, uiRef.current).catch(() => {}), 300);
+  }, []);
+  const rememberDraft = useCallback(
+    (text: string) => {
+      draftRef.current = text;
+      if (uiRef.current.draft === text) return;
+      uiRef.current = { ...uiRef.current, draft: text };
+      saveUiSoon();
+    },
+    [saveUiSoon],
+  );
+  const [restoredUi, setRestoredUi] = useState(PANEL_TAB === null);
+  useEffect(() => {
+    if (PANEL_TAB === null || restoredUi || (view !== 'home' && view !== 'chat')) return;
+    setRestoredUi(true);
+    void loadUi(PANEL_TAB).then(ui => {
+      if (!ui) return;
+      uiRef.current = ui;
+      // Kept for the box when it mounts again (home and chat each have their own), and put in the one shown now
+      draftRef.current = ui.draft;
+      if (ui.draft) setInputTextRef.current?.(ui.draft);
+      if (ui.scroll === null) return;
+      // After the chat has laid out and stuck to the bottom once
+      window.setTimeout(() => {
+        const scroller = document.querySelector<HTMLElement>('[role="log"] > div');
+        if (scroller) scroller.scrollTop = ui.scroll!;
+      }, 600);
+    });
+  }, [view, restoredUi]);
+  useEffect(() => {
+    if (PANEL_TAB === null || view !== 'chat') return;
+    const scroller = document.querySelector<HTMLElement>('[role="log"] > div');
+    if (!scroller) return;
+    const onScroll = () => {
+      const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 24;
+      uiRef.current = { ...uiRef.current, scroll: atBottom ? null : Math.round(scroller.scrollTop) };
+      saveUiSoon();
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', onScroll);
+  }, [view, threadId, saveUiSoon]);
 
   // Where you are, each step back one click away
   const home: Crumb = { label: t('nav_home'), onClick: handleNewThread };
@@ -870,6 +955,8 @@ const SidePanel = () => {
         setContent={setter => {
           setInputTextRef.current = setter;
         }}
+        onTextChange={rememberDraft}
+        initialText={draftRef.current}
       />
       <p className="text-muted-foreground mt-1.5 text-center text-[10.5px]">
         {speech.status === 'starting' || speech.status === 'listening' ? t('chat_stt_hint') : t('chat_footer_gate')}
@@ -1148,6 +1235,9 @@ const SidePanel = () => {
       {view === 'home' && (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto">
+            {PANEL_TAB !== null && (
+              <TabStart onNew={() => setInputTextRef.current?.(draftRef.current)} onOpen={handleSelect} />
+            )}
             <HomeView
               workspaceId={nextWorkspace}
               onPrompt={text => setInputTextRef.current?.(text)}

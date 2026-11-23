@@ -31,6 +31,7 @@ import './setup/register';
 import './telemetry/register';
 import './once/register';
 import './tabs/register';
+import './threads/register';
 import './products/register';
 import './growth/register';
 import './rounds/register';
