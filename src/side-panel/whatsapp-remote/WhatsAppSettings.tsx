@@ -113,7 +113,16 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
 
   // Asks when the page opens, and every two seconds while a code is on its way or waiting to be scanned, or while
   // the connect code waits for his message
-  const linking = status?.state === 'starting' || status?.state === 'scan' || Boolean(status?.connectCode);
+  const reconnect = status?.state === 'linked' ? (status.reconnect ?? null) : null;
+  const linking =
+    status?.state === 'starting' || status?.state === 'scan' || Boolean(status?.connectCode) || reconnect !== null;
+  // Ticks the countdown to the next try while the line is down
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!reconnect) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [reconnect]);
   useEffect(() => {
     if (!brain?.paired) return;
     void refresh();
@@ -161,8 +170,11 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
 
   const state = status?.state ?? null;
   const ownerValid = owner === '' || WHATSAPP_NUMBER.test(owner);
-  const stateLine =
-    state === 'linked'
+  const stateLine = reconnect
+    ? reconnect.nextAt !== null && reconnect.nextAt > now
+      ? t('wava_state_reconnecting', [String(reconnect.attempt), String(Math.ceil((reconnect.nextAt - now) / 1000))])
+      : t('wava_state_reconnectingNow', [String(reconnect.attempt)])
+    : state === 'linked'
       ? status!.number
         ? t('wava_state_linked', [formatNumber(status!.number)])
         : t('wava_state_linkedPlain')
@@ -185,7 +197,10 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
           aria-hidden="true"
           className={cn(
             'inline-block size-2 shrink-0 rounded-full',
-            state === 'linked' ? 'bg-primary shadow-[0_0_8px_rgb(var(--primary-rgb))]' : 'bg-muted-foreground/50',
+            state === 'linked' && !reconnect
+              ? 'bg-primary shadow-[0_0_8px_rgb(var(--primary-rgb))]'
+              : 'bg-muted-foreground/50',
+            reconnect && 'animate-pulse bg-amber-400',
             (state === 'failed' || state === 'disconnected') && 'bg-destructive',
           )}
         />
@@ -195,7 +210,14 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
           </p>
           {status?.message ? <p className="text-muted-foreground text-[11.5px]">{status.message}</p> : null}
         </div>
-        {state === 'linked' ? (
+        {reconnect ? (
+          <Button
+            size="sm"
+            disabled={busy !== null}
+            onClick={() => void run('restart', { type: 'wava_restart' }, t('wava_settings_restarted'))}>
+            {busy === 'restart' ? t('wava_settings_restarting') : t('wava_settings_reconnectNow')}
+          </Button>
+        ) : state === 'linked' ? (
           <Button
             variant="ghost"
             size="sm"

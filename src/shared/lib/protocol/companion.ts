@@ -867,6 +867,16 @@ export const whatsappStatusSchema = z.object({
   connectCode: z.string().max(20).nullable().default(null),
   // Ava has heard from a chat on his phone and can always write back there
   phoneConnected: z.boolean().default(false),
+  // While linked but the line is down and being retried: since when, which try, and when the next one starts (ms;
+  // null while a try is running). Older Ava Brain: absent
+  reconnect: z
+    .object({
+      since: z.number(),
+      attempt: z.number().int().positive(),
+      nextAt: z.number().nullable(),
+    })
+    .nullable()
+    .default(null),
   // When his last message came in, and Ava's last went out (ms)
   lastInAt: z.number().nullable().default(null),
   lastOutAt: z.number().nullable().default(null),

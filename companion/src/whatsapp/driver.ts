@@ -85,6 +85,8 @@ export interface WaEvents {
   disconnected: (reason: string) => void;
   // Could not start, or linking gave up (the codes ran out)
   failed: (message: string) => void;
+  // A linked session lost its line and is retrying: which try, and when the next starts (null: running now)
+  reconnecting?: (info: { attempt: number; nextAt: number | null }) => void;
   message: (message: WaIncoming) => void;
 }
 

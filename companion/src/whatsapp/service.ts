@@ -254,6 +254,8 @@ export class WhatsAppService {
   private state: WhatsAppState = 'not_linked';
   private qr: string | null = null;
   private message: string | null = null;
+  // Set while a linked session's line is down and being retried (see WaEvents.reconnecting)
+  private reconnect: { since: number; attempt: number; nextAt: number | null } | null = null;
   private driver: WaDriver | null = null;
   // Bumped on every start and stop, so events from a driver that was replaced are ignored
   private generation = 0;
@@ -303,6 +305,7 @@ export class WhatsAppService {
       needsFirstMessage: this.saved.needsFirstMessage && !this.phoneConnected(),
       connectCode: this.pendingCode(),
       phoneConnected: this.phoneConnected(),
+      reconnect: this.state === 'linked' ? this.reconnect : null,
       lastInAt: this.saved.lastInAt,
       lastOutAt: this.saved.lastOutAt,
     };
@@ -360,7 +363,15 @@ export class WhatsAppService {
           this.qr = code;
           this.setState('scan', null);
         },
-        ready: account => current() && this.onReady(account),
+        ready: account => {
+          if (!current()) return;
+          this.reconnect = null;
+          this.onReady(account);
+        },
+        reconnecting: ({ attempt, nextAt }) => {
+          if (!current()) return;
+          this.reconnect = { since: this.reconnect?.since ?? Date.now(), attempt, nextAt };
+        },
         disconnected: reason => {
           if (!current()) return;
           this.setState('disconnected', reason || 'WhatsApp disconnected.');
@@ -1043,6 +1054,7 @@ export class WhatsAppService {
 
   private setState(state: WhatsAppState, message: string | null): void {
     if (state !== this.state) this.deps.log.info('WhatsApp', { state });
+    if (state !== 'linked') this.reconnect = null;
     this.state = state;
     this.message = message;
   }
