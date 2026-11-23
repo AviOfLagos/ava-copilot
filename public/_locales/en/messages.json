@@ -9288,6 +9288,31 @@
   "wava_state_disconnected": {
     "message": "Disconnected"
   },
+  "wava_state_reconnecting": {
+    "message": "Connection lost. Trying again in $SECONDS$s (try $ATTEMPT$)",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "8"
+      }
+    }
+  },
+  "wava_state_reconnectingNow": {
+    "message": "Connection lost. Reconnecting… (try $ATTEMPT$)",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "wava_settings_reconnectNow": {
+    "message": "Reconnect now"
+  },
   "wava_state_failed": {
     "message": "Could not link"
   },
