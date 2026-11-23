@@ -1326,8 +1326,8 @@ export const widgetCopy = {
   },
   update: {
     title: 'Update available',
-    version: 'Version 0.2.4',
-    notes: ['Tasks, people and follow-ups', 'Ava knows every tool she has'],
+    version: 'Version 0.2.5',
+    notes: ['One conversation per tab', 'Auto mode, hover and retry countdowns'],
     commandLabel: 'Run this, then reload:',
     reload: 'Reload',
     later: 'Later',

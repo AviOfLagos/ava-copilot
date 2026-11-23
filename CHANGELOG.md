@@ -7,10 +7,33 @@ This file is also the source of the [changelog page](https://ava.nexprove.com/ch
 built from it, so the two cannot drift. To add an entry, write it here. The format is fixed so the site can read it:
 
 - `## <dates> · <label>` starts a week or a release. A label that starts with `next release` marks work that is
-  merged but not in the download yet (everything after 0.2.4, released 22 November).
+  merged but not in the download yet (everything after 0.2.5, released 23 November).
 - `### <theme>` groups the lines.
 - `- <what changed for the user>. ([#123](https://github.com/AviOfLagos/ava-copilot/pull/123))` is one line.
   Keep it to one line, no nested lists.
+
+## 22–23 November 2026 · release 0.2.5
+
+In the download from 0.2.5, released 23 November.
+
+### Working on pages
+
+- Each tab has its own Ava panel and conversation. Come back to a tab and you carry on where you stopped; on a new tab, start fresh or open any past conversation. ([#195](https://github.com/AviOfLagos/ava-copilot/pull/195))
+- Ask for something on another site and Ava opens a new tab for it instead of taking over the page you are on. ([#195](https://github.com/AviOfLagos/ava-copilot/pull/195))
+- Ava can move the mouse over things, so buttons that only show on hover (like Pinterest's Save) can be found and clicked. ([#190](https://github.com/AviOfLagos/ava-copilot/pull/190))
+- Auto mode: switch on "don't ask me for this task" and Ava stops showing confirm cards. It still asks before payments, deleting, changing access, and typing passwords or codes. ([#188](https://github.com/AviOfLagos/ava-copilot/pull/188))
+
+### When something goes wrong
+
+- Every automatic retry shows in the panel with a live countdown, like "Step failed — retrying in 4s (2 of 3)". ([#189](https://github.com/AviOfLagos/ava-copilot/pull/189))
+- A broken reply from the model is sent back once with what was wrong, and failed steps wait a little longer each time and tell Ava what failed. ([#187](https://github.com/AviOfLagos/ava-copilot/pull/187))
+- Models that refuse Ava's large list of actions (Gemini's "too many states") now switch to plain-text answers instead of failing. ([#186](https://github.com/AviOfLagos/ava-copilot/pull/186))
+- WhatsApp no longer hangs on a dropped connection: it gives up on a stuck try after 45 seconds and tries again, shows "Connection lost. Trying again in…", and has a Reconnect now button. ([#196](https://github.com/AviOfLagos/ava-copilot/pull/196))
+
+### Look and voice
+
+- Settings → General → Look: text size (85–130%), spacing and light, dark or system theme, plus A− and A+ at the top of the panel. ([#191](https://github.com/AviOfLagos/ava-copilot/pull/191))
+- Settings → Voice: presets, and Check this computer to measure how fast voices run on your Mac. ([#194](https://github.com/AviOfLagos/ava-copilot/pull/194))
 
 ## 16–22 November 2026 · release 0.2.4
 
