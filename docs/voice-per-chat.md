@@ -12,13 +12,12 @@ the header. It picks up the last voice chat if it is under 12 hours old. Work it
   The session's `threadId` is that chat; no `voice` chat is created. The 12-hour "continue the last voice chat" rule
   goes away.
 - What is heard and said is written into that chat as ordinary `user` / `planner` messages (`onTurn`, as today), so
-  the chat reads as one conversation whether a line was typed or spoken. A small "spoken" mark on the message
-  (`via: 'voice'`) lets the panel show a mic glyph; nothing else differs.
+  the chat reads as one conversation whether a line was typed or spoken.
 - The session starts with this chat's history (`voiceHistory` over its messages, which already include the answers of
   runs, because they are `planner` lines) plus the same identity, personality and capability sections as now.
 - `run_browser_task` and `do_task` run **in this chat** (`threads.send({ threadId })`): the run's steps and answer
-  show in the chat Avi is looking at. The spoken request is already the user message, so the run is started without
-  adding a second copy of it. If this chat is already running, the request goes to a linked side chat, as today
+  show in the chat Avi is looking at. The run's request shows as its own line (the task as Ava passed it on), so
+  retrying the task works as for a typed one. If this chat is already running, the request goes to a linked side chat, as today
   (`voiceThreadId`), and Ava says so in a few words.
 - The watcher (`watch()`) stops skipping its own chat: when this chat's run finishes or waits for Confirm, Ava says it.
 - Typing in the chat while voice is on keeps going to the voice session (as today), so it is one conversation.
@@ -29,10 +28,11 @@ the header. It picks up the last voice chat if it is under 12 hours old. Work it
   chat's tabs** (its home tab, its work tabs in `tabPanels`, or a tab voice itself just opened or switched to with
   `open_tab` / `switch_tab`, which become work tabs) **pauses** it: mic off, socket closed, nothing billed.
   Switching apps (window blur) does not pause.
-- Paused state: `{ threadId, tabId, pausedAt, resumeHandle }` in `storage.session`. The panel shows "Voice paused".
+- Paused state: `{ threadId, tabId, windowId }` in the voice manager (the keep-alive stays on while paused). The
+  panel's voice pill says "Paused". The extension's own pages (a popped-out panel, Settings) never pause it.
 - Coming back to the tab within **10 minutes** resumes: same chat, mic on, and a visible line "Picking up where we
   were" plus a short spoken one ("Okay, back. We were on the invoice."). The offscreen mic needs no new click.
-- After 10 minutes, or if the tab or its panel closes, the session ends. The chat gets "Voice ended while you were
+- After 10 minutes, or if the tab closes, the session ends. The chat gets "Voice ended while you were
   away"; the mic button starts it again.
 
 ## 3. Voice in another chat
@@ -64,8 +64,8 @@ notes "with my mic" already compete for the mic; that stays as is, out of scope.
 | | Gemini Live | Economy (on-device speech + chat model) |
 |---|---|---|
 | Same brain as chat | Same history, tools and identity, but a different model (Live's audio model) | Same model as chat (voice-quick-win) |
-| History | Sent once, in the instructions at connect (6,000 characters); lines added later by runs reach it as "System context" notes | Read from the chat on every turn, so it is always current; switch it from its own short turn list to the chat's messages |
-| Pause / resume | Close the socket. Resume with the resumption handle while Google still accepts it (short-lived), else a fresh session with the chat's history. A new one-use token each time | Stateless: stop listening, start again. Nothing lost |
+| History | Sent once, in the instructions at connect (6,000 characters); a run's result reaches it as a "System notice" when it ends | Also sent at connect; its own turn list keeps the rest. Reading the chat on every turn is a later step |
+| Pause / resume | Close the socket; resume is a fresh session with the chat's history (now including everything said before the pause) and a new one-use token. Reusing the resumption handle is a later saving | Stateless: stop listening, start again. Nothing lost |
 | Breaks | Tools are fixed at connect; a voice change restarts the session (as now); 15-minute audio limit (handled by resumption) | Local recognisers are English-only; slower replies |
 
 ## 7. Next problem (options only, no build)

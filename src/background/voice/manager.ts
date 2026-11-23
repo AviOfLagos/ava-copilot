@@ -57,6 +57,9 @@ import type { Speaker } from '../personalities/voices';
 import type { EconomyEngines } from './engines/wire';
 import { switchedGreeting } from '../personalities/prompt';
 import { aboutYouSection, economyModelOf, providerName } from './engines/self';
+import { tabPanels } from '../threads/tabPanels';
+import { OWN_SWITCH_MS, PAUSE_LIMIT_MS, onTabMove, recentChatsSection } from './presence';
+import type { RecentChat, VoicePlace } from './presence';
 
 const logger = createLogger('Voice');
 
@@ -67,23 +70,45 @@ const KEEP_ALIVE_MS = 20_000;
 // The most of an agent's answer said aloud in its voice; the rest is in its chat
 const AGENT_LINE_MAX = 600;
 
-export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'off';
+export type VoiceStatus = 'connecting' | 'listening' | 'speaking' | 'paused' | 'off';
+
+// Said to the conversation when the user comes back to its tab (the chat shows its own line)
+const RESUME_NOTICE =
+  'System notice: The user came back to this chat after a pause. Say in a few words that you are picking up where you were, naming what you were on, then stop.';
+// Chats that run in the background are not "recent conversations" with the user
+const BACKGROUND_ORIGINS = new Set(['workflow', 'brief', 'whatsapp']);
+
+/** Tells every panel how the conversation is going, for states the offscreen document does not know (paused). */
+function broadcast(status: VoiceStatus, threadId: string | null): void {
+  try {
+    void Promise.resolve(chrome.runtime.sendMessage({ type: 'voice_status', status, threadId })).catch(() => {});
+  } catch {
+    // No page is listening
+  }
+}
 
 /**
  * Runs the spoken conversation: starts and stops the session in the offscreen document, runs the
  * tools it calls, keeps the conversation in a thread, and tells the user out loud when something
  * they started finishes or waits for their click.
  */
-// Talking again within this time continues the same conversation
-const CONTINUE_WITHIN_MS = 12 * 60 * 60 * 1000;
 // Turns of the user's speech an address may come from
 const RECENT_TURNS = 4;
 // A conversation this long is worth a reflection when it ends
 const LONG_SESSION_TURNS = 12;
 
 export class VoiceManager {
+  // The chat the conversation lives in (docs/voice-per-chat.md): its turns are that chat's messages
   private threadId: string | null = null;
   private windowId: number | undefined;
+  // The tab it was started on: leaving it pauses the conversation, coming back resumes it
+  private tabId: number | undefined;
+  // Left for another tab: the mic is off and the session closed, until the user comes back or the time runs out
+  private paused: (VoicePlace & { wake: boolean }) | null = null;
+  private pauseTimer: ReturnType<typeof setTimeout> | null = null;
+  // When voice last opened or switched a tab, and the tabs it brought up: those are the conversation's own
+  private ownSwitchAt = 0;
+  private voiceTabs = new Set<number>();
   // What the user said in the last few turns, to check where an address came from
   private recentHeard: string[] = [];
   // The chat of the last task started by voice, for follow-ups
@@ -225,9 +250,14 @@ export class VoiceManager {
     return this.threadId !== null;
   }
 
-  /** The thread the conversation is kept in while it is on, so the panel can open it. */
+  /** The chat the conversation is kept in while it is on or paused, so a panel knows whether it is its own. */
   get currentThreadId(): string | null {
-    return this.threadId;
+    return this.threadId ?? this.paused?.threadId ?? null;
+  }
+
+  /** On, paused, or off, for a panel that opens. */
+  get state(): VoiceStatus {
+    return this.running ? this.status : this.paused ? 'paused' : 'off';
   }
 
   /** The workspace a personality switch in this conversation applies to; null outside one. */
@@ -250,14 +280,27 @@ export class VoiceManager {
    */
   async start(
     windowId?: number,
-    { wake = false, guarded = false }: { wake?: boolean; guarded?: boolean } = {},
+    {
+      wake = false,
+      guarded = false,
+      threadId,
+      tabId,
+    }: {
+      wake?: boolean;
+      guarded?: boolean;
+      // The chat to talk in; without one a new chat starts that knows the recent ones
+      threadId?: string | null;
+      // The tab whose panel started it
+      tabId?: number;
+    } = {},
   ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean; threadId?: string }> {
-    if (this.running) return { ok: true, threadId: this.threadId ?? undefined };
+    const previous = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
+    if (this.running && (previous ? previous.id === this.threadId : wake)) {
+      return { ok: true, threadId: this.threadId ?? undefined };
+    }
+    // One conversation at a time: starting in another chat moves it there
+    if (this.running || this.paused) await this.moveAway(previous?.title ?? t('voice_threadTitle'));
     const generation = ++this.generation;
-    // A conversation from the last hours goes on where it stopped; an older one starts fresh
-    const previous = (await db.threads.orderBy('updatedAt').reverse().toArray()).find(
-      item => item.tags.includes('voice') && Date.now() - item.updatedAt < CONTINUE_WITHIN_MS,
-    );
     // The personality of the conversation's workspace (or the active one): how it talks, and its voice and pace
     const personality = await personalityStore.resolve(previous?.workspaceId).catch(() => null);
     this.personalityWorkspaceId = previous?.workspaceId ?? null;
@@ -276,7 +319,10 @@ export class VoiceManager {
     const voiceIdentity = threadVoiceIdentity(await voiceIdentityStore.getSettings(), previous?.voice);
     const identity = voiceCoreSection(await loadIdentityContext(previous?.workspaceId), voiceIdentity.language);
     const thread = previous ?? (await threadStore.create({ title: t('voice_threadTitle'), tags: ['voice'] }));
-    const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';
+    // A chat's own history; a new one gets the last few chats, and search_chats / read_chat for the rest
+    const history = previous
+      ? voiceHistory(await threadStore.messages(previous.id))
+      : recentChatsSection(await this.recentChats(), Date.now());
     // The personality's Live voice, or Ava's from Settings: fixed for the session
     const speechConfig = liveSpeechConfig(settings.liveModel, voiceIdentity, personalityVoiceFor('live', personality));
     // What it knows about itself, from the settings in force now
@@ -340,6 +386,11 @@ export class VoiceManager {
     }
 
     this.threadId = thread.id;
+    this.tabId = tabId;
+    // A new chat lives on the tab it was started from, so its panel shows it
+    if (tabId !== undefined && tabPanels.entryOf(tabId)?.threadId !== thread.id) {
+      await tabPanels.open(tabId, thread.id).catch(() => null);
+    }
     this.session = {
       mode: economy ? 'economy' : 'live',
       liveModel: settings.liveModel,
@@ -365,7 +416,7 @@ export class VoiceManager {
     // Threads already waiting or finished are not news
     for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
     this.watchTimer = setInterval(() => void this.watch(), WATCH_MS);
-    this.keepAlive = setInterval(() => void chrome.runtime.getPlatformInfo(), KEEP_ALIVE_MS);
+    if (!this.keepAlive) this.keepAlive = setInterval(() => void chrome.runtime.getPlatformInfo(), KEEP_ALIVE_MS);
     return { ok: true, threadId: thread.id };
   }
 
@@ -393,6 +444,22 @@ export class VoiceManager {
   }
 
   async stop(): Promise<void> {
+    const paused = this.paused;
+    this.clearPaused();
+    this.voiceTabs.clear();
+    if (paused && !this.running) {
+      if (this.keepAlive) clearInterval(this.keepAlive);
+      this.keepAlive = null;
+      this.status = 'off';
+      broadcast('off', paused.threadId);
+      return;
+    }
+    await this.endSession(false);
+    await closeOffscreenIfIdle();
+  }
+
+  /** Ends the live session; a pause keeps the keep-alive, so the paused state outlives the quiet. */
+  private async endSession(pausing: boolean): Promise<void> {
     this.generation++;
     // A long conversation is worth reflecting on soon (the job skips when the last reflection is recent)
     if (this.threadId && this.turns >= LONG_SESSION_TURNS) {
@@ -402,17 +469,138 @@ export class VoiceManager {
     }
     this.turns = 0;
     if (this.watchTimer) clearInterval(this.watchTimer);
-    if (this.keepAlive) clearInterval(this.keepAlive);
+    if (!pausing && this.keepAlive) clearInterval(this.keepAlive);
     this.watchTimer = null;
-    this.keepAlive = null;
+    if (!pausing) this.keepAlive = null;
     this.threadId = null;
+    this.tabId = undefined;
     this.session = null;
     this.applying = null;
     this.stopWatchingPersonality?.();
     this.stopWatchingPersonality = null;
     this.status = 'off';
     await toOffscreen({ type: 'voice_stop' }).catch(() => {});
+  }
+
+  /** Listens for the user leaving the conversation's tab, coming back, or closing it. */
+  listen(): void {
+    chrome.tabs.onActivated.addListener(({ tabId, windowId }) => void this.tabMoved(tabId, windowId));
+    chrome.tabs.onRemoved.addListener(tabId => void this.tabClosed(tabId));
+  }
+
+  /** A tab came to the front: leaving the conversation's tab pauses it, coming back resumes it. */
+  async tabMoved(tabId: number, windowId: number): Promise<void> {
+    const place: VoicePlace | null =
+      this.running && this.threadId
+        ? { threadId: this.threadId, tabId: this.tabId, windowId: this.windowId }
+        : this.paused;
+    if (!place) return;
+    const now = Date.now();
+    // A tab voice just opened or brought up (open_tab, switch_tab) is the conversation's own from now on
+    if (this.running && now - this.ownSwitchAt < OWN_SWITCH_MS) this.voiceTabs.add(tabId);
+    const url = (await chrome.tabs.get(tabId).catch(() => undefined))?.url ?? '';
+    const move = onTabMove({
+      place,
+      extensionPage: url.startsWith(chrome.runtime.getURL('')),
+      paused: this.paused !== null,
+      tabId,
+      windowId,
+      chatOfTab: tabPanels.entryOf(tabId)?.threadId ?? this.threads.holderOf(tabId),
+      voiceTab: this.voiceTabs.has(tabId),
+      ownSwitchAt: this.ownSwitchAt,
+      now,
+    });
+    if (move === 'pause') await this.pause();
+    else if (move === 'resume') await this.resume();
+  }
+
+  /** The conversation's tab closed: it ends. */
+  async tabClosed(tabId: number): Promise<void> {
+    if ((this.running && this.tabId === tabId) || this.paused?.tabId === tabId) await this.stop();
+  }
+
+  /** Mic off, session closed, nothing billed; the chat and its place are kept for the user's return. */
+  private async pause(): Promise<void> {
+    const threadId = this.threadId;
+    if (!this.running || !threadId) return;
+    const place = { threadId, tabId: this.tabId, windowId: this.windowId, wake: this.wakeSession };
+    await this.endSession(true);
+    this.paused = place;
+    this.pauseTimer = setTimeout(() => void this.endPaused(), PAUSE_LIMIT_MS);
+    this.status = 'paused';
+    broadcast('paused', threadId);
     await closeOffscreenIfIdle();
+  }
+
+  /** The user came back: the same chat goes on, and Ava says she is picking up where they were. */
+  private async resume(): Promise<void> {
+    const paused = this.paused;
+    if (!paused) return;
+    this.clearPaused();
+    const result = await this.start(paused.windowId, {
+      threadId: paused.threadId,
+      tabId: paused.tabId,
+      wake: paused.wake,
+    }).catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+    if (!result.ok) {
+      logger.warning('The conversation could not resume', 'error' in result ? result.error : '');
+      await threadStore.addMessage(paused.threadId, 'system', t('voice_endedAway')).catch(() => {});
+      if (this.keepAlive) clearInterval(this.keepAlive);
+      this.keepAlive = null;
+      broadcast('off', paused.threadId);
+      return;
+    }
+    await threadStore.addMessage(paused.threadId, 'system', t('voice_resumed')).catch(() => {});
+    await toOffscreen({ type: 'voice_say', text: RESUME_NOTICE }).catch(() => {});
+  }
+
+  /** Away too long: the paused conversation ends, and its chat says so. */
+  private async endPaused(): Promise<void> {
+    const paused = this.paused;
+    if (!paused) return;
+    this.clearPaused();
+    this.voiceTabs.clear();
+    if (this.keepAlive) clearInterval(this.keepAlive);
+    this.keepAlive = null;
+    this.status = 'off';
+    await threadStore.addMessage(paused.threadId, 'system', t('voice_endedAway')).catch(() => {});
+    broadcast('off', paused.threadId);
+    await closeOffscreenIfIdle();
+  }
+
+  private clearPaused(): void {
+    if (this.pauseTimer) clearTimeout(this.pauseTimer);
+    this.pauseTimer = null;
+    this.paused = null;
+  }
+
+  /** The conversation moves to another chat: the one it leaves says where it went. */
+  private async moveAway(toTitle: string): Promise<void> {
+    const from = this.currentThreadId;
+    await this.stop();
+    if (from) await threadStore.addMessage(from, 'system', t('voice_moved', [toTitle])).catch(() => {});
+  }
+
+  /** The last chats the user had with Ava, for a conversation that starts without one. */
+  private async recentChats(): Promise<RecentChat[]> {
+    const chats = (await db.threads.orderBy('updatedAt').reverse().toArray())
+      .filter(thread => !BACKGROUND_ORIGINS.has(thread.origin ?? 'user'))
+      .slice(0, 8);
+    const recent: RecentChat[] = [];
+    for (const chat of chats) {
+      const messages = await threadStore.messages(chat.id).catch(() => []);
+      const last = messages.filter(m => m.actor === 'user' || m.actor === 'planner').at(-1);
+      if (!last) continue;
+      recent.push({ title: chat.title, updatedAt: chat.updatedAt, lastLine: last.content });
+    }
+    return recent;
+  }
+
+  /** This conversation's chat, when it is free to run a task itself. */
+  private async ownChatIfFree(): Promise<string | null> {
+    if (!this.threadId) return null;
+    const own = await threadStore.get(this.threadId).catch(() => undefined);
+    return own && own.status !== 'running' && own.status !== 'waiting_confirm' ? own.id : null;
   }
 
   /** After a restart of the background the conversation's state is gone, so the session ends cleanly. */
@@ -422,6 +610,8 @@ export class VoiceManager {
   }
 
   onStatus(status: VoiceStatus): void {
+    // The session a pause closed reports "off": the conversation is paused, not over
+    if (!this.running) return;
     this.status = status;
     if (status === 'off' && this.running) void this.stop();
   }
@@ -471,7 +661,10 @@ export class VoiceManager {
       case 'run_browser_task': {
         const task = String(args.task ?? '').trim();
         if (!task) return 'No task was given.';
-        // A follow-up goes to the same chat as the task before it, with its history
+        // It runs in this conversation's own chat, with its history; only while that one is busy does it go to a
+        // linked chat (a follow-up to the same one it went to before)
+        const own = await this.ownChatIfFree();
+        if (own) return this.runHere(own, task);
         const follow = args.continue_last === true && this.lastTaskThreadId ? this.lastTaskThreadId : null;
         const threadId = await this.threads.send({
           threadId: follow,
@@ -483,11 +676,13 @@ export class VoiceManager {
         });
         this.lastTaskThreadId = threadId;
         this.announced.set(threadId, 'running');
-        return 'Started in the browser. The user will hear when it finishes or needs their click.';
+        return 'This chat is busy with another task, so it started in a linked chat: say so in a few words. The user will hear when it finishes or needs their click.';
       }
       case 'do_task': {
         const request = String(args.request ?? '').trim();
         if (!request) return 'No request was given.';
+        const own = await this.ownChatIfFree();
+        if (own) return this.runHere(own, request);
         // Carries on in the chat of the last thing handed over, while it is not busy, so follow-ups keep context
         const last = this.lastTaskThreadId
           ? await threadStore.get(this.lastTaskThreadId).catch(() => undefined)
@@ -502,7 +697,7 @@ export class VoiceManager {
         });
         this.lastTaskThreadId = threadId;
         this.announced.set(threadId, 'running');
-        return 'Handed over; it runs in a chat linked to this conversation. The user will hear when it finishes or needs their click.';
+        return 'This chat is busy with another task, so it runs in a linked chat: say so in a few words. The user will hear when it finishes or needs their click.';
       }
       case 'read_screen': {
         // The tab the user is on, known without asking; else the last one worked on
@@ -600,11 +795,15 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         return readPage(target?.windowId ?? this.windowId, tabId, id => this.threads.holderOf(id) !== null);
       }
       case 'open_tab':
+        // The tab it opens comes to the front: that is the conversation's own move, not the user leaving
+        this.ownSwitchAt = Date.now();
         // Only a site the user named, or one already open: never one a read page suggested
         return openTab(String(args.target ?? ''), this.windowId, [...this.recentHeard, heard].join(' '));
       case 'switch_tab':
         if (typeof args.tab_id !== 'number') return 'No tab id was given.';
         void tabTracker.worked(args.tab_id);
+        this.ownSwitchAt = Date.now();
+        this.voiceTabs.add(args.tab_id);
         return switchTab(args.tab_id, this.windowId);
       case 'get_status':
         return this.describeStatus();
@@ -616,6 +815,14 @@ A picture of the screen was sent to you just now: describe what you see in it, a
         return tool ? tool.handler(args, heard) : `There is no tool called ${name}.`;
       }
     }
+  }
+
+  /** Runs a task in the conversation's own chat: its steps and answer show where the user is talking. */
+  private async runHere(threadId: string, task: string): Promise<string> {
+    await this.threads.send({ threadId, text: task, windowId: this.windowId, tabId: this.tabId });
+    this.lastTaskThreadId = threadId;
+    this.announced.set(threadId, 'running');
+    return 'Started in this chat. The user will hear when it finishes or needs their click.';
   }
 
   /** What the user said in the turn before this one, for a plain "yes" to a question. */
@@ -712,7 +919,6 @@ A picture of the screen was sent to you just now: describe what you see in it, a
     if (!this.running) return;
     try {
       for (const thread of await db.threads.toArray()) {
-        if (thread.id === this.threadId) continue;
         const key = stateKey(thread);
         const before = this.announced.get(thread.id);
         if (key === before) continue;

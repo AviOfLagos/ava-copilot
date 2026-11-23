@@ -45,6 +45,8 @@ const calendar = new CalendarWatcher();
 const autoJoin = new AutoJoin(meetings);
 autoJoin.start();
 const voice = new VoiceManager(threads, meetings, kb, calendar);
+// Leaving the conversation's tab pauses it; coming back resumes it
+voice.listen();
 const wakeWord = new WakeWord(voice);
 wakeWord.start();
 calendar.start();
@@ -443,7 +445,11 @@ chrome.runtime.onConnect.addListener(port => {
         case 'voice_start': {
           // Every outcome is answered as voice_started, so the panel's Talk button never stays on "Connecting"
           const result = await voice
-            .start(message.windowId)
+            .start(message.windowId, {
+              // The chat on screen and its tab: voice talks in that chat (docs/voice-per-chat.md)
+              threadId: typeof message.threadId === 'string' ? message.threadId : null,
+              tabId: typeof message.tabId === 'number' ? message.tabId : undefined,
+            })
             .catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
           return port.postMessage({ type: 'voice_started', ...result });
         }
@@ -463,7 +469,7 @@ chrome.runtime.onConnect.addListener(port => {
         case 'voice_state':
           return port.postMessage({
             type: 'voice_state',
-            status: voice.running ? voice.status : 'off',
+            status: voice.state,
             threadId: voice.currentThreadId,
           });
 

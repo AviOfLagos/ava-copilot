@@ -13066,5 +13066,23 @@
   },
   "tabPanel_runningElsewhere": {
     "message": "This chat is still working in its own tab. It moves to this tab when it finishes."
+  },
+  "voice_status_paused": {
+    "message": "已暫停"
+  },
+  "voice_resumed": {
+    "message": "語音回來了：從剛才停下的地方繼續。"
+  },
+  "voice_endedAway": {
+    "message": "你離開期間語音已結束。按麥克風即可再次對話。"
+  },
+  "voice_moved": {
+    "message": "語音已移到「$TITLE$」。",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Invoice chat"
+      }
+    }
   }
 }

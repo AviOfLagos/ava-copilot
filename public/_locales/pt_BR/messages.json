@@ -13066,5 +13066,23 @@
   },
   "tabPanel_runningElsewhere": {
     "message": "This chat is still working in its own tab. It moves to this tab when it finishes."
+  },
+  "voice_status_paused": {
+    "message": "Pausado"
+  },
+  "voice_resumed": {
+    "message": "A voz voltou: continuando de onde paramos."
+  },
+  "voice_endedAway": {
+    "message": "A voz terminou enquanto você estava fora. Toque no microfone para falar de novo."
+  },
+  "voice_moved": {
+    "message": "A voz foi para \"$TITLE$\".",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Invoice chat"
+      }
+    }
   }
 }

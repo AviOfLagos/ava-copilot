@@ -148,46 +148,53 @@ test('a spoken request runs a browser task, and the copilot says when it is done
       'list_personalities',
       'install_skill',
       'set_listening_mode',
+      'vocab_add',
+      'task_add',
+      'task_done',
+      'task_reopen',
+      'task_list',
+      'task_assign',
+      'task_move',
+      'person_note',
+      'person_update',
+      'person_status',
+      'workspace_create',
     ],
   );
   assert.match(voiceSession.setups[0].systemInstruction.parts[0].text, /You cannot confirm for them/);
 
-  // The tool ran the task in the browser and answered the model
+  // The tool ran the task in the conversation's own chat (docs/voice-per-chat.md) and answered the model
   await waitFor(() => mock.live.toolResponses.length > 0, 'the tool response');
-  assert.match(JSON.stringify(mock.live.toolResponses[0].response), /Started in the browser/);
+  assert.match(JSON.stringify(mock.live.toolResponses[0].response), /Started in this chat/);
   await waitFor(
-    async () => (await readThreads(session.panel)).some(t => t.title.includes('voice-task') && t.status === 'idle'),
+    async () => (await readThreads(session.panel)).some(t => t.tags.includes('voice') && t.status === 'idle'),
     'the task to finish',
   );
 
   // Proactive: the copilot is told to say the task is done
-  await waitFor(
-    () => mock.live.notices.some(n => n.includes('voice-task') && n.includes('is done')),
-    'the done notice',
-  );
+  await waitFor(() => mock.live.notices.some(n => n.includes('is done')), 'the done notice');
   // ...but never while the user is mid-sentence (the recording as the microphone keeps talking)
   assert.deepEqual(
     mock.live.noticeTimings.filter(notice => notice.userSpeaking),
     [],
     'no notice cut into the user speaking',
   );
-  // The server's turn detection is tuned for a conversation: slow to start, quick to end, and talking interrupts
+  // The server's turn detection is tuned for a conversation: slow to start, patient to end, and talking interrupts
   assert.deepEqual(voiceSession.setups[0].realtimeInputConfig, {
     automaticActivityDetection: {
       startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
-      endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+      endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
       prefixPaddingMs: 200,
-      silenceDurationMs: 600,
+      // The default Patience (Settings › Voice) waits longer before answering
+      silenceDurationMs: 1200,
     },
     activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
   });
 
-  // The conversation is kept in its own thread
-  const voiceThread = (await readThreads(session.panel)).find(t => t.tags.includes('voice'));
-  assert.ok(voiceThread);
-  // The task it started stays linked to that conversation's chat
-  const task = (await readThreads(session.panel)).find(t => t.title.includes('voice-task'));
-  assert.equal(task.voiceThreadId, voiceThread.id);
+  // The conversation and the task it started are one chat: no second chat was made for the task
+  const threads = await readThreads(session.panel);
+  assert.equal(threads.filter(t => t.tags.includes('voice')).length, 1);
+  assert.equal(threads.filter(t => t.voiceThreadId).length, 0);
   await session.click('Stop talking');
   await session.close();
 });
@@ -197,6 +204,8 @@ test('a send started by voice waits for the click, and the copilot says so', asy
   mock.live.voiceRequest = 'Run the scripted scenario voice-send.';
   const noticesBefore = mock.live.notices.length;
   const session = await openSession(extension, mock);
+  // A new chat: the mic there starts a conversation of its own, on the tab in front
+  await session.click('New thread').catch(() => {});
   await session.web.bringToFront();
   await session.click('Talk to Ava');
 
