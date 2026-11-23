@@ -26,8 +26,9 @@ export type LocalTtsEngineId = 'kitten' | 'kokoro';
 
 export type MoonshineSize = 'tiny' | 'base';
 
-// The text model an economy conversation uses: the quick model, or a model running on this Mac
-export type EconomyModelRole = 'fast' | 'local';
+// The text model an economy conversation uses: the model the chats use (the default, so voice is as able as chat),
+// the quick model, or a model running on this Mac
+export type EconomyModelRole = 'chat' | 'fast' | 'local';
 
 export interface VoiceEngineSettings {
   mode: VoiceMode;
@@ -42,6 +43,8 @@ export interface VoiceEngineSettings {
   kittenVoice: string;
   kokoroVoice: string;
   economyModel: EconomyModelRole;
+  // The user picked the text model in Settings › Voice engines (an older stored "fast" may just be the old default)
+  economyModelChosen: boolean;
   // A conversation with nothing said and no task running for this long ends by itself; 0 never
   idleEndMinutes: number;
 }
@@ -67,7 +70,8 @@ export const DEFAULT_VOICE_ENGINE_SETTINGS: VoiceEngineSettings = {
   sttGpu: true,
   kittenVoice: 'Bella',
   kokoroVoice: 'af_heart',
-  economyModel: 'fast',
+  economyModel: 'chat',
+  economyModelChosen: false,
   idleEndMinutes: 3,
 };
 
@@ -93,7 +97,8 @@ export function resolveVoiceMode(
 /**
  * Stored settings as they are meant now. Before 'auto' existed every save wrote the default 'live', so a stored
  * 'live' the user never picked (no `modeChosen`) is the old default and becomes 'auto'; 'economy' was always a
- * choice and stays. A mode picked in Settings carries `modeChosen` and is kept as it is.
+ * choice and stays. A mode picked in Settings carries `modeChosen` and is kept as it is. Likewise a stored text
+ * model 'fast' without `economyModelChosen` is the old default and becomes 'chat'.
  */
 export function migrateVoiceEngineSettings(
   stored: Partial<VoiceEngineSettings> | null | undefined,
@@ -104,6 +109,12 @@ export function migrateVoiceEngineSettings(
     merged.modeChosen = merged.mode === 'economy';
   }
   if (!['auto', 'live', 'economy'].includes(merged.mode)) merged.mode = 'auto';
+  // The same for the text model: 'fast' was the default before 'chat'; 'local' was always a choice
+  if (!stored?.economyModelChosen) {
+    if (merged.economyModel === 'fast') merged.economyModel = 'chat';
+    merged.economyModelChosen = merged.economyModel === 'local';
+  }
+  if (!['chat', 'fast', 'local'].includes(merged.economyModel)) merged.economyModel = 'chat';
   return merged;
 }
 
@@ -164,11 +175,14 @@ export function localSttChoice(
   settings: VoiceEngineSettings,
   installed: InstalledVoiceModels,
   hearing?: { language: string },
+  // The user's language, which Whisper is always told so it never guesses another; the hearing language by default
+  userLanguage: string | undefined = hearing?.language,
 ): SttChoice | null {
   let engine = economyStt(settings, installed);
   if (!engine) return null;
-  const language = hearing && whisperLanguage(hearing.language);
-  if (language && installed['whisper-base'] && (!settings.sttChosen || language !== 'en')) engine = 'whisper';
+  const wanted = hearing && whisperLanguage(hearing.language);
+  if (wanted && installed['whisper-base'] && (!settings.sttChosen || wanted !== 'en')) engine = 'whisper';
+  const language = userLanguage ? whisperLanguage(userLanguage) : undefined;
   if (engine === 'vosk') return { engine, webgpu: false };
   let model = sttModelId(engine, settings.moonshineSize) as NonNullable<SttChoice['model']>;
   // The chosen Moonshine size is not installed but the other one is

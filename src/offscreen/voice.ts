@@ -1,5 +1,7 @@
 import { pcm16Base64 } from './live';
-import { SpeechGate } from './vad';
+import { level, SpeechGate } from './vad';
+import { HEARING_NOTICE, HearingWatch } from './hearing';
+import type { HearingTrouble } from './hearing';
 import { TurnTaking } from './turns';
 import { liveSocketUrl } from './liveAuth';
 import type { LiveOptions } from './live';
@@ -80,6 +82,9 @@ export interface VoiceOptions extends LiveOptions {
   speechConfig?: { voiceConfig: { prebuiltVoiceConfig: { voiceName: string } }; languageCode?: string };
   // How long a pause may be before the user counts as finished (Settings › Voice › Patience)
   patience?: TurnPatience;
+  // The user's language (BCP-47, Settings › Voice and language): a hint for the transcript of what they say, so
+  // it is not taken for another language
+  language?: string;
 }
 
 export interface VoiceEvents {
@@ -91,9 +96,16 @@ export interface VoiceEvents {
   onStatus: (status: VoiceStatus, error?: string) => void;
   // Seconds of audio sent and played, for usage
   onUsage: (inputSeconds: number, outputSeconds: number) => void;
+  // The conversation is not hearing the user well (said once, aloud): for the voice trace
+  onHearing?: (trouble: HearingTrouble) => void;
 }
 
-export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
+/** What the Live session's transcript of the user is told: the user's language as a hint, else detect it. */
+export function inputTranscription(language?: string): { languageCodes?: string[] } {
+  return language ? { languageCodes: [language] } : {};
+}
+
+export function voiceSetup(options: VoiceOptions, resumeHandle: string | null, languageHint = true) {
   return {
     setup: {
       model: `models/${options.model}`,
@@ -104,13 +116,18 @@ export function voiceSetup(options: VoiceOptions, resumeHandle: string | null) {
       },
       systemInstruction: { parts: [{ text: options.instructions }] },
       realtimeInputConfig: realtimeInputConfig(options.patience),
-      inputAudioTranscription: {},
+      inputAudioTranscription: inputTranscription(languageHint ? options.language : undefined),
       outputAudioTranscription: {},
       tools: [{ functionDeclarations: options.tools }],
       sessionResumption: resumeHandle ? { handle: resumeHandle } : {},
       contextWindowCompression: { slidingWindow: {} },
     },
   };
+}
+
+/** Whether a closed socket means the service refused the transcription's language hint (an invalid argument). */
+export function refusedLanguageHint(code: number, reason: string): boolean {
+  return code === 1007 && /language_?codes|input_?audio_?transcription/i.test(reason);
 }
 
 /** A picture for the model: base64 data and its type. */
@@ -194,6 +211,13 @@ export class VoiceSession {
   private readonly lines: SpokenLines;
   // A new voice (a personality switch) waits for the floor, then the session starts again with it
   private restartPending = false;
+  // The service refused the language hint once: sessions from then on go without it
+  private languageHint = true;
+  // Says once when the mic stays silent or what is heard keeps coming back garbled
+  private readonly hearing = new HearingWatch(trouble => {
+    this.say(HEARING_NOTICE);
+    this.events.onHearing?.(trouble);
+  });
 
   constructor(
     private readonly options: VoiceOptions,
@@ -397,6 +421,7 @@ export class VoiceSession {
     // An agent's line is playing: its voice is not the user's
     if (!this.ready || this.stopped || this.micHeld || this.lines.voicing) return;
     const now = performance.now();
+    this.hearing.level(level(samples), now, !this.speaking && !this.turns.playing(now));
     const wasOpen = this.gate.speaking;
     // While the copilot's voice plays the gate asks for more, so its own echo is not taken for the user
     const { send, ended } = this.gate.push(samples, { playing: this.turns.playing(now) });
@@ -525,7 +550,8 @@ export class VoiceSession {
   private open(url: string): void {
     const socket = new WebSocket(url);
     this.socket = socket;
-    socket.onopen = () => socket.send(JSON.stringify(voiceSetup(this.options, this.handle)));
+    const hinted = this.languageHint && Boolean(this.options.language);
+    socket.onopen = () => socket.send(JSON.stringify(voiceSetup(this.options, this.handle, this.languageHint)));
     socket.onmessage = async event => {
       // Nothing from a socket that was replaced or a session that ended
       if (this.socket !== socket || this.stopped) return;
@@ -582,6 +608,8 @@ export class VoiceSession {
         this.turns.interrupted(performance.now());
       }
       if (content?.turnComplete) {
+        // Only words heard can be judged: a turn with none was the model's own (a notice, a greeting)
+        if (this.heard.trim()) this.hearing.recognised(this.heard);
         if (this.heard.trim() || this.said.trim()) this.events.onTurn(this.heard.trim(), this.said.trim());
         this.heard = '';
         this.said = '';
@@ -611,6 +639,12 @@ export class VoiceSession {
     socket.onclose = event => {
       if (this.socket !== socket || this.stopped) return;
       this.ready = false;
+      // A service that does not take the language hint: the same session again without it
+      if (hinted && refusedLanguageHint(event.code, event.reason)) {
+        this.languageHint = false;
+        setTimeout(() => this.connect(), 0);
+        return;
+      }
       // A refused key or model ends the session; anything else reconnects
       if (event.code === 1008 || event.code === 1007) {
         this.status('off', event.reason || 'The voice service refused the session');

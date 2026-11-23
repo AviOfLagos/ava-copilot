@@ -44,9 +44,12 @@ export function voiceSessionInstructions(
   identity = '',
   // What she can do, from every registration (capabilities/catalog.ts), and the tab in front when it starts
   capabilities = '',
+  // About you right now: the model, engine, recogniser and languages in force (engines/self.ts)
+  self = '',
 ): string {
   return [
     voiceInstructions(name),
+    self,
     capabilities,
     identity,
     stylePrompt && `How the user likes answers: ${stylePrompt}`,

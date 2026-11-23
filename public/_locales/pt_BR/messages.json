@@ -5182,6 +5182,9 @@
   "voice_engine_textModel_label": {
     "message": "Modelo de texto no modo econômico"
   },
+  "voice_engine_textModel_chat": {
+    "message": "O mesmo modelo dos seus chats"
+  },
   "voice_engine_textModel_fast": {
     "message": "Modelo rápido"
   },

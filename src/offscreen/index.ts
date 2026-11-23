@@ -179,6 +179,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             onTool: (name, args, heard) => chrome.runtime.sendMessage({ type: 'voice_tool', name, args, heard }),
             onStatus: (status, error) => notify({ type: 'voice_status', status, error, threadId }),
             onUsage: (inputSeconds, outputSeconds) => notify({ type: 'voice_usage', inputSeconds, outputSeconds }),
+            // A code only, never words: it goes to the voice trace
+            onHearing: trouble =>
+              notify({
+                type: 'voice_trace_hearing',
+                trouble,
+                engine: message.options?.mode === 'economy' ? message.options.economy?.stt?.engine : 'gemini',
+              }),
           },
         );
         // Known at once, so a second start (or the minute check of the wake word) sees a conversation on
