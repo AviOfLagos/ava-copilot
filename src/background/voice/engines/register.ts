@@ -23,7 +23,7 @@ import { isOverDailyBudget } from '../../usage/budget';
 import { END_CONVERSATION, runEconomyTurn } from './economy';
 import { isVoiceActivity, shouldEndIdle } from './idle';
 import { localSpeaking, speakLocally } from './localTts';
-import { checkRunning, checkThisComputer, recordSpoken } from './health';
+import { checkRunning, checkThisComputer, recordHearingTrouble, recordSpoken } from './health';
 import { forgetInstalledVoiceModels, installedVoiceModels } from './models';
 import { askVoiceOffscreen, toVoiceOffscreen } from './offscreen';
 import { chooseEconomyEngines, modelsNeeded } from './options';
@@ -31,6 +31,8 @@ import { hasGeminiSpeechToText } from '../dictation';
 import { economyTurnRequest, systemSayRequest } from './protocol';
 import type { EconomyTurnReply } from './protocol';
 import type { VoiceEngineRuntimeStatus } from './wire';
+import type { EconomyModelRole } from '@extension/storage';
+import { chatModelTarget } from './self';
 import { currentTabLine } from '../../capabilities/instance';
 
 /**
@@ -123,7 +125,12 @@ registerCommand('voice_engine_test', requestOnly('voice_engine_test'), async (_i
 
 registerCommand('voice_engine_listen_test', requestOnly('voice_engine_listen_test'), async (_input, context) => {
   try {
-    const stt = localSttChoice(await voiceEngineSettingsStore.getSettings(), await installedVoiceModels());
+    const stt = localSttChoice(
+      await voiceEngineSettingsStore.getSettings(),
+      await installedVoiceModels(),
+      undefined,
+      (await voiceIdentityStore.getSettings()).language,
+    );
     if (!stt) throw new Error(t('voice_engine_models_missing'));
     const reply = await toVoiceOffscreen<{ ok?: boolean; error?: string; text?: string; ms?: number; loadMs?: number }>(
       { type: 'stt_listen_once', stt, timeoutMs: 15_000 },
@@ -181,6 +188,16 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   return;
 });
 
+// A conversation said it was not hearing the user well: the code goes to the trace, with who was hearing
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (sender.id !== chrome.runtime.id || sender.tab || message?.type !== 'voice_trace_hearing') return;
+  const engine = typeof message.engine === 'string' ? message.engine.slice(0, 20) : 'unknown';
+  void recordHearingTrouble(message.trouble, engine).catch(error =>
+    logger.warning('Could not record hearing trouble', error),
+  );
+  return;
+});
+
 // A download finished or a model was removed in a page: what is installed is read again
 registerCommand('voice_models_changed', requestOnly('voice_models_changed'), async (_input, context) => {
   forgetInstalledVoiceModels();
@@ -230,6 +247,16 @@ function fromOffscreen(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id && !sender.tab && sender.url === chrome.runtime.getURL('offscreen.html');
 }
 
+/**
+ * The economy conversation's text model. 'chat' is the model the chats answer with (the Navigator's, resolved the
+ * way a chat resolves it), so voice is as able as typing; 'fast' and 'local' are the roles of the same names.
+ */
+export async function createEconomyModel(role: EconomyModelRole) {
+  const scope = { sessionId: 'voice', notify: () => {} };
+  if (role !== 'chat') return createRoleModel(role, scope);
+  return createRoleModel('fast', { ...scope, explicit: await chatModelTarget() });
+}
+
 async function economyTurn(message: unknown): Promise<EconomyTurnReply> {
   const parsed = economyTurnRequest.safeParse(message);
   if (!parsed.success) return { said: '', error: 'The turn was not valid.' };
@@ -244,10 +271,7 @@ async function economyTurn(message: unknown): Promise<EconomyTurnReply> {
     : parsed.data;
   return runEconomyTurn(turn, {
     model: async () => {
-      const { chatModel, choice } = await createRoleModel(settings.economyModel, {
-        sessionId: 'voice',
-        notify: () => {},
-      });
+      const { chatModel, choice } = await createEconomyModel(settings.economyModel);
       return { chatModel, local: choice.local };
     },
     runTool: (name, args, heard) => voice.onTool(name, args, heard),

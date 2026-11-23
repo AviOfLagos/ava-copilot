@@ -14,6 +14,9 @@ import type { WaDriver, WaDriverFactory, WaEvents, WaIncoming, WaLink, WaMediaIn
 // After a scan WhatsApp closes the socket once and asks for a fresh one; a dropped line is retried the same way
 const RECONNECT_MS = 2000;
 const RECONNECT_MAX_MS = 60_000;
+// A new socket that has neither opened nor closed by now is stuck (seen: an hour of silence after a 408); end it
+// and try again, so a dropped line can never hang for good
+export const CONNECT_TIMEOUT_MS = 45_000;
 const LOGGED_OUT = 401;
 const TIMED_OUT = 408;
 const RESTART_REQUIRED = 515;
@@ -241,9 +244,13 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
     let retryMs = RECONNECT_MS;
     let opened = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    // Tries since the line last dropped; 0 while open
+    let attempt = 0;
     // Shown online only while typing or recording to a chat, then offline again (markOnlineOnConnect is off, so
     // his phone keeps its notifications)
     let online = false;
+    let retryLater: () => void = () => {};
     const connected = () => {
       if (!socket) throw new Error('WhatsApp is not connected.');
       return socket;
@@ -269,6 +276,22 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
           });
           socket = current;
           const mine = () => !stopped && socket === current;
+          if (watchdog) clearTimeout(watchdog);
+          watchdog = null;
+          // Only a saved login is expected to open quickly; a first link waits for a scan as long as it takes
+          const savedLogin = Boolean((state as { creds?: { me?: unknown } }).creds?.me);
+          if (savedLogin)
+            watchdog = setTimeout(() => {
+              if (!mine()) return;
+              log.warn('WhatsApp did not answer; trying again', { attempt });
+              socket = null;
+              try {
+                current.end(undefined);
+              } catch {
+                // already gone
+              }
+              retryLater();
+            }, CONNECT_TIMEOUT_MS);
           current.ev.on('creds.update', (() => void saveCreds().catch(() => {})) as never);
           current.ev.on('connection.update', ((update: {
             qr?: string;
@@ -278,6 +301,8 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
             if (!mine()) return;
             if (update.qr) events.qr(update.qr);
             if (update.connection === 'open') {
+              if (watchdog) clearTimeout(watchdog);
+              attempt = 0;
               retryMs = RECONNECT_MS;
               const user = current.user;
               opened = true;
@@ -285,6 +310,7 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
               events.ready({ number: numberOfJid(selfIds[0]) ?? '', selfIds });
             }
             if (update.connection === 'close') {
+              if (watchdog) clearTimeout(watchdog);
               online = false;
               const code = update.lastDisconnect?.error?.output?.statusCode;
               socket = null;
@@ -301,11 +327,12 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
                 return;
               }
               // A fresh socket right after a scan; otherwise back off a little each time the line drops
-              const wait = code === RESTART_REQUIRED ? 0 : retryMs;
-              retryMs = Math.min(retryMs * 2, RECONNECT_MAX_MS);
-              if (code !== RESTART_REQUIRED)
-                log.warn('WhatsApp connection dropped; reconnecting', { code: code ?? null });
-              timer = setTimeout(connect, wait);
+              if (code === RESTART_REQUIRED) {
+                timer = setTimeout(connect, 0);
+                return;
+              }
+              log.warn('WhatsApp connection dropped; reconnecting', { code: code ?? null });
+              retryLater();
             }
           }) as never);
           current.ev.on('messages.upsert', ((upsert: { messages: BaileysMessage[]; type: string }) => {
@@ -328,6 +355,19 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
               events.message(incomingOfBaileys(message, lib, download));
             }
           }) as never);
+        };
+        retryLater = () => {
+          if (stopped) return;
+          const wait = retryMs;
+          retryMs = Math.min(retryMs * 2, RECONNECT_MAX_MS);
+          attempt++;
+          // Only a session that was linked reports it; a first link has its own states (scan, failed)
+          if (opened) events.reconnecting?.({ attempt, nextAt: Date.now() + wait });
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            if (opened) events.reconnecting?.({ attempt, nextAt: null });
+            connect();
+          }, wait);
         };
         connect();
       },
@@ -379,6 +419,7 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
       async stop() {
         stopped = true;
         if (timer) clearTimeout(timer);
+        if (watchdog) clearTimeout(watchdog);
         const current = socket;
         socket = null;
         current?.end(undefined);

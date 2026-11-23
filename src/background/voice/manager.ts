@@ -12,6 +12,7 @@ import {
   threadStore,
   usageStore,
   voiceIdentityStore,
+  voiceEngineSettingsStore,
   liveSpeechConfig,
   threadVoiceIdentity,
   personalityVoiceFor,
@@ -55,6 +56,7 @@ import { agentSpeaker, speakerTts, spokenLine } from '../personalities/voices';
 import type { Speaker } from '../personalities/voices';
 import type { EconomyEngines } from './engines/wire';
 import { switchedGreeting } from '../personalities/prompt';
+import { aboutYouSection, economyModelOf, providerName } from './engines/self';
 
 const logger = createLogger('Voice');
 
@@ -112,6 +114,8 @@ export class VoiceManager {
     stylePrompt: string | undefined;
     identity: string;
     economyTts: EconomyEngines['tts'] | null;
+    // "About you right now": the model, engine, recogniser and languages of this conversation
+    self: string;
   } | null = null;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
@@ -191,6 +195,7 @@ export class VoiceManager {
       history,
       session.identity,
       capabilitySection(),
+      session.self,
     );
     const thread = await threadStore.get(this.threadId).catch(() => undefined);
     if (session.mode === 'economy') {
@@ -274,6 +279,20 @@ export class VoiceManager {
     const history = previous ? voiceHistory(await threadStore.messages(previous.id)) : '';
     // The personality's Live voice, or Ava's from Settings: fixed for the session
     const speechConfig = liveSpeechConfig(settings.liveModel, voiceIdentity, personalityVoiceFor('live', personality));
+    // What it knows about itself, from the settings in force now
+    // (never in the way of starting: without it the conversation still runs)
+    const self = await (async () =>
+      aboutYouSection({
+        engine: economy ? 'economy' : 'live',
+        model: economy
+          ? await economyModelOf((await voiceEngineSettingsStore.getSettings()).economyModel)
+          : { provider: await providerName(gemini?.[0] ?? 'gemini'), model: settings.liveModel },
+        recogniser: economy?.economy.stt ?? null,
+        language: voiceIdentity.language,
+      }))().catch(error => {
+      logger.warning('Could not say which model and engine this conversation runs on', error);
+      return '';
+    });
 
     await ensureOffscreen();
     const response = await toOffscreen<{ ok?: boolean; error?: string; micDenied?: boolean }>({
@@ -290,6 +309,8 @@ export class VoiceManager {
               model: settings.liveModel,
               speechConfig,
               patience: settings.turnPatience,
+              // Pins the transcript of what the user says to their language
+              language: voiceIdentity.language,
             }),
         instructions: voiceSessionInstructions(
           this.assistantName,
@@ -298,6 +319,7 @@ export class VoiceManager {
           history,
           identity,
           capabilitySection(),
+          self,
         ),
         tools: [...VOICE_TOOLS, ...registeredVoiceTools().map(tool => tool.declaration)],
         // Echoed in every status, so a panel knows which chat holds the conversation
@@ -326,6 +348,7 @@ export class VoiceManager {
       stylePrompt,
       identity,
       economyTts: economy?.economy.tts ?? null,
+      self,
     };
     this.applying = personality ? { key: personalityKey(personality), result: Promise.resolve(false) } : null;
     this.stopWatchingPersonality?.();

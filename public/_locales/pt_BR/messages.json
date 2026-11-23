@@ -5182,6 +5182,9 @@
   "voice_engine_textModel_label": {
     "message": "Modelo de texto no modo econômico"
   },
+  "voice_engine_textModel_chat": {
+    "message": "O mesmo modelo dos seus chats"
+  },
   "voice_engine_textModel_fast": {
     "message": "Modelo rápido"
   },
@@ -9287,6 +9290,31 @@
   },
   "wava_state_disconnected": {
     "message": "Desconectado"
+  },
+  "wava_state_reconnecting": {
+    "message": "Conexão perdida. Tentando de novo em $SECONDS$s (tentativa $ATTEMPT$)",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "8"
+      }
+    }
+  },
+  "wava_state_reconnectingNow": {
+    "message": "Conexão perdida. Reconectando… (tentativa $ATTEMPT$)",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "wava_settings_reconnectNow": {
+    "message": "Reconectar agora"
   },
   "wava_state_failed": {
     "message": "Não foi possível vincular"

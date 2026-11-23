@@ -18,7 +18,7 @@ const store = vi.hoisted(() => {
 vi.mock('@extension/i18n', () => ({ t: (key: string) => key }));
 
 const { voiceHealthStore, voiceTraceStore } = await import('@extension/storage');
-const { recordSpoken, slowVoice } = await import('../health');
+const { recordHearingTrouble, recordSpoken, slowVoice } = await import('../health');
 
 const report = (changes: Record<string, unknown> = {}) => ({
   engine: 'kitten' as const,
@@ -80,5 +80,15 @@ describe('slowVoice', () => {
     expect(slowVoice('system', slow)).toBeNull();
     expect(slowVoice('gemini', slow)).toBeNull();
     expect(slowVoice('kitten', slow)).toBeNull();
+  });
+});
+
+describe('recordHearingTrouble', () => {
+  it('leaves a code in the trace, never words, and ignores anything else', async () => {
+    await recordHearingTrouble('unclear-turns', 'whisper');
+    await recordHearingTrouble('my secret words', 'whisper');
+    const entries = (await voiceTraceStore.get()).entries.filter(entry => entry.note === 'unclear-turns');
+    expect(entries.at(-1)).toMatchObject({ kind: 'stt', engine: 'whisper', ok: false, note: 'unclear-turns' });
+    expect(JSON.stringify(await voiceTraceStore.get())).not.toContain('secret');
   });
 });

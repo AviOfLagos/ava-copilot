@@ -177,6 +177,27 @@ describe('engine choice for economy conversations', () => {
     expect(threadVoiceEngines(settings(), { speak: 'kokoro' }).mode).toBe('economy');
   });
 
+  it("always tells Whisper the user's language, even where the engine is not upgraded for hearing", () => {
+    const installed = { 'whisper-base': {} } as never;
+    expect(localSttChoice(settings({ stt: 'whisper' }), installed, undefined, 'pt-BR')).toMatchObject({
+      engine: 'whisper',
+      language: 'pt',
+    });
+    // English-only recognisers are left as they are
+    const moonshine = { 'moonshine-tiny': {} } as never;
+    expect(localSttChoice(settings(), moonshine, undefined, 'pt-BR')).not.toHaveProperty('language');
+  });
+
+  it('answers voice with the chat model by default; an old untouched "fast" becomes it, a picked one stays', () => {
+    expect(DEFAULT_VOICE_ENGINE_SETTINGS.economyModel).toBe('chat');
+    expect(migrateVoiceEngineSettings({ economyModel: 'fast' }).economyModel).toBe('chat');
+    expect(migrateVoiceEngineSettings({ economyModel: 'fast', economyModelChosen: true }).economyModel).toBe('fast');
+    const local = migrateVoiceEngineSettings({ economyModel: 'local' });
+    expect(local.economyModel).toBe('local');
+    expect(local.economyModelChosen).toBe(true);
+    expect(migrateVoiceEngineSettings({ economyModel: 'nonsense' as never }).economyModel).toBe('chat');
+  });
+
   it('hears the user with Whisper when installed, unless another recogniser was picked', () => {
     const installed = { 'moonshine-tiny': {}, 'whisper-base': {} } as never;
     const hearing = { language: 'en-NG' };

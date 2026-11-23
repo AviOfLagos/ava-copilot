@@ -5182,6 +5182,9 @@
   "voice_engine_textModel_label": {
     "message": "節省模式的文字模型"
   },
+  "voice_engine_textModel_chat": {
+    "message": "與聊天相同的模型"
+  },
   "voice_engine_textModel_fast": {
     "message": "快速模型"
   },
@@ -9287,6 +9290,31 @@
   },
   "wava_state_disconnected": {
     "message": "已中斷連線"
+  },
+  "wava_state_reconnecting": {
+    "message": "連線中斷。$SECONDS$ 秒後重試（第 $ATTEMPT$ 次）",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "8"
+      }
+    }
+  },
+  "wava_state_reconnectingNow": {
+    "message": "連線中斷。正在重新連線…（第 $ATTEMPT$ 次）",
+    "placeholders": {
+      "attempt": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "wava_settings_reconnectNow": {
+    "message": "立即重新連線"
   },
   "wava_state_failed": {
     "message": "無法連結"

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } from 'baileys';
 import { memoryLogger } from '../log';
-import { baileysDriver, readCapped } from '../whatsapp/baileys';
+import { baileysDriver, CONNECT_TIMEOUT_MS, readCapped } from '../whatsapp/baileys';
 import type { BaileysModule } from '../whatsapp/baileys';
 import type { WaEvents, WaIncoming } from '../whatsapp/driver';
 import { tempDir } from './helpers';
@@ -74,6 +74,7 @@ function harness() {
     disconnected: vi.fn(),
     failed: vi.fn(),
     message: vi.fn(),
+    reconnecting: vi.fn(),
   } satisfies WaEvents;
   const dir = tempDir();
   const driver = baileysDriver(memoryLogger(), async () => lib)({ sessionDir: dir.path, executablePath: null });
@@ -104,6 +105,58 @@ describe('Baileys driver', () => {
     vi.useRealTimers();
     await driver.stop();
     expect(sockets[1].ended).toBe(true);
+    dir.remove();
+  });
+
+  it('retries a dropped line, gives up on a socket that never answers, and says when the next try starts', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const { driver, events, sockets, creds, dir } = harness();
+    creds.me = { id: '2348011111111:7@s.whatsapp.net' };
+    await driver.start(events);
+    sockets[0].user = { id: '2348011111111:7@s.whatsapp.net' };
+    sockets[0].emit('connection.update', { connection: 'open' });
+    expect(events.reconnecting).not.toHaveBeenCalled();
+
+    // The line drops (408): a try is scheduled, and the panel learns when
+    sockets[0].emit('connection.update', {
+      connection: 'close',
+      lastDisconnect: { error: { output: { statusCode: 408 } } },
+    });
+    expect(events.reconnecting).toHaveBeenLastCalledWith({ attempt: 1, nextAt: Date.now() + 2000 });
+    vi.advanceTimersByTime(2000);
+    expect(sockets).toHaveLength(2);
+    expect(events.reconnecting).toHaveBeenLastCalledWith({ attempt: 1, nextAt: null });
+
+    // The new socket neither opens nor closes: after the timeout it is ended and another try is scheduled
+    vi.advanceTimersByTime(CONNECT_TIMEOUT_MS);
+    expect(sockets[1].ended).toBe(true);
+    expect(events.reconnecting).toHaveBeenLastCalledWith({ attempt: 2, nextAt: Date.now() + 4000 });
+    vi.advanceTimersByTime(4000);
+    expect(sockets).toHaveLength(3);
+
+    // A late close from the abandoned socket changes nothing
+    sockets[1].emit('connection.update', {
+      connection: 'close',
+      lastDisconnect: { error: { output: { statusCode: 408 } } },
+    });
+    expect(sockets).toHaveLength(3);
+
+    // It opens: the watchdog is off and the next drop starts counting from 1 again
+    sockets[2].user = { id: '2348011111111:7@s.whatsapp.net' };
+    sockets[2].emit('connection.update', { connection: 'open' });
+    vi.advanceTimersByTime(CONNECT_TIMEOUT_MS * 2);
+    expect(sockets[2].ended).toBe(false);
+    expect(sockets).toHaveLength(3);
+    sockets[2].emit('connection.update', {
+      connection: 'close',
+      lastDisconnect: { error: { output: { statusCode: 428 } } },
+    });
+    expect(events.reconnecting).toHaveBeenLastCalledWith({ attempt: 1, nextAt: Date.now() + 2000 });
+
+    await driver.stop();
+    vi.advanceTimersByTime(CONNECT_TIMEOUT_MS * 2);
+    expect(sockets).toHaveLength(3);
+    vi.useRealTimers();
     dir.remove();
   });
 

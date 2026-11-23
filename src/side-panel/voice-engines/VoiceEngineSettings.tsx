@@ -376,12 +376,15 @@ export default function VoiceEngineSettings({ api }: { api: PanelApi }) {
             const economyModel = event.target.value as Settings['economyModel'];
             if (economyModel !== 'local') {
               flow.cancel();
-              update({ economyModel });
+              update({ economyModel, economyModelChosen: true });
               return;
             }
             setAsking('model');
-            void localChatRequirement().then(requirement => flow.choose(requirement, () => update({ economyModel })));
+            void localChatRequirement().then(requirement =>
+              flow.choose(requirement, () => update({ economyModel, economyModelChosen: true })),
+            );
           }}>
+          <option value="chat">{t('voice_engine_textModel_chat')}</option>
           <option value="fast">{t('voice_engine_textModel_fast')}</option>
           <option value="local">
             {t('voice_engine_textModel_local')}

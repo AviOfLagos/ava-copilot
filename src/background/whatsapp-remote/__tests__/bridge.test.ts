@@ -31,6 +31,7 @@ const LINKED: WhatsAppStatus = {
   needsFirstMessage: false,
   connectCode: null,
   phoneConnected: false,
+  reconnect: null,
   lastInAt: null,
   lastOutAt: null,
 };
