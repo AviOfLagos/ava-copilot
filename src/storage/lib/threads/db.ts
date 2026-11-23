@@ -124,6 +124,8 @@ export interface ThreadRecord {
   // The user said to work in the current tab ("Use the current tab"): the agent may take that page to another site.
   // Unset, a step that would leave the user's page for another site opens a new tab instead.
   stayInTab?: boolean;
+  // The task the chip's "use the current tab" applies to (its taskRunId): one task, not every later one
+  stayInTabTask?: string | null;
   // Tabs this chat's runs opened themselves. Every other bound tab is one of the user's own pages.
   openedTabIds?: number[];
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it

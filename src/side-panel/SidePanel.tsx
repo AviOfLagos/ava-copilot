@@ -657,6 +657,8 @@ const SidePanel = () => {
   const handleNewThread = () => {
     go('chat');
     setThreadId(null);
+    // This tab lets go of its chat: opening Ava here again starts fresh
+    if (PANEL_TAB !== null) post({ type: 'tab_panel_clear', tabId: PANEL_TAB });
   };
 
   /** A new chat, with `prompt` placed in the composer once it mounts (see the effect below `view`). */

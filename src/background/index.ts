@@ -357,8 +357,9 @@ chrome.runtime.onConnect.addListener(port => {
 
         case 'thread_send': {
           // The panel of one tab: a new chat sent from it lives on that tab
-          const panelTab = typeof message.tabId === 'number' ? message.tabId : null;
+          const panelTab = typeof message.tabId === 'number' ? message.tabId : undefined;
           const id = await threads.send({
+            tabId: panelTab,
             threadId,
             text: String(message.text ?? ''),
             windowId: message.windowId,
@@ -372,7 +373,6 @@ chrome.runtime.onConnect.addListener(port => {
               ),
             ),
           });
-          if (panelTab !== null && tabPanels.entryOf(panelTab)?.threadId !== id) await tabPanels.open(panelTab, id);
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
 

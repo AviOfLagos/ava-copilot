@@ -178,12 +178,13 @@ export class ThreadManager {
   ): Promise<{ state: 'ok' | 'running_elsewhere' | 'tab_busy'; holderTitle?: string }> {
     const thread = await this.store.get(threadId);
     if (!thread) throw new Error(`Thread ${threadId} does not exist`);
-    await this.panels.open(tabId, threadId);
+    // Another chat working in this tab keeps it: the panel shows this chat but the tab stays that chat's
     const holder = this.holderOf(tabId);
     if (holder && holder !== threadId) {
       const other = await this.store.get(holder);
       return { state: 'tab_busy', holderTitle: other?.title || holder };
     }
+    await this.panels.open(tabId, threadId);
     if (this.running.has(threadId)) {
       return { state: thread.boundTabIds.includes(tabId) ? 'ok' : 'running_elsewhere' };
     }
@@ -242,6 +243,8 @@ export class ThreadManager {
     // Content the model reads with the words but the chat does not show (a document's text, a link's preview),
     // already marked as content and never instructions
     context?: string;
+    // The tab whose panel sent it: the chat lives on that tab
+    tabId?: number;
   }): Promise<string> {
     const attachments = request.attachments ?? [];
     // Pictures alone are a question about them
@@ -249,7 +252,7 @@ export class ThreadManager {
     if (!text) {
       throw new Error(t('bg_cmd_newTask_noTask'));
     }
-    const thread =
+    let thread =
       (request.threadId && (await this.store.get(request.threadId))) ||
       (await this.store.create({
         origin: request.origin ?? 'user',
@@ -265,7 +268,12 @@ export class ThreadManager {
       throw new Error(t('threads_busy'));
     }
     await this.checkCapacity();
+    thread = await this.followHome(thread);
     const binding = await this.bindingFor(thread, request.windowId, text);
+    // A chat sent from a tab's panel lives on that tab, before its run starts, so the tabs the run opens are its own
+    if (request.tabId !== undefined && this.panels.entryOf(request.tabId)?.threadId !== thread.id) {
+      await this.panels.open(request.tabId, thread.id);
+    }
 
     const message = await this.store.addMessage(thread.id, 'user', text, { attachments });
     if (binding.reusedSite) {
@@ -277,7 +285,14 @@ export class ThreadManager {
     // so what it already sent is found and not sent again (../once).
     // ...and no try queued for the old one comes back
     await this.endings?.cancel(thread.id);
-    await this.store.update(thread.id, { taskRunId: message.id, autoTries: 0, retryRound: 0, failure: null });
+    await this.store.update(thread.id, {
+      taskRunId: message.id,
+      autoTries: 0,
+      retryRound: 0,
+      failure: null,
+      // "Use the current tab" was pressed for this task: it holds for it (and its retries) only
+      ...(thread.stayInTab ? { stayInTab: false, stayInTabTask: message.id } : {}),
+    });
     await this.placeInWorkspace(thread, text, request.workspaceId);
     await this.start(
       thread.id,
@@ -829,6 +844,28 @@ export class ThreadManager {
     }
   }
 
+  /**
+   * A chat opened on another tab while it was running there: once idle, its next task starts on its home tab, unless
+   * one of its tabs is still its own (home or a tab its run opened).
+   */
+  private async followHome(thread: ThreadRecord): Promise<ThreadRecord> {
+    const home = this.panels.homeOf(thread.id);
+    if (home === null || this.running.has(thread.id)) return thread;
+    if (thread.boundTabIds.some(tabId => this.panels.entryOf(tabId)?.threadId === thread.id)) return thread;
+    const tab = await chrome.tabs.get(home).catch(() => undefined);
+    if (!tab) return thread;
+    this.parked.delete(thread.id);
+    const changes = {
+      boundTabIds: [home],
+      boundGroupId: null,
+      boundUrl: isWebPage(tab.url) ? tab.url : thread.boundUrl,
+      boundWindowId: tab.windowId ?? null,
+      openedTabIds: [],
+    };
+    await this.store.update(thread.id, changes);
+    return { ...thread, ...changes };
+  }
+
   /** The chat's tabs that still exist and have not become another chat's since (a tab's panel moved on). */
   private async ownTabs(thread: Pick<ThreadRecord, 'id' | 'boundTabIds'>): Promise<number[]> {
     return (await existingTabs(thread.boundTabIds)).filter(tabId => this.panels.mayUse(thread.id, tabId));
@@ -941,7 +978,8 @@ export class ThreadManager {
     // said to use the current tab (the chip, or the task's own words), and not for an agent's or a routine's chat,
     // which works in tabs of its own
     binding.userTabs.clear();
-    if (attended(thread) && !thread.stayInTab && !asksForThisTab(task)) {
+    const stays = thread.stayInTab || (!!thread.stayInTabTask && thread.stayInTabTask === thread.taskRunId);
+    if (attended(thread) && !stays && !asksForThisTab(task)) {
       const opened = new Set(thread.openedTabIds ?? []);
       for (const tabId of binding.tabIds) if (!opened.has(tabId)) binding.userTabs.add(tabId);
     }

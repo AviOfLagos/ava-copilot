@@ -89,7 +89,7 @@ export function siteOf(host: string): string {
 
 /** Whether the task's words ask to stay in this tab ("in this tab", "use the current tab", "same tab"). */
 export function asksForThisTab(task: string): boolean {
-  return /\b(this|the current|current|same|my current)\s+tab\b/i.test(task);
+  return /\b(?:in|use|using|stay in|keep it in)\s+(?:this|the current|my current|the same|same)\s+tab\b/i.test(task);
 }
 
 export class TabNotBoundError extends Error {

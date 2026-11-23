@@ -152,8 +152,11 @@ describe('keeping the user’s page (new tab for another site)', () => {
   it('hears the user ask to stay in this tab', () => {
     expect(asksForThisTab('Open reddit in this tab')).toBe(true);
     expect(asksForThisTab('use the current tab to go to gmail')).toBe(true);
-    expect(asksForThisTab('same tab please')).toBe(true);
+    expect(asksForThisTab('do it in the same tab please')).toBe(true);
     expect(asksForThisTab('Go to reddit and find the launch thread')).toBe(false);
     expect(asksForThisTab('Summarise this page')).toBe(false);
+    // Mentioning the tab is not asking to leave it for another site
+    expect(asksForThisTab('summarize this tab, then compare on amazon.com')).toBe(false);
+    expect(asksForThisTab("what's on this tab")).toBe(false);
   });
 });

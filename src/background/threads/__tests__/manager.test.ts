@@ -1379,6 +1379,26 @@ describe('tab-scoped chats', () => {
     await expect(manager.send({ threadId: other.id, text: 'Go on', windowId: 1 })).rejects.toThrow('threads_tabInUse');
   });
 
+  it('does not take a tab from the chat working in it, even when it is that chat’s home', async () => {
+    const tab = browser.open('https://news.example/today');
+    const running = await manager.send({ text: 'Read the news', windowId: 1, tabId: tab });
+    expect(panels.homeOf(running)).toBe(tab);
+    const other = await store.create({ title: 'Plan the trip' });
+    expect(await manager.openOnTab(other.id, tab)).toEqual({ state: 'tab_busy', holderTitle: 'Read the news' });
+    expect(panels.entryOf(tab)).toEqual({ threadId: running, role: 'home' });
+  });
+
+  it('moves a chat opened elsewhere while it ran to that tab once it is idle', async () => {
+    const first = browser.open('https://news.example/today');
+    const threadId = await manager.send({ text: 'Read the news', windowId: 1, tabId: first });
+    const second = browser.open('https://shop.example/');
+    expect(await manager.openOnTab(threadId, second)).toEqual({ state: 'running_elsewhere' });
+    await finish();
+    browser.activate(first);
+    await manager.send({ threadId, text: 'And the sport?', windowId: 1, tabId: second });
+    expect(bindingOf(lastExecutor()).tabIds).toEqual([second]);
+  });
+
   it('leaves a chat that is still running on its own tab, and says so', async () => {
     const tab = browser.open('https://news.example/today');
     const threadId = await manager.send({ text: 'Read the news', windowId: 1 });
@@ -1436,6 +1456,10 @@ describe('tab-scoped chats', () => {
     expect((await store.get(threadId))?.stayInTab).toBe(true);
     await manager.send({ threadId, text: 'Now go to reddit', windowId: 1 });
     expect(bindingOf(lastExecutor()).userTabs.size).toBe(0);
+    // ...for that task only: the next one keeps the user's page again
+    await finish();
+    await manager.send({ threadId, text: 'Now find the sport', windowId: 1 });
+    expect(bindingOf(lastExecutor()).userTabs.size).toBe(1);
   });
 
   it('stays in the tab when the task itself says so', async () => {
