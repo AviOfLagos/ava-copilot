@@ -19,6 +19,8 @@ the header. It picks up the last voice chat if it is under 12 hours old. Work it
   show in the chat Avi is looking at. The run's request shows as its own line (the task as Ava passed it on), so
   retrying the task works as for a typed one. If this chat is already running, the request goes to a linked side chat, as today
   (`voiceThreadId`), and Ava says so in a few words.
+- A task said out loud never runs under the chat's Auto mode (`spokenTaskRunId`, `gate/autoMode.ts`): page audio
+  could have said it, so its sends and posts always ask for the click.
 - The watcher (`watch()`) stops skipping its own chat: when this chat's run finishes or waits for Confirm, Ava says it.
 - Typing in the chat while voice is on keeps going to the voice session (as today), so it is one conversation.
 

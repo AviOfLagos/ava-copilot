@@ -221,6 +221,38 @@ describe('leaving and coming back', () => {
     await voice.stop();
   });
 
+  it('keeps the wake-word guard and a refusal across a pause, and tells news from the pause', async () => {
+    const voice = manager();
+    await voice.start(1, { threadId: 'chat-a', tabId: 10, wake: true, guarded: true });
+    expect(voice.state).toBe('listening');
+    await voice.tabMoved(20, 1);
+    // A linked chat finished while away: it is still news on return
+    state.threads.push({ ...chat('side-9', 'Side task', 'running') });
+    await voice.tabMoved(10, 1);
+    const internals = voice as unknown as { guarded: boolean; announced: Map<string, string> };
+    expect(internals.guarded).toBe(true);
+    expect(internals.announced.has('side-9')).toBe(false);
+    await voice.stop();
+  });
+
+  it('says a task said out loud is spoken, so Auto mode does not cover it', async () => {
+    const voice = manager();
+    await voice.start(1, { threadId: 'chat-a', tabId: 10 });
+    await voice.onTool('run_browser_task', { task: 'Post the note' });
+    expect(sends[0]).toMatchObject({ spoken: true });
+    await voice.stop();
+  });
+
+  it('resumes in place when the mic is pressed in the paused chat, with no "moved" note', async () => {
+    const voice = manager();
+    await voice.start(1, { threadId: 'chat-a', tabId: 10 });
+    await voice.tabMoved(20, 1);
+    await voice.start(1, { threadId: 'chat-a', tabId: 30 });
+    expect(voice.running).toBe(true);
+    expect(stored.some(([, , content]) => content === 'voice_moved')).toBe(false);
+    await voice.stop();
+  });
+
   it('does not pause for a tab voice itself brought up', async () => {
     const voice = manager();
     await voice.start(1, { threadId: 'chat-a', tabId: 10 });

@@ -188,7 +188,7 @@ test('during a voice session the keyboard opens the same conversation, and typin
   // Ava is asked about it out loud and searches the chats
   mock.live.voiceRequest = 'What did we find about the zebra invoice?';
   mock.live.voiceTool = { name: 'search_chats', args: { query: 'zebra invoice' } };
-  await session.click('New chat').catch(() => {});
+  await session.click('New thread').catch(() => {});
   await session.web.bringToFront();
   await session.click('Talk to Ava');
   await waitFor(() => mock.live.sessions.some(s => s.voice), 'a voice session');

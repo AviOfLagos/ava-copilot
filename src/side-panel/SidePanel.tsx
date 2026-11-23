@@ -334,7 +334,9 @@ const SidePanel = () => {
         case 'voice_state':
           // The panel opened while a conversation was on
           if (message.threadId) setVoiceThreadId(message.threadId);
+          // "Off" too when this panel still shows it paused: the background restarted and the pause is gone
           if (message.status !== 'off') setVoiceStatus(message.status);
+          else setVoiceStatus(current => (current === 'paused' ? 'off' : current));
           break;
         case 'voice_text_sent':
           unconfirmedRef.current.confirm(message.clientId);
@@ -618,7 +620,8 @@ const SidePanel = () => {
 
   const toggleVoice = async () => {
     setBanner(null);
-    if (hereStatus !== 'off') {
+    // A paused conversation is started again from here (it resumes, or moves here), not ended
+    if (hereStatus !== 'off' && hereStatus !== 'paused') {
       endedAtRef.current = Date.now();
       setVoiceStarting(false);
       setVoiceStatus('off');

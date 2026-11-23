@@ -27,5 +27,7 @@ export async function autoModeAllows(taskId: string, kind: CommitKind): Promise<
   if (autoModeAsks().includes(kind)) return false;
   const thread = await threadStore.get(taskId).catch(() => undefined);
   if (!thread || alwaysAsks(thread)) return false;
+  // A task said out loud asks every time: a page's audio may have said it (voice/manager.ts runHere)
+  if (thread.spokenTaskRunId && thread.spokenTaskRunId === thread.taskRunId) return false;
   return thread.autoMode === true;
 }

@@ -104,7 +104,9 @@ export class VoiceManager {
   // The tab it was started on: leaving it pauses the conversation, coming back resumes it
   private tabId: number | undefined;
   // Left for another tab: the mic is off and the session closed, until the user comes back or the time runs out
-  private paused: (VoicePlace & { wake: boolean }) | null = null;
+  private paused: (VoicePlace & { wake: boolean; guarded: boolean; refused: boolean }) | null = null;
+  // Tab events one at a time: a quick switch away and back must not overtake the pause it follows
+  private tabQueue: Promise<unknown> = Promise.resolve();
   private pauseTimer: ReturnType<typeof setTimeout> | null = null;
   // When voice last opened or switched a tab, and the tabs it brought up: those are the conversation's own
   private ownSwitchAt = 0;
@@ -285,6 +287,7 @@ export class VoiceManager {
       guarded = false,
       threadId,
       tabId,
+      resuming = false,
     }: {
       wake?: boolean;
       guarded?: boolean;
@@ -292,6 +295,8 @@ export class VoiceManager {
       threadId?: string | null;
       // The tab whose panel started it
       tabId?: number;
+      // Coming back after a pause: what was said about chats before it still counts, so news from the pause is heard
+      resuming?: boolean;
     } = {},
   ): Promise<{ ok: boolean; micDenied?: boolean; error?: string; cancelled?: boolean; threadId?: string }> {
     const previous = threadId ? await threadStore.get(threadId).catch(() => undefined) : undefined;
@@ -299,6 +304,8 @@ export class VoiceManager {
       return { ok: true, threadId: this.threadId ?? undefined };
     }
     // One conversation at a time: starting in another chat moves it there
+    // Started again in the chat that is paused: it simply goes on there
+    if (this.paused && !this.running && previous && previous.id === this.paused.threadId) this.clearPaused();
     if (this.running || this.paused) await this.moveAway(previous?.title ?? t('voice_threadTitle'));
     const generation = ++this.generation;
     // The personality of the conversation's workspace (or the active one): how it talks, and its voice and pace
@@ -386,6 +393,8 @@ export class VoiceManager {
     }
 
     this.threadId = thread.id;
+    // The offscreen document reported its first statuses before the session was this one's: it is listening now
+    this.status = 'listening';
     this.tabId = tabId;
     // A new chat lives on the tab it was started from, so its panel shows it
     if (tabId !== undefined && tabPanels.entryOf(tabId)?.threadId !== thread.id) {
@@ -414,7 +423,9 @@ export class VoiceManager {
     this.lastActivity = Date.now();
     this.startedAt = Date.now();
     // Threads already waiting or finished are not news
-    for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
+    if (!resuming) {
+      for (const existing of await db.threads.toArray()) this.announced.set(existing.id, stateKey(existing));
+    }
     this.watchTimer = setInterval(() => void this.watch(), WATCH_MS);
     if (!this.keepAlive) this.keepAlive = setInterval(() => void chrome.runtime.getPlatformInfo(), KEEP_ALIVE_MS);
     return { ok: true, threadId: thread.id };
@@ -484,8 +495,11 @@ export class VoiceManager {
 
   /** Listens for the user leaving the conversation's tab, coming back, or closing it. */
   listen(): void {
-    chrome.tabs.onActivated.addListener(({ tabId, windowId }) => void this.tabMoved(tabId, windowId));
-    chrome.tabs.onRemoved.addListener(tabId => void this.tabClosed(tabId));
+    const queue = (fn: () => Promise<void>) => {
+      this.tabQueue = this.tabQueue.then(fn).catch(error => logger.warning('Voice tab event failed', error));
+    };
+    chrome.tabs.onActivated.addListener(({ tabId, windowId }) => queue(() => this.tabMoved(tabId, windowId)));
+    chrome.tabs.onRemoved.addListener(tabId => queue(() => this.tabClosed(tabId)));
   }
 
   /** A tab came to the front: leaving the conversation's tab pauses it, coming back resumes it. */
@@ -499,13 +513,19 @@ export class VoiceManager {
     // A tab voice just opened or brought up (open_tab, switch_tab) is the conversation's own from now on
     if (this.running && now - this.ownSwitchAt < OWN_SWITCH_MS) this.voiceTabs.add(tabId);
     const url = (await chrome.tabs.get(tabId).catch(() => undefined))?.url ?? '';
+    const holder = this.threads.holderOf(tabId);
+    // A tab this chat works in (a run of it may bring one up before it holds it): still the conversation's
+    const own = await threadStore.get(place.threadId).catch(() => undefined);
+    const boundHere = own?.boundTabIds?.includes(tabId) ?? false;
     const move = onTabMove({
+      // A run (this chat's or another's) brought its tab up: the agent moved, not the user
+      agentTab: holder !== null,
       place,
       extensionPage: url.startsWith(chrome.runtime.getURL('')),
       paused: this.paused !== null,
       tabId,
       windowId,
-      chatOfTab: tabPanels.entryOf(tabId)?.threadId ?? this.threads.holderOf(tabId),
+      chatOfTab: boundHere ? place.threadId : (tabPanels.entryOf(tabId)?.threadId ?? holder),
       voiceTab: this.voiceTabs.has(tabId),
       ownSwitchAt: this.ownSwitchAt,
       now,
@@ -523,7 +543,14 @@ export class VoiceManager {
   private async pause(): Promise<void> {
     const threadId = this.threadId;
     if (!this.running || !threadId) return;
-    const place = { threadId, tabId: this.tabId, windowId: this.windowId, wake: this.wakeSession };
+    const place = {
+      threadId,
+      tabId: this.tabId,
+      windowId: this.windowId,
+      wake: this.wakeSession,
+      guarded: this.guarded,
+      refused: this.refused,
+    };
     await this.endSession(true);
     this.paused = place;
     this.pauseTimer = setTimeout(() => void this.endPaused(), PAUSE_LIMIT_MS);
@@ -541,6 +568,8 @@ export class VoiceManager {
       threadId: paused.threadId,
       tabId: paused.tabId,
       wake: paused.wake,
+      guarded: paused.guarded,
+      resuming: true,
     }).catch(error => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
     if (!result.ok) {
       logger.warning('The conversation could not resume', 'error' in result ? result.error : '');
@@ -550,6 +579,8 @@ export class VoiceManager {
       broadcast('off', paused.threadId);
       return;
     }
+    // A refusal on screen before the pause still holds
+    this.refused = paused.refused;
     await threadStore.addMessage(paused.threadId, 'system', t('voice_resumed')).catch(() => {});
     await toOffscreen({ type: 'voice_say', text: RESUME_NOTICE }).catch(() => {});
   }
@@ -671,6 +702,7 @@ export class VoiceManager {
           text: task,
           windowId: this.windowId,
           origin: 'voice',
+          spoken: true,
           // The conversation's chat lists the tasks started from it
           fields: { voiceThreadId: this.threadId },
         });
@@ -693,6 +725,7 @@ export class VoiceManager {
           text: request,
           windowId: this.windowId,
           origin: 'voice',
+          spoken: true,
           fields: { voiceThreadId: this.threadId },
         });
         this.lastTaskThreadId = threadId;
@@ -819,7 +852,7 @@ A picture of the screen was sent to you just now: describe what you see in it, a
 
   /** Runs a task in the conversation's own chat: its steps and answer show where the user is talking. */
   private async runHere(threadId: string, task: string): Promise<string> {
-    await this.threads.send({ threadId, text: task, windowId: this.windowId, tabId: this.tabId });
+    await this.threads.send({ threadId, text: task, windowId: this.windowId, tabId: this.tabId, spoken: true });
     this.lastTaskThreadId = threadId;
     this.announced.set(threadId, 'running');
     return 'Started in this chat. The user will hear when it finishes or needs their click.';

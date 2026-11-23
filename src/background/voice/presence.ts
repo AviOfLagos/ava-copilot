@@ -33,6 +33,8 @@ export interface TabMove {
   now: number;
   // One of the extension's own pages (a popped-out panel, Settings): the user is still with Ava
   extensionPage?: boolean;
+  // A tab a chat's run is working in: the agent brought it up, not the user
+  agentTab?: boolean;
 }
 
 /** What a tab coming to the front does to the conversation: pause it, resume it, or nothing. */
@@ -43,7 +45,7 @@ export function onTabMove(move: TabMove): 'pause' | 'resume' | 'stay' {
   if (place.windowId !== undefined && move.windowId !== place.windowId) return 'stay';
   const ours = move.tabId === place.tabId || move.chatOfTab === place.threadId || move.voiceTab;
   if (move.paused) return ours ? 'resume' : 'stay';
-  if (ours || move.now - move.ownSwitchAt < OWN_SWITCH_MS) return 'stay';
+  if (ours || move.agentTab || move.now - move.ownSwitchAt < OWN_SWITCH_MS) return 'stay';
   return 'pause';
 }
 

@@ -31,6 +31,7 @@ describe('when voice pauses and resumes', () => {
     expect(move({ windowId: 2 })).toBe('stay');
     expect(move({ place: { threadId: 'chat-a' } })).toBe('stay');
     expect(move({ extensionPage: true })).toBe('stay');
+    expect(move({ agentTab: true })).toBe('stay');
   });
 
   it('resumes only on coming back to the chat', () => {
