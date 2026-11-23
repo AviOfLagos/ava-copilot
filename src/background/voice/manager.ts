@@ -280,13 +280,18 @@ export class VoiceManager {
     // The personality's Live voice, or Ava's from Settings: fixed for the session
     const speechConfig = liveSpeechConfig(settings.liveModel, voiceIdentity, personalityVoiceFor('live', personality));
     // What it knows about itself, from the settings in force now
-    const self = aboutYouSection({
-      engine: economy ? 'economy' : 'live',
-      model: economy
-        ? await economyModelOf((await voiceEngineSettingsStore.getSettings()).economyModel)
-        : { provider: await providerName(gemini?.[0] ?? 'gemini'), model: settings.liveModel },
-      recogniser: economy?.economy.stt ?? null,
-      language: voiceIdentity.language,
+    // (never in the way of starting: without it the conversation still runs)
+    const self = await (async () =>
+      aboutYouSection({
+        engine: economy ? 'economy' : 'live',
+        model: economy
+          ? await economyModelOf((await voiceEngineSettingsStore.getSettings()).economyModel)
+          : { provider: await providerName(gemini?.[0] ?? 'gemini'), model: settings.liveModel },
+        recogniser: economy?.economy.stt ?? null,
+        language: voiceIdentity.language,
+      }))().catch(error => {
+      logger.warning('Could not say which model and engine this conversation runs on', error);
+      return '';
     });
 
     await ensureOffscreen();

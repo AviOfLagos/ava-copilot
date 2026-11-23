@@ -79,8 +79,10 @@ export async function economyModelOf(role: EconomyModelRole): Promise<VoiceSelf[
 
 /** A provider's display name, or its id. */
 export async function providerName(providerId: string): Promise<string> {
-  const summaries = await llmProviderStore
-    .getProviderSummaries()
-    .catch(() => ({}) as Record<string, { name?: string }>);
-  return summaries[providerId]?.name || providerId;
+  try {
+    const summaries: Record<string, { name?: string }> = await llmProviderStore.getProviderSummaries();
+    return summaries[providerId]?.name || providerId;
+  } catch {
+    return providerId;
+  }
 }
