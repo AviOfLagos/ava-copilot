@@ -28,6 +28,10 @@ interface ComposerProps {
   disabled: boolean;
   showStopButton: boolean;
   setContent?: (setter: (text: string) => void) => void;
+  // Hears the words in the box whenever they change, e.g. to keep a tab's draft
+  onTextChange?: (text: string) => void;
+  // The words the box starts with when it mounts (a tab's kept draft)
+  initialText?: string;
   placeholder?: string;
 }
 
@@ -99,9 +103,14 @@ export default function Composer({
   disabled,
   showStopButton,
   setContent,
+  onTextChange,
+  initialText,
   placeholder,
 }: ComposerProps) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText ?? '');
+  const textChange = useRef(onTextChange);
+  textChange.current = onTextChange;
+  useEffect(() => textChange.current?.(text), [text]);
   const [files, setFiles] = useState<AttachedFile[]>([]);
   const [media, setMedia] = useState<PendingAttachment[]>([]);
   // Attachments still being read: sending waits for them

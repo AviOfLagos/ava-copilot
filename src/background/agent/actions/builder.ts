@@ -179,9 +179,12 @@ export class ActionBuilder {
       const intent = input.intent || t('act_searchGoogle_start', [input.query]);
       context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, intent);
 
-      await context.browserContext.navigateTo(`https://www.google.com/search?q=${input.query}`);
+      const where = await context.browserContext.navigateTo(`https://www.google.com/search?q=${input.query}`);
 
-      const msg2 = t('act_searchGoogle_ok', [input.query]);
+      const msg2 =
+        where === 'new_tab'
+          ? t('act_goToUrl_newTab', [`Google: ${input.query}`])
+          : t('act_searchGoogle_ok', [input.query]);
       context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, msg2);
       return new ActionResult({
         extractedContent: msg2,
@@ -194,8 +197,9 @@ export class ActionBuilder {
       const intent = input.intent || t('act_goToUrl_start', [input.url]);
       this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_START, intent);
 
-      await this.context.browserContext.navigateTo(input.url);
-      const msg2 = t('act_goToUrl_ok', [input.url]);
+      const where = await this.context.browserContext.navigateTo(input.url);
+      // The user's page stayed as it was: the model hears that the work goes on in the new tab
+      const msg2 = where === 'new_tab' ? t('act_goToUrl_newTab', [input.url]) : t('act_goToUrl_ok', [input.url]);
       this.context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, msg2);
       return new ActionResult({
         extractedContent: msg2,

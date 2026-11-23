@@ -5,6 +5,7 @@ import { createLogger } from './log';
 import { holdForDictation, releaseDictation, sttErrorMessage, transcribeAndCorrect } from './voice/dictation';
 import { injectBuildDomTreeScripts } from './browser/dom/service';
 import { ThreadManager } from './threads/manager';
+import { openPanelOnTab, tabPanels } from './threads/tabPanels';
 import { runEndings } from './retry/register';
 import { MeetingManager } from './meetings/manager';
 import { dispatchCommand, registerRecovery, runRecoveries } from './registry';
@@ -68,8 +69,14 @@ const SIDE_PANEL_URL = chrome.runtime.getURL(
 // a click handled here counts as invoking the extension on the tab, which is what lets the panel
 // record that tab's audio for meeting notes
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(error => console.error(error));
+// The panel is per tab: off everywhere unless a tab has its own (tabPanels.ts). Switching to a tab with no Ava hides
+// it; switching back shows that tab's own panel again
+chrome.sidePanel.setOptions({ enabled: false }).catch(error => console.error(error));
+void tabPanels.load();
 chrome.action.onClicked.addListener(tab => {
-  if (tab.windowId !== undefined) {
+  if (tab.id !== undefined) {
+    openPanelOnTab(tab.id).catch(error => logger.error('Could not open the side panel', error));
+  } else if (tab.windowId !== undefined) {
     chrome.sidePanel
       .open({ windowId: tab.windowId })
       .catch(error => logger.error('Could not open the side panel', error));
@@ -203,6 +210,7 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   void threads.onTabRemoved(tabId, { windowClosing: removeInfo?.isWindowClosing });
+  void tabPanels.forgetTab(tabId);
   void meetings.onTabRemoved(tabId);
 });
 
@@ -348,6 +356,8 @@ chrome.runtime.onConnect.addListener(port => {
           return port.postMessage({ type: 'heartbeat_ack' });
 
         case 'thread_send': {
+          // The panel of one tab: a new chat sent from it lives on that tab
+          const panelTab = typeof message.tabId === 'number' ? message.tabId : null;
           const id = await threads.send({
             threadId,
             text: String(message.text ?? ''),
@@ -362,6 +372,7 @@ chrome.runtime.onConnect.addListener(port => {
               ),
             ),
           });
+          if (panelTab !== null && tabPanels.entryOf(panelTab)?.threadId !== id) await tabPanels.open(panelTab, id);
           return port.postMessage({ type: 'thread_started', clientId: message.clientId, threadId: id });
         }
 

@@ -121,6 +121,11 @@ export interface ThreadRecord {
   // "Auto mode" for this task: submits, saves, posts and sends go ahead without a card (money, deleting, access and
   // sign-ins still ask). Written only by the user's own click in the panel (`thread_auto_mode`), never by the model.
   autoMode?: boolean;
+  // The user said to work in the current tab ("Use the current tab"): the agent may take that page to another site.
+  // Unset, a step that would leave the user's page for another site opens a new tab instead.
+  stayInTab?: boolean;
+  // Tabs this chat's runs opened themselves. Every other bound tab is one of the user's own pages.
+  openedTabIds?: number[];
   // A task Ava started in a voice conversation: the voice thread it belongs to, so that thread can link to it
   voiceThreadId?: string | null;
   // How this chat hears and speaks, over Settings

@@ -23,6 +23,12 @@ upstream's guidance and still describe the code accurately. Where they conflict 
   Several threads run at once, each limited to its bound tabs by `BrowserContext.setBinding`.
 - In E2E tests, `page.waitForFunction` needs `{ polling: 300 }` when the page is a background tab: it gets no
   animation frames.
+- The side panel is per tab (`src/background/threads/tabPanels.ts`): the global panel is disabled, each tab gets
+  `sidepanel.html?tab=<id>` when Ava is opened there, and a chat lives on one home tab (map in `storage.session`).
+  Open the panel with `openPanelOnTab`/`openPanelInWindow`, never `sidePanel.open({ windowId })`. Chrome only opens a
+  panel from a user gesture, so a tab the agent opens shows the chat after one click on the Ava icon. A step that would
+  take one of the user's own pages to another site opens a new tab instead (`TabBinding.keepsPage`), unless the user
+  chose "Use the current tab" or said "in this tab".
 - Meeting notes: `src/background/meetings` (manager) and `src/offscreen` (recorder). Chrome only records a tab the
   extension was invoked on, so the toolbar button opens the panel from `chrome.action.onClicked`; do not switch back to
   `openPanelOnActionClick`.

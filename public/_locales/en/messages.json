@@ -1108,7 +1108,7 @@
     "message": "$1 threads are already running. Stop one or wait for one to finish."
   },
   "threads_tabInUse": {
-    "message": "Tab is in use by thread \"$1\"."
+    "message": "Another chat, \"$1\", is working in this tab. Wait for it to finish or stop it, then send again."
   },
   "threads_reusedTab": {
     "message": "Using the $1 tab you already have open."
@@ -13014,5 +13014,29 @@
   },
   "voice_finding_unchecked_title": {
     "message": "This computer has not been checked yet."
+  },
+  "act_goToUrl_newTab": {
+    "message": "Opened $1 in a new tab, so the page the user asked from stays as it was"
+  },
+  "tabPanel_title": {
+    "message": "Ava on this tab"
+  },
+  "tabPanel_new": {
+    "message": "New conversation"
+  },
+  "tabPanel_previous": {
+    "message": "Or carry on with one here"
+  },
+  "tabPanel_noPage": {
+    "message": "no page yet"
+  },
+  "tabPanel_moved": {
+    "message": "This conversation moved to another tab, where you opened it last."
+  },
+  "tabPanel_busyHere": {
+    "message": "\"$1\" is working in this tab right now. This chat can act here once that one finishes or you stop it."
+  },
+  "tabPanel_runningElsewhere": {
+    "message": "This chat is still working in its own tab. It moves to this tab when it finishes."
   }
 }
