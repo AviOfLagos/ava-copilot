@@ -120,6 +120,7 @@ export default function WhatsAppSettings({ api }: { api: PanelApi }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!reconnect) return;
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [reconnect]);
