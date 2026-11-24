@@ -7,10 +7,20 @@ This file is also the source of the [changelog page](https://ava.nexprove.com/ch
 built from it, so the two cannot drift. To add an entry, write it here. The format is fixed so the site can read it:
 
 - `## <dates> · <label>` starts a week or a release. A label that starts with `next release` marks work that is
-  merged but not in the download yet (everything after 0.2.5, released 23 November).
+  merged but not in the download yet (everything after 0.2.6, released 24 November).
 - `### <theme>` groups the lines.
 - `- <what changed for the user>. ([#123](https://github.com/AviOfLagos/ava-copilot/pull/123))` is one line.
   Keep it to one line, no nested lists.
+
+## 23–24 November 2026 · release 0.2.6
+
+In the download from 0.2.6, released 24 November.
+
+### Voice
+
+- Voice and chat are one Ava: the mic talks inside the chat on screen, what you say is written there, and tasks you say out loud run in that same chat. ([#199](https://github.com/AviOfLagos/ava-copilot/pull/199))
+- Switch tabs and voice pauses (mic off, nothing billed); come back and Ava picks up where you were. Ten minutes away or closing the tab ends it. ([#199](https://github.com/AviOfLagos/ava-copilot/pull/199))
+- Voice uses the same model as chat by default, so it follows instructions as well as chat does, knows what it runs on, keeps to the language you chose, and says so when it can't hear you. ([#198](https://github.com/AviOfLagos/ava-copilot/pull/198))
 
 ## 22–23 November 2026 · release 0.2.5
 

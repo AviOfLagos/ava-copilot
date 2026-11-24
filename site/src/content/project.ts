@@ -1326,8 +1326,8 @@ export const widgetCopy = {
   },
   update: {
     title: 'Update available',
-    version: 'Version 0.2.5',
-    notes: ['One conversation per tab', 'Auto mode, hover and retry countdowns'],
+    version: 'Version 0.2.6',
+    notes: ['Voice lives in each chat', 'Voice uses the same brain as chat'],
     commandLabel: 'Run this, then reload:',
     reload: 'Reload',
     later: 'Later',
