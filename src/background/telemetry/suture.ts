@@ -1,4 +1,4 @@
-// Hosted Suture tracing (suture.nexprove.com/docs/tracing). Opt-in and OFF by default: a call is sent only when the
+// Hosted Suture tracing (trysuture.com/docs/tracing). Opt-in and OFF by default: a call is sent only when the
 // build has an ingest key (VITE_SUTURE_API_KEY) AND Settings › Privacy › Hosted tracing is on. Prompt and reply
 // text is a further switch (captureContent), also off by default. Otherwise the call just runs, nothing leaves.
 //
@@ -9,6 +9,9 @@ import { _resetSuture, flushSuture, initSuture, suture } from 'suture-trace';
 import { tracingSettingsStore } from '@extension/storage';
 
 const apiKey = (): string | undefined => import.meta.env.VITE_SUTURE_API_KEY || undefined;
+
+// Suture's current home; the library's default (app.suture.nexprove.com) only redirects here
+export const SUTURE_ENDPOINT = 'https://app.trysuture.com';
 
 /** The captureContent value the library was started with, or null when it is not running. */
 let startedWith: boolean | null = null;
@@ -30,7 +33,7 @@ async function current(): Promise<{ on: boolean; capture: boolean }> {
   const capture = settings.captureContent === true;
   if (startedWith !== capture) {
     stop();
-    initSuture({ apiKey: key, captureContent: capture, serviceName: 'ava-copilot' });
+    initSuture({ apiKey: key, endpoint: SUTURE_ENDPOINT, captureContent: capture, serviceName: 'ava-copilot' });
     startedWith = capture;
   }
   return { on: true, capture };
