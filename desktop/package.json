@@ -1,0 +1,41 @@
+{
+  "name": "ava-desktop",
+  "productName": "Ava",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Ava desktop app: the Ava window on the Mac, talking to Ava Brain (docs/desktop-app.md).",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "vite build && node scripts/build-main.mjs",
+    "start": "pnpm build && electron .",
+    "test": "vitest run",
+    "type-check": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@types/react": "18.3.27",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "6.3.0",
+    "electron": "45.4.1",
+    "esbuild": "0.28.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.2"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  }
+}

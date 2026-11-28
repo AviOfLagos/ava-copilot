@@ -1524,3 +1524,90 @@ export const recordingBeginReplySchema = z.union([
 ]);
 export const recordingChunkRequestSchema = z.object({ data: base64Schema.min(1).max(RECORDING_CHUNK_BODY_BYTES) });
 export const recordingCommitReplySchema = z.object({ ok: z.literal(true), path: z.string().min(1).max(1000) });
+
+// ── The Ava desktop app (desktop/, docs/desktop-app.md) ──────────────────────────────────────────────
+// The app's window sends the owner's words to Ava Brain; the extension pulls them, runs the chat (origin
+// 'desktop') and posts the answer back; the window reads it. The app's routes need the desktop token Ava Brain
+// writes to its data folder at every start, and no Origin header (web pages always send one). The extension's two
+// routes are ordinary paired API routes.
+
+export const DESKTOP_ROUTES = {
+  // The app
+  status: '/desktop/v1/status',
+  send: '/desktop/v1/send',
+  messages: '/desktop/v1/messages',
+  // The extension
+  inbox: '/v1/desktop/inbox',
+  reply: '/v1/desktop/reply',
+} as const;
+
+// The file in Ava Brain's data folder that holds the desktop token
+export const DESKTOP_TOKEN_FILE = 'desktop.token';
+// The extension counts as open when it pulled this recently
+export const DESKTOP_BROWSER_SEEN_MS = 15_000;
+export const DESKTOP_TEXT_MAX = 20_000;
+
+// One conversation in the app's window; the extension keeps one chat for each
+export const desktopChatIdSchema = z.string().regex(/^dc_[a-z0-9]{8,40}$/);
+
+export const desktopSendRequestSchema = z.object({
+  requestId: requestIdSchema,
+  chatId: desktopChatIdSchema,
+  text: z.string().trim().min(1).max(DESKTOP_TEXT_MAX),
+});
+export type DesktopSendRequest = z.infer<typeof desktopSendRequestSchema>;
+
+export const desktopMessageSchema = z.object({
+  id: z.string().min(1).max(100),
+  chatId: desktopChatIdSchema,
+  text: z.string().max(DESKTOP_TEXT_MAX),
+  at: z.number().int().nonnegative(),
+});
+export type DesktopMessage = z.infer<typeof desktopMessageSchema>;
+
+export const DESKTOP_REPLY_KINDS = [
+  // The chat started working on it
+  'working',
+  // The chat's answer
+  'answer',
+  // The chat waits for a click in the browser's Ava panel
+  'needs_click',
+  // The chat stopped with an error
+  'error',
+] as const;
+export type DesktopReplyKind = (typeof DESKTOP_REPLY_KINDS)[number];
+
+export const desktopReplyRequestSchema = z.object({
+  requestId: requestIdSchema,
+  chatId: desktopChatIdSchema,
+  kind: z.enum(DESKTOP_REPLY_KINDS),
+  text: z.string().max(DESKTOP_TEXT_MAX),
+});
+export type DesktopReplyRequest = z.infer<typeof desktopReplyRequestSchema>;
+
+export const desktopReplySchema = z.object({
+  seq: z.number().int().positive(),
+  chatId: desktopChatIdSchema,
+  kind: z.enum(DESKTOP_REPLY_KINDS),
+  text: z.string().max(DESKTOP_TEXT_MAX),
+  at: z.number().int().nonnegative(),
+});
+export type DesktopReply = z.infer<typeof desktopReplySchema>;
+
+export const desktopMessagesRequestSchema = z.object({ after: z.number().int().nonnegative() });
+
+export const desktopStatusSchema = z.object({
+  ok: z.literal(true),
+  version: z.string().max(40),
+  uptimeMs: z.number().nonnegative(),
+  // The extension pulled within DESKTOP_BROWSER_SEEN_MS
+  browserOpen: z.boolean(),
+  whatsapp: z.enum(WHATSAPP_STATES),
+  // Messages sent from the app that the extension has not taken yet
+  queued: z.number().int().nonnegative(),
+  // The newest answer's number: a window that opens starts reading after it
+  lastSeq: z.number().int().nonnegative(),
+});
+export type DesktopStatus = z.infer<typeof desktopStatusSchema>;
+
+export const desktopInboxReplySchema = z.object({ ok: z.literal(true), messages: z.array(desktopMessageSchema) });

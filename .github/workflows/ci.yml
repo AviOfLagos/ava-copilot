@@ -59,3 +59,32 @@ jobs:
       - name: Build
         working-directory: site
         run: pnpm build
+
+  desktop:
+    name: Desktop app (types, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Types, tests and the bundles need no Electron binary
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      # The app imports the shared protocol and appearance record, whose types need the app's .wxt config
+      - name: Install (app)
+        run: pnpm install --frozen-lockfile
+      - name: Install (desktop)
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile
+      - name: Types
+        working-directory: desktop
+        run: pnpm type-check
+      - name: Unit tests
+        working-directory: desktop
+        run: pnpm test
+      - name: Build
+        working-directory: desktop
+        run: pnpm build

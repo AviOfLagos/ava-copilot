@@ -40,6 +40,9 @@ import type { KeyStore } from './workflows/keys';
 import { MacWorkflows } from './workflows/service';
 import { traceRoutes } from './traces/routes';
 import { TraceStore } from './traces/store';
+import { DesktopChannel } from './desktop/channel';
+import { desktopRoutes } from './desktop/routes';
+import { writeDesktopToken } from './desktop/token';
 import type { MacWorkflowsDeps } from './workflows/service';
 
 /** Stand-ins for tests: process runner, MCP connector, clock, network, session engine. */
@@ -78,11 +81,14 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
   const run = deps.run ?? runProcess;
   const internalSecret = randomBytes(32).toString('base64url');
   const pairing = new PairingStore(config.dataDir, now);
+  const desktopToken = await writeDesktopToken(config.dataDir);
+  const desktop = new DesktopChannel(now);
   const server = new BrainServer({
     host: config.host,
     port: config.port,
     pairing,
     internalSecretHash: createHash('sha256').update(internalSecret).digest('hex'),
+    desktopSecretHash: desktopToken.hash,
     log,
   });
   const keys = deps.keys ?? createKeyStore({ run });
@@ -166,6 +172,7 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     enabled: process.env.AVA_TRACES !== 'off',
   });
   server.add(...traceRoutes({ traces }));
+  server.add(...desktopRoutes({ channel: desktop, whatsapp, version: config.version, startedAt, now }));
   server.add(
     ...brainRoutes({
       config,
@@ -204,6 +211,8 @@ export async function createBrain(config: BrainConfig, deps: BrainDeps = {}) {
     backupSecrets,
     vaults,
     calendar,
+    desktop,
+    desktopToken: desktopToken.token,
     internalSecret,
     async start(): Promise<number> {
       const port = await server.listen();

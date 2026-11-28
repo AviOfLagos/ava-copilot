@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // The desktop app is its own package: it type-checks its main process, preload and window, and the parts of the
+  // extension it shares (the Ava Brain protocol, the appearance record).
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "paths": {
+      "@protocol": ["../src/shared/lib/protocol/companion.ts"],
+      "@appearance": ["../src/storage/lib/settings/appearance.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "vitest.config.ts"]
+}

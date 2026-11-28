@@ -1,0 +1,278 @@
+/* The Ava window. Colours come from the panel's tokens (src/ui/lib/theme.css); spacing follows --density. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font:
+    14px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --density: 1;
+  --ui-zoom: 1;
+  --s: calc(8px * var(--density));
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  /* The root zoom scales everything; the viewport height is divided back so the window is filled exactly */
+  height: calc(100vh / var(--ui-zoom));
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 1.5);
+  /* Room for the traffic lights of the hidden title bar */
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 2) calc(var(--s) * 1.5) 84px;
+  border-bottom: 1px solid var(--color-border);
+  -webkit-app-region: drag;
+}
+
+.top button,
+.top select,
+.top .chips {
+  -webkit-app-region: no-drag;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.orb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgb(var(--primary-rgb)), rgb(var(--call-rgb) / 0.8));
+  box-shadow: 0 0 12px rgb(var(--primary-rgb) / 0.5);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s);
+  flex: 1;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px calc(var(--s) * 1.25);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-muted-foreground);
+}
+
+.chip-ok .dot {
+  background: rgb(var(--primary-rgb));
+}
+
+.chip-hold {
+  color: var(--color-hold-foreground);
+}
+
+.chip-hold .dot {
+  background: rgb(var(--hold-rgb));
+}
+
+.look {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 0.5);
+}
+
+.look-value {
+  min-width: 3.2em;
+  text-align: center;
+  color: var(--color-muted-foreground);
+  font-size: 12px;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button,
+select {
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  border-radius: 8px;
+  padding: calc(var(--s) * 0.5) calc(var(--s) * 1.25);
+  cursor: pointer;
+}
+
+select {
+  appearance: none;
+  padding-right: calc(var(--s) * 1.25);
+}
+
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 1px;
+}
+
+button.icon {
+  min-width: 2.2em;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+button.primary {
+  background: var(--primary-strong);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--s) * 1.5);
+  padding: calc(var(--s) * 3) max(calc(var(--s) * 3), calc((100% - 760px) / 2));
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  max-width: 460px;
+  color: var(--color-muted-foreground);
+}
+
+.empty h1 {
+  color: var(--color-foreground);
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 var(--s);
+}
+
+.bubble {
+  max-width: 82%;
+  padding: calc(var(--s) * 1.25) calc(var(--s) * 1.75);
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+}
+
+.bubble-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bubble-you {
+  align-self: flex-end;
+  background: var(--primary-tint);
+}
+
+.bubble-ava {
+  align-self: flex-start;
+  background: var(--color-card);
+}
+
+.bubble-failed {
+  margin-top: calc(var(--s) * 0.5);
+  font-size: 12px;
+  color: rgb(var(--destructive-rgb));
+}
+
+.note {
+  align-self: center;
+  max-width: 90%;
+  padding: calc(var(--s) * 0.75) calc(var(--s) * 1.5);
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted-foreground);
+}
+
+.note-hold {
+  border-color: rgb(var(--hold-rgb) / 0.4);
+  background: rgb(var(--hold-rgb) / 0.1);
+  color: var(--color-hold-foreground);
+}
+
+.note-error {
+  border-color: rgb(var(--destructive-rgb) / 0.4);
+  background: rgb(var(--destructive-rgb) / 0.08);
+  color: rgb(var(--destructive-rgb));
+}
+
+.working {
+  align-self: flex-start;
+  color: var(--color-muted-foreground);
+  font-size: 13px;
+}
+
+.composer {
+  margin: 0 max(calc(var(--s) * 3), calc((100% - 760px) / 2)) calc(var(--s) * 2.5);
+  padding: calc(var(--s) * 1.25);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s);
+}
+
+.composer form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s);
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  background: transparent;
+  padding: calc(var(--s) * 0.75);
+  max-height: 200px;
+}
+
+.composer textarea::placeholder {
+  color: var(--color-muted-foreground);
+}

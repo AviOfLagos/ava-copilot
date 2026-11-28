@@ -122,10 +122,14 @@ export const reopenedNote = (url: string): string =>
 
 type Parked = Pick<Runner, 'executor' | 'browserContext' | 'binding' | 'modelKey'>;
 
-// A task a person gave (typed, said, or sent from their phone), as against one an agent, a routine or the brief
+// A task a person gave (typed, said, sent from their phone or from the desktop app), as against one an agent, a routine or the brief
 // started. Only these may start on, or move to, a tab the user has open in another window.
 const attended = (thread: Pick<ThreadRecord, 'origin'>) =>
-  thread.origin === undefined || thread.origin === 'user' || thread.origin === 'voice' || thread.origin === 'whatsapp';
+  thread.origin === undefined ||
+  thread.origin === 'user' ||
+  thread.origin === 'voice' ||
+  thread.origin === 'whatsapp' ||
+  thread.origin === 'desktop';
 
 const modelKeyOf = (thread: ThreadRecord) => (thread.model ? `${thread.model.provider}>${thread.model.modelName}` : '');
 

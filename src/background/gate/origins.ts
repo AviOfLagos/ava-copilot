@@ -15,8 +15,9 @@ type Chat = Pick<ThreadRecord, 'origin'> | undefined;
 const NOT_THE_USER: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief']);
 // The user, but not at the computer
 const REMOTE: ReadonlySet<Origin> = new Set(['whatsapp']);
-// Every commit waits for the click, whatever the confirm settings say
-export const ALWAYS_ASK_ORIGINS: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'whatsapp']);
+// Every commit waits for the click, whatever the confirm settings say. The desktop app's chat too, for now: its words
+// come through Ava Brain's queue from any process holding the desktop token, not from the panel itself
+export const ALWAYS_ASK_ORIGINS: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'whatsapp', 'desktop']);
 
 const has = (set: ReadonlySet<Origin>, chat: Chat) => Boolean(chat?.origin && set.has(chat.origin));
 
