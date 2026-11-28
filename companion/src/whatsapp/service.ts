@@ -15,6 +15,7 @@ import type {
   WhatsAppReactRequest,
   WhatsAppReviseRequest,
   WhatsAppState,
+  WhatsAppAbility,
   WhatsAppStatus,
   WhatsAppVoiceRequest,
 } from '@protocol';
@@ -308,7 +309,24 @@ export class WhatsAppService {
       reconnect: this.state === 'linked' ? this.reconnect : null,
       lastInAt: this.saved.lastInAt,
       lastOutAt: this.saved.lastOutAt,
+      abilities: this.abilities(),
     };
+  }
+
+  /**
+   * What she can do on WhatsApp now: what the running driver implements, and what this service reads from the
+   * owner's messages. Nothing while there is no driver. A new driver method shows up here by itself (#202).
+   */
+  abilities(): WhatsAppAbility[] {
+    const driver = this.driver;
+    if (!driver || this.state !== 'linked') return [];
+    const abilities: WhatsAppAbility[] = ['send_text', 'read_voice', 'read_photo', 'read_document', 'read_link'];
+    if (driver.sendVoice) abilities.push('send_voice');
+    if (driver.react) abilities.push('react');
+    if (driver.edit) abilities.push('edit');
+    if (driver.remove) abilities.push('delete');
+    if (driver.presence) abilities.push('presence');
+    return abilities;
   }
 
   /** A chat on his phone that Ava has heard from: she can always write back there. */

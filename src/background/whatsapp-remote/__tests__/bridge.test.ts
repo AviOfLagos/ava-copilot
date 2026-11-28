@@ -34,6 +34,7 @@ const LINKED: WhatsAppStatus = {
   reconnect: null,
   lastInAt: null,
   lastOutAt: null,
+  abilities: [],
 };
 
 const thread = (fields: Partial<ThreadRecord> = {}): ThreadRecord =>

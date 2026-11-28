@@ -31,6 +31,8 @@ import { loadIdentityContext } from '../identity/context';
 import { buildAbilitiesSection, buildChannelSection } from '../agent/prompts/channel';
 import { currentCapabilities } from '../capabilities/sources';
 import { COMING } from '../capabilities/coming';
+import { whatsappAbilitiesSection } from '../whatsapp-remote/abilities';
+import { whatsappRemoteStateStore } from '../whatsapp-remote/state';
 
 export interface RunModels {
   navigator: ChatModel;
@@ -159,13 +161,18 @@ async function channelFacts(workspaceId: string | null | undefined): Promise<Cha
 }
 
 /** What Ava can do now, for the planner; without it the chat still runs. */
-function abilitiesSection(origin: ThreadRecord['origin'], facts: ChannelFacts): string {
+async function abilitiesSection(origin: ThreadRecord['origin'], facts: ChannelFacts): Promise<string> {
+  let section = '';
   try {
     // Never list a tool this chat is not offered
-    return buildAbilitiesSection(capabilitiesForOrigin(currentCapabilities(), origin, facts), COMING);
+    section = buildAbilitiesSection(capabilitiesForOrigin(currentCapabilities(), origin, facts), COMING);
   } catch {
-    return '';
+    // The chat still runs
   }
+  if (origin !== 'whatsapp') return section;
+  // What WhatsApp itself can do, from Ava Brain's last word on it (#202)
+  const status = (await whatsappRemoteStateStore.getState().catch(() => null))?.status;
+  return section + whatsappAbilitiesSection(status ? (status.abilities ?? []) : null);
 }
 
 /**
@@ -202,7 +209,7 @@ export async function createExecutor(options: {
     personality,
     identitySection: buildCoreSection(await loadIdentityContext(thread?.workspaceId)),
     channelSection: buildChannelSection(thread?.origin),
-    abilitiesSection: abilitiesSection(thread?.origin, toolFacts),
+    abilitiesSection: await abilitiesSection(thread?.origin, toolFacts),
     channel: thread?.origin ?? 'user',
     toolFacts,
   });
