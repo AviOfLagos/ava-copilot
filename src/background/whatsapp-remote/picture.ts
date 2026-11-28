@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { llmProviderStore, threadStore } from '@extension/storage';
 import { toAppError } from '@extension/shared';
-import { WHATSAPP_CAPTION_MAX } from '@src/shared/lib/protocol/companion';
+import {
+  WHATSAPP_CAPTION_MAX,
+  WHATSAPP_SEND_MEDIA_MAX_BYTES,
+  WHATSAPP_SEND_MIMETYPES,
+} from '@src/shared/lib/protocol/companion';
 import type { WhatsAppSendMediaRequest } from '@src/shared/lib/protocol/companion';
 import { ActionResult } from '../agent/types';
 import type { AgentContext } from '../agent/types';
@@ -46,13 +50,39 @@ export interface PictureDeps {
   screenshot: (context: AgentContext) => Promise<string | null>;
   // The picture model: what it costs (null: unknown), and how to make one; null when none is set up
   imageModel: (context: AgentContext) => Promise<{
+    // "<providerId>:<model>": the yes holds for this model only
+    id: string;
     label: string;
     costUsd: number | null;
     local: boolean;
     make: (prompt: string) => Promise<MadePicture>;
   } | null>;
   send: (request: Omit<WhatsAppSendMediaRequest, 'requestId'>) => Promise<void>;
+  now: () => number;
+  // Kept per chat in memory: the price last said, and the picture last made (see below)
+  quotes: Map<string, Quote>;
+  made: Map<string, Made>;
 }
+
+/**
+ * A price said in a chat. A paid picture is made only when one was said there for the same model, and he has
+ * written since (the message being answered is a newer one): `cost_ok` alone, which the model sets, never is enough.
+ */
+interface Quote {
+  modelId: string;
+  replyTo: string | null;
+  at: number;
+}
+const QUOTE_FOR_MS = 15 * 60 * 1000;
+
+// A picture made and paid for but not sent (WhatsApp refused it, or the line was down): asked again for the same
+// description, it is sent again without paying again
+interface Made {
+  description: string;
+  picture: MadePicture;
+  at: number;
+}
+const MADE_FOR_MS = 30 * 60 * 1000;
 
 function fail(context: AgentContext, error: string): ActionResult {
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_FAIL, error);
@@ -82,25 +112,46 @@ export async function sendPictureAction(
   } else {
     const description = input.description.trim();
     if (!description) return fail(context, 'Say what the picture should show in `description`.');
-    const model = await deps.imageModel(context).catch(() => null);
-    if (!model) {
-      return fail(
-        context,
-        'No picture model is set up. Tell him to add one in Models & usage → Pictures (for example OpenAI gpt-image-1), and that nothing was made.',
-      );
+    const kept = deps.made.get(context.taskId);
+    if (kept && kept.description === description && deps.now() - kept.at < MADE_FOR_MS) {
+      picture = kept.picture;
+    } else {
+      const model = await deps.imageModel(context).catch(() => null);
+      if (!model) {
+        return fail(
+          context,
+          'No picture model is set up. Tell him to add one in Models & usage → Pictures (for example OpenAI gpt-image-1), and that nothing was made.',
+        );
+      }
+      if (!model.local) {
+        const replyTo = await deps.replyTo(context.taskId);
+        const quote = deps.quotes.get(context.taskId);
+        const agreed =
+          input.cost_ok &&
+          quote !== undefined &&
+          quote.modelId === model.id &&
+          quote.replyTo !== replyTo &&
+          deps.now() - quote.at < QUOTE_FOR_MS;
+        if (!agreed) {
+          deps.quotes.set(context.taskId, { modelId: model.id, replyTo, at: deps.now() });
+          return new ActionResult({
+            extractedContent: `Not made yet. One picture with ${model.label} costs ${priceText(model.costUsd)}. Ask him in one line whether to make it for that, and end your turn. When he answers yes, call this again with cost_ok true.`,
+            includeInMemory: true,
+          });
+        }
+        deps.quotes.delete(context.taskId);
+      }
+      try {
+        picture = await model.make(description);
+      } catch (error) {
+        return fail(context, `The picture could not be made: ${toAppError(error).message}`);
+      }
+      deps.made.set(context.taskId, { description, picture, at: deps.now() });
     }
-    if (!model.local && !input.cost_ok) {
-      const price = priceText(model.costUsd);
-      return new ActionResult({
-        extractedContent: `Not made yet. One picture with ${model.label} costs ${price}. Ask him in one line whether to make it for that; call again with cost_ok true only after he says yes.`,
-        includeInMemory: true,
-      });
-    }
-    try {
-      picture = await model.make(description);
-    } catch (error) {
-      return fail(context, `The picture could not be made: ${toAppError(error).message}`);
-    }
+  }
+  const bytes = Math.floor((picture.base64.length * 3) / 4);
+  if (!WHATSAPP_SEND_MIMETYPES.image.includes(picture.mediaType) || bytes > WHATSAPP_SEND_MEDIA_MAX_BYTES.image) {
+    return fail(context, 'The picture is too big or of a kind WhatsApp cannot show, so it was not sent.');
   }
   try {
     const replyTo = await deps.replyTo(context.taskId);
@@ -115,6 +166,7 @@ export async function sendPictureAction(
   } catch (error) {
     return fail(context, `The picture could not be sent on WhatsApp: ${toAppError(error).message}`);
   }
+  if (input.source === 'generate') deps.made.delete(context.taskId);
   const done = input.source === 'screenshot' ? 'Screenshot sent on WhatsApp.' : 'Picture sent on WhatsApp.';
   context.emitEvent(Actors.NAVIGATOR, ExecutionState.ACT_OK, done);
   return new ActionResult({ extractedContent: done, includeInMemory: true });
@@ -134,13 +186,17 @@ const defaultPictureDeps: PictureDeps = {
     const model = provider ? imageModelFor(provider, choice.providerId, choice.model) : null;
     if (!model) return null;
     return {
+      id: `${choice.providerId}:${choice.model}`,
       label: choice.model,
       costUsd: pictureCostUsd(choice.model),
       local: choice.local,
-      make: prompt => makePicture(model, prompt, context.controller.signal),
+      make: prompt => makePicture(model, choice.model, prompt, context.controller.signal),
     };
   },
   send: async request => {
     await companionClient.whatsappSendMedia({ requestId: crypto.randomUUID(), ...request });
   },
+  now: () => Date.now(),
+  quotes: new Map(),
+  made: new Map(),
 };

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentContext } from '../../agent/types';
 import { fitsRole } from '@extension/storage';
 import type { ModelCatalogEntry } from '@extension/storage';
-import { pictureCostUsd } from '../../llm/images';
+import { pictureCostUsd, pictureOptions } from '../../llm/images';
 import { priceText, sendPictureAction, sendPictureActionSchema } from '../picture';
 import type { PictureDeps } from '../picture';
 
@@ -14,25 +14,37 @@ const input = (extra: Record<string, unknown> = {}) =>
 function deps(overrides: Partial<PictureDeps> = {}) {
   const sent: Parameters<PictureDeps['send']>[0][] = [];
   const make = vi.fn(async () => ({ base64: 'iVBORw0KGgo=', mediaType: 'image/png' }));
+  // The message being answered: a new one each time he writes
+  const chat = { replyTo: 'wa-msg-1', modelId: 'openai:gpt-image-1' };
   const all: PictureDeps = {
     origin: async () => 'whatsapp',
-    replyTo: async () => 'wa-msg-1',
+    replyTo: async () => chat.replyTo,
     screenshot: async () => '/9j/4AAQ',
-    imageModel: async () => ({ label: 'gpt-image-1', costUsd: 0.042, local: false, make }),
+    imageModel: async () => ({ id: chat.modelId, label: 'gpt-image-1', costUsd: 0.042, local: false, make }),
     send: async request => void sent.push(request),
+    now: () => 1_000_000,
+    quotes: new Map(),
+    made: new Map(),
     ...overrides,
   };
-  return { all, sent, make };
+  return { all, sent, make, chat };
 }
 
 describe('send_whatsapp_picture (#204)', () => {
   it('says the price and makes nothing until he said yes', async () => {
-    const { all, sent, make } = deps();
+    const { all, sent, make, chat } = deps();
     const first = await sendPictureAction(context, input(), all);
     expect(first.extractedContent).toContain('about $0.04');
-    expect(first.extractedContent).toContain('cost_ok true only after he says yes');
+    expect(first.extractedContent).toContain('When he answers yes');
     expect(make).not.toHaveBeenCalled();
     expect(sent).toEqual([]);
+
+    // cost_ok in the same turn, before he wrote anything: still only the price
+    await sendPictureAction(context, input({ cost_ok: true }), all);
+    expect(make).not.toHaveBeenCalled();
+
+    // He wrote back ("yes"): now it is made
+    chat.replyTo = 'wa-msg-2';
 
     const second = await sendPictureAction(context, input({ cost_ok: true, caption: ' Sunset ' }), all);
     expect(second.error).toBeFalsy();
@@ -44,14 +56,69 @@ describe('send_whatsapp_picture (#204)', () => {
         mimetype: 'image/png',
         caption: 'Sunset',
         kind: 'reply',
-        replyTo: 'wa-msg-1',
+        replyTo: 'wa-msg-2',
       },
     ]);
+  });
+
+  it('never pays on cost_ok alone, nor for a model other than the one priced', async () => {
+    const { all, make, chat } = deps();
+    // No price was said in this chat
+    expect((await sendPictureAction(context, input({ cost_ok: true }), all)).extractedContent).toContain(
+      'Not made yet',
+    );
+    chat.replyTo = 'wa-msg-2';
+    // The model changed between the price and his yes
+    chat.modelId = 'openai:gpt-image-2';
+    expect((await sendPictureAction(context, input({ cost_ok: true }), all)).extractedContent).toContain(
+      'Not made yet',
+    );
+    expect(make).not.toHaveBeenCalled();
+  });
+
+  it('sends a paid picture again without paying again when the first send failed', async () => {
+    let fails = true;
+    const { all, make, sent, chat } = deps({
+      send: async request => {
+        if (fails) throw new Error('WhatsApp is not linked on your Mac.');
+        sent.push(request);
+      },
+    });
+    await sendPictureAction(context, input(), all);
+    chat.replyTo = 'wa-msg-2';
+    expect((await sendPictureAction(context, input({ cost_ok: true }), all)).error).toContain('not linked');
+    fails = false;
+    expect((await sendPictureAction(context, input({ cost_ok: true }), all)).error).toBeFalsy();
+    expect(make).toHaveBeenCalledTimes(1);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('does not send a picture too big or of a kind WhatsApp cannot show', async () => {
+    const { all, sent } = deps({
+      imageModel: async () => ({
+        id: 'local:x',
+        label: 'x',
+        costUsd: null,
+        local: true,
+        make: async () => ({ base64: 'R0lGODlh', mediaType: 'image/gif' }),
+      }),
+    });
+    expect((await sendPictureAction(context, input(), all)).error).toContain('cannot show');
+    expect(sent).toEqual([]);
+  });
+
+  it('asks OpenAI for the quality the price is for, as a small JPEG', () => {
+    expect(pictureOptions('gpt-image-1')).toEqual({
+      size: '1024x1024',
+      providerOptions: { openai: { quality: 'medium', outputFormat: 'jpeg', outputCompression: 85 } },
+    });
+    expect(pictureOptions('imagen-4.0-generate-001')).toEqual({});
   });
 
   it('makes a picture with a local model without asking', async () => {
     const { all, sent } = deps({
       imageModel: async () => ({
+        id: 'local:flux',
         label: 'flux',
         costUsd: null,
         local: true,
@@ -85,7 +152,7 @@ describe('send_whatsapp_picture (#204)', () => {
         throw new Error('That picture is too big to send on WhatsApp.');
       },
     });
-    const result = await sendPictureAction(context, input({ cost_ok: true }), all);
+    const result = await sendPictureAction(context, input({ source: 'screenshot', description: '' }), all);
     expect(result.error).toContain('too big');
   });
 

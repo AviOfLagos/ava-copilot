@@ -59,13 +59,37 @@ export function pictureCostUsd(model: string): number | null {
   return PRICE_PER_PICTURE.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
+/**
+ * What is asked of the provider, so the price said is the price paid: OpenAI's GPT Image at medium quality (its
+ * default "auto" may pick high, several times dearer) as a compressed JPEG, one 1024 px square.
+ */
+export function pictureOptions(model: string): Pick<Parameters<typeof generateImage>[0], 'size' | 'providerOptions'> {
+  const name = model.toLowerCase();
+  if (/gpt-image|chatgpt-image/.test(name)) {
+    return {
+      size: '1024x1024',
+      providerOptions: { openai: { quality: 'medium', outputFormat: 'jpeg', outputCompression: 85 } },
+    };
+  }
+  if (/dall-e/.test(name)) return { size: '1024x1024' };
+  return {};
+}
+
 /** Makes one picture. */
 export async function makePicture(
   imageModel: ImageModel,
+  model: string,
   prompt: string,
   abortSignal?: AbortSignal,
 ): Promise<MadePicture> {
-  const { image } = await generateImage({ model: imageModel, prompt, n: 1, maxRetries: 1, abortSignal });
+  const { image } = await generateImage({
+    model: imageModel,
+    prompt,
+    n: 1,
+    maxRetries: 1,
+    abortSignal,
+    ...pictureOptions(model),
+  });
   if (!image?.base64) throw new AppError('unavailable', 'The picture model returned no picture.');
   return { base64: image.base64, mediaType: image.mediaType || 'image/png' };
 }
