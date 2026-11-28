@@ -76,7 +76,9 @@ describe('hosted Suture tracing', () => {
     const { tracedCall } = await load();
     await tracedCall('ava-planner', async () => 1, []);
     expect(sent.span).toHaveBeenCalledWith('ava-planner', {}, undefined);
-    expect(sent.init).toHaveBeenCalledWith(expect.objectContaining({ captureContent: false }));
+    expect(sent.init).toHaveBeenCalledWith(
+      expect.objectContaining({ captureContent: false, endpoint: 'https://app.trysuture.com' }),
+    );
   });
 
   it('stops again when the setting is switched off', async () => {

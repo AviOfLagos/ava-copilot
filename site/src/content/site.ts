@@ -1024,7 +1024,7 @@ export const privacy = {
         },
         {
           title: 'To Suture, only if you switch on hosted tracing',
-          body: 'Off by default. If you turn on Settings › Privacy › Hosted tracing, and your build carries a Suture key, each planner and navigator call sends a trace to the hosted Suture project (suture.nexprove.com): the step name, timing, model name and token counts. The text of prompts and replies is a second switch, also off by default, because chats can contain what other people send you on WhatsApp.',
+          body: 'Off by default. If you turn on Settings › Privacy › Hosted tracing, and your build carries a Suture key, each planner and navigator call sends a trace to the hosted Suture project (trysuture.com): the step name, timing, model name and token counts. The text of prompts and replies is a second switch, also off by default, because chats can contain what other people send you on WhatsApp.',
         },
         {
           title: 'Checking a key',
