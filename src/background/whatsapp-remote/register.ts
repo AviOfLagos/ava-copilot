@@ -279,7 +279,7 @@ command('wava_link', z.object({}), async () => {
 });
 command('wava_unlink', z.object({}), async () => {
   const result = await withStatus(companionClient.whatsappUnlink());
-  await whatsappRemoteStateStore.update({ replyTo: null, waitingTold: null, inFlight: null });
+  await whatsappRemoteStateStore.update({ replyTo: null, waitingTold: null, inFlight: null, replyMode: null });
   return result;
 });
 command('wava_connect', z.object({}), () => withStatus(companionClient.whatsappConnect()));

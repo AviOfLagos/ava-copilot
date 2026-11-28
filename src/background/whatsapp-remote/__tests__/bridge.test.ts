@@ -853,6 +853,65 @@ describe('answering like a person', () => {
     expect(chosen.h.voices).toHaveLength(1);
   });
 
+  describe('voice or text, as he asks (#203)', () => {
+    const voiceFiles = { files: { v: { data: 'T2dnUw==' } } };
+
+    it('text→voice: "reply with voice notes" is kept, said back, and his next typed message gets a voice note', async () => {
+      const h = harness({ messages: [msg('m1', 'Reply with voice notes from now on')], thread: thread() });
+      h.setState({ threadId: 'wa-thread', threadDay: '2026-10-20' });
+      await h.bridge.poll();
+      expect(h.state().replyMode).toBe('voice');
+      expect(h.sent).toEqual([{ text: 'wava_mode_voice', kind: 'reply', replyTo: 'm1' }]);
+      // The instruction alone runs no turn
+      expect(h.turns).toEqual([]);
+
+      const next = await turnOn([msg('a', 'what is on tomorrow?')], 'Two meetings.');
+      next.h.setState({ replyMode: h.state().replyMode });
+      await next.finish();
+      expect(next.h.voices).toHaveLength(1);
+      expect(next.h.sent).toEqual([]);
+    });
+
+    it('voice→text: "answer in text" inside a voice note sets text, and the rest of it is still asked', async () => {
+      const { h, finish } = await turnOn([voiceMsg('v')], 'Two meetings.', {
+        ...voiceFiles,
+        heard: { 'T2dnUw==': 'answer in text, what is on tomorrow?' },
+      });
+      expect(h.state().replyMode).toBe('text');
+      expect(h.turns.map(turn => turn.text)).toEqual(['wava_voice_label what is on tomorrow?']);
+      await finish();
+      expect(h.voices).toEqual([]);
+      expect(h.sent).toEqual([
+        { text: 'wava_mode_text', kind: 'reply', replyTo: 'v' },
+        { text: 'Two meetings.', kind: 'reply', replyTo: 'v' },
+      ]);
+    });
+
+    it('text→text and voice→voice when he asked for nothing (the settings, as before)', async () => {
+      const typed = await turnOn([msg('a', 'what is on tomorrow?')], 'Two meetings.');
+      await typed.finish();
+      expect(typed.h.voices).toEqual([]);
+      expect(typed.h.state().replyMode).toBeNull();
+      const spoken = await turnOn([voiceMsg('v')], 'Two meetings.', {
+        ...voiceFiles,
+        heard: { 'T2dnUw==': 'what is on tomorrow?' },
+      });
+      await spoken.finish();
+      expect(spoken.h.voices).toHaveLength(1);
+    });
+
+    it('keeps "answer in text" for a voice note that comes later, and his words beat the settings', async () => {
+      const { h, finish } = await turnOn([voiceMsg('v')], 'Two meetings.', {
+        ...voiceFiles,
+        heard: { 'T2dnUw==': 'what is on tomorrow?' },
+      });
+      h.setState({ replyMode: 'text' });
+      h.setSettings({ voiceForText: true });
+      await finish();
+      expect(h.voices).toEqual([]);
+    });
+  });
+
   it('answers in words when voice replies are off', async () => {
     const { h, finish } = await turnOn([voiceMsg('v')], 'Two meetings.', {
       files: { v: { data: 'T2dnUw==' } },

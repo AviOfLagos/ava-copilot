@@ -8,7 +8,8 @@ import type { WhatsAppAbility } from '@src/shared/lib/protocol/companion';
 
 export const ABILITY_WORDS: Record<WhatsAppAbility, string> = {
   send_text: 'answer in text',
-  send_voice: 'answer with a voice note in your voice',
+  send_voice:
+    'answer with a voice note in your voice (he can say "reply with voice notes" or "answer in text" to switch)',
   send_image: 'send pictures (made from a description, or a screenshot of a page)',
   send_video: 'send short videos',
   send_document: 'send files from this computer',

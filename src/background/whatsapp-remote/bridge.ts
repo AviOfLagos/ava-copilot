@@ -15,6 +15,7 @@ import { toSpeakableText } from '../tts/markdown';
 import { commandOf } from './commands';
 import { clip, describeRequest, plainOutside, requestKind, toWhatsAppText } from './format';
 import { mayNotify } from './notices';
+import { answersInVoice, replyModeOf } from './reply-mode';
 import type { InFlightAnswer, WhatsAppRemoteSettings, WhatsAppRemoteState } from './state';
 
 /**
@@ -314,6 +315,18 @@ export class WhatsAppBridge {
   }
 
   /**
+   * "Reply with voice notes", "answer in text": kept for his chat, said back in one short line, and what is left of
+   * his message returned for the turn (empty when the instruction was all of it).
+   */
+  private async replyMode(message: WhatsAppMessage, words: string): Promise<string> {
+    const instruction = replyModeOf(words);
+    if (!instruction) return words;
+    await this.deps.updateState({ replyMode: instruction.mode });
+    await this.say(t(instruction.mode === 'voice' ? 'wava_mode_voice' : 'wava_mode_text'), 'reply', message.id);
+    return instruction.rest;
+  }
+
+  /**
    * One turn from the messages waiting: his words, each voice note as the words it says, his photos, and as content
    * the model reads (never instructions) each document's text and each link's preview. What cannot be read is said
    * on WhatsApp and left out.
@@ -326,10 +339,16 @@ export class WhatsAppBridge {
       const words = message.text.trim();
       if (message.kind === 'voice' && message.media) {
         const said = await this.voiceOf(message, message.media.mediaType);
-        if (said && !(await this.command(message, said))) parts.push(`${t('wava_voice_label')} ${said}`);
+        const rest = said ? await this.replyMode(message, said) : '';
+        if (rest && !(await this.command(message, rest))) parts.push(`${t('wava_voice_label')} ${rest}`);
         continue;
       }
-      if (message.kind === 'text' && (await this.command(message, words))) continue;
+      if (message.kind === 'text') {
+        const rest = await this.replyMode(message, words);
+        if (!rest || (await this.command(message, rest))) continue;
+        parts.push(rest);
+        continue;
+      }
       if (message.kind === 'image' && message.media) {
         try {
           const reply = await this.deps.media({ id: message.id, as: 'bytes' });
@@ -559,7 +578,8 @@ export class WhatsAppBridge {
       const text = toWhatsAppText(answer.content, undefined, t('wava_reply_more'));
       const quote = state.quoteReply;
       const settings = await this.deps.settings();
-      const spoken = settings.voiceReplies && (state.replyVoice || settings.voiceForText);
+      // His own "reply with voice notes" / "answer in text" wins over the settings (#203)
+      const spoken = answersInVoice(state.replyMode ?? null, settings, state.replyVoice);
       let sent = spoken ? await this.sayVoice(answer.content, thread, replyTo, quote) : false;
       // Words when the voice note could not go, and after one that had a link in it (to tap)
       if (!sent || LINK.test(text)) sent = (await this.say(text, 'reply', replyTo, quote && !sent)) || sent;
