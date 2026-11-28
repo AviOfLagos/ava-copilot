@@ -51,6 +51,8 @@ import {
   workflowRunReplySchema,
   workflowSyncReplySchema,
   WHATSAPP_ROUTES,
+  DESKTOP_ROUTES,
+  desktopInboxReplySchema,
   whatsappInboxReplySchema,
   whatsappMediaReplySchema,
   whatsappSendReplySchema,
@@ -58,6 +60,7 @@ import {
 } from '@src/shared/lib/protocol/companion';
 import type {
   ArtifactCreateRequest,
+  DesktopReplyRequest,
   BackupBeginRequest,
   RecordingBeginRequest,
   GhRequest,
@@ -749,6 +752,41 @@ export class CompanionClient {
   }
 
   /** The owner's messages waiting: pulling also tells Ava Brain the browser is open. Not retried: the next poll is. */
+  /** What the desktop app's window sent, taken (docs/desktop-app.md). */
+  desktopInbox() {
+    return this.call({
+      method: 'POST',
+      path: DESKTOP_ROUTES.inbox,
+      body: {},
+      schema: desktopInboxReplySchema,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** The desktop messages kept here: Ava Brain forgets them. */
+  desktopAck(ids: string[]) {
+    return this.call({
+      method: 'POST',
+      path: DESKTOP_ROUTES.ack,
+      body: { ids },
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
+  /** "Working", an answer, a wait for a click or an error, for the desktop app's window. */
+  desktopReply(request: DesktopReplyRequest) {
+    return this.call({
+      method: 'POST',
+      path: DESKTOP_ROUTES.reply,
+      body: request,
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
   whatsappInbox(signal?: AbortSignal) {
     return this.call({
       method: 'POST',

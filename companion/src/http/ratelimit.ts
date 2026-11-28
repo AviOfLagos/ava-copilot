@@ -20,6 +20,8 @@ export const RATE_RULES = {
   studio: { capacity: 20, perMinute: 30 },
   view: { capacity: 300, perMinute: 1200 },
   internal: { capacity: 200, perMinute: 2000 },
+  // The desktop app reads every second or two, and the extension pulls its queue: their own bucket
+  desktop: { capacity: 60, perMinute: 400 },
   // Ava stopping or leaving a call: a bucket of its own, so a busy minute never holds it back
   meetStop: { capacity: 60, perMinute: 600 },
   // Backup chunks: a 256 MB snapshot is 64 of them, sent or read back in a row

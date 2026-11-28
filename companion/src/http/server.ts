@@ -21,7 +21,7 @@ import type { RateGroup } from './ratelimit';
  *   first answer instead of running twice.
  */
 
-export type RouteAuth = 'api' | 'pair' | 'internal' | 'studio-page' | 'studio-session' | 'view';
+export type RouteAuth = 'api' | 'pair' | 'internal' | 'desktop' | 'studio-page' | 'studio-session' | 'view';
 
 export interface RouteContext {
   req: IncomingMessage;
@@ -56,6 +56,8 @@ export interface ServerOptions {
   port: number;
   pairing: PairingStore;
   internalSecretHash: string;
+  // The desktop app's token (desktop/token.ts); without it the desktop routes refuse
+  desktopSecretHash?: string;
   log: Logger;
   limiter?: RateLimiter;
   now?: () => number;
@@ -292,6 +294,14 @@ export class BrainServer {
         if (origin !== undefined) fail('forbidden', 'Not allowed.');
         const token = bearerToken(req.headers.authorization);
         if (!token || !sameSecret(token, this.options.internalSecretHash)) fail('auth', 'Not allowed.');
+        return;
+      }
+      case 'desktop': {
+        // The desktop app's main process: the token from Ava Brain's data folder, and no Origin (web pages send one)
+        if (origin !== undefined) fail('forbidden', 'Not allowed.');
+        const token = bearerToken(req.headers.authorization);
+        const hash = this.options.desktopSecretHash;
+        if (!token || !hash || !sameSecret(token, hash)) fail('auth', 'Not allowed.');
         return;
       }
       case 'studio-session':

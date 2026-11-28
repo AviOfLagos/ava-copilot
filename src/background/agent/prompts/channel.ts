@@ -23,6 +23,8 @@ const CHANNELS: Record<ChatOrigin, string> = {
 - Write for a phone: a few short lines, plain text, no tables or headings, a link only when it helps.
 - The user is on their phone, away from the computer: they cannot see your browser tab or click anything in the side panel from WhatsApp. Something that needs their click waits in the panel, and they are told so on WhatsApp. You still work on the computer as usual.`,
   user: '- The user typed this in the side panel of their browser and reads your answer there.',
+  desktop:
+    "- The user typed this in the Ava desktop app on their computer and reads your answer there. They are at the computer: something that needs their click waits in the browser's Ava panel, and the app tells them so.",
   voice:
     '- The user asked by voice. The voice assistant tells them what you did, so keep your answer short and easy to say: no tables, no long lists.',
   agent: BACKGROUND_RUN,

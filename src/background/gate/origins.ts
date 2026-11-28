@@ -15,8 +15,9 @@ type Chat = Pick<ThreadRecord, 'origin'> | undefined;
 const NOT_THE_USER: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief']);
 // The user, but not at the computer
 const REMOTE: ReadonlySet<Origin> = new Set(['whatsapp']);
-// Every commit waits for the click, whatever the confirm settings say
-export const ALWAYS_ASK_ORIGINS: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'whatsapp']);
+// Every commit waits for the click, whatever the confirm settings say. The desktop app's chat too, for now: its words
+// come through Ava Brain's queue from any process holding the desktop token, not from the panel itself
+export const ALWAYS_ASK_ORIGINS: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'whatsapp', 'desktop']);
 
 const has = (set: ReadonlySet<Origin>, chat: Chat) => Boolean(chat?.origin && set.has(chat.origin));
 
@@ -27,7 +28,8 @@ export function alwaysAsks(chat: Chat): boolean {
 
 // Chats that are not the user typing at the computer. Whether they read outside content is only known when the code
 // that started them said so (`tainted: false`); when it did not, they count as having read some.
-const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp']);
+// The desktop app's chat counts too, for now (D1): its words come through Ava Brain's queue, not the panel itself
+const MAY_READ_OUTSIDE: ReadonlySet<Origin> = new Set(['agent', 'workflow', 'brief', 'whatsapp', 'desktop']);
 
 /**
  * Whether a saved "Allow every time" rule of `kind` may answer for a chat, and whether its card may offer one. The one
@@ -70,6 +72,10 @@ export function configRefusal(chat: Chat, what: string): string | null {
     return `${what} can only be created, changed or run from a chat with the user, not by a routine or an agent.`;
   }
   if (isRemoteChat(chat)) return `${what} can only be created or changed from the browser, not from WhatsApp.`;
+  // Until the agent loop lives in the app (docs/desktop-app.md, D7), configuration is changed in the browser only
+  if (chat?.origin === 'desktop') {
+    return `${what} can only be created or changed from the browser's Ava panel, not from the desktop app yet.`;
+  }
   return null;
 }
 

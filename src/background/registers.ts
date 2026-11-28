@@ -13,6 +13,7 @@ import './voice/engines/register';
 import './history/register';
 import './whatsapp/register';
 import './whatsapp-remote/register';
+import './desktop-remote/register';
 import './drive/register';
 import './chats/register';
 import './personalities/register';
