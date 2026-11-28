@@ -16,9 +16,11 @@ import { digest } from '../once';
 import { people } from '../people/people';
 import { transcribeSpeech } from '../voice/dictation';
 import { registerNoticeSink } from '../notices';
-import { registerCommand, registerRecovery } from '../registry';
+import { registerAgentAction, registerCommand, registerRecovery } from '../registry';
+import { Action } from '../agent/actions/builder';
 import { services } from '../registry/services';
 import { WhatsAppBridge } from './bridge';
+import { PICTURE_PROMPT, sendPictureAction, sendPictureActionSchema } from './picture';
 import { photoAttachment } from './media';
 import { HHMM, whatsappRemoteSettingsStore, whatsappRemoteStateStore } from './state';
 import { TaskDesk } from './task-desk';
@@ -325,4 +327,14 @@ command('wava_test', z.object({}), async () => {
     kind: 'reply',
   });
   await whatsappRemoteStateStore.update({ status: { ...status, qr: null }, checkedAt: Date.now() });
+});
+
+// A picture to him on WhatsApp (#204): offered in WhatsApp chats only (tools/channels.ts)
+registerAgentAction({
+  prompt: PICTURE_PROMPT,
+  create: context =>
+    new Action(
+      (input: z.infer<typeof sendPictureActionSchema.schema>) => sendPictureAction(context, input),
+      sendPictureActionSchema,
+    ),
 });

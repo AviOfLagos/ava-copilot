@@ -2,7 +2,13 @@ import { createHash, randomInt } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { WHATSAPP_MEDIA_MAX_BYTES, WHATSAPP_TEXT_MAX, WHATSAPP_VOICE_MAX_BYTES } from '@protocol';
+import {
+  WHATSAPP_MEDIA_MAX_BYTES,
+  WHATSAPP_SEND_MEDIA_MAX_BYTES,
+  WHATSAPP_SEND_MIMETYPES,
+  WHATSAPP_TEXT_MAX,
+  WHATSAPP_VOICE_MAX_BYTES,
+} from '@protocol';
 import type {
   WhatsAppLink,
   WhatsAppMediaKind,
@@ -14,6 +20,7 @@ import type {
   WhatsAppReaction,
   WhatsAppReactRequest,
   WhatsAppReviseRequest,
+  WhatsAppSendMediaRequest,
   WhatsAppState,
   WhatsAppAbility,
   WhatsAppStatus,
@@ -94,6 +101,33 @@ export const NOT_YET_TEXT: Record<string, string> = {
 export const DOWNLOAD_FAILED_TEXT = "I couldn't download that from WhatsApp. Try sending it again.";
 const NOUNS: Record<WhatsAppMediaKind, string> = { voice: 'voice note', image: 'photo', document: 'file' };
 const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+const MEDIA_NOUN = { image: 'picture', video: 'video', document: 'file' } as const;
+
+/** Whether the first bytes are what the type says (for the types that have a mark); text has none to check. */
+export function bytesAre(mimetype: string, data: Buffer): boolean {
+  const ascii = (from: number, to: number) => data.subarray(from, to).toString('latin1');
+  switch (mimetype) {
+    case 'image/jpeg':
+      return data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+    case 'image/png':
+      return ascii(1, 4) === 'PNG';
+    case 'image/webp':
+      return ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP';
+    case 'video/mp4':
+      return ascii(4, 8) === 'ftyp';
+    case 'application/pdf':
+      return ascii(0, 5) === '%PDF-';
+    case 'application/zip':
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      return ascii(0, 2) === 'PK';
+    default:
+      // Plain text: no NUL bytes in the first part
+      return !data.subarray(0, 4096).includes(0);
+  }
+}
+
 export const tooBigText = (kind: WhatsAppMediaKind, size: number) =>
   `That ${NOUNS[kind]} is ${megabytes(size)}; I can take up to ${megabytes(WHATSAPP_MEDIA_MAX_BYTES[kind])}.`;
 // Kept documents beyond this much in all: the oldest go
@@ -322,6 +356,9 @@ export class WhatsAppService {
     if (!driver || this.state !== 'linked') return [];
     const abilities: WhatsAppAbility[] = ['send_text', 'read_voice', 'read_photo', 'read_document', 'read_link'];
     if (driver.sendVoice) abilities.push('send_voice');
+    if (driver.sendImage) abilities.push('send_image');
+    if (driver.sendVideo) abilities.push('send_video');
+    if (driver.sendDocument) abilities.push('send_document');
     if (driver.react) abilities.push('react');
     if (driver.edit) abilities.push('edit');
     if (driver.remove) abilities.push('delete');
@@ -559,6 +596,32 @@ export class WhatsAppService {
     const quote = this.quoteOf(request, chatId);
     await this.deliver(chatId, 'voice', () =>
       driver.sendVoice!(chatId, { audio, seconds: request.seconds, waveform: request.waveform }, { quote }),
+    );
+    return this.status();
+  }
+
+  /**
+   * A picture, a short video or a file, to the same chat an answer in words would go to (#204). The bytes must be
+   * what the type says, and no bigger than WHATSAPP_SEND_MEDIA_MAX_BYTES; counted like any send.
+   */
+  async sendMedia(request: Omit<WhatsAppSendMediaRequest, 'requestId'>): Promise<WhatsAppStatus> {
+    const chatId = this.answerChat(request);
+    const driver = this.ready(chatId);
+    const noun = MEDIA_NOUN[request.media];
+    const send =
+      request.media === 'image' ? driver.sendImage : request.media === 'video' ? driver.sendVideo : driver.sendDocument;
+    if (!send) fail('unavailable', `This WhatsApp client cannot send ${noun}s.`);
+    const data = Buffer.from(request.data, 'base64');
+    if (data.length > WHATSAPP_SEND_MEDIA_MAX_BYTES[request.media]) {
+      fail('invalid', `That ${noun} is too big to send on WhatsApp.`);
+    }
+    if (!WHATSAPP_SEND_MIMETYPES[request.media].includes(request.mimetype) || !bytesAre(request.mimetype, data)) {
+      fail('invalid', `That is not a ${noun} WhatsApp can show.`);
+    }
+    const quote = this.quoteOf(request, chatId);
+    const caption = request.caption?.trim() || undefined;
+    await this.deliver(chatId, null, () =>
+      send.call(driver, chatId, { data, mimetype: request.mimetype, caption, fileName: request.fileName }, { quote }),
     );
     return this.status();
   }

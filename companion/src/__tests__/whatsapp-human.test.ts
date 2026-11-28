@@ -3,12 +3,13 @@ import { getContentType, isPnUser, jidNormalizedUser, normalizeMessageContent } 
 import { memoryLogger } from '../log';
 import { baileysDriver, incomingOfBaileys, quotedOf, VOICE_MIMETYPE } from '../whatsapp/baileys';
 import type { BaileysModule } from '../whatsapp/baileys';
-import type { WaDriver, WaEvents, WaIncoming, WaPresence, WaQuote, WaRef, WaVoice } from '../whatsapp/driver';
+import type { WaDriver, WaEvents, WaIncoming, WaMedia, WaPresence, WaQuote, WaRef, WaVoice } from '../whatsapp/driver';
 import {
   DELETE_WINDOW_MS,
   EDIT_TOO_LATE_TEXT,
   EDIT_VOICE_TEXT,
   EDIT_WINDOW_MS,
+  bytesAre,
   isOggOpus,
   NOTHING_TO_CHANGE_TEXT,
   OWN_MARK,
@@ -33,6 +34,7 @@ class FakeDriver implements WaDriver {
   sent: { chatId: string; text: string; quote?: WaQuote }[] = [];
   voices: { chatId: string; voice: WaVoice; quote?: WaQuote }[] = [];
   reactions: { message: WaRef; emoji: string }[] = [];
+  media: { how: 'image' | 'document'; chatId: string; media: WaMedia }[] = [];
   edits: { message: WaRef; text: string }[] = [];
   removed: WaRef[] = [];
   presences: { chatId: string; state: WaPresence }[] = [];
@@ -52,6 +54,14 @@ class FakeDriver implements WaDriver {
   async sendVoice(chatId: string, voice: WaVoice, options?: { quote?: WaQuote }) {
     this.voices.push({ chatId, voice, ...(options?.quote ? { quote: options.quote } : {}) });
     return `voice-${++this.next}`;
+  }
+  async sendImage(chatId: string, media: WaMedia) {
+    this.media.push({ how: 'image', chatId, media });
+    return `image-${++this.next}`;
+  }
+  async sendDocument(chatId: string, media: WaMedia) {
+    this.media.push({ how: 'document', chatId, media });
+    return `doc-${++this.next}`;
   }
   async react(message: WaRef, emoji: string) {
     this.reactions.push({ message, emoji });
@@ -150,6 +160,80 @@ describe('Ava answering like a person', () => {
     const { service } = await linked();
     service.setQuietHours('00:00', '23:59');
     await expect(service.sendVoice(voice({ kind: 'brief' }))).rejects.toMatchObject({ kind: 'forbidden' });
+  });
+
+  describe('pictures, videos and files (#204)', () => {
+    const PNG = Buffer.concat([Buffer.from([0x89]), Buffer.from('PNG\r\n'), Buffer.alloc(40)]);
+    const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(40)]);
+    const media = (extra: Record<string, unknown> = {}) => ({
+      media: 'image' as const,
+      data: PNG.toString('base64'),
+      mimetype: 'image/png',
+      kind: 'reply' as const,
+      ...extra,
+    });
+
+    it('sends a picture with its caption to his chat, counted toward the hour', async () => {
+      const { driver, service, settle } = await linked({ limit: 1, phone: true });
+      driver.deliver({ id: 'p1', chatId: PHONE_CHAT, fromMe: false, body: 'make me a picture', senderNumber: PHONE });
+      await settle();
+      const status = await service.sendMedia(media({ replyTo: 'p1', caption: '  A solar panel at sunset  ' }));
+      expect(driver.media).toHaveLength(1);
+      expect(driver.media[0]).toMatchObject({
+        how: 'image',
+        chatId: PHONE_CHAT,
+        media: { mimetype: 'image/png', caption: 'A solar panel at sunset' },
+      });
+      expect(driver.media[0].media.data.equals(PNG)).toBe(true);
+      expect(status.sentLastHour).toBe(1);
+      await expect(service.sendMedia(media({ replyTo: 'p1' }))).rejects.toMatchObject({ kind: 'rate_limit' });
+    });
+
+    it('sends a file under its own name', async () => {
+      const { driver, service } = await linked();
+      await service.sendMedia(
+        media({
+          media: 'document',
+          data: PDF.toString('base64'),
+          mimetype: 'application/pdf',
+          fileName: 'Invoice.pdf',
+        }),
+      );
+      expect(driver.media[0]).toMatchObject({ how: 'document', chatId: SELF, media: { fileName: 'Invoice.pdf' } });
+    });
+
+    it('refuses bytes that are not what the type says, a type of the wrong kind, and too big', async () => {
+      const { driver, service } = await linked();
+      await expect(service.sendMedia(media({ data: PDF.toString('base64') }))).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      await expect(service.sendMedia(media({ mimetype: 'application/pdf' }))).rejects.toMatchObject({
+        kind: 'invalid',
+      });
+      const big = Buffer.concat([PNG, Buffer.alloc(5 * 1024 * 1024)]).toString('base64');
+      await expect(service.sendMedia(media({ data: big }))).rejects.toMatchObject({ kind: 'invalid' });
+      expect(driver.media).toHaveLength(0);
+      expect(bytesAre('text/plain', Buffer.from('hello'))).toBe(true);
+      expect(bytesAre('text/plain', Buffer.from([0x68, 0, 0x69]))).toBe(false);
+    });
+
+    it('says plainly when the client cannot send that kind', async () => {
+      const { service } = await linked();
+      const mp4 = Buffer.concat([Buffer.alloc(4), Buffer.from('ftypisom'), Buffer.alloc(40)]).toString('base64');
+      await expect(
+        service.sendMedia(media({ media: 'video', data: mp4, mimetype: 'video/mp4' })),
+      ).rejects.toMatchObject({
+        kind: 'unavailable',
+      });
+      expect(service.status().abilities).toEqual(expect.arrayContaining(['send_image', 'send_document']));
+      expect(service.status().abilities).not.toContain('send_video');
+    });
+
+    it('keeps quiet hours for pictures too, except answers', async () => {
+      const { service } = await linked();
+      service.setQuietHours('00:00', '23:59');
+      await expect(service.sendMedia(media({ kind: 'brief' }))).rejects.toMatchObject({ kind: 'forbidden' });
+    });
   });
 
   it('quotes the message an answer is for, only when asked and only his', async () => {
@@ -334,6 +418,19 @@ describe('Baileys driver, like a person', () => {
         message: { conversation: 'hi' },
       },
     });
+  });
+
+  it('sends a picture, a video and a file as WhatsApp media, with words under them', async () => {
+    const { driver, socket } = await baileys();
+    const data = Buffer.from('bytes');
+    await driver.sendImage!(`${PHONE}@c.us`, { data, mimetype: 'image/png', caption: 'Sunset' });
+    await driver.sendVideo!(`${PHONE}@c.us`, { data, mimetype: 'video/mp4' });
+    await driver.sendDocument!(`${PHONE}@c.us`, { data, mimetype: 'application/pdf', fileName: 'Plan.pdf' });
+    expect(socket.sent.map(sent => sent.content)).toEqual([
+      { image: data, mimetype: 'image/png', caption: 'Sunset' },
+      { video: data, mimetype: 'video/mp4' },
+      { document: data, mimetype: 'application/pdf', fileName: 'Plan.pdf' },
+    ]);
   });
 
   it('quotes a voice note as one', () => {

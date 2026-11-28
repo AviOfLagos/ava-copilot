@@ -41,6 +41,8 @@ import {
   whatsappReviseRequestSchema,
   whatsappSendRequestSchema,
   WHATSAPP_VOICE_MAX_BODY_BYTES,
+  WHATSAPP_SEND_MEDIA_MAX_BODY_BYTES,
+  whatsappSendMediaRequestSchema,
   whatsappVoiceRequestSchema,
 } from '@protocol';
 import type { HealthReply, MacApp } from '@protocol';
@@ -719,6 +721,20 @@ export function brainRoutes(deps: RouteDeps): Route[] {
       async handler({ body }) {
         const request = parse(whatsappVoiceRequestSchema, body);
         return json({ ok: true, status: await deps.whatsapp.sendVoice(request) });
+      },
+    },
+    {
+      // A picture, a short video or a file for him (#204), counted like any send
+      method: 'POST',
+      path: WHATSAPP_ROUTES.sendMedia,
+      name: 'whatsapp.sendMedia',
+      auth: 'api',
+      rate: 'run',
+      dedupe: true,
+      maxBodyBytes: WHATSAPP_SEND_MEDIA_MAX_BODY_BYTES,
+      async handler({ body }) {
+        const request = parse(whatsappSendMediaRequestSchema, body);
+        return json({ ok: true, status: await deps.whatsapp.sendMedia(request) });
       },
     },
     {

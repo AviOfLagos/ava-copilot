@@ -37,6 +37,15 @@ describe('WhatsApp abilities (#202)', () => {
     expect(notYet).not.toContain('send pictures');
   });
 
+  it('keeps a send "not yet" while no tool here makes it, even when the driver can (#204)', () => {
+    const section = whatsappAbilitiesSection([...TODAY, 'send_image', 'send_video', 'send_document']);
+    const [can, notYet] = section.split('Not possible on WhatsApp yet:');
+    expect(can).toContain('send_whatsapp_picture');
+    expect(can).not.toContain('send files from this computer');
+    expect(notYet).toContain('send files from this computer (being built)');
+    expect(notYet).toContain('send short videos (being built)');
+  });
+
   it('promises nothing WhatsApp-specific when Ava Brain did not say', () => {
     expect(whatsappAbilitiesSection(null)).toContain('Do not promise');
     expect(whatsappAbilitiesSection([])).toContain('Do not promise');

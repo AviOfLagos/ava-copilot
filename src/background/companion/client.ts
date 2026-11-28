@@ -81,6 +81,7 @@ import type {
   WhatsAppReactRequest,
   WhatsAppReviseRequest,
   WhatsAppSendRequest,
+  WhatsAppSendMediaRequest,
   WhatsAppVoiceRequest,
 } from '@src/shared/lib/protocol/companion';
 import { BRAIN_TOKEN_REF, brainSettingsStore } from './state';
@@ -841,6 +842,17 @@ export class CompanionClient {
       body: request,
       schema: whatsappSendReplySchema,
       timeoutMs: 90_000,
+    });
+  }
+
+  /** A picture, a short video or a file for him (#204); counted like any send. */
+  whatsappSendMedia(request: WhatsAppSendMediaRequest) {
+    return this.call({
+      method: 'POST',
+      path: WHATSAPP_ROUTES.sendMedia,
+      body: request,
+      schema: whatsappSendReplySchema,
+      timeoutMs: 120_000,
     });
   }
 

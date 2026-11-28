@@ -14,4 +14,5 @@ export const ROLE_LABELS: Record<ModelRole, { name: MessageKey; hint: MessageKey
   realtime: { name: 'models_role_realtime', hint: 'models_role_realtime_hint' },
   tts: { name: 'models_role_tts', hint: 'models_role_tts_hint' },
   search: { name: 'models_role_search', hint: 'models_role_search_hint' },
+  image: { name: 'models_role_image', hint: 'models_role_image_hint' },
 };

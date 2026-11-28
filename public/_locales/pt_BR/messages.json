@@ -3160,6 +3160,15 @@
   "models_role_tts_hint": {
     "message": "Lê as respostas em voz alta."
   },
+  "models_role_image": {
+    "message": "Imagens"
+  },
+  "models_role_image_hint": {
+    "message": "Cria imagens a partir de uma descrição, por exemplo para enviar no WhatsApp. A maioria custa alguns centavos cada."
+  },
+  "models_role_empty_image": {
+    "message": "Ainda não há modelo de imagens. Adicione OpenAI (gpt-image-1), Gemini (Imagen) ou Grok e ative um dos modelos de imagem."
+  },
   "models_role_search": {
     "message": "Busca na web"
   },

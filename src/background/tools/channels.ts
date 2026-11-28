@@ -67,6 +67,9 @@ export const GROWTH_TOOLS: ReadonlySet<string> = new Set([
   'stop_contact',
 ]);
 
+// Actions that only make sense in one channel: offered there and nowhere else
+export const ONLY_IN: ReadonlyMap<string, ToolChannel> = new Map([['send_whatsapp_picture', 'whatsapp']]);
+
 const AWAY_FROM_THE_SCREEN: ReadonlySet<ToolChannel> = new Set(['whatsapp', 'agent', 'routine']);
 
 export interface ChannelFacts {
@@ -80,6 +83,8 @@ export function chatActionAllowed(
   channel: ToolChannel,
   facts: ChannelFacts = { hasProduct: true },
 ): boolean {
+  const only = ONLY_IN.get(name);
+  if (only) return channel === only;
   if (!AWAY_FROM_THE_SCREEN.has(channel)) return true;
   if (NEEDS_THE_SCREEN.has(name)) return false;
   return facts.hasProduct || !GROWTH_TOOLS.has(name);

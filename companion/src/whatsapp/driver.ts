@@ -46,6 +46,15 @@ export interface WaQuote extends WaRef {
   voiceSeconds: number | null;
 }
 
+/** A picture, video or file to send, with words under it when given. */
+export interface WaMedia {
+  data: Buffer;
+  mimetype: string;
+  caption?: string;
+  // Shown on a document
+  fileName?: string;
+}
+
 export interface WaVoice {
   // Ogg/Opus
   audio: Buffer;
@@ -97,6 +106,10 @@ export interface WaDriver {
   sendText(chatId: string, text: string, options?: { quote?: WaQuote }): Promise<string | null>;
   /** Sends a voice note (push to talk). */
   sendVoice?(chatId: string, voice: WaVoice, options?: { quote?: WaQuote }): Promise<string | null>;
+  /** Sends a picture, a short video or a file (#204). */
+  sendImage?(chatId: string, media: WaMedia, options?: { quote?: WaQuote }): Promise<string | null>;
+  sendVideo?(chatId: string, media: WaMedia, options?: { quote?: WaQuote }): Promise<string | null>;
+  sendDocument?(chatId: string, media: WaMedia, options?: { quote?: WaQuote }): Promise<string | null>;
   /** Reacts to a message; an empty emoji takes the reaction back. */
   react?(message: WaRef, emoji: string): Promise<void>;
   /** Changes the words of one of her own messages. */

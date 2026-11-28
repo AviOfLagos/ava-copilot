@@ -823,6 +823,8 @@ export const WHATSAPP_ROUTES = {
   presence: '/v1/whatsapp/presence',
   react: '/v1/whatsapp/react',
   voice: '/v1/whatsapp/voice',
+  // A picture, a short video or a file she made or found, to him (#204)
+  sendMedia: '/v1/whatsapp/send-media',
   revise: '/v1/whatsapp/revise',
 } as const;
 
@@ -1033,6 +1035,38 @@ export const whatsappReactRequestSchema = z.object({
 export type WhatsAppReactRequest = z.infer<typeof whatsappReactRequestSchema>;
 
 // A voice note: Ogg/Opus made in the extension (there is no ffmpeg on the Mac), sent as WhatsApp's own push-to-talk
+// What Ava sends him besides words and voice notes (#204), and the largest of each. WhatsApp itself takes more;
+// these keep a send quick and the request small.
+export const WHATSAPP_SEND_MEDIA_MAX_BYTES = {
+  image: 5 * 1024 * 1024,
+  video: 16 * 1024 * 1024,
+  document: 16 * 1024 * 1024,
+} as const;
+export type WhatsAppSendMediaKind = keyof typeof WHATSAPP_SEND_MEDIA_MAX_BYTES;
+export const WHATSAPP_SEND_MEDIA_KINDS = Object.keys(WHATSAPP_SEND_MEDIA_MAX_BYTES) as WhatsAppSendMediaKind[];
+// The types each kind may be; a file of another type is not sent
+export const WHATSAPP_SEND_MIMETYPES: Record<WhatsAppSendMediaKind, readonly string[]> = {
+  image: ['image/jpeg', 'image/png', 'image/webp'],
+  video: ['video/mp4'],
+  document: [
+    'application/pdf',
+    'text/plain',
+    'text/csv',
+    'text/markdown',
+    'application/zip',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'video/mp4',
+  ],
+};
+const WHATSAPP_SEND_MEDIA_BASE64_MAX = Math.ceil((WHATSAPP_SEND_MEDIA_MAX_BYTES.video * 4) / 3) + 4;
+export const WHATSAPP_SEND_MEDIA_MAX_BODY_BYTES = WHATSAPP_SEND_MEDIA_BASE64_MAX + 8000;
+export const WHATSAPP_CAPTION_MAX = 1024;
+
 export const WHATSAPP_VOICE_MAX_BYTES = 4 * 1024 * 1024;
 const WHATSAPP_VOICE_BASE64_MAX = Math.ceil((WHATSAPP_VOICE_MAX_BYTES * 4) / 3) + 4;
 export const WHATSAPP_VOICE_MAX_BODY_BYTES = WHATSAPP_VOICE_BASE64_MAX + 4000;
@@ -1053,6 +1087,33 @@ export const whatsappVoiceRequestSchema = z.object({
   quote: z.boolean().optional(),
 });
 export type WhatsAppVoiceRequest = z.infer<typeof whatsappVoiceRequestSchema>;
+
+export const whatsappSendMediaRequestSchema = z.object({
+  requestId: requestIdSchema,
+  media: z.enum(['image', 'video', 'document']),
+  data: z
+    .string()
+    .min(16)
+    .max(WHATSAPP_SEND_MEDIA_BASE64_MAX)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'Base64 only.'),
+  mimetype: z
+    .string()
+    .max(120)
+    .regex(/^[a-z]+\/[a-z0-9.+-]+$/),
+  // A name only, never a path
+  fileName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(name => !/[/\\]/.test(name) && !name.includes(String.fromCharCode(0)), 'A file name, not a path.')
+    .optional(),
+  caption: z.string().max(WHATSAPP_CAPTION_MAX).optional(),
+  kind: z.enum(WHATSAPP_NOTICE_KINDS),
+  replyTo: z.string().min(1).max(200).optional(),
+  quote: z.boolean().optional(),
+});
+export type WhatsAppSendMediaRequest = z.infer<typeof whatsappSendMediaRequestSchema>;
 
 // Her own last message (or the one of hers he quoted), changed when he says so ("delete that", "change that to…")
 export const whatsappReviseRequestSchema = z
