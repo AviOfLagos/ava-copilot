@@ -13084,5 +13084,13 @@
         "example": "Invoice chat"
       }
     }
+  },
+  "wava_mode_voice": {
+    "message": "Combinado, vou responder com mensagens de voz a partir de agora.",
+    "description": "WhatsApp: the owner asked for voice-note replies (#203)"
+  },
+  "wava_mode_text": {
+    "message": "Combinado, vou responder por texto a partir de agora.",
+    "description": "WhatsApp: the owner asked for text replies (#203)"
   }
 }

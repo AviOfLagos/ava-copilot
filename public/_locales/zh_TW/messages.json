@@ -13084,5 +13084,13 @@
         "example": "Invoice chat"
       }
     }
+  },
+  "wava_mode_voice": {
+    "message": "好的，之後我會用語音訊息回覆。",
+    "description": "WhatsApp: the owner asked for voice-note replies (#203)"
+  },
+  "wava_mode_text": {
+    "message": "好的，之後我會用文字回覆。",
+    "description": "WhatsApp: the owner asked for text replies (#203)"
   }
 }

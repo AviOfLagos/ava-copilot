@@ -2,6 +2,7 @@ import { createStorage } from '@extension/storage/lib/base/base';
 import { StorageEnum } from '@extension/storage/lib/base/enums';
 import type { WhatsAppStatus } from '@src/shared/lib/protocol/companion';
 import type { NoticeKind } from '../notices';
+import type { ReplyMode } from './reply-mode';
 import type { PendingTaskMessage } from './task-desk';
 
 /**
@@ -61,6 +62,9 @@ export interface WhatsAppRemoteState {
   inFlight: InFlightAnswer | null;
   // Task lists that waited for quiet hours to end: ids and titles only (./task-desk.ts)
   taskOutbox: PendingTaskMessage[];
+  // How he asked to be answered ("reply with voice notes", "answer in text"); null: the settings decide (#203).
+  // His chat is the one WhatsApp chat Ava answers; per person once others can talk to her (#205)
+  replyMode: ReplyMode | null;
 }
 
 export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
@@ -77,6 +81,7 @@ export const DEFAULT_WHATSAPP_REMOTE_STATE: WhatsAppRemoteState = {
   acknowledged: null,
   inFlight: null,
   taskOutbox: [],
+  replyMode: null,
 };
 
 const settingsStorage = createStorage<WhatsAppRemoteSettings>(

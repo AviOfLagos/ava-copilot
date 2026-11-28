@@ -172,7 +172,8 @@ async function abilitiesSection(origin: ThreadRecord['origin'], facts: ChannelFa
   if (origin !== 'whatsapp') return section;
   // What WhatsApp itself can do, from Ava Brain's last word on it (#202)
   const status = (await whatsappRemoteStateStore.getState().catch(() => null))?.status;
-  return section + whatsappAbilitiesSection(status ? (status.abilities ?? []) : null);
+  // Unlinked or not heard from: nothing is claimed
+  return section + whatsappAbilitiesSection(status?.state === 'linked' ? (status.abilities ?? []) : null);
 }
 
 /**
