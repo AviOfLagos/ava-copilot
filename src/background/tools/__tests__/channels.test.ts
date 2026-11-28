@@ -68,11 +68,14 @@ describe('the tools each channel is offered', () => {
     }
   });
 
-  it('leaves the panel list exactly as it was', () => {
+  it('leaves the panel list exactly as it was, but for the tools of one other channel', () => {
     const all = inventory.builtChatActions();
+    const panelTools = all.filter(action => (channels.ONLY_IN.get(action.name()) ?? 'panel') === 'panel');
     for (const facts of [{ hasProduct: true }, { hasProduct: false }]) {
-      expect(channels.actionsForChannel(all, 'panel', facts)).toEqual(all);
+      expect(channels.actionsForChannel(all, 'panel', facts)).toEqual(panelTools);
     }
+    // A WhatsApp-only tool is offered on WhatsApp and nowhere else
+    expect(channels.chatActionChannels('send_whatsapp_picture')).toEqual(['whatsapp']);
     // A voice-started chat is read in the panel, so it gets the panel's list
     expect(channels.channelOfOrigin('voice')).toBe('panel');
     expect(channels.channelOfOrigin(undefined)).toBe('panel');
@@ -145,9 +148,15 @@ describe('"what can you do?" on WhatsApp', () => {
     }
   });
 
-  it('tells the panel everything, as before', () => {
+  it('tells the panel everything, as before, but the tools of one other channel', () => {
     const full = sources.currentCapabilities();
-    expect(abilities.capabilitiesForOrigin(full, 'user', facts)).toEqual(full);
+    const names = (capabilities: typeof full) => [
+      ...capabilities.groups.flatMap(group => group.entries.map(entry => entry.name)),
+      ...capabilities.agentActions.map(action => action.name),
+    ];
+    const panel = abilities.capabilitiesForOrigin(full, 'user', facts);
+    expect(names(panel)).toEqual(names(full).filter(name => !channels.ONLY_IN.has(name)));
+    expect(panel.places).toEqual(full.places);
     expect(abilities.capabilitiesForOrigin(full, 'whatsapp', facts)).not.toEqual(full);
   });
 });

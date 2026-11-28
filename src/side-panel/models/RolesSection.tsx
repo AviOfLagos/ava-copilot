@@ -43,6 +43,7 @@ const EMPTY_HINT: Partial<Record<ModelRole, MessageKey>> = {
   tts: 'models_role_empty_gemini',
   transcribe: 'models_role_empty_gemini',
   search: 'models_role_empty_gemini',
+  image: 'models_role_empty_image',
 };
 
 // O-series, GPT-5 or GPT-6: the only OpenAI and Azure models that take a reasoning effort.

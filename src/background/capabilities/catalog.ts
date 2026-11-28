@@ -72,6 +72,7 @@ const GROUP_ORDER: CapabilityGroupId[] = [
 // Where each known tool goes; a tool not listed goes under "More", never nowhere
 export const TOOL_GROUPS: Record<string, CapabilityGroupId> = {
   read_screen: 'screen',
+  send_whatsapp_picture: 'conversation',
   list_tabs: 'screen',
   read_page: 'screen',
   open_tab: 'screen',

@@ -9,6 +9,8 @@ export type ModelRole =
   | 'transcribe'
   | 'realtime'
   | 'tts'
+  // Makes pictures from a description (#204)
+  | 'image'
   | 'search';
 
 /** One model a provider offers, as discovered by the registry. */

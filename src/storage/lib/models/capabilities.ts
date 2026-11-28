@@ -92,6 +92,8 @@ export function fitsRole(entry: ModelCatalogEntry, role: ModelRole): boolean {
       return hasTag(entry, TAG.speech);
     case 'search':
       return chat && hasTag(entry, TAG.search);
+    case 'image':
+      return hasTag(entry, TAG.imageOutput);
   }
 }
 

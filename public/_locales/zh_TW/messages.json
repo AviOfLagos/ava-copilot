@@ -3160,6 +3160,15 @@
   "models_role_tts_hint": {
     "message": "朗讀回答。"
   },
+  "models_role_image": {
+    "message": "圖片"
+  },
+  "models_role_image_hint": {
+    "message": "依描述產生圖片，例如在 WhatsApp 傳送。多數每張花費幾美分。"
+  },
+  "models_role_empty_image": {
+    "message": "尚無圖片模型。請新增 OpenAI（gpt-image-1）、Gemini（Imagen）或 Grok，並開啟其中一個圖片模型。"
+  },
   "models_role_search": {
     "message": "網路搜尋"
   },

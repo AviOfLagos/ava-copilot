@@ -8,7 +8,7 @@ when a tool has no row, or when a tool has no group in `TOOL_GROUPS`. Which chan
 and are offered the growth team's tools only when the chat's workspace has a product (the channels below show the
 case with a product).
 
-121 tools. Per channel: panel 94, voice 67, whatsapp 90, agent 90, routine 90.
+122 tools. Per channel: panel 94, voice 67, whatsapp 91, agent 90, routine 90.
 
 "In" says where the tool is defined (chat action, voice tool, or both under one name). "Chars" is the size of its
 definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an agent or a routine.
@@ -104,6 +104,7 @@ definition as the model sees it: chat / voice. A chat is the panel, WhatsApp, an
 | `search_knowledge` (search knowledge) | chat | Memory and knowledge | panel, whatsapp, agent, routine | 452 / - | Search the user's knowledge base: their past chats with you, their meeting notes and transcripts, and pages they saved. |
 | `select_dropdown_option` (select dropdown option) | chat | Screen and tabs | panel, whatsapp, agent, routine | 317 / - | Select dropdown option for interactive element index by the text of the option you want to select |
 | `send_keys` (send keys) | chat | Screen and tabs | panel, whatsapp, agent, routine | 507 / - | Send strings of special keys like Backspace, Insert, PageDown, Delete, Enter. |
+| `send_whatsapp_picture` (send whatsapp picture) | chat | Conversation | whatsapp | 985 / - | In a WhatsApp chat only: send the owner a picture on WhatsApp. |
 | `set_listening_mode` (set listening mode) | voice | Settings and checks | voice | - / 511 | Turns ambient listening on or off. |
 | `set_personality` (set personality) | both | Settings and checks | panel, voice, whatsapp, agent, routine | 332 / 407 | Switches the assistant's personality to one of the user's (built-in or their own), by name. |
 | `set_up_connection` (set up connection) | both | Settings and checks | panel, voice, whatsapp, agent, routine | 681 / 431 | Set up a connection for the user, step by step: Obsidian, a connector (GitHub, Linear, Notion, Slack, Gmail, Google Calendar, Google Drive, or any MCP server b… |

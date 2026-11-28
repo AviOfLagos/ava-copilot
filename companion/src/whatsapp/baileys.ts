@@ -392,6 +392,40 @@ export function baileysDriver(log: Logger, load: () => Promise<BaileysModule> = 
         );
         return sent?.key?.id ?? null;
       },
+      async sendImage(chatId, media, options) {
+        const quoted = options?.quote ? { quoted: quotedOf(options.quote) } : undefined;
+        const content = {
+          image: media.data,
+          mimetype: media.mimetype,
+          ...(media.caption ? { caption: media.caption } : {}),
+        };
+        const sent = await connected().sendMessage(toBaileysJid(chatId), content, quoted);
+        return sent?.key?.id ?? null;
+      },
+      async sendVideo(chatId, media, options) {
+        const quoted = options?.quote ? { quoted: quotedOf(options.quote) } : undefined;
+        const content = {
+          video: media.data,
+          mimetype: media.mimetype,
+          ...(media.caption ? { caption: media.caption } : {}),
+        };
+        const sent = await connected().sendMessage(toBaileysJid(chatId), content, quoted);
+        return sent?.key?.id ?? null;
+      },
+      async sendDocument(chatId, media, options) {
+        const quoted = options?.quote ? { quoted: quotedOf(options.quote) } : undefined;
+        const sent = await connected().sendMessage(
+          toBaileysJid(chatId),
+          {
+            document: media.data,
+            mimetype: media.mimetype,
+            fileName: media.fileName ?? 'file',
+            ...(media.caption ? { caption: media.caption } : {}),
+          },
+          quoted,
+        );
+        return sent?.key?.id ?? null;
+      },
       async react(message, emoji) {
         await connected().sendMessage(toBaileysJid(message.chatId), { react: { text: emoji, key: keyOf(message) } });
       },

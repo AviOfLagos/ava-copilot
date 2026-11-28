@@ -69,6 +69,7 @@ export const MODEL_ROLES: ModelRole[] = [
   'realtime',
   'tts',
   'search',
+  'image',
 ];
 
 export type ModelSettingsStorage = BaseStorage<ModelSettingsRecord> & {

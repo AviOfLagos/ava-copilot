@@ -10,7 +10,8 @@ export const ABILITY_WORDS: Record<WhatsAppAbility, string> = {
   send_text: 'answer in text',
   send_voice:
     'answer with a voice note in your voice (he can say "reply with voice notes" or "answer in text" to switch)',
-  send_image: 'send pictures (made from a description, or a screenshot of a page)',
+  send_image:
+    'send pictures with send_whatsapp_picture: a screenshot of the page you are on, or one made from a description (it says the price first)',
   send_video: 'send short videos',
   send_document: 'send files from this computer',
   react: 'react to their message with an emoji',
@@ -28,12 +29,19 @@ export const ABILITY_WORDS: Record<WhatsAppAbility, string> = {
 
 // What is being built, and where: said as "not yet, it's coming" when asked
 export const NOT_YET_ISSUE: Partial<Record<WhatsAppAbility, number>> = {
-  send_image: 204,
   send_video: 204,
   send_document: 204,
   groups: 20,
   other_people: 205,
   message_others: 206,
+};
+
+// Sends that also need a tool of the extension's: Ava Brain can send a video or a file before any tool here makes
+// one, and she must not say she can (#204 part 2 adds the file tool)
+const TOOL_READY: Partial<Record<WhatsAppAbility, boolean>> = {
+  send_image: true,
+  send_video: false,
+  send_document: false,
 };
 
 const ORDER = Object.keys(ABILITY_WORDS) as WhatsAppAbility[];
@@ -49,7 +57,7 @@ export function whatsappAbilitiesSection(abilities: readonly WhatsAppAbility[] |
 - Ava Brain did not say what works on WhatsApp right now (it may be closed or not linked). Do not promise anything WhatsApp-specific (voice notes, pictures, files); answer in text.
 `;
   }
-  const has = new Set(abilities);
+  const has = new Set(abilities.filter(id => TOOL_READY[id] !== false));
   const can = ORDER.filter(id => has.has(id)).map(id => ABILITY_WORDS[id]);
   const notYet = ORDER.filter(id => !has.has(id)).map(id => {
     const issue = NOT_YET_ISSUE[id];

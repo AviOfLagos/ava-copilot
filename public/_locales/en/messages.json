@@ -3160,6 +3160,15 @@
   "models_role_tts_hint": {
     "message": "Reads answers aloud."
   },
+  "models_role_image": {
+    "message": "Pictures"
+  },
+  "models_role_image_hint": {
+    "message": "Makes pictures from a description, e.g. to send on WhatsApp. Most cost a few cents each."
+  },
+  "models_role_empty_image": {
+    "message": "No picture model yet. Add OpenAI (gpt-image-1), Gemini (Imagen) or Grok and turn one of its picture models on."
+  },
   "models_role_search": {
     "message": "Web search"
   },
