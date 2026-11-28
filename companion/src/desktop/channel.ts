@@ -5,7 +5,8 @@ import type { DesktopMessage, DesktopReply, DesktopReplyKind } from '@protocol';
 /**
  * The desktop app's chat, passed through Ava Brain (docs/desktop-app.md): the window's words wait here until the
  * extension takes them, and the extension's answers wait here until the window reads them. Kept in memory: a
- * restart of Ava Brain drops what was in flight, and the window says so (its message never gets a "working").
+ * restart of Ava Brain drops what was in flight and starts the answers' numbers again at 1 (the window reads
+ * lastSeq and starts over when it went back).
  */
 
 // More than this waiting, the oldest go: the window has been sending into a closed browser for a long time
@@ -29,12 +30,16 @@ export class DesktopChannel {
     return message;
   }
 
-  /** Everything waiting, taken by the extension (it starts each one as a turn straight away). */
-  take(): DesktopMessage[] {
+  /** Everything waiting, for the extension. It stays until the extension acks it, so nothing is lost on the way. */
+  pending(): DesktopMessage[] {
     this.browserSeenAt = this.now();
-    const taken = this.queue;
-    this.queue = [];
-    return taken;
+    return [...this.queue];
+  }
+
+  /** The extension has kept these: forget them. */
+  ack(ids: readonly string[]): void {
+    const done = new Set(ids);
+    this.queue = this.queue.filter(message => !done.has(message.id));
   }
 
   /** An answer, or a "working", from the extension. */

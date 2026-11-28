@@ -50,9 +50,12 @@ export function markFailed(state: ChatState, id: string, why: string): ChatState
   };
 }
 
-/** What the extension sent back for this conversation; others are left for their own window. */
-export function applyReplies(state: ChatState, replies: DesktopReply[]): ChatState {
-  let next = state;
+/**
+ * What the extension sent back for this conversation; others are left for their own window. `restarted`: Ava Brain
+ * started again and numbers its answers from 1, so the window's place starts over too.
+ */
+export function applyReplies(state: ChatState, replies: DesktopReply[], restarted = false): ChatState {
+  let next = restarted ? { ...state, seq: 0, working: false } : state;
   for (const reply of replies) {
     if (reply.seq <= next.seq) continue;
     next = { ...next, seq: reply.seq };

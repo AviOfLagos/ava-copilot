@@ -23,13 +23,14 @@ function setup(
   const threads = { ...options.threads };
   const replies: { chatId: string; kind: string; text: string }[] = [];
   const started: { threadId: string | null; text: string }[] = [];
+  const acked: string[] = [];
+  // Ava Brain keeps a message until it is acked
   let inbox = options.inbox ?? [];
   let messages: ThreadMessage[] = [];
   const bridge = new DesktopBridge({
-    inbox: async () => {
-      const taken = inbox;
-      inbox = [];
-      return taken;
+    inbox: async () => inbox.filter(message => !acked.includes(message.id)),
+    ack: async ids => {
+      acked.push(...ids);
     },
     reply: async request => {
       replies.push(request);
@@ -51,6 +52,7 @@ function setup(
   return {
     bridge,
     replies,
+    acked,
     started,
     threads,
     state: () => state,
@@ -58,7 +60,11 @@ function setup(
       messages = next;
     },
     push: (next: DesktopMessage[]) => {
-      inbox = next;
+      inbox = [...inbox, ...next];
+    },
+    // Ava Brain hands the same messages over again (its ack was lost)
+    replay: () => {
+      acked.length = 0;
     },
   };
 }
@@ -70,6 +76,12 @@ describe('DesktopBridge', () => {
     expect(test.started).toEqual([{ threadId: null, text: 'hello' }]);
     expect(test.replies).toEqual([{ chatId: CHAT, kind: 'working', text: '' }]);
     expect(test.state().chats).toEqual({ [CHAT]: 't1' });
+    expect(test.acked).toEqual(['dm_hello']);
+
+    // Handed over twice, it still runs once
+    test.replay();
+    await test.bridge.poll();
+    expect(test.started).toHaveLength(1);
 
     test.threads.t1 = thread({ status: 'idle' });
     test.push([message('again')]);
@@ -118,6 +130,35 @@ describe('DesktopBridge', () => {
     expect(test.replies).toHaveLength(2);
   });
 
+  it('sends the answer of a turn that ended before the pull did', async () => {
+    const test = setup({ inbox: [message('quick')] });
+    test.setMessages([said(1, 'user', 'quick'), said(2, 'planner', 'Done.')]);
+    await test.bridge.poll();
+    // The conversation was kept straight after the start, before the pull ended
+    expect(test.state().chats[CHAT]).toBe('t1');
+    await test.bridge.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' });
+    expect(test.replies).toContainEqual({ chatId: CHAT, kind: 'answer', text: 'Done.' });
+  });
+
+  it('marks an answer sent only when it went', async () => {
+    const test = setup({ state: { chats: { [CHAT]: 't1' } } });
+    const failing = new DesktopBridge({
+      inbox: async () => [],
+      ack: async () => {},
+      reply: async () => {
+        throw new Error('Ava Brain closed');
+      },
+      getThread: async () => undefined,
+      messages: async () => [said(1, 'user', 'hi'), said(2, 'planner', 'Hello.')],
+      startTurn: async () => 't1',
+      getState: async () => test.state(),
+      updateState: async () => {},
+      warn: () => {},
+    });
+    await expect(failing.onThreadUpdate(thread({ status: 'running' }), { status: 'idle' })).rejects.toThrow();
+    expect(test.state().replied).toEqual({});
+  });
+
   it("ignores chats that are not the desktop app's", async () => {
     const test = setup({ state: { chats: { [CHAT]: 't1' } } });
     await test.bridge.onThreadUpdate(thread({ status: 'running', origin: 'user' }), { status: 'idle' });
@@ -128,6 +169,7 @@ describe('DesktopBridge', () => {
     const test = setup({ inbox: [message('hello')] });
     const bridge = new DesktopBridge({
       inbox: async () => [message('hello')],
+      ack: async () => {},
       reply: async request => {
         test.replies.push(request);
       },

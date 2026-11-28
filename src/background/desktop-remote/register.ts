@@ -29,6 +29,9 @@ const getState = async (): Promise<DesktopRemoteState> => ({
 
 export const desktopBridge = new DesktopBridge({
   inbox: async () => (await companionClient.desktopInbox()).messages,
+  ack: async ids => {
+    await companionClient.desktopAck(ids);
+  },
   reply: async ({ chatId, kind, text }) => {
     await companionClient.desktopReply({
       requestId: crypto.randomUUID(),

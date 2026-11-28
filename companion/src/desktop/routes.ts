@@ -1,5 +1,6 @@
 import {
   DESKTOP_ROUTES,
+  desktopAckRequestSchema,
   desktopMessagesRequestSchema,
   desktopReplyRequestSchema,
   desktopSendRequestSchema,
@@ -68,7 +69,12 @@ export function desktopRoutes(deps: {
       rate: 'desktop',
       async handler({ body }) {
         const { after } = parse(desktopMessagesRequestSchema, body);
-        return json({ ok: true, replies: channel.repliesAfter(after), browserOpen: channel.browserOpen() });
+        return json({
+          ok: true,
+          replies: channel.repliesAfter(after),
+          browserOpen: channel.browserOpen(),
+          lastSeq: channel.lastSeq,
+        });
       },
     },
     {
@@ -78,7 +84,18 @@ export function desktopRoutes(deps: {
       auth: 'api',
       rate: 'desktop',
       async handler() {
-        return json({ ok: true, messages: channel.take() });
+        return json({ ok: true, messages: channel.pending() });
+      },
+    },
+    {
+      method: 'POST',
+      path: DESKTOP_ROUTES.ack,
+      name: 'desktop.ack',
+      auth: 'api',
+      rate: 'desktop',
+      async handler({ body }) {
+        channel.ack(parse(desktopAckRequestSchema, body).ids);
+        return json({ ok: true });
       },
     },
     {

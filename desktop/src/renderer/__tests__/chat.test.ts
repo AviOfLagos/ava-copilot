@@ -43,6 +43,12 @@ describe('desktop chat', () => {
     expect(state.seq).toBe(8);
   });
 
+  it('starts its place over when Ava Brain restarted', () => {
+    const state = applyReplies(emptyChat(CHAT, 57), [reply(1, 'answer', 'after the restart')], true);
+    expect(state.seq).toBe(1);
+    expect(state.lines.map(line => line.text)).toEqual(['after the restart']);
+  });
+
   it('marks a message Ava Brain did not take', () => {
     const state = markFailed(addSent(emptyChat(CHAT), 'hi', 1, 'm1'), 'm1', 'Ava Brain is not running on this Mac.');
     expect(state.lines[0]).toMatchObject({ failed: 'Ava Brain is not running on this Mac.' });

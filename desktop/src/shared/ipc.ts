@@ -17,10 +17,10 @@ export interface AvaBridge {
   brainStatus: () => Promise<BrainView>;
   // The chat's words, sent to Ava Brain; false when Ava Brain could not take them
   send: (chatId: string, text: string) => Promise<{ ok: boolean; message?: string }>;
-  // Answers after `after`, and where the newest one is
-  replies: (after: number) => Promise<{ replies: DesktopReply[]; lastSeq: number }>;
-  // Where answers start for a window that just opened
-  startSeq: () => Promise<number>;
+  // Answers after `after`; `restarted` when Ava Brain started again and numbers them from 1
+  replies: (after: number) => Promise<{ replies: DesktopReply[]; restarted: boolean }>;
+  // Where answers start for a window that just opened; null while Ava Brain cannot be asked
+  startSeq: () => Promise<number | null>;
   appearance: () => Promise<AppearanceSettingsConfig>;
   setAppearance: (changes: Partial<AppearanceSettingsConfig>) => Promise<AppearanceSettingsConfig>;
   // Whether macOS is in dark mode now

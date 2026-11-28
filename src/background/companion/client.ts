@@ -763,6 +763,18 @@ export class CompanionClient {
     });
   }
 
+  /** The desktop messages kept here: Ava Brain forgets them. */
+  desktopAck(ids: string[]) {
+    return this.call({
+      method: 'POST',
+      path: DESKTOP_ROUTES.ack,
+      body: { ids },
+      schema: okReplySchema,
+      idempotent: true,
+      timeoutMs: 8000,
+    });
+  }
+
   /** "Working", an answer, a wait for a click or an error, for the desktop app's window. */
   desktopReply(request: DesktopReplyRequest) {
     return this.call({

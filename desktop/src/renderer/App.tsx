@@ -148,15 +148,17 @@ export function App() {
   // Answers: from now on when the window opens, then every second and a half
   useEffect(() => {
     let stopped = false;
-    void window.ava.startSeq().then(seq => {
-      if (stopped) return;
-      setChat(current => ({ ...current, seq: Math.max(current.seq, seq) }));
-      ready.current = true;
-    });
     const timer = setInterval(async () => {
-      if (!ready.current) return;
-      const { replies } = await window.ava.replies(chatRef.current.seq);
-      if (replies.length) setChat(current => applyReplies(current, replies));
+      if (!ready.current) {
+        // Where Ava Brain's answers are now; until it can say, nothing old is read again
+        const seq = await window.ava.startSeq();
+        if (stopped || seq === null) return;
+        setChat(current => ({ ...current, seq: Math.max(current.seq, seq) }));
+        ready.current = true;
+        return;
+      }
+      const { replies, restarted } = await window.ava.replies(chatRef.current.seq);
+      if (replies.length || restarted) setChat(current => applyReplies(current, replies, restarted));
     }, READ_MS);
     return () => {
       stopped = true;

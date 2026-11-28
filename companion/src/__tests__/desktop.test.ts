@@ -15,8 +15,12 @@ describe('DesktopChannel', () => {
     channel.send(CHAT, 'hello');
     channel.send(CHAT, 'and this');
     expect(channel.queued).toBe(2);
-    expect(channel.take().map(message => message.text)).toEqual(['hello', 'and this']);
-    expect(channel.take()).toEqual([]);
+    const waiting = channel.pending();
+    expect(waiting.map(message => message.text)).toEqual(['hello', 'and this']);
+    // Kept until acked
+    expect(channel.pending()).toHaveLength(2);
+    channel.ack(waiting.map(message => message.id));
+    expect(channel.pending()).toEqual([]);
     expect(channel.browserOpen()).toBe(true);
 
     const first = channel.reply(CHAT, 'working', '');
@@ -32,7 +36,7 @@ describe('DesktopChannel', () => {
   it('keeps only the newest messages when the browser stays closed', () => {
     const channel = new DesktopChannel();
     for (let i = 0; i < DESKTOP_QUEUE_MAX + 5; i++) channel.send(CHAT, `m${i}`);
-    const taken = channel.take();
+    const taken = channel.pending();
     expect(taken).toHaveLength(DESKTOP_QUEUE_MAX);
     expect(taken[0].text).toBe('m5');
   });
@@ -79,8 +83,11 @@ describe('desktop routes', () => {
     // The app cannot read the extension's queue
     expect((await desktop(DESKTOP_ROUTES.inbox, token)).status).toBe(403);
 
-    const inbox = (await (await test.api(DESKTOP_ROUTES.inbox)).json()) as { messages: { text: string }[] };
+    const inbox = (await (await test.api(DESKTOP_ROUTES.inbox)).json()) as { messages: { id: string; text: string }[] };
     expect(inbox.messages.map(message => message.text)).toEqual(['Hello Ava']);
+    await test.api(DESKTOP_ROUTES.ack, { body: JSON.stringify({ ids: inbox.messages.map(message => message.id) }) });
+    const after = (await (await test.api(DESKTOP_ROUTES.inbox)).json()) as { messages: unknown[] };
+    expect(after.messages).toEqual([]);
 
     const reply = await test.api(DESKTOP_ROUTES.reply, {
       body: JSON.stringify({ requestId: 'req-00002', chatId: CHAT, kind: 'answer', text: 'Hi there' }),
@@ -90,7 +97,9 @@ describe('desktop routes', () => {
     const read = (await (await desktop(DESKTOP_ROUTES.messages, token, { after: 0 })).json()) as {
       replies: { kind: string; text: string }[];
       browserOpen: boolean;
+      lastSeq: number;
     };
+    expect(read.lastSeq).toBe(1);
     expect(read.replies).toMatchObject([{ kind: 'answer', text: 'Hi there' }]);
     expect(read.browserOpen).toBe(true);
 

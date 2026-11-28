@@ -90,6 +90,31 @@ describe('BrainClient', () => {
   });
 });
 
+describe('BrainClient.replies', () => {
+  const location = { base: 'http://127.0.0.1:1', tokenPath: '/nowhere' };
+  const answer = (seq: number) => ({ seq, chatId: 'dc_abcdefgh12', kind: 'answer', text: `a${seq}`, at: seq });
+
+  it('reads from the start again when Ava Brain restarted and its numbers went back', async () => {
+    const { fetcher, calls } = fakeFetch([
+      { status: 200, body: { ok: true, replies: [], browserOpen: true, lastSeq: 2 } },
+      { status: 200, body: { ok: true, replies: [answer(1), answer(2)], browserOpen: true, lastSeq: 2 } },
+    ]);
+    const client = new BrainClient({ location, fetch: fetcher, readToken: async () => 't' });
+    const read = await client.replies(57);
+    expect(read).toMatchObject({ restarted: true });
+    expect(read.replies.map(reply => reply.seq)).toEqual([1, 2]);
+    expect(calls.map(call => JSON.parse(call.init.body as string).after)).toEqual([57, 0]);
+  });
+
+  it('reads on from its place otherwise', async () => {
+    const { fetcher } = fakeFetch([
+      { status: 200, body: { ok: true, replies: [answer(4)], browserOpen: true, lastSeq: 4 } },
+    ]);
+    const client = new BrainClient({ location, fetch: fetcher, readToken: async () => 't' });
+    expect(await client.replies(3)).toMatchObject({ restarted: false, replies: [{ seq: 4 }] });
+  });
+});
+
 describe('what the window sends', () => {
   it('takes only conversation ids and words within the limit', () => {
     expect(isChatId('dc_abcdefgh12')).toBe(true);

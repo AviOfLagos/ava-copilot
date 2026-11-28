@@ -47,6 +47,7 @@ const messagesReplySchema = z.object({
   ok: z.literal(true),
   replies: z.array(desktopReplySchema),
   browserOpen: z.boolean(),
+  lastSeq: z.number().int().nonnegative(),
 });
 
 export interface BrainClientDeps {
@@ -76,8 +77,15 @@ export class BrainClient {
     return this.call(DESKTOP_ROUTES.send, { requestId: this.newRequestId(), chatId, text }, sendReplySchema);
   }
 
-  async replies(after: number): Promise<{ replies: DesktopReply[]; browserOpen: boolean }> {
-    return this.call(DESKTOP_ROUTES.messages, { after }, messagesReplySchema);
+  /**
+   * The answers after `after`. Ava Brain numbers them from 1 again when it restarts: when its newest is below
+   * `after`, the window's place is gone, so everything it has now is read and `restarted` says so.
+   */
+  async replies(after: number): Promise<{ replies: DesktopReply[]; restarted: boolean }> {
+    const reply = await this.call(DESKTOP_ROUTES.messages, { after }, messagesReplySchema);
+    if (reply.lastSeq >= after) return { replies: reply.replies, restarted: false };
+    const again = await this.call(DESKTOP_ROUTES.messages, { after: 0 }, messagesReplySchema);
+    return { replies: again.replies, restarted: true };
   }
 
   private async call<S extends z.ZodType>(path: string, body: unknown, schema: S, again = true): Promise<z.infer<S>> {

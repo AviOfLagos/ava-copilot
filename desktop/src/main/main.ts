@@ -47,17 +47,17 @@ function registerIpc(): void {
   ipcMain.handle(IPC.replies, async (_event, after: unknown) => {
     const from = typeof after === 'number' && Number.isInteger(after) && after >= 0 ? after : 0;
     try {
-      const { replies } = await brain.replies(from);
-      return { replies, lastSeq: replies.at(-1)?.seq ?? from };
+      return await brain.replies(from);
     } catch {
-      return { replies: [], lastSeq: from };
+      return { replies: [], restarted: false };
     }
   });
   ipcMain.handle(IPC.startSeq, async () => {
     try {
       return (await brain.status()).lastSeq;
     } catch {
-      return 0;
+      // Not known yet: the window asks again, rather than reading old answers again from the start
+      return null;
     }
   });
   ipcMain.handle(IPC.appearance, () => appearance.get());

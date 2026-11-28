@@ -1538,6 +1538,8 @@ export const DESKTOP_ROUTES = {
   messages: '/desktop/v1/messages',
   // The extension
   inbox: '/v1/desktop/inbox',
+  // Messages the extension has kept, by id: only then does Ava Brain forget them
+  ack: '/v1/desktop/ack',
   reply: '/v1/desktop/reply',
 } as const;
 
@@ -1609,5 +1611,7 @@ export const desktopStatusSchema = z.object({
   lastSeq: z.number().int().nonnegative(),
 });
 export type DesktopStatus = z.infer<typeof desktopStatusSchema>;
+
+export const desktopAckRequestSchema = z.object({ ids: z.array(z.string().min(1).max(100)).max(100) });
 
 export const desktopInboxReplySchema = z.object({ ok: z.literal(true), messages: z.array(desktopMessageSchema) });
