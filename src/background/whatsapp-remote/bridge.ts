@@ -321,6 +321,8 @@ export class WhatsAppBridge {
   private async replyMode(message: WhatsAppMessage, words: string): Promise<string> {
     const instruction = replyModeOf(words);
     if (!instruction) return words;
+    // A message that comes back after a failed turn changes nothing and is not confirmed twice
+    if ((await this.deps.getState()).replyMode === instruction.mode) return instruction.rest;
     await this.deps.updateState({ replyMode: instruction.mode });
     await this.say(t(instruction.mode === 'voice' ? 'wava_mode_voice' : 'wava_mode_text'), 'reply', message.id);
     return instruction.rest;

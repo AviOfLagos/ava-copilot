@@ -14,8 +14,27 @@ describe('replyModeOf (#203)', () => {
     ['No more voice notes', 'text'],
     ['stop sending voice notes!', 'text'],
     ['type your replies', 'text'],
+    ['Can you reply with voice notes?', 'voice'],
+    ['Switch to voice notes', 'voice'],
+    ['I prefer text', 'text'],
+    ['Reply with text, not voice notes', 'text'],
   ])('"%s" sets %s', (text, mode) => {
     expect(replyModeOf(text)).toEqual({ mode, rest: '' });
+  });
+
+  it('ignores requests that only mention a voice note or texting', () => {
+    for (const words of [
+      "Send me a voice note about today's plan",
+      'Send a voice note',
+      'How do I send a voice note',
+      'Remind me to send a voice note',
+      'Remind me to send Ada and Bob a voice note',
+      'Text me the address of the venue',
+      'text me when the build finishes',
+      'Remember to text me',
+    ]) {
+      expect(replyModeOf(words), words).toBeNull();
+    }
   });
 
   it('keeps the rest of a longer message for the chat', () => {
