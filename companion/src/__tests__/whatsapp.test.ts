@@ -135,6 +135,17 @@ describe('Ava on WhatsApp in Ava Brain', () => {
     expect(service.status()).toMatchObject({ state: 'linked', qr: null, number: ME });
   });
 
+  it('says what she can do there from the running driver, and nothing while not linked (#202)', async () => {
+    const { service, driver } = await linked();
+    // The fake driver sends words only
+    expect(service.status().abilities).toEqual(['send_text', 'read_voice', 'read_photo', 'read_document', 'read_link']);
+    Object.assign(driver, { sendVoice: async () => 'v-1', react: async () => {} });
+    expect(service.status().abilities).toEqual(expect.arrayContaining(['send_voice', 'react']));
+    expect(service.status().abilities).not.toContain('send_image');
+    await service.unlink();
+    expect(service.status().abilities).toEqual([]);
+  });
+
   it('keeps only the owner’s own self-chat messages, and nothing of any other chat', async () => {
     const { driver, service, settle, dir, log } = await linked();
     driver.deliver({ id: 'own-1', body: 'what is on today?' });

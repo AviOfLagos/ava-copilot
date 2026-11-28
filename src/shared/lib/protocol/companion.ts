@@ -848,6 +848,32 @@ export const WHATSAPP_TEXT_MAX = 4000;
 export const WHATSAPP_NOTICE_KINDS = ['reply', 'approval', 'meeting', 'brief', 'routine', 'tasks'] as const;
 export type WhatsAppNoticeKind = (typeof WHATSAPP_NOTICE_KINDS)[number];
 
+// What Ava can do on WhatsApp now, from the running driver and Ava Brain's own handling (#202). The extension turns
+// these into words for the chat; anything not listed is not possible yet, and she says so.
+export const WHATSAPP_ABILITIES = [
+  // Sending
+  'send_text',
+  'send_voice',
+  'send_image',
+  'send_video',
+  'send_document',
+  // Her own messages
+  'react',
+  'edit',
+  'delete',
+  'presence',
+  // Reading what the owner sends
+  'read_voice',
+  'read_photo',
+  'read_document',
+  'read_link',
+  // People other than the owner
+  'groups',
+  'other_people',
+  'message_others',
+] as const;
+export type WhatsAppAbility = (typeof WHATSAPP_ABILITIES)[number];
+
 export const whatsappStatusSchema = z.object({
   state: z.enum(WHATSAPP_STATES),
   // The code to show while state is 'scan' (the pairing string, or a picture of it as a data URL); never
@@ -880,6 +906,15 @@ export const whatsappStatusSchema = z.object({
   // When his last message came in, and Ava's last went out (ms)
   lastInAt: z.number().nullable().default(null),
   lastOutAt: z.number().nullable().default(null),
+  // What she can do there now (empty while not linked). Older Ava Brain: absent. Unknown ids from a newer one are
+  // dropped, not refused
+  abilities: z
+    .array(z.string().max(40))
+    .max(40)
+    .default([])
+    .transform(ids =>
+      ids.filter((id): id is WhatsAppAbility => (WHATSAPP_ABILITIES as readonly string[]).includes(id)),
+    ),
 });
 export type WhatsAppStatus = z.infer<typeof whatsappStatusSchema>;
 
